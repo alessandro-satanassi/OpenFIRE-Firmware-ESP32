@@ -57,9 +57,9 @@ private:
     int  medianX = MouseMaxX / 2;
     int  medianY = MouseMaxY / 2;
     unsigned int see[4];
-    float height;
-    float width;
-    float angle;
+    float height = (568 * CamToMouseMult) - (200 * CamToMouseMult);
+    float width = (623 * CamToMouseMult) - (400 * CamToMouseMult);
+    float angle = 0;
 
     unsigned int start = 0;
     unsigned int seenFlags = 0;
@@ -74,6 +74,25 @@ private:
     // |   |  // la base AB-CD è sempre più corta dell'altezza AC-BD
     // |   |  // le diagonali del rettangolo sono AD-BC
     // C---D  //TxIR inferiori orrizzontali
+
+    int prev2_medianX;
+    int prev2_medianY;
+    float prev2_height;
+    float prev2_width;
+    float prev2_angle;
+
+    float shape_vec_AB_x, shape_vec_AB_y; // Vettore dal vertice A al vertice B
+    float shape_vec_AD_x, shape_vec_AD_y; // Vettore dal vertice A al vertice D
+    int point4_X, point4_Y;
+    uint8_t point4_idx;
+
+    //int shape_correction_x;
+    //int shape_correction_y;
+    float height_left = (568 * CamToMouseMult) - (200 * CamToMouseMult);
+    float height_right = (568 * CamToMouseMult) - (200 * CamToMouseMult);
+    float width_top = (623 * CamToMouseMult) - (400 * CamToMouseMult);
+    float width_bottom = (623 * CamToMouseMult) - (400 * CamToMouseMult);
+
 };
 
 #endif // _OpenFIRE_Square_Advanced_h_

@@ -18,7 +18,7 @@
 
 #include <stdint.h>
 #include <unordered_map>
-//#include <FS.h> // non serve, viene richiamata direttamente da littlefs
+//#include <FS.h> // 696969 //non serve, viene richiamata direttamente da littlefs
 
 // = 696969 = per la compilazione su esp32 - la libreria exfatlib che viene chiamata da Arduino TinyUSB
 // =========== definisce quelle costanti e ricevo un warning in quanto anche LittleFS le definisce  ===

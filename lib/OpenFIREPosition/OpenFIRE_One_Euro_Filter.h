@@ -31,7 +31,7 @@ public:
     void One_Euro_Filter(int &outX, int &outY);
 
 private:
-        //================================================================
+    //================================================================
     // COSTANTI DI TUNING FILTRO ONE EURO
     //================================================================
     static constexpr float OE_FREQ           = 200.0f;           // Frequenza campionamento (Hz)

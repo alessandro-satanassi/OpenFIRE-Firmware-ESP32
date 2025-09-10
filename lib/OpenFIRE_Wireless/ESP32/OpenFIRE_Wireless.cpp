@@ -1,6 +1,7 @@
 #if defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
 
 #include "OpenFIRE_Wireless.h"
+#include "esp_idf_version.h"
 
 #ifdef DONGLE
   #ifdef USES_DISPLAY
@@ -48,7 +49,16 @@ uint8_t buffer_espnow[ESP_NOW_MAX_DATA_LEN];
 esp_now_peer_info_t peerInfo; // deve stare fuori funzioni da funzioni -- globale --variabile di utilità per configurazione
 
 static void _esp_now_rx_cb(const esp_now_recv_info_t *info, const uint8_t *data, int len); // callback esp_now
-static void _esp_now_tx_cb(const uint8_t *mac_addr, esp_now_send_status_t status); // callback esp_now
+
+
+#if ESP_IDF_VERSION_MAJOR == 5 && ESP_IDF_VERSION_MINOR <= 4
+  // Codice per versioni fino alla 5.4
+  static void _esp_now_tx_cb(const uint8_t *mac_addr, esp_now_send_status_t status); // callback esp_now
+#elif ESP_IDF_VERSION_MAJOR > 5 || (ESP_IDF_VERSION_MAJOR == 5 && ESP_IDF_VERSION_MINOR >= 5)
+  // Codice per versioni 5.5 o superiori
+  static void _esp_now_tx_cb(const esp_now_send_info_t *tx_info, esp_now_send_status_t status); // callback esp_now // poer nuova versione IDF 55
+#endif
+
 
 void packet_callback_read_dongle(); // callback packet 
 void packet_callback_read_gun(); // callback packet
@@ -129,8 +139,10 @@ int SerialWireless_::peekBin() {
 int SerialWireless_::read() {
   if (lenBufferSerialRead) {
     uint8_t ret = bufferSerialRead[_readerSerialRead];
-    lenBufferSerialRead --;
-    _readerSerialRead ++;
+    //lenBufferSerialRead --;
+    lenBufferSerialRead = lenBufferSerialRead - 1;
+    //_readerSerialRead ++;
+    _readerSerialRead = _readerSerialRead + 1;
     if (_readerSerialRead >= FIFO_SIZE_READ_SERIAL) {
       _readerSerialRead -= FIFO_SIZE_READ_SERIAL;
     }
@@ -153,8 +165,10 @@ bool SerialWireless_::checkForRxPacket() {
 int SerialWireless_::readBin() {
   if (_readLen) {
     uint8_t ret = _queue[_reader];
-    _readLen --;
-    _reader ++;
+    //_readLen --;
+    _readLen = _readLen - 1;
+    //_reader ++;
+    _reader = _reader + 1;
     if (_reader >= FIFO_SIZE_READ) {
       _reader -= FIFO_SIZE_READ;
     }
@@ -810,8 +824,14 @@ static void _esp_now_rx_cb(const esp_now_recv_info_t *info, const uint8_t *data,
   SerialWireless.checkForRxPacket();
 }
 
-static void _esp_now_tx_cb(const uint8_t *mac_addr, esp_now_send_status_t status) {
-  
+#if ESP_IDF_VERSION_MAJOR == 5 && ESP_IDF_VERSION_MINOR <= 4
+  // Codice per versioni fino alla 5.4
+  static void _esp_now_tx_cb(const uint8_t *mac_addr, esp_now_send_status_t status) {
+#elif ESP_IDF_VERSION_MAJOR > 5 || (ESP_IDF_VERSION_MAJOR == 5 && ESP_IDF_VERSION_MINOR >= 5)
+  // Codice per versioni 5.5 o superiori
+  static void _esp_now_tx_cb(const esp_now_send_info_t *tx_info, esp_now_send_status_t status) { // callback esp_now // poer nuova versione IDF 55
+#endif
+
   xSemaphoreTake(mutex_writer_bin, portMAX_DELAY);
 
   if (SerialWireless._writeLen > 0 ) {

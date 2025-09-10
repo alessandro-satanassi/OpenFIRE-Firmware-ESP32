@@ -715,7 +715,7 @@ void FW_Common::GetPosition()
                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, res_y);
             }
 
-            
+            // L'ORDINE DEVE ESSERE FILTRO DI KALMAN -> FILTRO ONE_EURO
             #ifdef USE_POS_ONE_EURO_FILTER
                 X_One_Euro = OpenFIREper.getX();
                 Y_One_Euro = OpenFIREper.getY();
