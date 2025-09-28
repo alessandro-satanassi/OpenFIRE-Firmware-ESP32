@@ -389,7 +389,7 @@ void Gamepad16_::moveStick(uint16_t origX, uint16_t origY) {
       gamepad16Report.ry = map(_y, 0, 4095, 32767, -32767);
     } else {
       gamepad16Report.x = map(_x, 0, 4095, 32767, -32767);
-      gamepad16Report.x = map(_y, 0, 4095, 32767, -32767);
+      gamepad16Report.y = map(_y, 0, 4095, 32767, -32767);
     }
     TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
     //report();
