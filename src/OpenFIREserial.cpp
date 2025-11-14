@@ -1452,6 +1452,7 @@ void OF_Serial::PrintDebugSerial()
 
 bool OF_Serial::Serial_available(uint8_t min) 
 {
+    //return true; // poi da togliere
     if ((Serial.available() >= min)) return true;
     else {
         unsigned long timer_out = millis();

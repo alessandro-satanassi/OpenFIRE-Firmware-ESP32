@@ -24,6 +24,12 @@
 #include "OpenFIREprefs.h"
 #include "OpenFIREconstant.h"
 
+// ================= parte poi da rimuovere ==================
+#ifdef CLOCK_CAM_WII
+uint32_t tone_freq_main = 0;
+uint32_t tone_duty_main = 0;
+#endif //CLOCK_CAM_WII
+// ================= fine parte poi da rimuovere =============
 
 // =======696969===== GESTIONE DUAL CORE PER ESP32 CHE USA FREERTOS ===  INIZIALIZZAZIONE ========
 #if defined(ARDUINO_ARCH_ESP32) && defined(DUAL_CORE)
@@ -202,6 +208,15 @@ void setup() {
     #ifdef USES_DISPLAY
         //FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Init);
         FW_Common::OLED.TopPanelUpdate(" ... CONNECTION ...");
+        
+        // =================== parte poi da rimuovere ====================
+        #ifdef CLOCK_CAM_WII
+        char buffer[50];
+        sprintf(buffer, "Hz: %d - DC: %d ", tone_freq_main, tone_duty_main);
+        FW_Common::OLED.TopPanelUpdate(buffer);
+        #endif // CLOCK_CAM_WII
+        // ================== fine parte da rimovere =====================
+
     #endif // USES_DISPLAY
     #endif //ARDUINO_ARCH_ESP32
 
@@ -300,7 +315,8 @@ void setup() {
         Serial.begin(9600);
         Serial.setTimeout(0);
         #if defined(ARDUINO_ARCH_ESP32)
-            Serial.setTxTimeoutMs(0); // default è 250ms // serve per fare come in arduino pico rp2040
+            //// tolto perchè con nuova versione arduino-esp32 o tinyUSB non funziona più bene ///// Serial.setTxTimeoutMs(0);
+            //////////////////////Serial.setTxTimeoutMs(0); // default è 250ms // serve per fare come in arduino pico rp2040
             //Serial.setRxBufferSize(64); // impostato con per arduino pico .. se non si imposta è 256 di default
             //Serial.setRxBufferSize(usbPackageSize + 128);
             //Serial.setTxBufferSize(64);
