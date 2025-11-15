@@ -129,19 +129,22 @@ jobs:
         os_config:
           - name: windows-64bit
             runner: windows-latest
-            esptool_url: https://github.com/espressif/esptool/releases/download/v4.10.0/esptool-v4.10.0-win64.zip
+            esptool_url: https://github.com/espressif/esptool/releases/download/v5.1.0/esptool-v5.1.0-windows-amd64.zip
+            #esptool_url: https://github.com/espressif/esptool/releases/download/v4.10.0/esptool-v4.10.0-windows-amd64.zip
             esptool_path_in_zip: esptool-win64/
             esptool_filename_in_zip: esptool.exe # Nome del file eseguibile dentro lo ZIP di esptool
             script_name: flash_firmware.bat
           - name: linux-amd-64bit
             runner: ubuntu-latest
-            esptool_url: https://github.com/espressif/esptool/releases/download/v4.10.0/esptool-v4.10.0-linux-amd64.zip
+            esptool_url: https://github.com/espressif/esptool/releases/download/v5.1.0/esptool-v5.1.0-linux-amd64.tar.gz
+            # esptool_url: https://github.com/espressif/esptool/releases/download/v4.10.0/esptool-v4.10.0-linux-amd64.tar.gz
             esptool_path_in_zip: esptool-linux-amd64/
             esptool_filename_in_zip: esptool
             script_name: flash_firmware.sh
           - name: macos-64bit
             runner: macos-latest
-            esptool_url: https://github.com/espressif/esptool/releases/download/v4.10.0/esptool-v4.10.0-macos.zip
+            esptool_url: https://github.com/espressif/esptool/releases/download/v5.1.0/esptool-v5.1.0-macos-amd64.tar.gz
+            #esptool_url: https://github.com/espressif/esptool/releases/download/v4.10.0/esptool-v4.10.0-macos-amd64.tar.gz
             esptool_path_in_zip: esptool-macos/
             esptool_filename_in_zip: esptool
             script_name: flash_firmware.sh
