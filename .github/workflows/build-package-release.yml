@@ -65,6 +65,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install --upgrade platformio
 
+      - name: Install esptool dependencies   # la nuova versione di esptool vuole questo pacchetto e non lo installa da solo
+        run: |
+          pip install --upgrade rich_click
+
       - name: Cache PlatformIO
         uses: actions/cache@v4
         with:
