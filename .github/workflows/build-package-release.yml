@@ -11,16 +11,48 @@ on:
 #   branches: [ main ]
 # pull_request:
 #   branches: [ main ]
-  workflow_dispatch: # Permetti l'attivazione manuale
+  workflow_dispatch: # Permetti l'attivazione manuale - devi mettere si per creare i file pacchetto per i vari sistemi operativi
     inputs:
-      release:
-        description: "Creare una versione?"
+      sistemi_operativi:
+        description: "Vuoi Creare anche i file per i sistemi operativi ? (necessario per creare release)"
         required: true
         default: "no"
         type: choice
         options:
           - "no"
           - "yes"
+      release:
+        description: "Voui creare una release ?"
+        required: true
+        default: "no"
+        type: choice
+        options:
+          - "no"
+          - "yes"
+      tag_name:
+        description: "Tag della release (es. v1.2.0 - es. v6.0-RC6) (usato solo se release=yes)"
+        required: false
+        default: ""
+      release_name:
+        description: "Nome leggibile della release (es. v6.0-RC6 OpenFIRE Firmware ESP32 - Release Candidate) (usato solo se release=yes)"
+        required: false
+        default: ""
+      draft:
+        description: "Voui impostare la release come DRAFT e quindi NON pubblicare subito la release ? (false = NO,pubblica subito  - true = SI,lascialo in draft mode)"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"  
+      prerelease:
+        description: "E' una pre-release ? (false = NO  - true = SI, imposta il flag pre-release)"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"  
 
 permissions:
   contents: write # Necessario per actions/upload-release-asset per caricare asset sulla release
@@ -106,10 +138,10 @@ jobs:
           path: OpenFIREfw-NoFS-${{ matrix.boards }}.bin
           if-no-files-found: error
 
-  package_and_upload_release_assets:
+  package_assets:
     name: Package for ${{ matrix.boards.name }} on ${{ matrix.os_config.name }}
     needs: build_firmware # Esegui solo se build_firmware ha successo
-    if: ${{ github.event.inputs.release == 'yes' }}
+    if: ${{ github.event.inputs.sistemi_operativi == 'yes' }}
     runs-on: ${{ matrix.os_config.runner }}
     strategy:
       matrix:
@@ -308,14 +340,33 @@ jobs:
           path: ${{ github.workspace }}/OpenFIRE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip # Path all'archivio ZIP creato
           if-no-files-found: error
 
+ 
+  create_release:
+    needs: package_assets
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.release == 'yes' }}
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./release_assets
 
-    # - name: Upload ZIP to Release Assets
-    #   uses: actions/upload-release-asset@v1
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    #   with:
-    #     upload_url: ${{ github.event.release.upload_url }}
-    #     asset_path: ./${{ env.ARCHIVE_FILENAME }} # Path all'archivio ZIP creato
-    #     asset_name: ${{ env.ARCHIVE_FILENAME }} # Nome dell'asset sulla release
-    #     asset_content_type: application/zip
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.event.inputs.tag_name }}
+          release_name: ${{ github.event.inputs.release_name }}
+          draft: ${{ github.event.inputs.draft }}
+          prerelease: ${{ github.event.inputs.prerelease }}
 
+      - name: Upload all assets with original names
+        run: |
+          for file in ./release_assets/*; do
+            echo "Uploading $file"
+            gh release upload ${{ github.event.inputs.tag_name }} "$file" --clobber
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
