@@ -344,7 +344,7 @@ jobs:
   create_release:
     needs: package_assets
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.release == 'yes' }}
+    if: ${{ github.event.inputs.release == 'yes' }} # ${{ github.event.inputs.sistemi_operativi == 'yes' }}
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -364,9 +364,10 @@ jobs:
 
       - name: Upload all assets with original names
         run: |
-          for file in ./release_assets/*; do
+          find ./release_assets -type f -print0 | while IFS= read -r -d '' file; do
             echo "Uploading $file"
             gh release upload ${{ github.event.inputs.tag_name }} "$file" --clobber --repo ${{ github.repository }}
           done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
