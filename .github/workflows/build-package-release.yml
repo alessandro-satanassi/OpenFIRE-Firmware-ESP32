@@ -344,7 +344,7 @@ jobs:
   create_release:
     needs: package_assets
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.release == 'yes' }} # ${{ github.event.inputs.sistemi_operativi == 'yes' }}
+    if: ${{ github.event.inputs.release == 'yes' && github.event.inputs.sistemi_operativi == 'yes' }}
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -352,15 +352,15 @@ jobs:
           path: ./release_assets
 
       - name: Create GitHub Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.event.inputs.tag_name }}
-          release_name: ${{ github.event.inputs.release_name }}
+          name: ${{ github.event.inputs.release_name }}
           draft: ${{ github.event.inputs.draft }}
           prerelease: ${{ github.event.inputs.prerelease }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
       - name: Upload all assets with original names
         run: |
