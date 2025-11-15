@@ -198,7 +198,7 @@ jobs:
             unzip -j esptool_archive.zip "${{ matrix.os_config.esptool_path_in_zip }}${{ matrix.os_config.esptool_filename_in_zip }}" -d staging_dir
           fi
           if [[ "${{ matrix.os_config.esptool_tipo_file }}" == "tar.gz" ]]; then
-            tar -xzf esptool_archive.tar.gz -C staging_dir --strip-components=10 "${{ matrix.os_config.esptool_path_in_zip }}${{ matrix.os_config.esptool_filename_in_zip }}"
+            tar -xzf esptool_archive.tar.gz -C staging_dir --strip-components=1 "${{ matrix.os_config.esptool_path_in_zip }}${{ matrix.os_config.esptool_filename_in_zip }}"
           fi
 
           echo "Contents of staging_dir after esptool extraction:"
