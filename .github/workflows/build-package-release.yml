@@ -132,7 +132,7 @@ jobs:
             esptool_url: https://github.com/espressif/esptool/releases/download/v5.1.0/esptool-v5.1.0-windows-amd64.zip
             #esptool_url: https://github.com/espressif/esptool/releases/download/v4.10.0/esptool-v4.10.0-windows-amd64.zip
             esptool_tipo_file: zip
-            esptool_path_in_zip: esptool-win64/
+            esptool_path_in_zip: esptool-windows-amd64/
             esptool_filename_in_zip: esptool.exe # Nome del file eseguibile dentro lo ZIP di esptool
             script_name: flash_firmware.bat
           - name: linux-amd-64bit
@@ -148,7 +148,7 @@ jobs:
             esptool_url: https://github.com/espressif/esptool/releases/download/v5.1.0/esptool-v5.1.0-macos-amd64.tar.gz
             #esptool_url: https://github.com/espressif/esptool/releases/download/v4.10.0/esptool-v4.10.0-macos-amd64.tar.gz
             esptool_tipo_file: tar.gz
-            esptool_path_in_zip: esptool-macos/
+            esptool_path_in_zip: esptool-macos-amd64/
             esptool_filename_in_zip: esptool
             script_name: flash_firmware.sh
             
