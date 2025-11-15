@@ -192,7 +192,7 @@ jobs:
             curl -L -o esptool_archive.tar.gz "${{ matrix.os_config.esptool_url }}"
           fi
 
-          echo "Extracting ${{ matrix.os_config.esptool_path_in_zip }}${{ matrix.os_config.esptool_filename_in_zip }} from esptool_archive.zip to staging_dir/"
+          echo "Extracting ${{ matrix.os_config.esptool_path_in_zip }}${{ matrix.os_config.esptool_filename_in_zip }} from esptool_archive.${{ matrix.os_config.esptool_tipo_file }} to staging_dir/"
           # L'opzione -j di unzip estrae i file senza creare le loro directory originali (li mette direttamente in -d)
           if [[ "${{ matrix.os_config.esptool_tipo_file }}" == "zip" ]]; then
             unzip -j esptool_archive.zip "${{ matrix.os_config.esptool_path_in_zip }}${{ matrix.os_config.esptool_filename_in_zip }}" -d staging_dir
