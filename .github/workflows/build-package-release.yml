@@ -58,7 +58,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3"
+          python-version: "3.13" # la versione 3.14 non è supportata da espressif32@55.3.34 (non so perchè solo da 3.10 e 3.13), basterebbe python-version: "3.13", ma installa la 3.14
 
       - name: Install PlatformIO Core
         run: |
