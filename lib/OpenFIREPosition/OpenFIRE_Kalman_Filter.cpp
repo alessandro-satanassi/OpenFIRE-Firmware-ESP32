@@ -304,6 +304,6 @@ void OpenFIRE_Kalman_Filter::Kalman_Filter(int &outX, int &outY)
     outX = static_cast<int>(kf_x_state[0]) - MouseMaxX;
     outY = static_cast<int>(kf_y_state[0]) - MouseMaxY;
 }
-#endif COMMENTO
+#endif //COMMENTO
 
 #endif //USE_POS_KALMAN_FILTER

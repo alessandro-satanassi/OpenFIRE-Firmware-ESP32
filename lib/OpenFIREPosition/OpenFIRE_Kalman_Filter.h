@@ -94,6 +94,11 @@ private:
     float kf_last_vx_raw;
     float kf_last_vy_raw;
 
+    float kf_inv_halfW;
+    float kf_inv_halfH;
+    float kf_inv_dQ;
+    float kf_inv_dR;
+
     bool  kf_is_initialized;
 };
 
