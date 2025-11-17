@@ -211,9 +211,9 @@ void setup() {
         
         // =================== parte poi da rimuovere ====================
         #ifdef CLOCK_CAM_WII
-        char buffer[50];
-        sprintf(buffer, "Hz: %d - DC: %d ", tone_freq_main, tone_duty_main);
-        FW_Common::OLED.TopPanelUpdate(buffer);
+        // char buffer[50];
+        // sprintf(buffer, "Hz: %d - DC: %d ", tone_freq_main, tone_duty_main);
+        // FW_Common::OLED.TopPanelUpdate(buffer);
         #endif // CLOCK_CAM_WII
         // ================== fine parte da rimovere =====================
 
