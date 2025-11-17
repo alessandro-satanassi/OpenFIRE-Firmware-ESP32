@@ -7,7 +7,7 @@
   #ifdef USES_DISPLAY
     #ifdef USE_LOVYAN_GFX
       #include <LovyanGFX.hpp>
-      #include "..\..\src\LGFX_096_ST7735S_80x160.hpp"
+      #include "../../src/LGFX_096_ST7735S_80x160.hpp"
       extern LGFX tft;
     #else
       #include <Adafruit_ST7735.h>
