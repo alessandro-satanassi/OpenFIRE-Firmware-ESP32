@@ -272,7 +272,7 @@ jobs:
           if "%FIRMWARE_CHOICE%"=="1" set FIRMWARE_FILE=firmware.bin
           set /p COMPORT="Enter the COM port (e.g. COM3), or leave blank for automatic detection: "
           if not "%COMPORT%"=="" set COMPORT=--port "%COMPORT%"
-          %~dp0\\$ESPTOOL_EXECUTABLE_NAME --chip $CHIP_TYPE %COMPORT% --baud $BAUD --before default_reset --after hard_reset write_flash -z --flash_mode $FLASH_MODE --flash_freq $FLASH_FREQ --flash_size detect 0x0000 %FIRMWARE_FILE%
+          $ESPTOOL_EXECUTABLE_NAME --chip $CHIP_TYPE %COMPORT% --baud $BAUD --before default-reset --after hard-reset write-flash -z --flash-mode $FLASH_MODE --flash-freq $FLASH_FREQ --flash-size detect 0x0000 %FIRMWARE_FILE%
           echo.
           if %errorlevel% neq 0 (
             echo ERROR: Firmware flashing failed. Check connections and micro.
@@ -298,7 +298,7 @@ jobs:
           if [[ -n \$COMPORT ]]; then
             COMPORT="--port \$COMPORT"
           fi
-          ./$ESPTOOL_EXECUTABLE_NAME --chip $CHIP_TYPE \$COMPORT --baud $BAUD --before default_reset --after hard_reset write_flash -z --flash_mode $FLASH_MODE --flash_freq $FLASH_FREQ --flash_size detect 0x0000 \$FIRMWARE_FILE
+          ./$ESPTOOL_EXECUTABLE_NAME --chip $CHIP_TYPE \$COMPORT --baud $BAUD --before default-reset --after hard-reset write-flash -z --flash-mode $FLASH_MODE --flash-freq $FLASH_FREQ --flash-size detect 0x0000 \$FIRMWARE_FILE
           echo ""
           if [[ \$? -ne 0 ]]; then
             echo "ERROR: Firmware flashing failed. Check connections and micro."
