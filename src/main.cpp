@@ -82,7 +82,7 @@ void setup() {
     OF_Prefs::LoadPresets();
     
     if(OF_Prefs::InitFS() == OF_Prefs::Error_Success) {
-        OF_Prefs::ResetPreferences(); // ============ FORMATTA IL FILE SYSTEM =================================
+        //OF_Prefs::ResetPreferences(); // ============ FORMATTA IL FILE SYSTEM =================================
         OF_Prefs::LoadProfiles();
     
         // Profile sanity checks
@@ -116,6 +116,7 @@ void setup() {
         OF_Prefs::Load();
         
         #if defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
+           ////////////////// MAI USATO //////////////////////////////
             uint8_t aux_espnow_wifi_channel, aux_espnow_wifi_power;
             if (OF_Prefs::LoadWireless(&aux_espnow_wifi_channel, &aux_espnow_wifi_power) == OF_Prefs::Error_Success) {
                 espnow_wifi_channel = aux_espnow_wifi_channel;
@@ -126,7 +127,8 @@ void setup() {
                 OF_Prefs::SaveWireless(&espnow_wifi_channel, &espnow_wifi_power)
             }
             */
-            if (OF_Prefs::LoadLastDongleWireless(lastDongleAddress) == OF_Prefs::Error_Success) lastDongleSave = true;
+            //////////////////////////////// FINE MAI USATO //////////////////////////////////////
+            if (OF_Prefs::LoadLastDongleWireless(lastDongleAddress, &lastDongleChannel) == OF_Prefs::Error_Success) lastDongleSave = true;
                 else lastDongleSave = false;
 
         #endif // defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
@@ -292,12 +294,17 @@ void setup() {
         unsigned long lastMillis = millis ();
         while ((millis () - lastMillis <= MILLIS_TIMEOUT) && (!TinyUSBDevice.mounted())) { yield(); }
         if (!TinyUSBDevice.mounted()) {
+            SerialWireless.init_wireless();
             SerialWireless.begin(); // fare una sorta di prebegin, senza impostare peer e altro
             if (lastDongleSave) {
                 // PROVA A CONNETTERTI AL PRECEDENTE DONGLE INVIANDO IL PACCHETTO CHECK_CONNECTION
                 if (SerialWireless.connection_gun_at_last_dongle()) {
-                } else SerialWireless.connection_gun();
-
+                } else {
+                    //lastDongleSave=false;
+                    //SerialWireless.end();
+                    //SerialWireless.begin();
+                    SerialWireless.connection_gun();
+                }
             }
             else {
                 //TinyUSBDevices.onBattery = false; // lo imposta a true solo dopo che è stata stabilita e riconosciuta connessione tra dongle e gun
@@ -336,7 +343,7 @@ void setup() {
     #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
     else {     
         if (!lastDongleSave || 
-            (lastDongleSave && !(memcmp(lastDongleAddress, peerAddress,6) == 0))) OF_Prefs::SaveLastDongleWireless(peerAddress);
+            (lastDongleSave && (!(memcmp(lastDongleAddress, peerAddress,6) == 0) || !(lastDongleChannel == espnow_wifi_channel)))) OF_Prefs::SaveLastDongleWireless(peerAddress, &lastDongleChannel);
         // CHIUDI TUTTO CIO' CHE E' USB SE E' DA CHIUDERE
         TinyUSBDevice.clearConfiguration();
         TinyUSBDevice.detach();

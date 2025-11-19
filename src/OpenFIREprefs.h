@@ -222,10 +222,10 @@ public:
         static int SaveWireless(uint8_t *channel, uint8_t *power);  
 
         /// @brief Carica le impostazione dell'ultimo DONGLE a cui è stato connesso // canale e mac addres
-        static int LoadLastDongleWireless(uint8_t *address);
+        static int LoadLastDongleWireless(uint8_t *address, uint8_t *channel);
         
         /// @brief Salva le le impostazione dell'ultimo DONGLE a cui è stato connesso // canale e mac addres
-        static int SaveLastDongleWireless(uint8_t *address);  
+        static int SaveLastDongleWireless(uint8_t *address, uint8_t *channel);  
 
     #endif //ARDUINO_ARCH_ESP32
 

@@ -218,23 +218,25 @@ int OF_Prefs::SaveWireless(uint8_t *channel, uint8_t *power)
     } else return Error_NoData;
 }
 
-int OF_Prefs::LoadLastDongleWireless(uint8_t *address)
+int OF_Prefs::LoadLastDongleWireless(uint8_t *address, uint8_t *channel)
 {
     File lastDongleFile = LittleFS.open("/lastDONGLE.conf", "r");
     if(lastDongleFile) {
         int bWritten = lastDongleFile.read(address, 6);
+        bWritten += lastDongleFile.read(channel, 1);
         lastDongleFile.close();
-        if (bWritten == 6) return Error_Success; else return Error_NoData;
+        if (bWritten == (6 + 1)) return Error_Success; else return Error_NoData;
     } else return Error_NoData;
 }
 
-int OF_Prefs::SaveLastDongleWireless(uint8_t *address)
+int OF_Prefs::SaveLastDongleWireless(uint8_t *address, uint8_t *channel)
 {
     File lastDongleFile = LittleFS.open("/lastDONGLE.conf", "w");
     if(lastDongleFile) {
         int bWritten = lastDongleFile.write(address, 6);
+        bWritten += lastDongleFile.write(channel, 1);
         lastDongleFile.close();
-        if (bWritten == 6) return Error_Success; else return Error_NoData;
+        if (bWritten == (6 + 1)) return Error_Success; else return Error_NoData;
     } else return Error_NoData;
 }
 

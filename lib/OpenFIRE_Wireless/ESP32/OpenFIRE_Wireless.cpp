@@ -97,6 +97,7 @@ const uint8_t BROADCAST_ADDR[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
   const functionPtr callbackArr[] = { packet_callback_read_dongle };
   uint8_t lastDongleAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  uint8_t lastDongleChannel = ESPNOW_WIFI_CHANNEL_DEFAULT;
   bool lastDongleSave = false; // se true significa che abbiamo un indirizzo dell'ultimo dongle altrimenti false
 #elif defined(GUN)
   //const uint8_t peerAddress[6] = {0xA0, 0x85, 0xE3, 0xE8, 0x0F, 0xB8}; // espe32s3 con piedini (riceve ma non trasmette)
@@ -108,6 +109,7 @@ const uint8_t BROADCAST_ADDR[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
   // nel caso si spenga la pistola ed abbiamo memorizzato l'ultimo dongle connesso, prova a riconnettersi subito
   uint8_t lastDongleAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  uint8_t lastDongleChannel = ESPNOW_WIFI_CHANNEL_DEFAULT;
   bool lastDongleSave = false; // se true significa che abbiamo un indirizzo dell'ultimo dongle altrimenti false
   // ==========================================================================================================
 
@@ -811,8 +813,8 @@ int SerialWireless_::availablePacket() {
   return numAvailablePacket;
 }
 
-void SerialWireless_::begin() {
 
+void SerialWireless_::init_wireless() {
   configST myConfig; // variabile di utilità per configurazione
   // ============ inizializzazione semafori =============
   tx_sem = xSemaphoreCreateBinary();
@@ -824,8 +826,38 @@ void SerialWireless_::begin() {
   xSemaphoreGive(mutex_writer_bin);
   // ==== fine inizializzazione semafori
 
+  myConfig.port         = &Serial; // questo andrà tolta - rimasta solo per contabilità =========================================
+  myConfig.debug        = false; //true; //false; //true;
+  myConfig.debugPort    = &Serial;
+  myConfig.timeout      = DEFAULT_TIMEOUT; // 50ms
+  myConfig.callbacks    = callbackArr;
+  //myConfig.callbacks    = NULL;
+  myConfig.callbacksLen = sizeof(callbackArr) / sizeof(functionPtr);
+  //myConfig.callbacksLen = 0;
+  packet.begin(myConfig);
+
+  setupTimer(); // crea i timer .. timer per invio dati seriali
+
+}
+
+
+void SerialWireless_::begin() {
+  #ifdef COMMENTO
+  configST myConfig; // variabile di utilità per configurazione
+  // ============ inizializzazione semafori =============
+  tx_sem = xSemaphoreCreateBinary();
+  mutex_tx_serial = xSemaphoreCreateMutex();
+  mutex_writer_bin = xSemaphoreCreateMutex();
+
+  xSemaphoreGive(tx_sem);
+  xSemaphoreGive(mutex_tx_serial);
+  xSemaphoreGive(mutex_writer_bin);
+  // ==== fine inizializzazione semafori
+  #endif //COMMENTO
+
   #ifdef GUN
-  espnow_wifi_channel = findBestChannel(); //12;
+  if (lastDongleSave) espnow_wifi_channel=lastDongleChannel;
+    else espnow_wifi_channel = findBestChannel(); //12;
   //findBestChannel();
   #endif //GUN
 
@@ -890,6 +922,7 @@ void SerialWireless_::begin() {
     //Serial.printf("esp_now_register_send_cb failed! 0x%x", err);
   }
 
+  #ifdef COMMENTO
   myConfig.port         = &Serial; // questo andrà tolta - rimasta solo per contabilità =========================================
   myConfig.debug        = false; //true; //false; //true;
   myConfig.debugPort    = &Serial;
@@ -900,13 +933,17 @@ void SerialWireless_::begin() {
   //myConfig.callbacksLen = 0;
   
   packet.begin(myConfig);
+  #endif // COMMENTO
+
   TinyUSBDevices.wireless_mode = WIRELESS_MODE::ENABLE_ESP_NOW_TO_DONGLE;
+  #ifdef COMMENTO
   setupTimer(); // crea i timer .. timer per invio dati seriali
+  #endif // COMMENTO
 }
 
 bool SerialWireless_::end() {
 
-  esp_now_del_peer(peerAddress);
+  //esp_now_del_peer(peerAddress); // non serve lo fa direttamente esp_now_deinit()
   esp_err_t err = esp_now_deinit();
   if (err != ESP_OK) {
     //Serial.printf("esp_now_deinit failed! 0x%x", err);
@@ -993,6 +1030,9 @@ bool SerialWireless_::connection_dongle() {
   }
   memcpy(peerAddress, mac_esp_another_card, 6);
   memcpy(peerInfo.peer_addr, peerAddress, 6);
+  espnow_wifi_channel=usb_data_wireless.channel;
+  esp_wifi_set_channel(espnow_wifi_channel, WIFI_SECOND_CHAN_NONE);
+  peerInfo.channel = espnow_wifi_channel;
   //peerInfo.channel = ESPNOW_WIFI_CHANNEL;
   //peerInfo.encrypt = false;              
   if (esp_now_add_peer(&peerInfo) != ESP_OK) {  // inserisce il dongle nei peer
@@ -1031,7 +1071,10 @@ bool SerialWireless_::connection_gun_at_last_dongle() {
     TinyUSBDevices.onBattery = true;
     return true;
   } else {
-    stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION; 
+    stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
+    lastDongleSave=false;
+    esp_now_deinit();
+    begin();
     return false;
   }
 }
@@ -1223,6 +1266,7 @@ void packet_callback_read_gun() {
               memcpy(&aux_buffer[1], SerialWireless.mac_esp_inteface, 6);
               memcpy(&aux_buffer[7], SerialWireless.mac_esp_another_card, 6);
               // INVIA ANCHE DATI RELATIVI A VID, PID, ECC,ECC, DELLA GUN
+              usb_data_wireless.channel = espnow_wifi_channel;
               memcpy(&aux_buffer[13], &usb_data_wireless, sizeof(usb_data_wireless));
 
               // =========================================================

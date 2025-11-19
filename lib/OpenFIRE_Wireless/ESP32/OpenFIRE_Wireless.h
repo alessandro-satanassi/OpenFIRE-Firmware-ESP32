@@ -73,6 +73,7 @@
 extern uint8_t espnow_wifi_channel;
 extern uint8_t espnow_wifi_power;
 extern uint8_t lastDongleAddress[6];
+extern uint8_t lastDongleChannel;
 extern uint8_t peerAddress[6];
 extern bool lastDongleSave;
  
@@ -190,6 +191,7 @@ class SerialWireless_ : public Stream
   SerialWireless_() : Stream() {}
   ~SerialWireless_() {}
   
+  void init_wireless();
   void begin();
   bool end();
   
