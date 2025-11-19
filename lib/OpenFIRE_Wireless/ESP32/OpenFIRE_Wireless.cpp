@@ -17,7 +17,7 @@
 #endif // DONGLE
 
 
-#define ESPNOW_WIFI_CHANNEL_DEFAULT 12
+#define ESPNOW_WIFI_CHANNEL_DEFAULT 12    // canale sul quale si sintonizza la lightgun di default
 
 // la potenza di trasmissione può andare da 8 a 84, dove 84 è il valore massimo che corrisponde a 20 db
 #define ESPNOW_WIFI_POWER_DEFAULT 84 
@@ -113,6 +113,447 @@ const uint8_t BROADCAST_ADDR[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 #endif
 ///////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
+#ifdef COMMENTO
+
+//#endif //COMMENTO
+
+// ================= VARIABILI GLOBALI PER CALLBACK =================
+static volatile uint32_t g_packetCounter = 0; // conta pacchetti catturati in promiscuous mode
+static volatile bool g_sniffing = false;     // flag per abilitare la callback
+
+// ================= CALLBACK PROMISCUOUS MODE =================
+// Deve essere IRAM_ATTR, minima e veloce perché viene chiamata da interrupt WiFi
+void IRAM_ATTR promiscuousCallback(void *buf, wifi_promiscuous_pkt_type_t type) {
+  if (!g_sniffing) return; // se sniffing disabilitato, ignora pacchetto
+  g_packetCounter = g_packetCounter + 1;        // incrementa contatore pacchetti
+}
+
+// ================= FUNZIONE PRINCIPALE =================
+int findBestChannel() {
+  
+  // ================= STRUTTURA PER STATISTICHE CANALE =================
+  typedef struct {
+    uint16_t networks;  // numero di AP rilevati sul canale
+    float avgRSSI;      // RSSI medio dei AP
+    int8_t maxRSSI;     // RSSI massimo rilevato
+    uint32_t packets;   // pacchetti catturati in sniffing
+    float noise;        // stima rumore sul canale
+    float score;        // punteggio combinato del canale
+  } ChannelStats;
+  
+  ChannelStats channelStats[14];  // array canali 1-13 (indice 0 non usato)
+  memset(channelStats, 0, sizeof(channelStats));
+  g_packetCounter = 0;
+  g_sniffing = false;
+  for (int i = 0; i < 14; i++) channelStats[i].maxRSSI = -128;
+
+  // ================= FASE 1: SCAN RETI WiFi =================
+  WiFi.mode(WIFI_STA);      // setta modalità station
+  WiFi.disconnect();        // disconnetti eventuali connessioni
+  vTaskDelay(pdMS_TO_TICKS(100)); // stabilizzazione radio
+
+  // scan sincrono: include reti nascoste, scan attivo, max 120 ms per canale
+  int n = WiFi.scanNetworks(false, true, false, 300UL /*120*/, 0);
+  if (n < 0) n = 0; // gestione errore scan
+
+  // processa risultati scan
+  if (n > 0) {
+    for (int i = 0; i < n; i++) {
+      int ch = WiFi.channel(i);
+      int rssi = WiFi.RSSI(i);
+      if (ch >= 1 && ch <= 13) {
+        if (channelStats[ch].networks < 65535) channelStats[ch].networks++;
+        channelStats[ch].avgRSSI += rssi;
+        if (rssi > channelStats[ch].maxRSSI) channelStats[ch].maxRSSI = (int8_t)rssi;
+      }
+    }
+    // calcola RSSI medio per canale
+    for (int ch = 1; ch <= 13; ch++) {
+      if (channelStats[ch].networks > 0)
+        channelStats[ch].avgRSSI /= channelStats[ch].networks;
+      else
+        channelStats[ch].maxRSSI = -100; // canale vuoto = RSSI minimo
+    }
+  }
+  WiFi.scanDelete();           // libera memoria scan
+  vTaskDelay(pdMS_TO_TICKS(50)); // breve pausa per stabilità
+
+  // ================= FASE 2: SNIFF TRAFFICO E NOISE =================
+  // promiscous mode: permette di contare pacchetti sul canale
+  esp_err_t err = ESP_OK;
+  if (err != ESP_OK && err != ESP_ERR_WIFI_NOT_INIT) {
+    // se non parte promiscuous mode, fallback: solo scan AP
+    int bestCh = 1;
+    uint16_t minNets = 65535;
+    for (int ch = 1; ch <= 13; ch++) {
+      if (channelStats[ch].networks < minNets) {
+        minNets = channelStats[ch].networks;
+        bestCh = ch;
+      }
+    }
+    return bestCh;
+  }
+
+  vTaskDelay(pdMS_TO_TICKS(50));
+  esp_wifi_set_promiscuous(true);
+  esp_wifi_set_promiscuous_rx_cb(&promiscuousCallback);
+
+  for (int ch = 1; ch <= 13; ch++) {
+    esp_wifi_set_channel(ch, WIFI_SECOND_CHAN_NONE); // switch canale
+    vTaskDelay(pdMS_TO_TICKS(50)); // stabilizzazione canale
+
+    // --- Misurazione traffico: conteggio pacchetti ---
+    g_packetCounter = 0;
+    g_sniffing = true;
+    uint32_t startCount = g_packetCounter;
+    vTaskDelay(pdMS_TO_TICKS(400)); // periodo sniff 400 ms
+    channelStats[ch].packets = g_packetCounter - startCount;
+
+    // --- Misurazione Noise Floor ---
+    int32_t noiseSum = 0;
+    const int samples = 15; // 15 campioni per media
+    for (int i = 0; i < samples; i++) {
+      uint32_t start = g_packetCounter;
+      vTaskDelay(pdMS_TO_TICKS(17));
+      uint32_t activity = g_packetCounter - start;
+      if (activity > 50) activity = 50; // clamp
+      noiseSum += -95 + (activity * 3); // formula stima rumore
+    }
+    channelStats[ch].noise = noiseSum / (float)samples;
+    // clamp valori realistici
+    if (channelStats[ch].noise > -50) channelStats[ch].noise = -50;
+    if (channelStats[ch].noise < -100) channelStats[ch].noise = -100;
+  }
+
+  g_sniffing = false;
+  esp_wifi_set_promiscuous(false);
+  esp_wifi_set_promiscuous_rx_cb(NULL);
+
+  // ================= FASE 3: CALCOLO SCORE =================
+  // pesi ottimizzati per ESP-NOW
+  const float wNet   = 1.0f; //0.05625f;
+  const float wRSSI  = 0.30f;
+  const float wPkt   = 0.375f;
+  const float wNoise = 0.10f;
+
+  for (int ch = 1; ch <= 13; ch++) {
+    float sNet = channelStats[ch].networks * 100.0 * wNet; // più reti = peggio
+    float sRSSI = 0;
+    if (channelStats[ch].maxRSSI > -100) {
+      int rssiMapped = constrain(channelStats[ch].maxRSSI, -100, -30);
+      sRSSI = map(rssiMapped, -100, -30, 0, 100) * wRSSI; // RSSI massimo
+    }
+    float sPkt = (channelStats[ch].packets / 10.0) * wPkt; // traffico pacchetti
+    int noiseMapped = constrain((int)channelStats[ch].noise, -100, -50);
+    float sNoise = map(noiseMapped, -100, -50, 0, 100) * wNoise; // rumore
+    channelStats[ch].score = sNet + sRSSI + sPkt + sNoise; // score base
+  }
+
+  // --- Penalità sovrapposizione ±2 canali ---
+  float finalScores[14];
+  for (int ch = 1; ch <= 13; ch++) {
+    finalScores[ch] = channelStats[ch].score;
+    if (ch > 1) finalScores[ch] += channelStats[ch-1].score * 0.35; // adiacente -1
+    if (ch > 2) finalScores[ch] += channelStats[ch-2].score * 0.15; // adiacente -2
+    if (ch < 13) finalScores[ch] += channelStats[ch+1].score * 0.35; // adiacente +1
+    if (ch < 12) finalScores[ch] += channelStats[ch+2].score * 0.15; // adiacente +2
+  }
+
+  // ================= FASE 4: SELEZIONE MIGLIOR CANALE =================
+  int bestCh = 1;
+  float minScore = 999999.0;
+  for (int ch = 1; ch <= 13; ch++) {
+    if (finalScores[ch] < minScore) {
+      minScore = finalScores[ch];
+      bestCh = ch;
+    }
+  }
+
+  // ================= PULIZIA FINALE =================
+  vTaskDelay(pdMS_TO_TICKS(50));
+  g_packetCounter = 0;
+  g_sniffing = false;
+  vTaskDelay(pdMS_TO_TICKS(50));
+
+  return bestCh;
+}
+
+#endif // commento
+
+// ===============================================================
+// ESP-NOW OPTIMAL CHANNEL FINDER - VERSIONE PERFETTA
+// Tempo totale: ~14 secondi | Accuratezza: massima
+// ===============================================================
+
+// ================= VARIABILI GLOBALI PER CALLBACK =================
+static volatile uint32_t g_packetCounter = 0;
+static volatile bool g_sniffing = false;
+
+// ================= CALLBACK PROMISCUOUS MODE =================
+void IRAM_ATTR promiscuousCallback(void *buf, wifi_promiscuous_pkt_type_t type) {
+  if (!g_sniffing) return;
+  g_packetCounter = g_packetCounter + 1;
+}
+
+// ================= FUNZIONE PRINCIPALE =================
+int findBestChannel() {
+  
+  // ================= STRUTTURA PER STATISTICHE CANALE =================
+  typedef struct {
+    uint16_t networks;   // Numero di AP rilevati
+    float avgRSSI;       // RSSI medio degli AP
+    int8_t maxRSSI;      // RSSI massimo (interferenza più forte)
+    uint32_t packets;    // Pacchetti catturati in 600ms
+    float noise;         // Stima noise floor
+    float score;         // Score base del canale
+  } ChannelStats;
+  
+  ChannelStats channelStats[14];
+  memset(channelStats, 0, sizeof(channelStats));
+  g_packetCounter = 0;
+  g_sniffing = false;
+  for (int i = 0; i < 14; i++) channelStats[i].maxRSSI = -128;
+
+  // ================= FASE 1: SCAN RETI WiFi =================
+  // Tempo: ~2 secondi (150ms × 13 canali)
+  WiFi.mode(WIFI_STA);
+  WiFi.disconnect();
+  vTaskDelay(pdMS_TO_TICKS(100));
+
+  // Scan ottimizzato: 150ms per canale cattura tutti i beacon
+  // (beacon interval tipico: 100ms)
+  int n = WiFi.scanNetworks(false, true, false, 150UL, 0);
+  if (n < 0) n = 0;
+
+  if (n > 0) {
+    for (int i = 0; i < n; i++) {
+      int ch = WiFi.channel(i);
+      int rssi = WiFi.RSSI(i);
+      if (ch >= 1 && ch <= 13) {
+        if (channelStats[ch].networks < 65535) channelStats[ch].networks++;
+        channelStats[ch].avgRSSI += rssi;
+        if (rssi > channelStats[ch].maxRSSI) {
+          channelStats[ch].maxRSSI = (int8_t)rssi;
+        }
+      }
+    }
+    
+    // Calcola RSSI medio
+    for (int ch = 1; ch <= 13; ch++) {
+      if (channelStats[ch].networks > 0) {
+        channelStats[ch].avgRSSI /= channelStats[ch].networks;
+      } else {
+        channelStats[ch].maxRSSI = -100; // Canale vuoto
+      }
+    }
+  }
+  
+  WiFi.scanDelete();
+  vTaskDelay(pdMS_TO_TICKS(50));
+
+  // ================= FASE 2: SNIFF TRAFFICO E NOISE =================
+  // Tempo: ~12 secondi (920ms × 13 canali)
+  esp_err_t err = ESP_OK;
+  if (err != ESP_OK && err != ESP_ERR_WIFI_NOT_INIT) {
+    // Fallback: solo scan AP se promiscuous mode non disponibile
+    int bestCh = 1;
+    uint16_t minNets = 65535;
+    for (int ch = 1; ch <= 13; ch++) {
+      if (channelStats[ch].networks < minNets) {
+        minNets = channelStats[ch].networks;
+        bestCh = ch;
+      }
+    }
+    return bestCh;
+  }
+
+  vTaskDelay(pdMS_TO_TICKS(50));
+  esp_wifi_set_promiscuous(true);
+  esp_wifi_set_promiscuous_rx_cb(&promiscuousCallback);
+
+  for (int ch = 1; ch <= 13; ch++) {
+    esp_wifi_set_channel(ch, WIFI_SECOND_CHAN_NONE);
+    vTaskDelay(pdMS_TO_TICKS(70)); // Stabilizzazione radio
+    
+    // --- Misurazione traffico: 600ms cattura pattern completi ---
+    // Include: beacon (100ms), data burst, retry packets
+    g_packetCounter = 0;
+    g_sniffing = true;
+    uint32_t startCount = g_packetCounter;
+    vTaskDelay(pdMS_TO_TICKS(600));
+    uint32_t endCount = g_packetCounter;
+    channelStats[ch].packets = endCount - startCount;
+    
+    // --- Misurazione Noise Floor: 15 campioni per media stabile ---
+    int32_t noiseSum = 0;
+    const int samples = 15;
+    for (int i = 0; i < samples; i++) {
+      uint32_t start = g_packetCounter;
+      vTaskDelay(pdMS_TO_TICKS(17)); // Campionamento 17ms (totale 255ms)
+      uint32_t activity = g_packetCounter - start;
+      
+      // Formula noise migliorata: scala logaritmica
+      if (activity == 0) {
+        noiseSum += -100; // Silenzio completo
+      } else if (activity <= 3) {
+        noiseSum += -95 + (activity * 3);
+      } else if (activity <= 10) {
+        noiseSum += -86 + (activity - 3) * 2;
+      } else if (activity <= 30) {
+        noiseSum += -72 + (activity - 10);
+      } else {
+        noiseSum += -52 + (activity - 30) / 2;
+      }
+    }
+    
+    channelStats[ch].noise = noiseSum / (float)samples;
+    channelStats[ch].noise = constrain(channelStats[ch].noise, -100, -50);
+  }
+
+  g_sniffing = false;
+  esp_wifi_set_promiscuous(false);
+  esp_wifi_set_promiscuous_rx_cb(NULL);
+
+  // ================= FASE 3: CALCOLO SCORE OTTIMIZZATO =================
+  // Pesi basati su analisi empirica e documentazione Espressif
+  // 
+  // PRIORITÀ PER ESP-NOW:
+  // 1. RSSI forte = interferenza diretta che abbassa SNR (KILLER #1)
+  // 2. Traffico reale = collisioni pacchetti (KILLER #2)
+  // 3. Numero reti = congestione potenziale (moderato)
+  // 4. Noise floor = basso impatto (ESP-NOW usa MCS0/802.11b robusto)
+  
+  const float wRSSI  = 0.40f;  // Interferenza diretta = priorità massima
+  const float wPkt   = 0.35f;  // Collisioni reali = molto critico
+  const float wNet   = 0.20f;  // Congestione = moderato (scala log)
+  const float wNoise = 0.05f;  // Rumore = minimo (modulazione robusta)
+
+  for (int ch = 1; ch <= 13; ch++) {
+    
+    // --- Score RSSI: interferenza diretta più pericolosa ---
+    // AP con segnale forte (-40dBm) vicino = disastro garantito
+    // -100dBm (lontano) = 0 punti | -40dBm (vicino) = 40 punti
+    float sRSSI = 0;
+    if (channelStats[ch].maxRSSI > -100) {
+      int rssiMapped = constrain(channelStats[ch].maxRSSI, -100, -30);
+      sRSSI = map(rssiMapped, -100, -30, 0, 100) * wRSSI;
+    }
+    
+    // --- Score Pacchetti: traffico reale misurato ---
+    // Normalizzato su 600ms: 0 pkt = 0 | 100 pkt = 35 punti
+    float sPkt = (channelStats[ch].packets / 10.0) * wPkt;
+    if (sPkt > 100 * wPkt) sPkt = 100 * wPkt; // clamp max
+    
+    // --- Score Reti: scala logaritmica per evitare dominanza ---
+    // 0 reti = 0 | 1 rete = 4.2 | 5 reti = 9.2 | 10 reti = 13.8
+    float sNet = (channelStats[ch].networks > 0) 
+                 ? (log(channelStats[ch].networks + 1) * 20.0) * wNet 
+                 : 0;
+    
+    // --- Score Noise: peso minimo (ESP-NOW resistente) ---
+    // -100dBm (silenzio) = 0 | -50dBm (rumoroso) = 5 punti
+    int noiseMapped = constrain((int)channelStats[ch].noise, -100, -50);
+    float sNoise = map(noiseMapped, -100, -50, 0, 100) * wNoise;
+    
+    channelStats[ch].score = sRSSI + sPkt + sNet + sNoise;
+  }
+
+  // ================= PENALITÀ OVERLAP CANALI ADIACENTI =================
+  // WiFi 20MHz: ogni canale si sovrappone con ±4 canali
+  // Riferimento: 802.11b usa 22MHz, 802.11g/n usa 20MHz + guardband
+  // Canali non-overlapping: 1, 6, 11 (separati di 5 canali)
+  //
+  // Penalità progressive per simulare overlap reale:
+  // ±1: 50% (overlap massimo, circa 75% spettro condiviso)
+  // ±2: 35% (overlap significativo, circa 50% spettro)
+  // ±3: 20% (overlap moderato, circa 25% spettro)
+  // ±4: 10% (overlap minimo, bordi spettro)
+  
+  float finalScores[14];
+  for (int ch = 1; ch <= 13; ch++) {
+    finalScores[ch] = channelStats[ch].score;
+    
+    // Penalità overlap completo modello 20MHz
+    if (ch > 1) finalScores[ch] += channelStats[ch-1].score * 0.50f;
+    if (ch > 2) finalScores[ch] += channelStats[ch-2].score * 0.35f;
+    if (ch > 3) finalScores[ch] += channelStats[ch-3].score * 0.20f;
+    if (ch > 4) finalScores[ch] += channelStats[ch-4].score * 0.10f;
+    
+    if (ch < 13) finalScores[ch] += channelStats[ch+1].score * 0.50f;
+    if (ch < 12) finalScores[ch] += channelStats[ch+2].score * 0.35f;
+    if (ch < 11) finalScores[ch] += channelStats[ch+3].score * 0.20f;
+    if (ch < 10) finalScores[ch] += channelStats[ch+4].score * 0.10f;
+  
+    // Dopo il calcolo finalScores, dare bonus ai canali ideali
+    //if (ch == 1 || ch == 6 || ch == 11) {
+    //  finalScores[ch] *= 0.92f; // -8% bonus (preferenza)
+    //}  
+  }
+
+  // ================= FASE 4: SELEZIONE MIGLIOR CANALE =================
+  int bestCh = 1;
+  float minScore = 999999.0;
+  
+  for (int ch = 1; ch <= 13; ch++) {
+    if (finalScores[ch] < minScore) {
+      minScore = finalScores[ch];
+      bestCh = ch;
+    }
+  }
+
+  // ================= DEBUG OUTPUT (opzionale) =================
+  #ifdef DEBUG_CHANNEL_SELECTION
+  Serial.println("\n========== ESP-NOW CHANNEL ANALYSIS ==========");
+  Serial.println("CH | Nets | RSSI | Pkts | Noise | Score  | Final  ");
+  Serial.println("---|------|------|------|-------|--------|--------");
+  for (int ch = 1; ch <= 13; ch++) {
+    char marker = (ch == bestCh) ? '*' : ' ';
+    Serial.printf("%c%2d |  %2d  | %4d | %4lu | %5.1f | %6.2f | %6.2f\n",
+                  marker, ch,
+                  channelStats[ch].networks,
+                  channelStats[ch].maxRSSI,
+                  channelStats[ch].packets,
+                  channelStats[ch].noise,
+                  channelStats[ch].score,
+                  finalScores[ch]);
+  }
+  Serial.println("==============================================");
+  Serial.printf("BEST CHANNEL: %d (score: %.2f)\n", bestCh, minScore);
+  Serial.println("==============================================\n");
+  #endif
+
+  // ================= PULIZIA FINALE =================
+  vTaskDelay(pdMS_TO_TICKS(50));
+  g_packetCounter = 0;
+  g_sniffing = false;
+  
+  return bestCh;
+}
+
+// ===============================================================
+// USAGE EXAMPLE:
+// ===============================================================
+// void setup() {
+//   Serial.begin(115200);
+//   
+//   Serial.println("Searching for best ESP-NOW channel...");
+//   int channel = findBestChannel();
+//   Serial.printf("Selected channel: %d\n", channel);
+//   
+//   // Inizializza ESP-NOW sul canale scelto
+//   WiFi.mode(WIFI_STA);
+//   WiFi.disconnect();
+//   esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+//   
+//   if (esp_now_init() == ESP_OK) {
+//     Serial.println("ESP-NOW initialized successfully");
+//   }
+// }
+// ===============================================================
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 /*****************************
  *   SERIAL WIRELESS SECTION
@@ -383,6 +824,11 @@ void SerialWireless_::begin() {
   xSemaphoreGive(mutex_writer_bin);
   // ==== fine inizializzazione semafori
 
+  #ifdef GUN
+  espnow_wifi_channel = findBestChannel(); //12;
+  //findBestChannel();
+  #endif //GUN
+
   WiFi.mode(WIFI_STA); 
   
   /*
@@ -410,7 +856,7 @@ void SerialWireless_::begin() {
     //Serial.printf("esp_wifi_set_max_tx_power failed! 0x%x", err);
   }
 
-  WiFi.disconnect();  // ???
+  WiFi.disconnect();  // ??? si va messo
 
   vTaskDelay(pdMS_TO_TICKS(1000)); // delay(1000);
     

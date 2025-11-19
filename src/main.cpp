@@ -82,7 +82,7 @@ void setup() {
     OF_Prefs::LoadPresets();
     
     if(OF_Prefs::InitFS() == OF_Prefs::Error_Success) {
-        //OF_Prefs::ResetPreferences(); // ============ FORMATTA IL FILE SYSTEM =================================
+        OF_Prefs::ResetPreferences(); // ============ FORMATTA IL FILE SYSTEM =================================
         OF_Prefs::LoadProfiles();
     
         // Profile sanity checks

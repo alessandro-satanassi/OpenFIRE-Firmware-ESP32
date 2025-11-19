@@ -230,7 +230,7 @@ void FW_Common::CameraSet()
             // il sistema riesce a produrre Hz 24975610
             #define WII_CLOCK_DUTY_CYCLE 1      // 50%
 
-            const int gpio_pin = 10; //OF_Prefs::pins[OF_Const::wiiClockGen];  // gpio 10 sia su Esp32 pico che su esp32 wroom, si imposta da board
+            const int gpio_pin = OF_Prefs::pins[OF_Const::wiiClockGen];  // gpio 10 sia su Esp32 pico che su esp32 wroom, si imposta da board
 
             if (gpio_pin > -1) {
                 if (!ledcSetClockSource(LEDC_AUTO_CLK/*LEDC_USE_APB_CLK*/)) log_e("ERRORE: ledcSetClockSource fallita!"); //LEDC_USE_XTAL_CLK     // LEDC_USE_APB_CLK     // LEDC_AUTO_CLK  //  RC_FAST_CLK
