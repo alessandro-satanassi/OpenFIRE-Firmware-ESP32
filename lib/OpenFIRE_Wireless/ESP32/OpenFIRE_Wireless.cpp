@@ -32,13 +32,19 @@
   #endif // USES_DISPLAY
 #endif // GUN
 
-#define ESPNOW_WIFI_CHANNEL_DEFAULT 12    // canale sul quale si sintonizza la lightgun di default
 
-// la potenza di trasmissione può andare da 8 a 84, dove 84 è il valore massimo che corrisponde a 20 db
-#define ESPNOW_WIFI_POWER_DEFAULT 84 
 
-uint8_t espnow_wifi_channel = ESPNOW_WIFI_CHANNEL_DEFAULT;  // FATTA VARIABILE PER FUTURA CONFIGURAZIONE TRAMITE APP O OLED
-uint8_t espnow_wifi_power = ESPNOW_WIFI_POWER_DEFAULT;      // FATTA VARIABILE PER FUTURA CONFIGURAZIONE TRAMITE APP O OLED
+#ifndef OPENFIRE_ESPNOW_WIFI_CHANNEL
+  #define OPENFIRE_ESPNOW_WIFI_CHANNEL 12 // canale sul quale si sintonizza la lightgun di default
+#endif // OPENFIRE_ESPNOW_WIFI_CHANNEL
+
+#ifndef OPENFIRE_ESPNOW_WIFI_POWER
+  // la potenza di trasmissione può andare da 8 a 84, dove 84 è il valore massimo che corrisponde a 20 db
+  #define OPENFIRE_ESPNOW_WIFI_POWER 84 
+#endif //OPENFIRE_ESPNOW_WIFI_POWER
+
+uint8_t espnow_wifi_channel = OPENFIRE_ESPNOW_WIFI_CHANNEL;  // FATTA VARIABILE PER FUTURA CONFIGURAZIONE TRAMITE APP O OLED
+uint8_t espnow_wifi_power = OPENFIRE_ESPNOW_WIFI_POWER;      // FATTA VARIABILE PER FUTURA CONFIGURAZIONE TRAMITE APP O OLED
 
 
 USB_Data_GUN_Wireless usb_data_wireless = {
@@ -48,7 +54,7 @@ USB_Data_GUN_Wireless usb_data_wireless = {
   0x1998, // 0x0001   // PID
   1,                  // PLAYER
   espnow_wifi_channel
-  //ESPNOW_WIFI_CHANNEL_DEFAULT // CHANNEL
+  //OPENFIRE_ESPNOW_WIFI_CHANNEL // CHANNEL
   //,""               // ????
 };
 
@@ -112,7 +118,7 @@ const uint8_t BROADCAST_ADDR[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
   const functionPtr callbackArr[] = { packet_callback_read_dongle };
   uint8_t lastDongleAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-  uint8_t lastDongleChannel = ESPNOW_WIFI_CHANNEL_DEFAULT;
+  uint8_t lastDongleChannel = OPENFIRE_ESPNOW_WIFI_CHANNEL;
   bool lastDongleSave = false; // se true significa che abbiamo un indirizzo dell'ultimo dongle altrimenti false
 #elif defined(GUN)
   //const uint8_t peerAddress[6] = {0xA0, 0x85, 0xE3, 0xE8, 0x0F, 0xB8}; // espe32s3 con piedini (riceve ma non trasmette)
@@ -124,179 +130,13 @@ const uint8_t BROADCAST_ADDR[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
   // nel caso si spenga la pistola ed abbiamo memorizzato l'ultimo dongle connesso, prova a riconnettersi subito
   uint8_t lastDongleAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-  uint8_t lastDongleChannel = ESPNOW_WIFI_CHANNEL_DEFAULT;
+  uint8_t lastDongleChannel = OPENFIRE_ESPNOW_WIFI_CHANNEL;
   bool lastDongleSave = false; // se true significa che abbiamo un indirizzo dell'ultimo dongle altrimenti false
   // ==========================================================================================================
 
 #endif
 ///////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////
-#ifdef COMMENTO
-
-//#endif //COMMENTO
-
-// ================= VARIABILI GLOBALI PER CALLBACK =================
-static volatile uint32_t g_packetCounter = 0; // conta pacchetti catturati in promiscuous mode
-static volatile bool g_sniffing = false;     // flag per abilitare la callback
-
-// ================= CALLBACK PROMISCUOUS MODE =================
-// Deve essere IRAM_ATTR, minima e veloce perché viene chiamata da interrupt WiFi
-void IRAM_ATTR promiscuousCallback(void *buf, wifi_promiscuous_pkt_type_t type) {
-  if (!g_sniffing) return; // se sniffing disabilitato, ignora pacchetto
-  g_packetCounter = g_packetCounter + 1;        // incrementa contatore pacchetti
-}
-
-// ================= FUNZIONE PRINCIPALE =================
-int findBestChannel() {
-  
-  // ================= STRUTTURA PER STATISTICHE CANALE =================
-  typedef struct {
-    uint16_t networks;  // numero di AP rilevati sul canale
-    float avgRSSI;      // RSSI medio dei AP
-    int8_t maxRSSI;     // RSSI massimo rilevato
-    uint32_t packets;   // pacchetti catturati in sniffing
-    float noise;        // stima rumore sul canale
-    float score;        // punteggio combinato del canale
-  } ChannelStats;
-  
-  ChannelStats channelStats[14];  // array canali 1-13 (indice 0 non usato)
-  memset(channelStats, 0, sizeof(channelStats));
-  g_packetCounter = 0;
-  g_sniffing = false;
-  for (int i = 0; i < 14; i++) channelStats[i].maxRSSI = -128;
-
-  // ================= FASE 1: SCAN RETI WiFi =================
-  WiFi.mode(WIFI_STA);      // setta modalità station
-  WiFi.disconnect();        // disconnetti eventuali connessioni
-  vTaskDelay(pdMS_TO_TICKS(100)); // stabilizzazione radio
-
-  // scan sincrono: include reti nascoste, scan attivo, max 120 ms per canale
-  int n = WiFi.scanNetworks(false, true, false, 300UL /*120*/, 0);
-  if (n < 0) n = 0; // gestione errore scan
-
-  // processa risultati scan
-  if (n > 0) {
-    for (int i = 0; i < n; i++) {
-      int ch = WiFi.channel(i);
-      int rssi = WiFi.RSSI(i);
-      if (ch >= 1 && ch <= 13) {
-        if (channelStats[ch].networks < 65535) channelStats[ch].networks++;
-        channelStats[ch].avgRSSI += rssi;
-        if (rssi > channelStats[ch].maxRSSI) channelStats[ch].maxRSSI = (int8_t)rssi;
-      }
-    }
-    // calcola RSSI medio per canale
-    for (int ch = 1; ch <= 13; ch++) {
-      if (channelStats[ch].networks > 0)
-        channelStats[ch].avgRSSI /= channelStats[ch].networks;
-      else
-        channelStats[ch].maxRSSI = -100; // canale vuoto = RSSI minimo
-    }
-  }
-  WiFi.scanDelete();           // libera memoria scan
-  vTaskDelay(pdMS_TO_TICKS(50)); // breve pausa per stabilità
-
-  // ================= FASE 2: SNIFF TRAFFICO E NOISE =================
-  // promiscous mode: permette di contare pacchetti sul canale
-  esp_err_t err = ESP_OK;
-  if (err != ESP_OK && err != ESP_ERR_WIFI_NOT_INIT) {
-    // se non parte promiscuous mode, fallback: solo scan AP
-    int bestCh = 1;
-    uint16_t minNets = 65535;
-    for (int ch = 1; ch <= 13; ch++) {
-      if (channelStats[ch].networks < minNets) {
-        minNets = channelStats[ch].networks;
-        bestCh = ch;
-      }
-    }
-    return bestCh;
-  }
-
-  vTaskDelay(pdMS_TO_TICKS(50));
-  esp_wifi_set_promiscuous(true);
-  esp_wifi_set_promiscuous_rx_cb(&promiscuousCallback);
-
-  for (int ch = 1; ch <= 13; ch++) {
-    esp_wifi_set_channel(ch, WIFI_SECOND_CHAN_NONE); // switch canale
-    vTaskDelay(pdMS_TO_TICKS(50)); // stabilizzazione canale
-
-    // --- Misurazione traffico: conteggio pacchetti ---
-    g_packetCounter = 0;
-    g_sniffing = true;
-    uint32_t startCount = g_packetCounter;
-    vTaskDelay(pdMS_TO_TICKS(400)); // periodo sniff 400 ms
-    channelStats[ch].packets = g_packetCounter - startCount;
-
-    // --- Misurazione Noise Floor ---
-    int32_t noiseSum = 0;
-    const int samples = 15; // 15 campioni per media
-    for (int i = 0; i < samples; i++) {
-      uint32_t start = g_packetCounter;
-      vTaskDelay(pdMS_TO_TICKS(17));
-      uint32_t activity = g_packetCounter - start;
-      if (activity > 50) activity = 50; // clamp
-      noiseSum += -95 + (activity * 3); // formula stima rumore
-    }
-    channelStats[ch].noise = noiseSum / (float)samples;
-    // clamp valori realistici
-    if (channelStats[ch].noise > -50) channelStats[ch].noise = -50;
-    if (channelStats[ch].noise < -100) channelStats[ch].noise = -100;
-  }
-
-  g_sniffing = false;
-  esp_wifi_set_promiscuous(false);
-  esp_wifi_set_promiscuous_rx_cb(NULL);
-
-  // ================= FASE 3: CALCOLO SCORE =================
-  // pesi ottimizzati per ESP-NOW
-  const float wNet   = 1.0f; //0.05625f;
-  const float wRSSI  = 0.30f;
-  const float wPkt   = 0.375f;
-  const float wNoise = 0.10f;
-
-  for (int ch = 1; ch <= 13; ch++) {
-    float sNet = channelStats[ch].networks * 100.0 * wNet; // più reti = peggio
-    float sRSSI = 0;
-    if (channelStats[ch].maxRSSI > -100) {
-      int rssiMapped = constrain(channelStats[ch].maxRSSI, -100, -30);
-      sRSSI = map(rssiMapped, -100, -30, 0, 100) * wRSSI; // RSSI massimo
-    }
-    float sPkt = (channelStats[ch].packets / 10.0) * wPkt; // traffico pacchetti
-    int noiseMapped = constrain((int)channelStats[ch].noise, -100, -50);
-    float sNoise = map(noiseMapped, -100, -50, 0, 100) * wNoise; // rumore
-    channelStats[ch].score = sNet + sRSSI + sPkt + sNoise; // score base
-  }
-
-  // --- Penalità sovrapposizione ±2 canali ---
-  float finalScores[14];
-  for (int ch = 1; ch <= 13; ch++) {
-    finalScores[ch] = channelStats[ch].score;
-    if (ch > 1) finalScores[ch] += channelStats[ch-1].score * 0.35; // adiacente -1
-    if (ch > 2) finalScores[ch] += channelStats[ch-2].score * 0.15; // adiacente -2
-    if (ch < 13) finalScores[ch] += channelStats[ch+1].score * 0.35; // adiacente +1
-    if (ch < 12) finalScores[ch] += channelStats[ch+2].score * 0.15; // adiacente +2
-  }
-
-  // ================= FASE 4: SELEZIONE MIGLIOR CANALE =================
-  int bestCh = 1;
-  float minScore = 999999.0;
-  for (int ch = 1; ch <= 13; ch++) {
-    if (finalScores[ch] < minScore) {
-      minScore = finalScores[ch];
-      bestCh = ch;
-    }
-  }
-
-  // ================= PULIZIA FINALE =================
-  vTaskDelay(pdMS_TO_TICKS(50));
-  g_packetCounter = 0;
-  g_sniffing = false;
-  vTaskDelay(pdMS_TO_TICKS(50));
-
-  return bestCh;
-}
-
-#endif // commento
 
 // ===============================================================
 // ESP-NOW OPTIMAL CHANNEL FINDER - VERSIONE PERFETTA
@@ -314,7 +154,7 @@ void IRAM_ATTR promiscuousCallback(void *buf, wifi_promiscuous_pkt_type_t type) 
 }
 
 // ================= FUNZIONE PRINCIPALE =================
-int findBestChannel() {
+uint8_t findBestChannel() {
   
   // ================= STRUTTURA PER STATISTICHE CANALE =================
   typedef struct {
@@ -371,20 +211,7 @@ int findBestChannel() {
 
   // ================= FASE 2: SNIFF TRAFFICO E NOISE =================
   // Tempo: ~12 secondi (920ms × 13 canali)
-  esp_err_t err = ESP_OK;
-  if (err != ESP_OK && err != ESP_ERR_WIFI_NOT_INIT) {
-    // Fallback: solo scan AP se promiscuous mode non disponibile
-    int bestCh = 1;
-    uint16_t minNets = 65535;
-    for (int ch = 1; ch <= 13; ch++) {
-      if (channelStats[ch].networks < minNets) {
-        minNets = channelStats[ch].networks;
-        bestCh = ch;
-      }
-    }
-    return bestCh;
-  }
-
+  
   vTaskDelay(pdMS_TO_TICKS(50));
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_rx_cb(&promiscuousCallback);
@@ -509,37 +336,16 @@ int findBestChannel() {
   }
 
   // ================= FASE 4: SELEZIONE MIGLIOR CANALE =================
-  int bestCh = 1;
+  uint8_t bestCh = 1;
   float minScore = 999999.0;
   
-  for (int ch = 1; ch <= 13; ch++) {
+  for (uint8_t ch = 1; ch <= 13; ch++) {
     if (finalScores[ch] < minScore) {
       minScore = finalScores[ch];
       bestCh = ch;
     }
   }
-
-  // ================= DEBUG OUTPUT (opzionale) =================
-  #ifdef DEBUG_CHANNEL_SELECTION
-  Serial.println("\n========== ESP-NOW CHANNEL ANALYSIS ==========");
-  Serial.println("CH | Nets | RSSI | Pkts | Noise | Score  | Final  ");
-  Serial.println("---|------|------|------|-------|--------|--------");
-  for (int ch = 1; ch <= 13; ch++) {
-    char marker = (ch == bestCh) ? '*' : ' ';
-    Serial.printf("%c%2d |  %2d  | %4d | %4lu | %5.1f | %6.2f | %6.2f\n",
-                  marker, ch,
-                  channelStats[ch].networks,
-                  channelStats[ch].maxRSSI,
-                  channelStats[ch].packets,
-                  channelStats[ch].noise,
-                  channelStats[ch].score,
-                  finalScores[ch]);
-  }
-  Serial.println("==============================================");
-  Serial.printf("BEST CHANNEL: %d (score: %.2f)\n", bestCh, minScore);
-  Serial.println("==============================================\n");
-  #endif
-
+  
   // ================= PULIZIA FINALE =================
   vTaskDelay(pdMS_TO_TICKS(50));
   g_packetCounter = 0;
@@ -548,26 +354,6 @@ int findBestChannel() {
   return bestCh;
 }
 
-// ===============================================================
-// USAGE EXAMPLE:
-// ===============================================================
-// void setup() {
-//   Serial.begin(115200);
-//   
-//   Serial.println("Searching for best ESP-NOW channel...");
-//   int channel = findBestChannel();
-//   Serial.printf("Selected channel: %d\n", channel);
-//   
-//   // Inizializza ESP-NOW sul canale scelto
-//   WiFi.mode(WIFI_STA);
-//   WiFi.disconnect();
-//   esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
-//   
-//   if (esp_now_init() == ESP_OK) {
-//     Serial.println("ESP-NOW initialized successfully");
-//   }
-// }
-// ===============================================================
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -873,6 +659,9 @@ void SerialWireless_::begin() {
   #ifdef GUN
   if (lastDongleSave) espnow_wifi_channel=lastDongleChannel;
     else {  
+      #ifdef OPENFIRE_AUTO_CHANNEL_ESPNOW_WIFI
+        espnow_wifi_channel = findBestChannel(); //12;
+      #endif // OPENFIRE_AUTO_CHANNEL_ESPNOW_WIFI
       #ifdef USES_DISPLAY
         //FW_Common::OLED.TopPanelUpdate(" ... CONNECTION ...");
         //FW_Common::OLED.display->setTextSize(1);
@@ -889,7 +678,7 @@ void SerialWireless_::begin() {
         //FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Init);
         //FW_Common::OLED.TopPanelUpdate(" ... CONNECTION ...");
       #endif // USES_DISPLAY
-      espnow_wifi_channel = findBestChannel(); //12;
+      //espnow_wifi_channel = findBestChannel(); //12;
       #ifdef USES_DISPLAY
         char buffer[50];
         sprintf(buffer, "Canale: %2d ", espnow_wifi_channel);
