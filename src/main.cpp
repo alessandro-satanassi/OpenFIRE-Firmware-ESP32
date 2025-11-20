@@ -31,6 +31,19 @@ uint32_t tone_duty_main = 0;
 #endif //CLOCK_CAM_WII
 // ================= fine parte poi da rimuovere =============
 
+// ========== serve per usare display da parte wireless =============
+#ifdef USES_DISPLAY
+    #ifdef USE_LOVYAN_GFX
+        LGFX_SSD1306 *display_OLED;   //aggiunto inline per condividerla
+    #else
+        Adafruit_SSD1306 *display_OLED; //aggiunto inline per condividerla
+    #endif
+#endif // USES_DISPLAY
+// ========== fine serve per usare display da parte wireless =============
+
+
+
+
 // =======696969===== GESTIONE DUAL CORE PER ESP32 CHE USA FREERTOS ===  INIZIALIZZAZIONE ========
 #if defined(ARDUINO_ARCH_ESP32) && defined(DUAL_CORE)
     void setup1();
@@ -208,6 +221,10 @@ void setup() {
     // scrive sulla parte superiore del diplay "connessione"
     #ifdef ARDUINO_ARCH_ESP32
     #ifdef USES_DISPLAY
+        // ========== serve per usare display da parte wireless =============
+        display_OLED=FW_Common::OLED.display;
+        // ========== fine serve per usare display da parte wireless =============
+
         //FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Init);
         FW_Common::OLED.TopPanelUpdate(" ... CONNECTION ...");
         
@@ -223,7 +240,7 @@ void setup() {
     #endif //ARDUINO_ARCH_ESP32
 
 
-
+    /// SPOSTARE DOPO INZIALIZZAZIONE
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // 696969 == CODICE PER CALIBRARE LEVETTA STICK IN POSIZIONE CENTRALE =============
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -343,7 +360,7 @@ void setup() {
     #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
     else {     
         if (!lastDongleSave || 
-            (lastDongleSave && (!(memcmp(lastDongleAddress, peerAddress,6) == 0) || !(lastDongleChannel == espnow_wifi_channel)))) OF_Prefs::SaveLastDongleWireless(peerAddress, &lastDongleChannel);
+            (lastDongleSave && (!(memcmp(lastDongleAddress, peerAddress,6) == 0) || !(lastDongleChannel == espnow_wifi_channel)))) OF_Prefs::SaveLastDongleWireless(peerAddress, &espnow_wifi_channel);
         // CHIUDI TUTTO CIO' CHE E' USB SE E' DA CHIUDERE
         TinyUSBDevice.clearConfiguration();
         TinyUSBDevice.detach();

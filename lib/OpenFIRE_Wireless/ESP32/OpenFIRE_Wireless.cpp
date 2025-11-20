@@ -16,6 +16,21 @@
   #endif // USES_DISPLAY
 #endif // DONGLE
 
+#ifdef GUN
+  #ifdef USES_DISPLAY
+    //#include "../../src/OpenFIREdisplay.h"
+    //#include "../../src/OpenFIREcommon.h"
+    #ifdef USE_LOVYAN_GFX
+      #include <LovyanGFX.hpp>
+      #include "../../src/LGFX_096_SSD1306_64x128.hpp"
+      extern LGFX_SSD1306 *display_OLED;
+    #else
+      #include <Adafruit_SSD1306.h>
+      extern Adafruit_SSD1306 *display_OLED;
+      //extern ExtDisplay OLED;
+    #endif // USE_LOVYAN_GFX
+  #endif // USES_DISPLAY
+#endif // GUN
 
 #define ESPNOW_WIFI_CHANNEL_DEFAULT 12    // canale sul quale si sintonizza la lightgun di default
 
@@ -857,7 +872,37 @@ void SerialWireless_::begin() {
 
   #ifdef GUN
   if (lastDongleSave) espnow_wifi_channel=lastDongleChannel;
-    else espnow_wifi_channel = findBestChannel(); //12;
+    else {  
+      #ifdef USES_DISPLAY
+        //FW_Common::OLED.TopPanelUpdate(" ... CONNECTION ...");
+        //FW_Common::OLED.display->setTextSize(1);
+
+        display_OLED->fillRect(0, 0, 128, 16, BLACK);
+        display_OLED->drawFastHLine(0, 15, 128, WHITE);
+        display_OLED->setCursor(2, 2);
+        display_OLED->setTextSize(1);
+        display_OLED->setTextColor(WHITE, BLACK);
+        display_OLED->print("Ricerca canale");
+        display_OLED->display();
+      
+      
+        //FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Init);
+        //FW_Common::OLED.TopPanelUpdate(" ... CONNECTION ...");
+      #endif // USES_DISPLAY
+      espnow_wifi_channel = findBestChannel(); //12;
+      #ifdef USES_DISPLAY
+        char buffer[50];
+        sprintf(buffer, "Canale: %2d ", espnow_wifi_channel);
+        // FW_Common::OLED.TopPanelUpdate(buffer);
+        display_OLED->fillRect(0, 0, 128, 16, BLACK);
+        display_OLED->drawFastHLine(0, 15, 128, WHITE);
+        display_OLED->setCursor(2, 2);
+        display_OLED->setTextSize(1);
+        display_OLED->setTextColor(WHITE, BLACK);
+        display_OLED->print(buffer);
+        display_OLED->display();
+      #endif // USES_DISPLAY
+    }
   //findBestChannel();
   #endif //GUN
 
@@ -878,11 +923,13 @@ void SerialWireless_::begin() {
     //Serial.println("Failed to read MAC address");
   }
   
+  esp_wifi_set_promiscuous(true);
   err = esp_wifi_set_channel(espnow_wifi_channel, WIFI_SECOND_CHAN_NONE);
   if (err != ESP_OK) {
     //Serial.printf("esp_wifi_set_channel failed! 0x%x", err);
   }
-  
+  esp_wifi_set_promiscuous(false);
+
   err = esp_wifi_set_max_tx_power(espnow_wifi_power); // tra 8 e 84 corrispondenti a 2dbm a 20 dbm);
   if (err != ESP_OK) {
     //Serial.printf("esp_wifi_set_max_tx_power failed! 0x%x", err);
@@ -964,12 +1011,14 @@ bool SerialWireless_::connection_dongle() {
   unsigned long lastMillis_tx_packet = millis ();
   unsigned long lastMillis_change_channel = millis ();
   unsigned long lastMillis_start_dialogue = millis ();
-  uint8_t aux_buffer_tx[13];
+  uint8_t aux_buffer_tx[14]; // aggiunto un byte per trasmettere anche il canale di trasmissione
+                             // durante tx pacchetto pubblicazione presenza, mette anche il canale
   
   stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
   aux_buffer_tx[0] = CONNECTION_STATE::TX_DONGLE_SEARCH_GUN_BROADCAST;
   memcpy(&aux_buffer_tx[1], SerialWireless.mac_esp_inteface, 6);
   memcpy(&aux_buffer_tx[7], peerAddress, 6);
+  //aux_buffer_tx[13] = espnow_wifi_channel;
   
   
   #ifdef DONGLE
@@ -987,7 +1036,7 @@ bool SerialWireless_::connection_dongle() {
          ((millis() - (lastMillis_tx_packet-50))) > TIMEOUT_TX_PACKET) {  // aggiunta impostato 50 ms come margine, per evitare che quando invia pacchetto cambi subito casnale senza dare possibilità risposta
         channel++;
         if (channel >13) channel = 1;
-        
+        aux_buffer_tx[13] = channel;
         #ifdef DONGLE
           #ifdef USES_DISPLAY
             tft.fillRect(95,60,50,20,0/*BLACK*/);  
@@ -995,10 +1044,11 @@ bool SerialWireless_::connection_dongle() {
             tft.printf("%2d", channel);   
           #endif //USES_DISPLAY
         #endif //DONGLE
-        
+        esp_wifi_set_promiscuous(true);
         if (esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE) != ESP_OK) {
           //Serial.printf("DONGLE - esp_wifi_set_channel failed!");
         }
+        esp_wifi_set_promiscuous(false);
         peerInfo.channel = channel;
         if (esp_now_mod_peer(&peerInfo) != ESP_OK) {  // modifica il canale del peer
           //Serial.println("DONGLE - Errore nella modifica del canale");
@@ -1007,7 +1057,7 @@ bool SerialWireless_::connection_dongle() {
         lastMillis_tx_packet = 0; // per fare inviare subito un pacchetto sul nuovo canale
       }
       if ((millis() - lastMillis_tx_packet) > TIMEOUT_TX_PACKET) {
-        SerialWireless.SendPacket((const uint8_t *)aux_buffer_tx, 13, PACKET_TX::CONNECTION);
+        SerialWireless.SendPacket((const uint8_t *)aux_buffer_tx, 14, PACKET_TX::CONNECTION); // aggiunto un byte per trasmettere anche il canale di trasmissione
         //Serial.print("DONGLE - inviato pacchetto broadcast sul canale: ");
         //Serial.println(channel);
         lastMillis_tx_packet = millis (); 
@@ -1031,7 +1081,9 @@ bool SerialWireless_::connection_dongle() {
   memcpy(peerAddress, mac_esp_another_card, 6);
   memcpy(peerInfo.peer_addr, peerAddress, 6);
   espnow_wifi_channel=usb_data_wireless.channel;
+  esp_wifi_set_promiscuous(true);
   esp_wifi_set_channel(espnow_wifi_channel, WIFI_SECOND_CHAN_NONE);
+  esp_wifi_set_promiscuous(false);
   peerInfo.channel = espnow_wifi_channel;
   //peerInfo.channel = ESPNOW_WIFI_CHANNEL;
   //peerInfo.encrypt = false;              
@@ -1061,7 +1113,7 @@ bool SerialWireless_::connection_gun_at_last_dongle() {
          ((millis() - lastMillis_start_dialogue_last_dongle) < TIMEOUT_DIALOGUE_LAST_DONGLE)) { 
       if ((millis() - lastMillis_tx_packet_last_dongle) > TIMEOUT_TX_PACKET_LAST_DONGLE)
       {
-        SerialWireless.SendPacket((const uint8_t *)aux_buffer_tx, 13, PACKET_TX::CHECK_CONNECTION_LAST_DONGLE);
+        SerialWireless.SendPacket((const uint8_t *)aux_buffer_tx, 13, PACKET_TX::CHECK_CONNECTION_LAST_DONGLE); 
         lastMillis_tx_packet_last_dongle = millis();
       }
     yield();
@@ -1243,7 +1295,9 @@ void packet_callback_read_gun() {
       memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead); //13); //sizeof(aux_buffer)); // qui va bene anche 13 come dati da copiare
       switch (aux_buffer[0]) {
         case CONNECTION_STATE::TX_DONGLE_SEARCH_GUN_BROADCAST:
-          if (SerialWireless.stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) { // prende la prima dongle disposnibile
+          if ((SerialWireless.stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) &&
+              (aux_buffer[13] == espnow_wifi_channel))
+          { // prende la prima dongle disposnibile
             memcpy(SerialWireless.mac_esp_another_card, &aux_buffer[1], 6);
             // invia richiesta connessione
             aux_buffer[0] = CONNECTION_STATE::TX_GUN_TO_DONGLE_PRESENCE;
