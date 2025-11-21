@@ -137,7 +137,7 @@ const uint8_t BROADCAST_ADDR[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 #endif
 ///////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////
-
+#if defined(GUN) && defined(USES_DISPLAY)
 void animTaskLink(void *pvParameters) {
   unsigned long lastChange = 0;
   int8_t currentIndex = 0;
@@ -170,11 +170,12 @@ void animTaskLink(void *pvParameters) {
     vTaskDelay(pdMS_TO_TICKS(150)); // piccolo delay per non saturare la CPU
   }
 }
-
+#endif // GUN
 
 
 //////////////////////////////////////////////////////////////////
 
+#if defined(GUN) && defined(USES_DISPLAY)
 void animTask(void *pvParameters) {
   int8_t currentIndex = 0;
   const uint8_t baseX = 1;
@@ -221,7 +222,7 @@ void animTask(void *pvParameters) {
     vTaskDelay(pdMS_TO_TICKS(150)); // piccolo delay per non saturare la CPU
   }
 }
-
+#endif //GUN
 
 // ===============================================================
 // ESP-NOW OPTIMAL CHANNEL FINDER - VERSIONE PERFETTA
@@ -241,7 +242,7 @@ void IRAM_ATTR promiscuousCallback(void *buf, wifi_promiscuous_pkt_type_t type) 
 // ================= FUNZIONE PRINCIPALE =================
 uint8_t findBestChannel() {
   
-  #ifdef USES_DISPLAY
+  #if defined(GUN) && defined(USES_DISPLAY)
   TaskHandle_t animTaskHandle = NULL;  
   // Avvio animazione
     if (animTaskHandle == NULL) {
@@ -453,7 +454,7 @@ uint8_t findBestChannel() {
   g_packetCounter = 0;
   g_sniffing = false;
   
-  #ifdef USES_DISPLAY
+  #if defined(GUN) && defined(USES_DISPLAY)
     if (animTaskHandle != NULL) {
       vTaskDelete(animTaskHandle);
       animTaskHandle = NULL;
@@ -1048,7 +1049,7 @@ bool SerialWireless_::connection_gun_at_last_dongle() {
 
 bool SerialWireless_::connection_gun() {
   
-  #ifdef USES_DISPLAY
+  #if defined(GUN) && defined(USES_DISPLAY)
   TaskHandle_t animTaskHandleLink = NULL;  
   // Avvio animazione
     if (animTaskHandleLink == NULL) {
@@ -1108,7 +1109,7 @@ bool SerialWireless_::connection_gun() {
     
     TinyUSBDevices.onBattery = true;
 
-    #ifdef USES_DISPLAY
+    #if defined(GUN) && defined(USES_DISPLAY)
       if (animTaskHandleLink != NULL) {
         vTaskDelete(animTaskHandleLink);
         animTaskHandleLink = NULL;
@@ -1118,7 +1119,7 @@ bool SerialWireless_::connection_gun() {
     return true;
   }
   
-  #ifdef USES_DISPLAY
+  #if defined(GUN) && defined(USES_DISPLAY)
     if (animTaskHandleLink != NULL) {
       vTaskDelete(animTaskHandleLink);
       animTaskHandleLink = NULL;
