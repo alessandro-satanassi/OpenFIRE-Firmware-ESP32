@@ -138,6 +138,91 @@ const uint8_t BROADCAST_ADDR[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 ///////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////
 
+void animTaskLink(void *pvParameters) {
+  unsigned long lastChange = 0;
+  int8_t currentIndex = 0;
+  int8_t direzione = 1;
+  const char* word = "Scanning WiFi (((o)))"; // Waiting link 
+  const char* rotazione = "-\\|/-\\|/";
+  int8_t rotazioneIndex = 0;
+  const uint8_t baseX = 1;
+  const uint8_t baseY = 2;
+  const uint8_t charWidth = 6;
+  uint8_t len_word = strlen(word);
+
+  // Setup iniziale display
+  display_OLED->setCursor(baseX, baseY);
+  display_OLED->setTextSize(1);
+  display_OLED->setTextColor(WHITE, BLACK);
+  display_OLED->fillRect(0, 0, 128, 16, BLACK);
+  display_OLED->drawFastHLine(0, 15, 128, WHITE);
+  char buffer[30];
+  sprintf(buffer, "Ch:%2d Waiting link", espnow_wifi_channel);
+  display_OLED->print(buffer);
+  display_OLED->display();
+
+  // Loop del task
+  for (;;) {    
+    display_OLED->setCursor(baseX + (19 * charWidth), baseY);
+    display_OLED->write(rotazione[rotazioneIndex]);
+    rotazioneIndex = (rotazioneIndex + 1) % 8;
+    display_OLED->display();
+    vTaskDelay(pdMS_TO_TICKS(150)); // piccolo delay per non saturare la CPU
+  }
+}
+
+
+
+//////////////////////////////////////////////////////////////////
+
+void animTask(void *pvParameters) {
+  int8_t currentIndex = 0;
+  const uint8_t baseX = 1;
+  const uint8_t baseY = 2;
+  const uint8_t charWidth = 6;
+
+  // Setup iniziale display
+  display_OLED->setCursor(baseX, baseY);
+  display_OLED->setTextSize(1);
+  display_OLED->setTextColor(WHITE, BLACK);
+  display_OLED->fillRect(0, 0, 128, 16, BLACK);
+  display_OLED->drawFastHLine(0, 15, 128, WHITE);
+  display_OLED->print("Scanning WiFi        ");
+  display_OLED->display();
+
+  // Loop del task
+  for (;;) {  
+    display_OLED->setCursor(baseX + (14 * charWidth), baseY);
+    switch (currentIndex)
+    {
+    case 0:
+      /* code */
+      display_OLED->print("   o   ");
+      break;
+    case 1:
+      /* code */
+      display_OLED->print("  (o)  ");
+      break;
+    case 2:
+      /* code */
+      display_OLED->print(" ((o)) ");
+      break;
+    case 3:
+      /* code */
+      display_OLED->print("(((o)))");
+      break;
+    
+    default:
+      
+    break;
+    }
+    currentIndex = (currentIndex + 1) % 4;
+    display_OLED->display();
+    vTaskDelay(pdMS_TO_TICKS(150)); // piccolo delay per non saturare la CPU
+  }
+}
+
+
 // ===============================================================
 // ESP-NOW OPTIMAL CHANNEL FINDER - VERSIONE PERFETTA
 // Tempo totale: ~14 secondi | Accuratezza: massima
@@ -155,6 +240,22 @@ void IRAM_ATTR promiscuousCallback(void *buf, wifi_promiscuous_pkt_type_t type) 
 
 // ================= FUNZIONE PRINCIPALE =================
 uint8_t findBestChannel() {
+  
+  #ifdef USES_DISPLAY
+  TaskHandle_t animTaskHandle = NULL;  
+  // Avvio animazione
+    if (animTaskHandle == NULL) {
+      xTaskCreatePinnedToCore(
+        animTask,          // funzione del task
+        "AnimTask",        // nome
+        4096,              // stack size
+        NULL,              // parametri
+        1,                 // priorità
+        &animTaskHandle,   // handle
+        APP_CPU_NUM        // core (puoi usare 0 o 1)
+      );
+    }
+  #endif // USES_DISPLAY
   
   // ================= STRUTTURA PER STATISTICHE CANALE =================
   typedef struct {
@@ -217,6 +318,7 @@ uint8_t findBestChannel() {
   esp_wifi_set_promiscuous_rx_cb(&promiscuousCallback);
 
   for (int ch = 1; ch <= 13; ch++) {
+
     esp_wifi_set_channel(ch, WIFI_SECOND_CHAN_NONE);
     vTaskDelay(pdMS_TO_TICKS(70)); // Stabilizzazione radio
     
@@ -350,6 +452,13 @@ uint8_t findBestChannel() {
   vTaskDelay(pdMS_TO_TICKS(50));
   g_packetCounter = 0;
   g_sniffing = false;
+  
+  #ifdef USES_DISPLAY
+    if (animTaskHandle != NULL) {
+      vTaskDelete(animTaskHandle);
+      animTaskHandle = NULL;
+    }
+  #endif // USES_DISPLAY
   
   return bestCh;
 }
@@ -661,7 +770,21 @@ void SerialWireless_::begin() {
     else {  
       #ifdef OPENFIRE_AUTO_CHANNEL_ESPNOW_WIFI
         espnow_wifi_channel = findBestChannel(); //12;
+               
+        #ifdef USES_DISPLAY
+          display_OLED->setCursor(10, 2);
+          display_OLED->setTextSize(1);
+          display_OLED->setTextColor(WHITE, BLACK);
+          display_OLED->fillRect(0, 0, 128, 16, BLACK);
+          display_OLED->drawFastHLine(0, 15, 128, WHITE);
+          display_OLED->print("Best Channel Ready");
+          display_OLED->display();
+          vTaskDelay(pdMS_TO_TICKS(500));
+        #endif // USES_DISPLAY
+    
       #endif // OPENFIRE_AUTO_CHANNEL_ESPNOW_WIFI
+      
+      #ifdef COMMENTO
       #ifdef USES_DISPLAY
         //FW_Common::OLED.TopPanelUpdate(" ... CONNECTION ...");
         //FW_Common::OLED.display->setTextSize(1);
@@ -691,6 +814,8 @@ void SerialWireless_::begin() {
         display_OLED->print(buffer);
         display_OLED->display();
       #endif // USES_DISPLAY
+      #endif // COMMENTO
+
     }
   //findBestChannel();
   #endif //GUN
@@ -922,6 +1047,24 @@ bool SerialWireless_::connection_gun_at_last_dongle() {
 
 
 bool SerialWireless_::connection_gun() {
+  
+  #ifdef USES_DISPLAY
+  TaskHandle_t animTaskHandleLink = NULL;  
+  // Avvio animazione
+    if (animTaskHandleLink == NULL) {
+      xTaskCreatePinnedToCore(
+        animTaskLink,          // funzione del task
+        "AnimTaskLink",        // nome
+        4096,              // stack size
+        NULL,              // parametri
+        1,                 // priorità
+        &animTaskHandleLink,   // handle
+        APP_CPU_NUM        // core (puoi usare 0 o 1)
+      );
+    }
+  #endif // USES_DISPLAY
+
+
 
   #define TIMEOUT_GUN_DIALOGUE 1000 // in millisecondi
   unsigned long lastMillis_start_dialogue = millis ();
@@ -964,8 +1107,24 @@ bool SerialWireless_::connection_gun() {
     }                       
     
     TinyUSBDevices.onBattery = true;
+
+    #ifdef USES_DISPLAY
+      if (animTaskHandleLink != NULL) {
+        vTaskDelete(animTaskHandleLink);
+        animTaskHandleLink = NULL;
+      }
+    #endif // USES_DISPLAY
+
     return true;
   }
+  
+  #ifdef USES_DISPLAY
+    if (animTaskHandleLink != NULL) {
+      vTaskDelete(animTaskHandleLink);
+      animTaskHandleLink = NULL;
+    }
+  #endif // USES_DISPLAY
+   
   return false;
 }
 

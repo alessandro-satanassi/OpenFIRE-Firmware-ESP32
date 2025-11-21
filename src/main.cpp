@@ -226,7 +226,7 @@ void setup() {
         // ========== fine serve per usare display da parte wireless =============
 
         //FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Init);
-        FW_Common::OLED.TopPanelUpdate(" ... CONNECTION ...");
+        ////////////////////////FW_Common::OLED.TopPanelUpdate(" ... CONNECTION ...");
         
         // =================== parte poi da rimuovere ====================
         #ifdef CLOCK_CAM_WII
@@ -245,11 +245,33 @@ void setup() {
     // 696969 == CODICE PER CALIBRARE LEVETTA STICK IN POSIZIONE CENTRALE =============
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     #if defined(ARDUINO_ARCH_ESP32) && defined(USES_ANALOG)   // la facciamo solo per ESP32 e lasciamo RP2040 come gestione originale
+        
+    #ifdef USES_DISPLAY
+        unsigned long lastChange = 0;
+        int8_t currentIndex = 0;
+        int8_t direzione = 1;
+        const char* word = "...CALIBRATION...";
+        const uint8_t baseX = 10;
+        const uint8_t baseY = 2;
+        const uint8_t charWidth = 6;
+        uint8_t len_word;
+        
+        display_OLED->setCursor(baseX, baseY);
+        display_OLED->setTextSize(1);
+        display_OLED->setTextColor(WHITE, BLACK);
+        display_OLED->fillRect(0, 0, 128, 16, BLACK);
+        display_OLED->drawFastHLine(0, 15, 128, WHITE);
+        display_OLED->print(word);
+        display_OLED->display();
+        len_word=strlen(word);
+    #endif // USES_DISPLAY
+    
     uint16_t analogValueX;
     uint16_t analogValueY;
+       
     //unsigned long startTime = 0;
     unsigned long startTime = millis();
-    while ((millis()-startTime) < 2000)
+    while ((millis()-startTime) < 2000) // 2000
     {
         analogValueX = analogRead(OF_Prefs::pins[OF_Const::analogX]);
         analogValueY = analogRead(OF_Prefs::pins[OF_Const::analogY]);
@@ -257,8 +279,28 @@ void setup() {
         if (analogValueX < ANALOG_STICK_DEADZONE_X_MIN) ANALOG_STICK_DEADZONE_X_MIN = analogValueX;
         if (analogValueY > ANALOG_STICK_DEADZONE_Y_MAX) ANALOG_STICK_DEADZONE_Y_MAX = analogValueY;
         if (analogValueY < ANALOG_STICK_DEADZONE_Y_MIN) ANALOG_STICK_DEADZONE_Y_MIN = analogValueY;
+
+        #ifdef USES_DISPLAY
+            if (millis() - lastChange > 50) {
+                display_OLED->setTextColor(BLACK, BLACK);
+                display_OLED->setCursor(baseX + (currentIndex * charWidth), baseY);
+                display_OLED->write(word[currentIndex]);
+                if ((currentIndex > 0) && (currentIndex < (len_word-1)))  {
+                    display_OLED->setCursor(baseX + ((currentIndex-direzione) * charWidth), baseY);
+                    display_OLED->setTextColor(WHITE, BLACK); 
+                    display_OLED->write(word[currentIndex-direzione]);
+                }
+                display_OLED->display();
+                currentIndex = currentIndex + direzione;
+                if ((currentIndex == (len_word-1)) || (currentIndex == 0)) direzione *= -1;
+                lastChange = millis();
+            }
+        #endif // USES_DISPLAY
     }
-    
+    #ifdef USES_DISPLAY
+        FW_Common::OLED.TopPanelUpdate(" CALIBRATION READY "); 
+    #endif //USES_DISPLAY
+
     ANALOG_STICK_DEADZONE_X_CENTER = (ANALOG_STICK_DEADZONE_X_MIN + ANALOG_STICK_DEADZONE_X_MAX) / 2; 
     ANALOG_STICK_DEADZONE_Y_CENTER = (ANALOG_STICK_DEADZONE_Y_MIN + ANALOG_STICK_DEADZONE_Y_MAX) / 2; 
     
@@ -333,7 +375,21 @@ void setup() {
 
     while(!TinyUSBDevice.mounted() && !TinyUSBDevices.onBattery) { yield();}
 
+
     // arriva qui solo se e' stato connesso l'usb o e' stata negoziata e stabilita una connessione wireless
+    #ifdef USES_DISPLAY
+        FW_Common::OLED.TopPanelUpdate("  !! LINK READY !! "); 
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        #ifdef COMMENTO
+        display_OLED->setCursor(10, 2);
+        display_OLED->setTextSize(1);
+        display_OLED->setTextColor(WHITE, BLACK);
+        display_OLED->fillRect(0, 0, 128, 16, BLACK);
+        display_OLED->drawFastHLine(0, 15, 128, WHITE);
+        display_OLED->print("Link ready!");
+        display_OLED->display();
+        #endif // COMMENTO
+    #endif //USES_DISPLAY
 
     if (TinyUSBDevice.mounted()) {
         Serial.begin(9600);
