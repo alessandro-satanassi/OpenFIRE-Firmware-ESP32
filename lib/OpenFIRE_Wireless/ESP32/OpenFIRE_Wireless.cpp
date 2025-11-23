@@ -23,10 +23,10 @@
     #ifdef USE_LOVYAN_GFX
       #include <LovyanGFX.hpp>
       #include "../../src/LGFX_096_SSD1306_64x128.hpp"
-      extern LGFX_SSD1306 *display_OLED;
+      extern LGFX_SSD1306 *&display_OLED;
     #else
       #include <Adafruit_SSD1306.h>
-      extern Adafruit_SSD1306 *display_OLED;
+      extern Adafruit_SSD1306 *&display_OLED;
       //extern ExtDisplay OLED;
     #endif // USE_LOVYAN_GFX
   #endif // USES_DISPLAY
@@ -150,6 +150,7 @@ void animTaskLink(void *pvParameters) {
   const uint8_t charWidth = 6;
   uint8_t len_word = strlen(word);
 
+  
   // Setup iniziale display
   display_OLED->setCursor(baseX, baseY);
   display_OLED->setTextSize(1);
@@ -168,7 +169,7 @@ void animTaskLink(void *pvParameters) {
     rotazioneIndex = (rotazioneIndex + 1) % 8;
     display_OLED->display();
     vTaskDelay(pdMS_TO_TICKS(150)); // piccolo delay per non saturare la CPU
-  }
+  } 
 }
 #endif // GUN
 
@@ -244,6 +245,7 @@ uint8_t findBestChannel() {
   
   #if defined(GUN) && defined(USES_DISPLAY)
   TaskHandle_t animTaskHandle = NULL;  
+  if(display_OLED != nullptr) {
   // Avvio animazione
     if (animTaskHandle == NULL) {
       xTaskCreatePinnedToCore(
@@ -256,6 +258,7 @@ uint8_t findBestChannel() {
         APP_CPU_NUM        // core (puoi usare 0 o 1)
       );
     }
+  }
   #endif // USES_DISPLAY
   
   // ================= STRUTTURA PER STATISTICHE CANALE =================
@@ -773,6 +776,7 @@ void SerialWireless_::begin() {
         espnow_wifi_channel = findBestChannel(); //12;
                
         #ifdef USES_DISPLAY
+        if(display_OLED != nullptr) {
           display_OLED->setCursor(10, 2);
           display_OLED->setTextSize(1);
           display_OLED->setTextColor(WHITE, BLACK);
@@ -780,7 +784,8 @@ void SerialWireless_::begin() {
           display_OLED->drawFastHLine(0, 15, 128, WHITE);
           display_OLED->print("Best Channel Ready");
           display_OLED->display();
-          vTaskDelay(pdMS_TO_TICKS(500));
+          vTaskDelay(pdMS_TO_TICKS(1000));
+        }
         #endif // USES_DISPLAY
     
       #endif // OPENFIRE_AUTO_CHANNEL_ESPNOW_WIFI
@@ -1051,6 +1056,7 @@ bool SerialWireless_::connection_gun() {
   
   #if defined(GUN) && defined(USES_DISPLAY)
   TaskHandle_t animTaskHandleLink = NULL;  
+  if(display_OLED != nullptr) {
   // Avvio animazione
     if (animTaskHandleLink == NULL) {
       xTaskCreatePinnedToCore(
@@ -1063,6 +1069,7 @@ bool SerialWireless_::connection_gun() {
         APP_CPU_NUM        // core (puoi usare 0 o 1)
       );
     }
+  }
   #endif // USES_DISPLAY
 
 

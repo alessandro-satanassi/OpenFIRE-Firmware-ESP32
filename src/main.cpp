@@ -34,9 +34,11 @@ uint32_t tone_duty_main = 0;
 // ========== serve per usare display da parte wireless =============
 #ifdef USES_DISPLAY
     #ifdef USE_LOVYAN_GFX
-        LGFX_SSD1306 *display_OLED;   //aggiunto inline per condividerla
+        //LGFX_SSD1306 *display_OLED  = nullptr;   
+        LGFX_SSD1306 *&display_OLED  = FW_Common::OLED.display;   //aggiunto inline per condividerla
     #else
-        Adafruit_SSD1306 *display_OLED; //aggiunto inline per condividerla
+        //Adafruit_SSD1306 *display_OLED  = nullptr; 
+        Adafruit_SSD1306 *&display_OLED  = FW_Common::OLED.display; //aggiunto inline per condividerla
     #endif
 #endif // USES_DISPLAY
 // ========== fine serve per usare display da parte wireless =============
@@ -222,7 +224,7 @@ void setup() {
     #ifdef ARDUINO_ARCH_ESP32
     #ifdef USES_DISPLAY
         // ========== serve per usare display da parte wireless =============
-        display_OLED=FW_Common::OLED.display;
+        //////////////////////////////////////////////////////////////////////////display_OLED=FW_Common::OLED.display;
         // ========== fine serve per usare display da parte wireless =============
 
         //FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Init);
@@ -255,7 +257,7 @@ void setup() {
         const uint8_t baseY = 2;
         const uint8_t charWidth = 6;
         uint8_t len_word;
-        
+    if(display_OLED != nullptr) {    
         display_OLED->setCursor(baseX, baseY);
         display_OLED->setTextSize(1);
         display_OLED->setTextColor(WHITE, BLACK);
@@ -264,6 +266,7 @@ void setup() {
         display_OLED->print(word);
         display_OLED->display();
         len_word=strlen(word);
+    }
     #endif // USES_DISPLAY
     
     uint16_t analogValueX;
@@ -281,6 +284,7 @@ void setup() {
         if (analogValueY < ANALOG_STICK_DEADZONE_Y_MIN) ANALOG_STICK_DEADZONE_Y_MIN = analogValueY;
 
         #ifdef USES_DISPLAY
+        if(display_OLED != nullptr) {
             if (millis() - lastChange > 50) {
                 display_OLED->setTextColor(BLACK, BLACK);
                 display_OLED->setCursor(baseX + (currentIndex * charWidth), baseY);
@@ -295,6 +299,7 @@ void setup() {
                 if ((currentIndex == (len_word-1)) || (currentIndex == 0)) direzione *= -1;
                 lastChange = millis();
             }
+        }
         #endif // USES_DISPLAY
     }
     #ifdef USES_DISPLAY
@@ -377,19 +382,12 @@ void setup() {
 
 
     // arriva qui solo se e' stato connesso l'usb o e' stata negoziata e stabilita una connessione wireless
-    #ifdef USES_DISPLAY
-        FW_Common::OLED.TopPanelUpdate("  !! LINK READY !! "); 
-        vTaskDelay(pdMS_TO_TICKS(1000));
-        #ifdef COMMENTO
-        display_OLED->setCursor(10, 2);
-        display_OLED->setTextSize(1);
-        display_OLED->setTextColor(WHITE, BLACK);
-        display_OLED->fillRect(0, 0, 128, 16, BLACK);
-        display_OLED->drawFastHLine(0, 15, 128, WHITE);
-        display_OLED->print("Link ready!");
-        display_OLED->display();
-        #endif // COMMENTO
-    #endif //USES_DISPLAY
+    #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
+        #ifdef USES_DISPLAY
+            FW_Common::OLED.TopPanelUpdate("  !! LINK READY !! "); 
+            vTaskDelay(pdMS_TO_TICKS(1000));
+        #endif //USES_DISPLAY
+    #endif // defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
 
     if (TinyUSBDevice.mounted()) {
         Serial.begin(9600);
