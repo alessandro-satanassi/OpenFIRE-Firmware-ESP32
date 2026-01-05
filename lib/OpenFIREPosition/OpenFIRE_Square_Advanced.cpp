@@ -27,15 +27,6 @@
 #include <cfloat>
 
 
-/*
- * ==============================================================================
- * Sezione Helper: Funzioni di utilità per l'ottimizzazione
- *
- * Definire queste funzioni all'inizio del file o in un file header condiviso.
- * L'uso di 'inline' suggerisce al compilatore di sostituire la chiamata alla
- * funzione con il suo codice, eliminando l'overhead e massimizzando la velocità.
- * ==============================================================================
- */
 
 /**
  * @brief Calcola la radice quadrata inversa (1/sqrt(x)) in modo approssimato ma estremamente veloce.

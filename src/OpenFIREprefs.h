@@ -109,7 +109,7 @@ public:
     static inline uint32_t settings[OF_Const::settingsTypesCount] = {
         255,                        // rumble strength
         150,                        // rumble length
-        45,                         // solenoid on length
+        20, // 696969 // 45,                         // solenoid on length
         80,                         // solenoid off length
         500,                        // solenoid hold length
         2500,                       // hold-to-pause length

@@ -26,6 +26,11 @@
 #endif // OPENFIRE_WIRELESS_ENABLE
 // ============ 696969 ===== fine redifinizione di Serial per gestire le connessione wireless seriali ========
 
+#ifdef ARDUINO_ARCH_ESP32  // 696969
+    #define delay(ms) vTaskDelay(pdMS_TO_TICKS(ms))                    
+#endif //ARDUINO_ARCH_ESP32
+
+
 #ifdef MAMEHOOKER
 void OF_Serial::SerialProcessing()
 {

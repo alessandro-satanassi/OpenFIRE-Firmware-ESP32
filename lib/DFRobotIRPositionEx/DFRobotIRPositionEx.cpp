@@ -23,6 +23,10 @@
 #include <Wire.h>
 #include "DFRobotIRPositionEx.h"
 
+#ifdef ARDUINO_ARCH_ESP32  // 696969
+    #define delay(ms) vTaskDelay(pdMS_TO_TICKS(ms))                    
+#endif //ARDUINO_ARCH_ESP32
+
 // data lengths
 constexpr unsigned int DFRIRdata_LengthBasic = 11;
 constexpr unsigned int DFRIRdata_LengthExtended = 13;

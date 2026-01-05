@@ -24,6 +24,11 @@
 #include "OpenFIREprefs.h"
 #include "OpenFIREconstant.h"
 
+#ifdef ARDUINO_ARCH_ESP32  // 696969
+    #define delay(ms) vTaskDelay(pdMS_TO_TICKS(ms))                    
+#endif //ARDUINO_ARCH_ESP32
+
+
 // ================= parte poi da rimuovere ==================
 #ifdef CLOCK_CAM_WII
 uint32_t tone_freq_main = 0;
@@ -437,8 +442,17 @@ void setup() {
     #endif // USES_DISPLAY
     #endif //ARDUINO_ARCH_ESP32
 
-
-
+    #ifdef COMMENTO
+    ////// 696969 ///////////// PROVA SOLENOIDE //////////////////////////////////////
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    for (;;) {
+        digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], HIGH);
+        vTaskDelay(pdMS_TO_TICKS(15));
+        digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);
+        vTaskDelay(pdMS_TO_TICKS(85));
+    }
+    ////// 696969 ///////////// FINE PROVA SOLENOIDE /////////////////////////////////
+    #endif // COMMENTO
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////// 696969 ////////////////////////////////////////////////

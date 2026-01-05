@@ -18,6 +18,10 @@
   #include <PicoBluetoothHID.h>
 #endif // ARDUINO_RASPBERRY_PI_PICO_W
 
+#ifdef ARDUINO_ARCH_ESP32  // 696969
+    #define delay(ms) vTaskDelay(pdMS_TO_TICKS(ms))                    
+#endif //ARDUINO_ARCH_ESP32
+
 /*****************************
  *   GLOBAL SECTION
  *****************************/
