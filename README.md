@@ -49,7 +49,7 @@ We chose PCBWay for their:
 
 <p align="left">
   <a href="https://www.pcbway.com">
-    <img src="https://www.pcbway.com/project/img/logo.png" alt="PCBWay - PCB Prototype & Fabrication" width="200">
+    <img src="docs/img/pcbway-logo.png" alt="PCBWay - PCB Prototype & Fabrication" width="200">
   </a>
 </p>
 
