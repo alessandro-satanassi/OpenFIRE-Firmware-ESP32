@@ -8,6 +8,11 @@ git clone --recursive https://github.com/alessandro-satanassi/OpenFIRE-Firmware-
 To properly clone the repository and compile it you must use git clone with the --recursive parameter, as follows:
 git clone --recursive https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32.git
 
+# OpenFIRE-Firmware-ESP32
+
+> 🛠️ **Hardware sponsored by [PCBWay](https://www.pcbway.com)**
+---
+
 ## ... porting OpenFIRE-firmware for EPS32
 
 Questo repository è un porting del progetto originale 'OpenFIRE-firmware' del TeamOpenFIRE, adattato per funzionare sul microcontrollore ESP32S3.
@@ -32,6 +37,21 @@ This is simply an adaptation to make it work on ESP32S3, with the addition of wi
 ![Waveshare-esp32-s3-pico](https://github.com/user-attachments/assets/5f7bf9ae-6ab5-4240-b930-d8cf20cb1c75)
 
 ![YD-esp32-s3-wroom1-DevKitC-1-N16R8](https://github.com/user-attachments/assets/6e865f2a-d90f-4dd0-9b57-c992bfd7377f)
+
+## 🤝 Sponsorship & Support
+
+A special thanks to **[PCBWay](https://www.pcbway.com)** for sponsoring the hardware development of this project. Their professional PCB manufacturing service has been fundamental in transforming our schematics into reliable, high-quality physical boards.
+
+We chose PCBWay for their:
+* **Manufacturing Precision:** Excellent solder mask and silkscreen quality even on dense designs.
+* **Reliability:** Consistent build quality across different batches.
+* **Fast Prototyping:** Quick turnaround times that significantly accelerated our testing phase.
+
+<p align="left">
+  <a href="https://www.pcbway.com">
+    <img src="https://www.pcbway.com/project/img/logo.png" alt="PCBWay - PCB Prototype & Fabrication" width="200">
+  </a>
+</p>
 
 
 ## ... segue la pagina originale del progetto
