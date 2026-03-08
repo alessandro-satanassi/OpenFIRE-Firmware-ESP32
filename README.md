@@ -25,15 +25,23 @@ Ogni volta che verranno apportate modifiche al progetto originale 'OpenFIRE-firm
 Ringrazio di cuore il TeamOpenFIRE per la creazione del progetto 'OpenFIRE-firmware': a loro vanno tutti i meriti e la mia piena gratitudine.
 Questo è semplicemente un adattamento per il funzionamento su ESP32S3, con l'aggiunta della connessione wireless tramite ESP-NOW.
 
-Questa è la sequenza di avvio del firmware:
-1  - calibrazione automatica del joystick analogico (dura un paio di secondo durante i quali non devi toccare il joystick analogico);
-2A - se il cavo USB è collegato al PC, la lightgun si connette direttamente via cavo USB
-2B - se il cavo USB NON è collegato al PC, la lightgun cerca il canale wi-fi con minore interferenze e più libero per un trasmissione ottimale.
-      Quindi si pone in ascolto su tale canale fino a quando non trova la presenza di un 'dongle', ma se nel frattempo viene collegato un cavo USB, si connette via cavo USB.
-      Se rileva un 'dongle', prova a collegarsi ed associarsi a tale 'dongle' e se ci riesce si collega al PC tramite tale 'dongle', esattamente come farebbe con cavo USB ma via wifi. Il PC non nota alcuna differenza tra connessione via cavo USB o tramite dongle 'wifi', funzina tutta esattamente allo stesso modo.
-      Nel caso in cui la lightgun si dovesse spegnere, al riavvio tenterà subito di riconnettersi all'ultimo 'dongle' associato e se lo trova, la connessione è immediata, altrimenti rinizia la ricerca del canale wifi più libero e si pone alla ricerca di un 'dongle' attivo libero.
-3  - la lightgun si collega al PC, se è coolegata via wifi viene mostrata un'icona del wi-fi, altrimenti una incona di un cavo USB
+## Sequenza di avvio del firmware
 
+1. **Calibrazione automatica del joystick analogico**
+   > ⚠️ **IMPORTANTE:** La procedura dura circa due secondi. Durante questa fase **non toccare il joystick** per garantire una calibrazione corretta.
+
+2. **Gestione della connettività**
+    * **2A - Connessione via Cavo:** Se il cavo USB è collegato al PC, la lightgun si connette direttamente in modalità cablata.
+    * **2B - Connessione Wireless (USB scollegato):**
+        * La lightgun scansiona l'ambiente e seleziona il canale Wi-Fi con minori interferenze per una trasmissione ottimale.
+        * Rimane in ascolto di un **dongle**. Se durante l'attesa viene collegato un cavo USB, la connessione passa immediatamente su cavo.
+        * Una volta rilevato un dongle libero, esegue l'associazione. Il PC gestirà la periferica esattamente come se fosse collegata via cavo (nessuna differenza di funzionamento).
+        * **Riconnessione automatica:** In caso di spegnimento, al riavvio cercherà prioritariamente l'ultimo dongle associato per una connessione istantanea. Se non lo trova, farà una nuova scansione dei canali.
+
+3. **Stato della connessione**
+   Una volta stabilito il collegamento con il PC, l'interfaccia mostrerà lo stato attuale:
+   * 📶 **Icona Wi-Fi**: Connessione tramite dongle wireless.
+   * 🔌 **Icona USB**: Connessione tramite cavo fisico.
 
 
 This repository is a porting of the original 'OpenFIRE-firmware' project by TeamOpenFIRE, adapted to work on the ESP32S3 microcontroller.
@@ -45,14 +53,23 @@ Whenever there are changes to the original 'OpenFIRE-firmware' project by TeamOp
 I sincerely thank TeamOpenFIRE for creating the 'OpenFIRE-firmware' project; all credit and gratitude go to them for their work.
 This is simply an adaptation to make it work on ESP32S3, with the addition of wireless connectivity via ESP-NOW.
 
-This is the firmware boot sequence:
-1  - automatic calibration of the analog joystick (this lasts a couple of seconds, during which you must not touch the analog joystick);
-2A - if the USB cable is connected to the PC, the lightgun connects directly via the USB cable.
-2B - if the USB cable is NOT connected to the PC, the lightgun searches for the Wi-Fi channel with the least interference and the clearest signal for optimal transmission.
-      It then listens on that channel until it detects the presence of a dongle, but if a USB cable is connected in the meantime, it connects via the USB cable.
-      If it detects a dongle, it attempts to connect and pair with that dongle. If successful, it connects to the PC via that dongle, just as it would with a USB cable, but via Wi-Fi. The PC doesn't notice any difference between connecting via USB cable or via Wi-Fi dongle; everything works exactly the same.
-      If the lightgun shuts down, upon restarting it will immediately attempt to reconnect to the last paired dongle. If it finds one, it connects immediately. Otherwise, it restarts the search for the freest Wi-Fi channel and searches for a free active dongle.
-3 - The lightgun connects to the PC. If it is connected via Wi-Fi, a Wi-Fi icon is displayed; otherwise, a USB cable icon is displayed.
+## Firmware Boot Sequence
+
+1. **Automatic Joystick Calibration**
+   > ⚠️ **IMPORTANT:** The process takes about two seconds. **Do not touch the analog joystick** during this phase to ensure a correct calibration.
+
+2. **Connectivity Management**
+    * **2A - Wired Connection:** If the USB cable is connected to the PC, the lightgun will connect directly via USB.
+    * **2B - Wireless Connection (USB disconnected):**
+        * The lightgun scans for the Wi-Fi channel with the lowest interference for optimal transmission.
+        * It listens for an available **dongle**. If a USB cable is connected during this stage, it will switch to wired mode immediately.
+        * Once a dongle is detected and paired, the connection is established wirelessly. The PC will treat the device exactly like a standard USB connection.
+        * **Auto-Reconnect:** If the lightgun powers off, it will prioritize reconnecting to the last paired dongle for an instant link. If not found, it restarts the channel scan and dongle search.
+
+3. **Connection Status**
+   Once the connection to the PC is established, the interface will display the current status:
+   * 📶 **Wi-Fi Icon**: Connected via wireless dongle.
+   * 🔌 **USB Icon**: Connected via physical cable.
 
 
 ## 🤝 Sponsorship & Support
