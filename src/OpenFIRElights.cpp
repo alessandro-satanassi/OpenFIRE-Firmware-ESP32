@@ -22,6 +22,7 @@ void OF_RGB::LedInit()
         pinMode(PIN_LED, OUTPUT);
     #endif // ARDUINO_RASPBERRY_PI_PICO
 
+    // 696969 questa serve solo se nella board è integrato un neopixel e bisogna usare un'altro pin per abilitare o disabilitare il neopixel, non per inviare segnale al neopixel
     // init DotStar and/or NeoPixel to red during setup()
     // For the onboard NEOPIXEL, if any; it needs to be enabled.
     #ifdef NEOPIXEL_ENABLEPIN
