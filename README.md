@@ -40,7 +40,7 @@ Questo è semplicemente un adattamento per il funzionamento su ESP32S3, con l'ag
 
 3. **Stato della connessione**
    Una volta stabilito il collegamento con il PC, l'interfaccia mostrerà lo stato attuale:
-   * 📶 **Icona Wi-Fi**: Connessione tramite dongle wireless.
+   * 🛜 **Icona Wi-Fi**: Connessione tramite dongle wireless.
    * 🔌 **Icona USB**: Connessione tramite cavo fisico.
 
 
@@ -68,7 +68,7 @@ This is simply an adaptation to make it work on ESP32S3, with the addition of wi
 
 3. **Connection Status**
    Once the connection to the PC is established, the interface will display the current status:
-   * 📶 **Wi-Fi Icon**: Connected via wireless dongle.
+   * 🛜 **Wi-Fi Icon**: Connected via wireless dongle.
    * 🔌 **USB Icon**: Connected via physical cable.
 
 
