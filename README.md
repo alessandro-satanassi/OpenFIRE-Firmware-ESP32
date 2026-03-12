@@ -3,6 +3,15 @@
 > 🛠️ **Hardware sponsored by [PCBWay](https://www.pcbway.com)**
 ---
 
+---
+### 🔫 PICON-AS: Wireless Lightgun Hardware
+Se vuoi costruire una lightgun wireless funzionante completamente a batteria basata su questo firmware, dai un'occhiata al progetto **PICON-AS**. Trovi tutte le istruzioni per l'hardware e il montaggio a questo indirizzo: [Istruzioni PICON-AS](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/)
+Nota: Il sito è già fruibile e i contenuti tecnici sono corretti; stiamo solo ultimando la stesura dettagliata di alcune sezioni delle istruzioni.
+---
+If you want to build a fully battery-powered wireless lightgun based on this firmware, check out the **PICON-AS** project. You can find all the hardware and assembly instructions at this link: [PICON-AS Instructions](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/)
+Note: The website is already functional and all technical data is correct; we are currently finalizing the detailed step-by-step instructions.
+---
+
 ## ATTENZIONE
 
 Per clonare correttamente il repository e compilarlo devi usare git clone col parametro --recursive, nel seguente modo:
