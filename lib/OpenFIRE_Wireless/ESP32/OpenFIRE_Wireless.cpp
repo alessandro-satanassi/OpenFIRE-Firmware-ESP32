@@ -39,8 +39,8 @@
 #endif // OPENFIRE_ESPNOW_WIFI_CHANNEL
 
 #ifndef OPENFIRE_ESPNOW_WIFI_POWER
-  // la potenza di trasmissione può andare da 8 a 84, dove 84 è il valore massimo che corrisponde a 20 db
-  #define OPENFIRE_ESPNOW_WIFI_POWER 84 
+  // la potenza di trasmissione può andare da 8 a 84, dove 84 è il valore massimo che corrisponde a 21 db (x4)
+  #define OPENFIRE_ESPNOW_WIFI_POWER WIFI_POWER_15dBm
 #endif //OPENFIRE_ESPNOW_WIFI_POWER
 
 uint8_t espnow_wifi_channel = OPENFIRE_ESPNOW_WIFI_CHANNEL;  // FATTA VARIABILE PER FUTURA CONFIGURAZIONE TRAMITE APP O OLED
@@ -435,10 +435,10 @@ uint8_t findBestChannel() {
     if (ch < 11) finalScores[ch] += channelStats[ch+3].score * 0.20f;
     if (ch < 10) finalScores[ch] += channelStats[ch+4].score * 0.10f;
   
-    // Dopo il calcolo finalScores, dare bonus ai canali ideali
-    //if (ch == 1 || ch == 6 || ch == 11) {
-    //  finalScores[ch] *= 0.92f; // -8% bonus (preferenza)
-    //}  
+    // Dopo il calcolo finalScores, dare bonus ai canali ideali  // DECIDERE SE METTERLO
+    if (ch == 1 || ch == 6 || ch == 11) {
+      finalScores[ch] *= 0.92f; // -8% bonus (preferenza)
+    }  
   }
 
   // ================= FASE 4: SELEZIONE MIGLIOR CANALE =================
@@ -855,11 +855,28 @@ void SerialWireless_::begin() {
     //Serial.printf("esp_wifi_set_max_tx_power failed! 0x%x", err);
   }
 
-  WiFi.disconnect();  // ??? si va messo
+  err = esp_wifi_set_ps(WIFI_PS_NONE);  // DISABILITA IL POWER SAVE PER MASSIMA REATTIVITà
+  if (err != ESP_OK) {
+    //Serial.printf("esp_wifi_set_ps failed! 0x%x", err);
+  }
+
+
+  WiFi.disconnect();  // ??? SI va messo
 
   vTaskDelay(pdMS_TO_TICKS(1000)); // delay(1000);
     
   err = esp_now_init();
+  if (err != ESP_OK) {
+    //Serial.printf("esp_now_init failed! 0x%x", err);
+  }
+
+  err = esp_wifi_config_espnow_rate(WIFI_IF_STA, WIFI_PHY_RATE_18M);
+  
+  //esp_now_peer_rate_config_t rc = {WIFI_PHY_MODE_11G, WIFI_PHY_RATE_18M, false};
+  //esp_now_set_peer_rate_config(mac, &rc);
+  //esp_now_set_peer_rate_config()
+  
+  
   if (err != ESP_OK) {
     //Serial.printf("esp_now_init failed! 0x%x", err);
   }

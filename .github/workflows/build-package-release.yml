@@ -57,6 +57,9 @@ on:
 permissions:
   contents: write # Necessario per actions/upload-release-asset per caricare asset sulla release
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # necessaria per elimnare i warning  .. da giugno 2026 userà di default node24 e si potrà togliere, bisogna aggiornare però le versioni delle action
+
 jobs:
   build_firmware:
     runs-on: ubuntu-latest
