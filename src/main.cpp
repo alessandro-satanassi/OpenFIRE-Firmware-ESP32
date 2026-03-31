@@ -70,7 +70,7 @@ void setup() {
 // ======== 696969 =========== X AVVIO DUAL CORE ESP32 =================================== 
 #if defined(ARDUINO_ARCH_ESP32) && defined(DUAL_CORE)
     #define STACK_SIZE_SECOND_CORE 10000  // basta 4096 ???
-    #define PRIORITY_SECOND_CORE 0  // dovrebbe essere 1 ???
+    #define PRIORITY_SECOND_CORE 0  // dovrebbe essere 1 ??? 3 ????
     xTaskCreatePinnedToCore(
     esploop1,               /* Task function. */
     "loop1",                /* name of task. */

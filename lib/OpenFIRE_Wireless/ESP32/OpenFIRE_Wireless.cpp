@@ -41,6 +41,7 @@
 #ifndef OPENFIRE_ESPNOW_WIFI_POWER
   // la potenza di trasmissione può andare da 8 a 84, dove 84 è il valore massimo che corrisponde a 21 db (x4)
   #define OPENFIRE_ESPNOW_WIFI_POWER WIFI_POWER_15dBm
+  //#define OPENFIRE_ESPNOW_WIFI_POWER WIFI_POWER_17dBm
 #endif //OPENFIRE_ESPNOW_WIFI_POWER
 
 uint8_t espnow_wifi_channel = OPENFIRE_ESPNOW_WIFI_CHANNEL;  // FATTA VARIABILE PER FUTURA CONFIGURAZIONE TRAMITE APP O OLED
@@ -136,6 +137,14 @@ const uint8_t BROADCAST_ADDR[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 #endif
 ///////////////////////////////////////////////////////////////////
+// Definizione globale della configurazione del rate
+esp_now_rate_config_t rate_config = {
+    .phymode = WIFI_PHY_MODE_11G, // Forza lo standard G
+    .rate = WIFI_PHY_RATE_12M,    // Forza i 12 Mbps
+    .ersu = false,                // Non necessario per 11g
+    .dcm = false                  // Non necessario per 11g
+};
+
 ///////////////////////////////////////////////////////////////////
 #if defined(GUN) && defined(USES_DISPLAY)
 void animTaskLink(void *pvParameters) {
@@ -827,7 +836,7 @@ void SerialWireless_::begin() {
   #endif //GUN
 
   WiFi.mode(WIFI_STA); 
-  
+  WiFi.disconnect();  // ??? SI va messo
   /*
   esp_err_t err = esp_wifi_start();
   if (err != ESP_OK) {
@@ -838,7 +847,17 @@ void SerialWireless_::begin() {
 
   //WiFi.macAddress(mac_esp_inteface); // registra il mac addres della scheda
 
-  esp_err_t err = esp_wifi_get_mac(WIFI_IF_STA, mac_esp_inteface);
+  esp_err_t err = esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11G); // | WIFI_PROTOCOL_11N);
+  if (err != ESP_OK) {
+    //Serial.printf("esp_wifi_set_protocol failed! 0x%x", err);
+  }
+  
+  err = esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW_HT20);
+  if (err != ESP_OK) {
+    //Serial.printf("esp_wifi_set_bandwidth failed! 0x%x", err);
+  }
+  
+  err = esp_wifi_get_mac(WIFI_IF_STA, mac_esp_inteface);
   if (err != ESP_OK) {
     //Serial.println("Failed to read MAC address");
   }
@@ -861,21 +880,57 @@ void SerialWireless_::begin() {
   }
 
 
-  WiFi.disconnect();  // ??? SI va messo
 
-  vTaskDelay(pdMS_TO_TICKS(1000)); // delay(1000);
+
+  // WiFi.disconnect();  // ??? SI va messo
+
+  vTaskDelay(pdMS_TO_TICKS(500)); // delay(1000);
     
   err = esp_now_init();
   if (err != ESP_OK) {
     //Serial.printf("esp_now_init failed! 0x%x", err);
   }
 
-  err = esp_wifi_config_espnow_rate(WIFI_IF_STA, WIFI_PHY_RATE_18M);
+  /* =============================================================
+  ============== SOSTITUITO DA esp_now_set_peer_rate_config(peerAddress, &rate_config); AD OGNI CREAZIONE DI UN PEER
+
+  //err = esp_wifi_config_espnow_rate(WIFI_IF_STA, WIFI_PHY_RATE_18M);
+  err = esp_wifi_config_espnow_rate(WIFI_IF_STA, WIFI_PHY_RATE_12M);
   
+  ================================================================= */
+
+
   //esp_now_peer_rate_config_t rc = {WIFI_PHY_MODE_11G, WIFI_PHY_RATE_18M, false};
   //esp_now_set_peer_rate_config(mac, &rc);
   //esp_now_set_peer_rate_config()
   
+  /*
+  esp_now_peer_rate_config_t rc = {
+    WIFI_PHY_MODE_11G,
+    WIFI_PHY_RATE_12M,
+    false
+  };
+  esp_now_set_peer_rate_config(mac_peer, &rc);
+
+  // 3. Configura il RATE specifico per questo peer
+esp_now_peer_rate_config_t rateConfig = {
+  .mode = WIFI_PHY_MODE_11G,      // Forza lo standard G
+  .rate = WIFI_PHY_RATE_12M,     // Imposta i 12 Mbps
+  .ersu = false                   // Solo per modalità 11ax (WiFi 6), metti false
+};
+
+esp_err_t err = esp_now_set_peer_rate_config(peer_mac, &rateConfig);
+
+if (err != ESP_OK) {
+  // Serial.printf("Errore configurazione rate: 0x%x", err);
+
+
+
+  */
+
+    ////////////////////////////esp_now_set_peer_rate_config(peer_mac, &rate_config);
+
+
   
   if (err != ESP_OK) {
     //Serial.printf("esp_now_init failed! 0x%x", err);
@@ -894,7 +949,7 @@ void SerialWireless_::begin() {
   peerInfo.encrypt = false;
   if (esp_now_add_peer(&peerInfo) != ESP_OK) {
     //Serial.println("Errore nell'aggiunta del peer");
-  }
+  } else esp_now_set_peer_rate_config(peerAddress, &rate_config);
 
   err = esp_now_register_recv_cb(_esp_now_rx_cb);
   if (err != ESP_OK) {
@@ -1026,7 +1081,7 @@ bool SerialWireless_::connection_dongle() {
   //peerInfo.encrypt = false;              
   if (esp_now_add_peer(&peerInfo) != ESP_OK) {  // inserisce il dongle nei peer
     //Serial.println("DONGLE - Errore nell'aggiunta del nuovo peer della GUN");
-  }
+  } else esp_now_set_peer_rate_config(peerAddress, &rate_config);
   TinyUSBDevices.onBattery = true;
   return true;
 }
@@ -1106,7 +1161,7 @@ bool SerialWireless_::connection_gun() {
   //peerInfo.encrypt = false;              
   if (esp_now_add_peer(&peerInfo) != ESP_OK) {  // inserisce il dongle nei peer
     //Serial.println("Errore nell'aggiunta del nuovo peer");
-  }                       
+  } else esp_now_set_peer_rate_config(peerAddress, &rate_config);                       
   // ====================================================
 
   while(!TinyUSBDevice.mounted() && stato_connessione_wireless != CONNECTION_STATE::TX_GUN_TO_DONGLE_CONFERM) { 
@@ -1129,7 +1184,7 @@ bool SerialWireless_::connection_gun() {
     //peerInfo.encrypt = false;              
     if (esp_now_add_peer(&peerInfo) != ESP_OK) {  // inserisce il dongle nei peer
       //Serial.println("Errore nell'aggiunta del nuovo peer");
-    }                       
+    } else esp_now_set_peer_rate_config(peerAddress, &rate_config);                       
     
     TinyUSBDevices.onBattery = true;
 
