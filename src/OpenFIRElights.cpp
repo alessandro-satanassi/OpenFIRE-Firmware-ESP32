@@ -35,7 +35,9 @@ void OF_RGB::LedInit()
     #endif // DOTSTAR_ENABLE
 
     #ifdef NEOPIXEL_PIN
-        neopixel.begin();
+        if(OF_Prefs::pins[OF_Const::neoPixel] < 0) {
+            neopixel.begin();
+        }
     #endif // NEOPIXEL_PIN
  
     /* Arduino Nano LED support disabled due to instability.
@@ -85,8 +87,10 @@ void OF_RGB::SetLedPackedColor(const uint32_t &color)
     dotstar.show();
 #endif // DOTSTAR_ENABLE
 #ifdef NEOPIXEL_PIN
-    neopixel.setPixelColor(0, color);
-    neopixel.show();
+    if(OF_Prefs::pins[OF_Const::neoPixel] < 0) {
+        neopixel.setPixelColor(0, color);
+        neopixel.show();
+    }
 #endif // NEOPIXEL_PIN
 
 #ifdef CUSTOM_NEOPIXEL
@@ -153,8 +157,10 @@ void OF_RGB::LedUpdate(const uint8_t &r, const uint8_t &g, const uint8_t &b)
         dotstar.show();
     #endif // DOTSTAR_ENABLE
     #ifdef NEOPIXEL_PIN
-        neopixel.setPixelColor(0, r, g, b);
-        neopixel.show();
+        if(OF_Prefs::pins[OF_Const::neoPixel] < 0) {
+            neopixel.setPixelColor(0, r, g, b);
+            neopixel.show();
+        }
     #endif // NEOPIXEL_PIN
 
     #ifdef CUSTOM_NEOPIXEL

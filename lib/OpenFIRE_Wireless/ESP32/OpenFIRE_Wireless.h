@@ -65,6 +65,23 @@
   // vediamo
 #endif
 
+
+#ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
+// ---------------- INIZIO AGGIUNTE TPC (Transmit Power Control) ----------------
+// Target di potenza (valori espressi in 0.25 dBm, range 8-84)
+#define WIFI_POWER_MAX 80    // 20 dBm (Massima potenza)
+#define WIFI_POWER_MIN 20    // 5 dBm (Minima potenza per risparmio batteria)
+#define TARGET_RSSI   -55    // Segnale ideale per stabilità/consumo a 12Mbps
+
+// Esponiamo la variabile globale che memorizza l'ultimo RSSI letto
+extern volatile int8_t last_rssi_percepito;
+
+// Prototipo della funzione di calcolo
+uint8_t calcolaPotenzaOttimale(int8_t rssi_remoto);
+// ---------------- FINE AGGIUNTE TPC ----------------
+#endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO
+
+
 /*****************************
  *   ESP_NOW
  *****************************/
@@ -72,6 +89,11 @@
  
 extern uint8_t espnow_wifi_channel;
 extern uint8_t espnow_wifi_power;
+#ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
+extern bool espnow_wifi_power_auto;
+extern int8_t ultimo_rssi_trasmesso;
+extern int8_t espnow_rssi_ricevuto;
+#endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO
 extern uint8_t lastDongleAddress[6];
 extern uint8_t lastDongleChannel;
 extern uint8_t peerAddress[6];
@@ -95,6 +117,12 @@ enum PACKET_TX {
   GAMEPADE_TX,
   CONNECTION,  // CONNESSIONE E ASSOCIAZIONE DONGLE CON GUN
   CHECK_CONNECTION_LAST_DONGLE, //VERIFICA LA CONNESSIONE WIRELESS TRA GUN E DONGLE E VICEVERSA
+  #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
+  // NUOVO PER GESTIONE POTENZA TX
+  DUMMY_PACKET, // TRASMISSIONE DI UN PACCHETTO VUOTO fantoccio/fittizio col quale non fare nulla  // ????? DOPPIONE NON SERVE ??? .. POTREBBE ESSERE UTILE PER LATRE COSE COME TEST
+  RSSI_FEEDBACK, // TRASMETTE UN PACCHETTO VUOTO CHE SERVE PER MISURARE L'RSSI SUL DISPOSITIVO RICEVENTE, CHIEDE ESPLICITAMENTE AL RICEVENTE DI INVIARGLI UN RSSI REPORT
+  RSSI_REPORT,   // INVIA AL DISPOSITIVO TRASMISTTENTE IL VALORE DELL'RSSI RICEVUTO IN MODO CHE IL TRASMITTENTE ADATTI LA SUA POTENZA - quando si riceve questo pacchetto che contienne rssi, si regola la potenza
+  #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO
   // ========= VALUTARE
   RESET_DATA_USB,
   REBOOT,      // REBOOT DEL DONGLE

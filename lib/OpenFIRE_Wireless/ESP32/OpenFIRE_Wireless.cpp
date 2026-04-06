@@ -40,12 +40,17 @@
 
 #ifndef OPENFIRE_ESPNOW_WIFI_POWER
   // la potenza di trasmissione può andare da 8 a 84, dove 84 è il valore massimo che corrisponde a 21 db (x4)
-  #define OPENFIRE_ESPNOW_WIFI_POWER WIFI_POWER_15dBm
-  //#define OPENFIRE_ESPNOW_WIFI_POWER WIFI_POWER_17dBm
+  //#define OPENFIRE_ESPNOW_WIFI_POWER WIFI_POWER_15dBm  // corrisponde a 60 .. potenza più conservativa ma con segnale eccellente
+  #define OPENFIRE_ESPNOW_WIFI_POWER WIFI_POWER_17dBm  // corrisponde a 68 .. massima potenza senza distursioni con segnale eccellette
+  
 #endif //OPENFIRE_ESPNOW_WIFI_POWER
 
 uint8_t espnow_wifi_channel = OPENFIRE_ESPNOW_WIFI_CHANNEL;  // FATTA VARIABILE PER FUTURA CONFIGURAZIONE TRAMITE APP O OLED
 uint8_t espnow_wifi_power = OPENFIRE_ESPNOW_WIFI_POWER;      // FATTA VARIABILE PER FUTURA CONFIGURAZIONE TRAMITE APP O OLED
+
+#ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
+bool espnow_wifi_power_auto = true;
+#endif // OPENFIRE_ESPNOW_WIFI_POWER_AUTO
 
 
 USB_Data_GUN_Wireless usb_data_wireless = {
@@ -144,6 +149,43 @@ esp_now_rate_config_t rate_config = {
     .ersu = false,                // Non necessario per 11g
     .dcm = false                  // Non necessario per 11g
 };
+////////////////////////////////////////////////////////////////////
+
+#ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
+// ---------------- INIZIO LOGICA TPC ----------------
+// Variabile globale per salvare l'RSSI istantaneo del pacchetto appena arrivato
+volatile int8_t last_rssi_percepito = -100;
+int8_t ultimo_rssi_trasmesso = TARGET_RSSI;
+int8_t espnow_rssi_ricevuto = 0;
+//volatile int8_t last_rssi_percepito = -100;
+// ultimo_rssi_trasmesso = last_rssi_percepito;
+
+uint8_t calcolaPotenzaOttimale(int8_t rssi_remoto) {
+    // Usiamo direttamente int16_t per evitare cast impliciti continui nei calcoli successivi
+    int16_t potenza_attuale = espnow_wifi_power;
+
+    // Calcolo in un'unica riga: 
+    // Usiamo lo shift bit a bit (<< 1) al posto della moltiplicazione (* 2) per massima velocità hardware
+    potenza_attuale += (TARGET_RSSI - rssi_remoto) * 2; // * 4; 
+
+    // AGGIUNGIAMO UN MARGINE DI SICUREZZA DI +2 dBm (8 unità) 
+    // visto che la potenza non verrà più corretta in volo!
+    //potenza_attuale += 8;
+    
+    #if defined(GUN)
+        // La GUN scende per risparmiare batteria
+        potenza_attuale = constrain(potenza_attuale, WIFI_POWER_MIN, WIFI_POWER_MAX);
+    #elif defined(DONGLE)
+        // Il DONGLE resta mediamente alto (minimo 40) perché ha la corrente via USB
+        potenza_attuale = constrain(potenza_attuale, 40, WIFI_POWER_MAX); 
+    #endif
+
+    return (uint8_t)potenza_attuale;
+}
+
+
+// ---------------- FINE LOGICA TPC ----------------
+#endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO
 
 ///////////////////////////////////////////////////////////////////
 #if defined(GUN) && defined(USES_DISPLAY)
@@ -444,9 +486,9 @@ uint8_t findBestChannel() {
     if (ch < 11) finalScores[ch] += channelStats[ch+3].score * 0.20f;
     if (ch < 10) finalScores[ch] += channelStats[ch+4].score * 0.10f;
   
-    // Dopo il calcolo finalScores, dare bonus ai canali ideali  // DECIDERE SE METTERLO
+    // Dopo il calcolo finalScores, dare bonus ai canali ideali
     if (ch == 1 || ch == 6 || ch == 11) {
-      finalScores[ch] *= 0.92f; // -8% bonus (preferenza)
+      finalScores[ch] *= 0.92f; // -8% bonus (preferenza) 
     }  
   }
 
@@ -1082,6 +1124,17 @@ bool SerialWireless_::connection_dongle() {
   if (esp_now_add_peer(&peerInfo) != ESP_OK) {  // inserisce il dongle nei peer
     //Serial.println("DONGLE - Errore nell'aggiunta del nuovo peer della GUN");
   } else esp_now_set_peer_rate_config(peerAddress, &rate_config);
+
+  #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO // ==========================================================
+    if (espnow_wifi_power_auto) {
+      SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
+      SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
+      SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
+      //espnow_wifi_power = 45;
+    }
+  #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO // ==========================================================
+
+
   TinyUSBDevices.onBattery = true;
   return true;
 }
@@ -1184,7 +1237,17 @@ bool SerialWireless_::connection_gun() {
     //peerInfo.encrypt = false;              
     if (esp_now_add_peer(&peerInfo) != ESP_OK) {  // inserisce il dongle nei peer
       //Serial.println("Errore nell'aggiunta del nuovo peer");
-    } else esp_now_set_peer_rate_config(peerAddress, &rate_config);                       
+    } else esp_now_set_peer_rate_config(peerAddress, &rate_config);
+        
+    #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO // ===========================================================================  
+      if (espnow_wifi_power_auto) {
+        SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
+        SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
+        SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
+        //espnow_wifi_power = 45;
+      }
+    #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO // ===========================================================================  
+
     
     TinyUSBDevices.onBattery = true;
 
@@ -1223,7 +1286,32 @@ void packet_callback_read_dongle() {
       break;
     case PACKET_TX::KEYBOARD_TX:
       usbHid.sendReport(HID_RID_e::HID_RID_KEYBOARD, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
+      break;
+    #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
+    case PACKET_TX::DUMMY_PACKET:
+      /* pacchetto vuoto - non fare nulla - per eventuali test - da implementare se necessario */
+      /* code */  
       break; 
+    case PACKET_TX::RSSI_FEEDBACK:
+      /* richiesta di inviare rssi quindi inviare un pacchetto rssi_report con l'rssi */
+      aux_buffer[0] = last_rssi_percepito;
+      SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_REPORT);
+      break; 
+    case PACKET_TX::RSSI_REPORT:
+      /* ricevuto ul pacchetto rssi, quindi adattare la potenza di trasmissione in base a tale valore */
+      {
+        memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
+        int8_t rssi_misurato_dall_altro = (int8_t)aux_buffer[0];
+        uint8_t mia_nuova_potenza = calcolaPotenzaOttimale(rssi_misurato_dall_altro);
+        if (esp_wifi_set_max_tx_power(mia_nuova_potenza) == ESP_OK) {
+          espnow_wifi_power = mia_nuova_potenza;
+          espnow_rssi_ricevuto = rssi_misurato_dall_altro;
+          ultimo_rssi_trasmesso = last_rssi_percepito;
+          //espnow_wifi_power = 41;
+        }
+      }
+      break; 
+    #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO
     case PACKET_TX::CHECK_CONNECTION_LAST_DONGLE:
       // CODICE
       memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
@@ -1303,6 +1391,31 @@ void packet_callback_read_gun() {
     case PACKET_TX::KEYBOARD_TX:
       /* code */  
       break; 
+    #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
+    case PACKET_TX::DUMMY_PACKET:
+      /* pacchetto vuoto - non fare nulla - per eventuali test - da implementare se necessario */
+      /* code */  
+      break; 
+    case PACKET_TX::RSSI_FEEDBACK:
+      /* richiesta di inviare rssi quindi inviare un pacchetto rssi_report con l'rssi */
+      aux_buffer[0] = last_rssi_percepito;
+      SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_REPORT);
+      break; 
+    case PACKET_TX::RSSI_REPORT:
+      /* ricevuto ul pacchetto rssi, quindi adattare la potenza di trasmissione in base a tale valore */
+      {
+        memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
+        int8_t rssi_misurato_dall_altro = (int8_t)aux_buffer[0];
+        uint8_t mia_nuova_potenza = calcolaPotenzaOttimale(rssi_misurato_dall_altro);
+        if (esp_wifi_set_max_tx_power(mia_nuova_potenza) == ESP_OK) {
+          espnow_wifi_power = mia_nuova_potenza;
+          espnow_rssi_ricevuto = rssi_misurato_dall_altro;
+          ultimo_rssi_trasmesso = last_rssi_percepito;
+          //espnow_wifi_power = 41;
+        }
+      }      
+      break;
+    #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO
     case PACKET_TX::CHECK_CONNECTION_LAST_DONGLE:
       // CODICE VALUTARE SE FARE CONTROLLO SE PISTOLA ANCORA CONNESSA .. SE NON CONNESSA RIAVVIA LA SCHEDA ?
       memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
@@ -1375,6 +1488,13 @@ void packet_callback_read_gun() {
 }
 
 static void _esp_now_rx_cb(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
+  #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
+  // ---- AGGIUNTA TPC (Operazione a costo zero in RAM) ----
+    if (info->rx_ctrl != NULL) {
+        last_rssi_percepito = info->rx_ctrl->rssi;
+    }
+  // -------------------------------------------------------
+  #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO
   if ((FIFO_SIZE_READ - SerialWireless._readLen) >= len) {
     size_t firstChunk = FIFO_SIZE_READ - SerialWireless._writer;
     if (firstChunk < len) {
@@ -1452,5 +1572,6 @@ void SerialWireless_::resetTimer_serial(uint64_t duration_us) {
 
 
 // ==========================   FINE TIMER ====================================
+
 
 #endif //OPENFIRE_WIRELESS_ENABLE
