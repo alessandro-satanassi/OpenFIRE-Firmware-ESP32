@@ -93,6 +93,17 @@ public:
 };
 extern TinyUSBDevices_ TinyUSBDevices;
 
+//=====================================
+
+#ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
+void report_all_MOUSE_KEY_PAD_TX_wifi_espnow(void);
+
+#endif // OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
+
+// =====================================
+
+
+
 enum HID_RID_e{
   HID_RID_KEYBOARD = 1,
   HID_RID_MOUSE,   //2  
@@ -126,7 +137,8 @@ uint8_t const desc_hid_report[] = {
 // 5 button absolute mouse
 class AbsMouse5_
 {
-  private:
+  //private:
+  public:
   hid_abs_mouse_report_t absmouse5Report = {0,0,0,0,0};
   
   public:
@@ -347,7 +359,8 @@ extern AbsMouse5_ AbsMouse5;
   
 class Keyboard_ : public Print
 {
-  private:
+  //private:
+  public:
     hid_keyboard_report_t _keyReport = {0,0,{0,0,0,0,0,0}};
 
   public:
@@ -413,7 +426,8 @@ extern Keyboard_ Keyboard;
 #define START_DPAD_KEY PAD_UP  // utilizzato come riferimento per posizione per file lightgunButtons.cpp
 
 class Gamepad16_ {
-  private:
+  //private:
+  public:
     hid_gamepad16_report_t gamepad16Report = {0,0,0,0,0,0,0,0};
     uint16_t _x = 2048; // A META' CONSIDERANDO IL RANGE DA 0 A 4095
     uint16_t _y = 2048; // A META' CONSIDERANDO IL RANGE DA 0 A 4095

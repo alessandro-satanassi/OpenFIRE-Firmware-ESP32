@@ -89,6 +89,11 @@ uint8_t calcolaPotenzaOttimale(int8_t rssi_remoto);
  
 extern uint8_t espnow_wifi_channel;
 extern uint8_t espnow_wifi_power;
+#ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
+extern hid_abs_mouse_report_t absmouse5Report_last_wifi;
+extern hid_keyboard_report_t  keyReport_last_wifi;
+extern hid_gamepad16_report_t gamepad16Report_last_wifi;
+#endif // OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
 #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
 extern bool espnow_wifi_power_auto;
 extern int8_t ultimo_rssi_trasmesso;
@@ -117,6 +122,9 @@ enum PACKET_TX {
   GAMEPADE_TX,
   CONNECTION,  // CONNESSIONE E ASSOCIAZIONE DONGLE CON GUN
   CHECK_CONNECTION_LAST_DONGLE, //VERIFICA LA CONNESSIONE WIRELESS TRA GUN E DONGLE E VICEVERSA
+  #ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
+  MOUSE_KEY_PAD_TX,
+  #endif // OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
   #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
   // NUOVO PER GESTIONE POTENZA TX
   DUMMY_PACKET, // TRASMISSIONE DI UN PACCHETTO VUOTO fantoccio/fittizio col quale non fare nulla  // ????? DOPPIONE NON SERVE ??? .. POTREBBE ESSERE UTILE PER LATRE COSE COME TEST

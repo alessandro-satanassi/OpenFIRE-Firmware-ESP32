@@ -48,6 +48,13 @@
 uint8_t espnow_wifi_channel = OPENFIRE_ESPNOW_WIFI_CHANNEL;  // FATTA VARIABILE PER FUTURA CONFIGURAZIONE TRAMITE APP O OLED
 uint8_t espnow_wifi_power = OPENFIRE_ESPNOW_WIFI_POWER;      // FATTA VARIABILE PER FUTURA CONFIGURAZIONE TRAMITE APP O OLED
 
+#ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
+  hid_abs_mouse_report_t absmouse5Report_last_wifi = {0,0,0,0,0};
+  hid_keyboard_report_t  keyReport_last_wifi = {0,0,{0,0,0,0,0,0}};
+  hid_gamepad16_report_t gamepad16Report_last_wifi = {0,0,0,0,0,0,0,0};
+#endif // OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
+
+
 #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
 bool espnow_wifi_power_auto = true;
 #endif // OPENFIRE_ESPNOW_WIFI_POWER_AUTO
@@ -1287,6 +1294,55 @@ void packet_callback_read_dongle() {
     case PACKET_TX::KEYBOARD_TX:
       usbHid.sendReport(HID_RID_e::HID_RID_KEYBOARD, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
       break;
+    #ifdef COMMENDO //OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
+    case PACKET_TX::MOUSE_KEY_PAD_TX:
+      if (memcmp(&SerialWireless.packet.rxBuff[PREAMBLE_SIZE], &absmouse5Report_last_wifi, sizeof(absmouse5Report_last_wifi))) {
+        memcpy(&absmouse5Report_last_wifi, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], sizeof(absmouse5Report_last_wifi));
+        usbHid.sendReport(HID_RID_e::HID_RID_MOUSE, &absmouse5Report_last_wifi, sizeof(absmouse5Report_last_wifi));  
+      }
+      if (memcmp(&SerialWireless.packet.rxBuff[PREAMBLE_SIZE]+sizeof(absmouse5Report_last_wifi), &keyReport_last_wifi, sizeof(keyReport_last_wifi))) {
+        memcpy(&keyReport_last_wifi, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE]+sizeof(absmouse5Report_last_wifi), sizeof(keyReport_last_wifi));
+        usbHid.sendReport(HID_RID_e::HID_RID_KEYBOARD, &keyReport_last_wifi, sizeof(keyReport_last_wifi));
+      }
+      if (memcmp(&SerialWireless.packet.rxBuff[PREAMBLE_SIZE]+sizeof(absmouse5Report_last_wifi)+sizeof(keyReport_last_wifi), &gamepad16Report_last_wifi, sizeof(gamepad16Report_last_wifi))) {
+        memcpy(&gamepad16Report_last_wifi, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE]+sizeof(absmouse5Report_last_wifi)+sizeof(keyReport_last_wifi), sizeof(gamepad16Report_last_wifi));
+        usbHid.sendReport(HID_RID_e::HID_RID_GAMEPAD, &gamepad16Report_last_wifi, sizeof(gamepad16Report_last_wifi));
+      }
+      break;  
+    #endif // commanto // OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
+    #ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
+    case PACKET_TX::MOUSE_KEY_PAD_TX: { // ATTENZIONE: Le parentesi graffe qui sono OBBLIGATORIE in C++ per dichiarare variabili dentro un 'case'
+      
+      // Calcoliamo l'indirizzo base UNA sola volta e lo mettiamo nel puntatore 'ptr'
+      uint8_t* ptr = &SerialWireless.packet.rxBuff[PREAMBLE_SIZE];
+
+      // --- MOUSE ---
+      // Confrontiamo il buffer con l'ultimo stato noto
+      if (memcmp(ptr, &absmouse5Report_last_wifi, sizeof(absmouse5Report_last_wifi))) {
+        //memcpy(&absmouse5Report_last_wifi, ptr, sizeof(absmouse5Report_last_wifi));
+        if (usbHid.sendReport(HID_RID_e::HID_RID_MOUSE, ptr, sizeof(absmouse5Report_last_wifi)))
+          memcpy(&absmouse5Report_last_wifi, ptr, sizeof(absmouse5Report_last_wifi));
+      }
+      ptr += sizeof(absmouse5Report_last_wifi); // Fai scorrere il puntatore in avanti alla fine dei dati mouse
+
+      // --- TASTIERA ---
+      if (memcmp(ptr, &keyReport_last_wifi, sizeof(keyReport_last_wifi))) {
+        //memcpy(&keyReport_last_wifi, ptr, sizeof(keyReport_last_wifi));
+        if (usbHid.sendReport(HID_RID_e::HID_RID_KEYBOARD, ptr, sizeof(keyReport_last_wifi)))
+          memcpy(&keyReport_last_wifi, ptr, sizeof(keyReport_last_wifi));
+      }
+      ptr += sizeof(keyReport_last_wifi); // Fai scorrere il puntatore in avanti alla fine dei dati tastiera
+
+      // --- GAMEPAD ---
+      if (memcmp(ptr, &gamepad16Report_last_wifi, sizeof(gamepad16Report_last_wifi))) {
+        //memcpy(&gamepad16Report_last_wifi, ptr, sizeof(gamepad16Report_last_wifi));
+        if (usbHid.sendReport(HID_RID_e::HID_RID_GAMEPAD, ptr, sizeof(gamepad16Report_last_wifi)))
+          memcpy(&gamepad16Report_last_wifi, ptr, sizeof(gamepad16Report_last_wifi));
+      }
+      
+      break;  
+    } // Chiusura del blocco del case
+    #endif // OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
     #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
     case PACKET_TX::DUMMY_PACKET:
       /* pacchetto vuoto - non fare nulla - per eventuali test - da implementare se necessario */
