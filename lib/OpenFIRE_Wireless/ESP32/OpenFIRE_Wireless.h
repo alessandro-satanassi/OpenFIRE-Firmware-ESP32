@@ -154,6 +154,11 @@ enum CONNECTION_STATE {
   TX_CHECK_CONNECTION_LAST_DONGLE, //6  GUN -> DONGLE
   TX_CONFERM_CONNECTION_LAST_DONGLE, //7 DONGLE -> GUN
   DEVICES_CONNECTED_WITH_LAST_DONGLE, // 8
+  //===============================
+  TX_GUN_SEARCH_DONGLE_BROADCAST,  //9
+  TX_DONGLE_TO_GUN_PRESENCE,  //10
+  TX_GUN_TO_DONGLE_ACCEPT,  //11
+  TX_DONGLE_TO_GUN_CONFERM,  //12
 };
 
 typedef struct __attribute__ ((packed)) {
@@ -271,6 +276,8 @@ class SerialWireless_ : public Stream
 
   bool connection_dongle();
   bool connection_gun();
+  bool connection_dongle_original();
+  bool connection_gun_original();
   bool connection_gun_at_last_dongle();
 
   // ===============================

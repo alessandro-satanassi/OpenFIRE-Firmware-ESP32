@@ -1,3 +1,5 @@
+
+
 #if defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
 
 #include "OpenFIRE_Wireless.h"
@@ -6,12 +8,35 @@
 #ifdef DONGLE
   #ifdef USES_DISPLAY
     #ifdef USE_LOVYAN_GFX
+      #define LGFX_USE_V1
       #include <LovyanGFX.hpp>
       #include "../../src/LGFX_096_ST7735S_80x160.hpp"
       extern LGFX tft;
+      #define WHITE            TFT_WHITE
+      #define BLACK            TFT_BLACK
+      #define BLUE             TFT_BLUE
+      #define RED              TFT_RED
+      #define MAGENTA          TFT_MAGENTA
+      #define GREEN            TFT_GREEN
+      #define CYAN             TFT_CYAN
+      #define YELLOW           TFT_YELLOW
+      #define BROWN            TFT_BROWN
+      #define GRAY             TFT_LIGHTGRAY
+      #define ORANGE           TFT_ORANGE
     #else
       #include <Adafruit_ST7735.h>
       extern Adafruit_ST7735 tft;
+      #define WHITE            ST7735_WHITE
+      #define BLACK            ST7735_BLACK
+      #define BLUE             ST7735_BLUE
+      #define RED              ST7735_RED
+      #define MAGENTA          ST7735_MAGENTA
+      #define GREEN            ST7735_GREEN
+      #define CYAN             ST7735_CYAN
+      #define YELLOW           ST7735_YELLOW
+      #define BROWN            0XBC40
+      #define GRAY             0X8430
+      #define ORANGE           ST7735_ORANGE
     #endif // USE_LOVYAN_GFX
   #endif // USES_DISPLAY
 #endif // DONGLE
@@ -32,10 +57,11 @@
   #endif // USES_DISPLAY
 #endif // GUN
 
+extern bool display_init;
 
 
 #ifndef OPENFIRE_ESPNOW_WIFI_CHANNEL
-  #define OPENFIRE_ESPNOW_WIFI_CHANNEL 12 // canale sul quale si sintonizza la lightgun di default
+  #define OPENFIRE_ESPNOW_WIFI_CHANNEL 11 // canale sul quale si sintonizza la lightgun di default
 #endif // OPENFIRE_ESPNOW_WIFI_CHANNEL
 
 #ifndef OPENFIRE_ESPNOW_WIFI_POWER
@@ -195,6 +221,13 @@ uint8_t calcolaPotenzaOttimale(int8_t rssi_remoto) {
 #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO
 
 ///////////////////////////////////////////////////////////////////
+
+volatile uint8_t channel_display = espnow_wifi_channel;
+
+/////////////////////////////////////////////////////////////////////////////
+// VERSIONE GRAFICA RICERCA CANALE PER GUN //////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+
 #if defined(GUN) && defined(USES_DISPLAY)
 void animTaskLink(void *pvParameters) {
   unsigned long lastChange = 0;
@@ -207,7 +240,7 @@ void animTaskLink(void *pvParameters) {
   const uint8_t baseY = 2;
   const uint8_t charWidth = 6;
   uint8_t len_word = strlen(word);
-
+  uint8_t channel_tread = espnow_wifi_channel;
   
   // Setup iniziale display
   display_OLED->setCursor(baseX, baseY);
@@ -216,12 +249,27 @@ void animTaskLink(void *pvParameters) {
   display_OLED->fillRect(0, 0, 128, 16, BLACK);
   display_OLED->drawFastHLine(0, 15, 128, WHITE);
   char buffer[30];
-  sprintf(buffer, "Ch:%2d Waiting link", espnow_wifi_channel);
+  sprintf(buffer, "Ch:%2d Waiting link", channel_tread);
   display_OLED->print(buffer);
   display_OLED->display();
 
   // Loop del task
-  for (;;) {    
+  for (;;) {
+    if (channel_display != channel_tread)
+    {
+      display_OLED->setCursor(19, 2);
+              //display_OLED->setTextSize(1);
+              //display_OLED->setTextColor(WHITE, BLACK);
+              ///////////display_OLED->fillRect(0, 0, 128, 16, BLACK);
+              //display_OLED->drawFastHLine(0, 15, 128, WHITE);
+      
+      sprintf(buffer, "%2d", channel_display);
+      display_OLED->print(buffer);
+              //display_OLED->display();          
+      
+
+      channel_tread = channel_display;
+    }
     display_OLED->setCursor(baseX + (19 * charWidth), baseY);
     display_OLED->write(rotazione[rotazioneIndex]);
     rotazioneIndex = (rotazioneIndex + 1) % 8;
@@ -283,6 +331,133 @@ void animTask(void *pvParameters) {
 }
 #endif //GUN
 
+/////////////////////////////////////////////////////////////////////////////
+// FINE VERSIONE GRAFICA RICERCA CANALE PER GUN /////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////////////////////
+// VERSIONE GRAFICA RICERCA CANALE PER DONGLE ///////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+
+#if defined(DONGLE) && defined(USES_DISPLAY)
+void animTaskLink(void *pvParameters) {
+  unsigned long lastChange = 0;
+  int8_t currentIndex = 0;
+  int8_t direzione = 1;
+  const char* word = "Scanning WiFi (((o)))"; // Waiting link 
+  const char* rotazione = "-\\|/-\\|/";
+  int8_t rotazioneIndex = 0;
+  const uint8_t baseX = 75;
+  const uint8_t baseY = 58;
+  const uint8_t charWidth = 6;
+  uint8_t len_word = strlen(word);
+
+  
+  // Setup iniziale display
+  //tft.setCursor(baseX, baseY);
+  tft.setTextSize(1);
+  tft.setTextColor(WHITE, BLACK);
+  tft.fillRect(70,20,100,60,BLACK);
+  ////////tft.fillRect(0, 0, 128, 16, BLACK);
+  ////////tft.drawFastHLine(0, 15, 128, WHITE);
+  tft.setCursor(baseX, baseY - 30);
+  tft.print("Selected");
+  tft.setCursor(baseX, baseY - 19);
+  tft.print("channel:");
+  tft.setCursor(baseX + (9 * charWidth)+3, baseY - 26);
+  tft.setTextSize(2);
+  tft.setTextColor(RED, BLACK);
+  char buffer[10];
+  sprintf(buffer, "%2d", espnow_wifi_channel);
+  tft.print(buffer);
+  tft.setTextSize(1);
+  tft.setTextColor(WHITE, BLACK);
+  tft.setCursor(baseX, baseY);
+  tft.print("Connecting");
+  tft.display();
+  tft.setTextSize(2);
+  tft.setTextColor(BLUE, BLACK);
+
+  // Loop del task
+  for (;;) {    
+    tft.setCursor(baseX + (11 * charWidth) + 3, baseY);
+    tft.write(rotazione[rotazioneIndex]);
+    rotazioneIndex = (rotazioneIndex + 1) % 8;
+    tft.display();
+    vTaskDelay(pdMS_TO_TICKS(150)); // piccolo delay per non saturare la CPU
+  } 
+}
+#endif // DONGLE
+
+
+//////////////////////////////////////////////////////////////////
+
+#if defined(DONGLE) && defined(USES_DISPLAY)
+void animTask(void *pvParameters) {
+  int8_t currentIndex = 0;
+  const uint8_t baseX = 75;
+  const uint8_t baseY = 45;
+  const uint8_t charWidth = 6;
+
+  // Setup iniziale display
+  tft.setCursor(baseX, baseY);
+  tft.setTextSize(1);
+  tft.setTextColor(WHITE, BLACK);
+  //tft.fillRect(0, 0, 128, 16, BLACK);
+  //tft.drawFastHLine(0, 15, 128, WHITE);
+  //tft.setTextColor(RED, BLACK);
+  tft.setCursor(baseX + 12, baseY - 20);
+  tft.print("Searching");
+  tft.setCursor(baseX+3, baseY - 10);
+  tft.print("best channel");
+  //tft.setTextColor(BLUE, BLACK);
+  tft.setCursor(baseX, baseY);
+  tft.print("Scanning WiFi");
+  tft.display();
+  tft.setTextColor(BLUE, BLACK);
+
+  //tft.setTextColor(WHITE, BLACK);
+  // Loop del task
+  for (;;) {  
+    tft.setCursor(baseX + (3 * charWidth), baseY + 18);
+    switch (currentIndex)
+    {
+    case 0:
+      /* code */
+      tft.print("   o   ");
+      break;
+    case 1:
+      /* code */
+      tft.print("  (o)  ");
+      break;
+    case 2:
+      /* code */
+      tft.print(" ((o)) ");
+      break;
+    case 3:
+      /* code */
+      tft.print("(((o)))");
+      break;
+    
+    default:
+      
+    break;
+    }
+    currentIndex = (currentIndex + 1) % 4;
+    tft.display();
+    vTaskDelay(pdMS_TO_TICKS(150)); // piccolo delay per non saturare la CPU
+  }
+}
+#endif //DONGLE
+
+
+/////////////////////////////////////////////////////////////////////////////
+// FINE VERSIONE GRAFICA RICERCA CANALE PER DONGLE //////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+
 // ===============================================================
 // ESP-NOW OPTIMAL CHANNEL FINDER - VERSIONE PERFETTA
 // Tempo totale: ~14 secondi | Accuratezza: massima
@@ -303,6 +478,7 @@ uint8_t findBestChannel() {
   
   #if defined(GUN) && defined(USES_DISPLAY)
   TaskHandle_t animTaskHandle = NULL;  
+  //if(display_init) {
   if(display_OLED != nullptr) {
   // Avvio animazione
     if (animTaskHandle == NULL) {
@@ -319,6 +495,25 @@ uint8_t findBestChannel() {
   }
   #endif // USES_DISPLAY
   
+  #if defined(DONGLE) && defined(USES_DISPLAY)
+  TaskHandle_t animTaskHandle = NULL;  
+  if(display_init) {
+  // Avvio animazione
+    if (animTaskHandle == NULL) {
+      xTaskCreatePinnedToCore(
+        animTask,          // funzione del task
+        "AnimTask",        // nome
+        4096,              // stack size
+        NULL,              // parametri
+        1,                 // priorità
+        &animTaskHandle,   // handle
+        APP_CPU_NUM        // core (puoi usare 0 o 1)
+      );
+    }
+  }
+  #endif // USES_DISPLAY
+
+
   // ================= STRUTTURA PER STATISTICHE CANALE =================
   typedef struct {
     uint16_t networks;   // Numero di AP rilevati
@@ -515,7 +710,7 @@ uint8_t findBestChannel() {
   g_packetCounter = 0;
   g_sniffing = false;
   
-  #if defined(GUN) && defined(USES_DISPLAY)
+  #if /*defined(GUN) &&*/ defined(USES_DISPLAY)
     if (animTaskHandle != NULL) {
       vTaskDelete(animTaskHandle);
       animTaskHandle = NULL;
@@ -828,61 +1023,21 @@ void SerialWireless_::begin() {
   #endif //COMMENTO
 
   #ifdef GUN
-  if (lastDongleSave) espnow_wifi_channel=lastDongleChannel;
-    else {  
-      #ifdef OPENFIRE_AUTO_CHANNEL_ESPNOW_WIFI
-        espnow_wifi_channel = findBestChannel(); //12;
-               
-        #ifdef USES_DISPLAY
-        if(display_OLED != nullptr) {
-          display_OLED->setCursor(10, 2);
-          display_OLED->setTextSize(1);
-          display_OLED->setTextColor(WHITE, BLACK);
-          display_OLED->fillRect(0, 0, 128, 16, BLACK);
-          display_OLED->drawFastHLine(0, 15, 128, WHITE);
-          display_OLED->print("Best Channel Ready");
-          display_OLED->display();
-          vTaskDelay(pdMS_TO_TICKS(1000));
-        }
-        #endif // USES_DISPLAY
-    
-      #endif // OPENFIRE_AUTO_CHANNEL_ESPNOW_WIFI
-      
-      #ifdef COMMENTO
-      #ifdef USES_DISPLAY
-        //FW_Common::OLED.TopPanelUpdate(" ... CONNECTION ...");
-        //FW_Common::OLED.display->setTextSize(1);
-
-        display_OLED->fillRect(0, 0, 128, 16, BLACK);
-        display_OLED->drawFastHLine(0, 15, 128, WHITE);
-        display_OLED->setCursor(2, 2);
-        display_OLED->setTextSize(1);
-        display_OLED->setTextColor(WHITE, BLACK);
-        display_OLED->print("Ricerca canale");
-        display_OLED->display();
-      
-      
-        //FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Init);
-        //FW_Common::OLED.TopPanelUpdate(" ... CONNECTION ...");
-      #endif // USES_DISPLAY
-      //espnow_wifi_channel = findBestChannel(); //12;
-      #ifdef USES_DISPLAY
-        char buffer[50];
-        sprintf(buffer, "Canale: %2d ", espnow_wifi_channel);
-        // FW_Common::OLED.TopPanelUpdate(buffer);
-        display_OLED->fillRect(0, 0, 128, 16, BLACK);
-        display_OLED->drawFastHLine(0, 15, 128, WHITE);
-        display_OLED->setCursor(2, 2);
-        display_OLED->setTextSize(1);
-        display_OLED->setTextColor(WHITE, BLACK);
-        display_OLED->print(buffer);
-        display_OLED->display();
-      #endif // USES_DISPLAY
-      #endif // COMMENTO
-
-    }
-  //findBestChannel();
+    if (lastDongleSave) espnow_wifi_channel=lastDongleChannel;
+      else espnow_wifi_channel=OPENFIRE_ESPNOW_WIFI_CHANNEL;
   #endif //GUN
+
+  #ifdef DONGLE
+    
+      #ifdef OPENFIRE_AUTO_CHANNEL_ESPNOW_WIFI
+        espnow_wifi_channel = findBestChannel(); //12;             
+      #else
+        espnow_wifi_channel=OPENFIRE_ESPNOW_WIFI_CHANNEL;
+      #endif // OPENFIRE_AUTO_CHANNEL_ESPNOW_WIFI
+     
+  #endif // DONGLE
+
+
 
   WiFi.mode(WIFI_STA); 
   WiFi.disconnect();  // ??? SI va messo
@@ -1043,7 +1198,84 @@ bool SerialWireless_::end() {
   return true;
 }
 
+// ============ NUOVA IMPLEMNTAZIONE == LA GUN FA IL FARO ================================
 bool SerialWireless_::connection_dongle() {
+    
+  #if defined(DONGLE) && defined(USES_DISPLAY)
+  TaskHandle_t animTaskHandleLink = NULL;  
+  if(display_init) {
+  // Avvio animazione
+    if (animTaskHandleLink == NULL) {
+      xTaskCreatePinnedToCore(
+        animTaskLink,          // funzione del task
+        "AnimTaskLink",        // nome
+        4096,              // stack size
+        NULL,              // parametri
+        1,                 // priorità
+        &animTaskHandleLink,   // handle
+        APP_CPU_NUM        // core (puoi usare 0 o 1)
+      );
+    }
+  }
+  #endif // USES_DISPLAY
+
+  #define TIMEOUT_GUN_DIALOGUE 1000 // in millisecondi   ?????????????????????????
+  unsigned long lastMillis_start_dialogue = millis ();
+  lastMillis_start_dialogue = millis ();
+  stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
+    
+  // ====================================================
+
+  while(/*!TinyUSBDevice.mounted() && */stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) { 
+    if (stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) {
+      lastMillis_start_dialogue = millis ();
+    }
+    if (((millis() - lastMillis_start_dialogue) > TIMEOUT_GUN_DIALOGUE) && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
+      stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
+    }
+  }
+    
+  //Serial.println("DONGLE - Negosazione completata - associazione dei dispositivi GUN/DONGLE");
+  if (esp_now_del_peer(peerAddress) != ESP_OK) {  // cancella il broadcast dai peer
+    //Serial.println("DONGLE - Errore nella cancellazione del peer broadcast");
+  }
+  memcpy(peerAddress, mac_esp_another_card, 6);
+  memcpy(peerInfo.peer_addr, peerAddress, 6);
+  ////////////espnow_wifi_channel=usb_data_wireless.channel;
+  ////////////esp_wifi_set_promiscuous(true);
+  ////////////esp_wifi_set_channel(espnow_wifi_channel, WIFI_SECOND_CHAN_NONE);
+  ////////////esp_wifi_set_promiscuous(false);
+  //peerInfo.channel = espnow_wifi_channel;
+  //peerInfo.channel = ESPNOW_WIFI_CHANNEL;
+  //peerInfo.encrypt = false;              
+  if (esp_now_add_peer(&peerInfo) != ESP_OK) {  // inserisce il dongle nei peer
+    //Serial.println("DONGLE - Errore nell'aggiunta del nuovo peer della GUN");
+  } else esp_now_set_peer_rate_config(peerAddress, &rate_config);
+
+  #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO // ==========================================================
+    if (espnow_wifi_power_auto) {
+      SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
+      SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
+      SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
+      //espnow_wifi_power = 45;
+    }
+  #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO // ==========================================================
+
+
+  TinyUSBDevices.onBattery = true;
+  
+    #if defined(DONGLE) && defined(USES_DISPLAY)
+      if (animTaskHandleLink != NULL) {
+        vTaskDelete(animTaskHandleLink);
+        animTaskHandleLink = NULL;
+      }
+    #endif // USES_DISPLAY
+  
+  return true; 
+}
+
+// =========================================== ORIGINALE CONNECTION DONGLE == IN CUI IL DONGLE FA IL FARO =====================================
+bool SerialWireless_::connection_dongle_original() {
 
   uint8_t channel = espnow_wifi_channel;   // tra e 1 e 13 (il 14 dovrebbe essere riservato)
   #define TIMEOUT_TX_PACKET 500 // in millisecondi
@@ -1060,8 +1292,7 @@ bool SerialWireless_::connection_dongle() {
   memcpy(&aux_buffer_tx[1], SerialWireless.mac_esp_inteface, 6);
   memcpy(&aux_buffer_tx[7], peerAddress, 6);
   //aux_buffer_tx[13] = espnow_wifi_channel;
-  
-  
+ 
   #ifdef DONGLE
     #ifdef USES_DISPLAY
       tft.fillRect(95,60,50,20,0/*BLACK*/);
@@ -1145,6 +1376,8 @@ bool SerialWireless_::connection_dongle() {
   TinyUSBDevices.onBattery = true;
   return true;
 }
+// ========================== FINE ORIGINALE CONNECTION DONGLE ==============================================
+
 
 bool SerialWireless_::connection_gun_at_last_dongle() {
   #define TIMEOUT_TX_PACKET_LAST_DONGLE 300 // in millisecondi - tempo di invio pacchetti ogni millisecondi quindi 4-5 pacchetti
@@ -1183,8 +1416,174 @@ bool SerialWireless_::connection_gun_at_last_dongle() {
   }
 }
 
-
+// ======================= NUOVA IMPLEMENTAZIONE DOVE LA GUN FA IL FARO ===============
 bool SerialWireless_::connection_gun() {
+  
+  channel_display = espnow_wifi_channel;
+
+  #if defined(GUN) && defined(USES_DISPLAY)
+  TaskHandle_t animTaskHandleLink = NULL;  
+  if(display_OLED != nullptr) {
+  // Avvio animazione
+    if (animTaskHandleLink == NULL) {
+      xTaskCreatePinnedToCore(
+        animTaskLink,          // funzione del task
+        "AnimTaskLink",        // nome
+        4096,              // stack size
+        NULL,              // parametri
+        1,                 // priorità
+        &animTaskHandleLink,   // handle
+        APP_CPU_NUM        // core (puoi usare 0 o 1)
+      );
+    }
+  }
+  #endif // USES_DISPLAY
+  
+  
+  uint8_t channel = espnow_wifi_channel;   // tra e 1 e 13 (il 14 dovrebbe essere riservato)
+  #define TIMEOUT_TX_PACKET 500 // in millisecondi
+  #define TIMEOUT_CHANGE_CHANNEL 2000 // in millisecondi - cambia canale ogni
+  #define TIMEOUT_DIALOGUE 6000 // in millisecondi - tempo massimo per completare operazione accoppiamento
+  unsigned long lastMillis_tx_packet = millis ();
+  unsigned long lastMillis_change_channel = millis ();
+  unsigned long lastMillis_start_dialogue = millis ();
+  uint8_t aux_buffer_tx[14]; // aggiunto un byte per trasmettere anche il canale di trasmissione
+                             // durante tx pacchetto pubblicazione presenza, mette anche il canale
+  
+  
+  
+  //IMPOSTARE IL PEER BOARCAST QUI ====================== SERVE SE SI RIPARTE DA CERCA ULTIMO DONGLE
+  if (esp_now_del_peer(peerAddress) != ESP_OK) {  // cancella il broadcast dai peer
+    //Serial.println("Errore nella cancellazione del peer");
+  }
+  memcpy(peerAddress, BROADCAST_ADDR, 6);
+  memcpy(peerInfo.peer_addr, peerAddress, 6);
+  //peerInfo.channel = ESPNOW_WIFI_CHANNEL;
+  //peerInfo.encrypt = false;              
+  if (esp_now_add_peer(&peerInfo) != ESP_OK) {  // inserisce il dongle nei peer
+    //Serial.println("Errore nell'aggiunta del nuovo peer");
+  } else esp_now_set_peer_rate_config(peerAddress, &rate_config);                       
+  // ====================================================
+  
+  stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
+  aux_buffer_tx[0] = CONNECTION_STATE::TX_GUN_SEARCH_DONGLE_BROADCAST;
+  memcpy(&aux_buffer_tx[1], SerialWireless.mac_esp_inteface, 6);
+  memcpy(&aux_buffer_tx[7], peerAddress, 6);
+  //aux_buffer_tx[13] = espnow_wifi_channel;
+ 
+  
+  while (!TinyUSBDevice.mounted() && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
+    if (stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) {
+      if (((millis() - lastMillis_change_channel) > TIMEOUT_CHANGE_CHANNEL) && 
+         ((millis() - (lastMillis_tx_packet-50))) > TIMEOUT_TX_PACKET) {  // aggiunta impostato 50 ms come margine, per evitare che quando invia pacchetto cambi subito casnale senza dare possibilità risposta
+        //channel++;
+        //if (channel >13) channel = 1;
+        aux_buffer_tx[13] = channel;
+        channel_display = channel;
+        
+        #ifdef GUN______
+          #ifdef USES_DISPLAY
+              
+              display_OLED->setCursor(19, 2);
+              //display_OLED->setTextSize(1);
+              //display_OLED->setTextColor(WHITE, BLACK);
+              ///////////display_OLED->fillRect(0, 0, 128, 16, BLACK);
+              //display_OLED->drawFastHLine(0, 15, 128, WHITE);
+              char buffer[5];
+              sprintf(buffer, "%2d", channel);
+              display_OLED->print(buffer);
+              //display_OLED->display();          
+              
+            #endif //USES_DISPLAY
+        #endif //DONGLE
+        
+        esp_wifi_set_promiscuous(true);
+        if (esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE) != ESP_OK) {
+          //Serial.printf("DONGLE - esp_wifi_set_channel failed!");
+        }
+        esp_wifi_set_promiscuous(false);
+        peerInfo.channel = channel;
+        if (esp_now_mod_peer(&peerInfo) != ESP_OK) {  // modifica il canale del peer
+          //Serial.println("DONGLE - Errore nella modifica del canale");
+        }             
+        lastMillis_change_channel = millis ();
+        lastMillis_tx_packet = 0;
+        
+        channel++;
+        if (channel >13) channel = 1;// per fare inviare subito un pacchetto sul nuovo canale
+      }
+      if ((millis() - lastMillis_tx_packet) > TIMEOUT_TX_PACKET) {
+        SerialWireless.SendPacket((const uint8_t *)aux_buffer_tx, 14, PACKET_TX::CONNECTION); // aggiunto un byte per trasmettere anche il canale di trasmissione
+        //Serial.print("DONGLE - inviato pacchetto broadcast sul canale: ");
+        //Serial.println(channel);
+        lastMillis_tx_packet = millis (); 
+      }
+      lastMillis_start_dialogue = millis();
+    }
+    else {
+      if (((millis() - lastMillis_start_dialogue) > TIMEOUT_DIALOGUE) && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
+        stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
+        //Serial.println("DONGLE - Non si è conclusa la negoziazione tra DONGLE/GUN e si riparte da capo");
+        lastMillis_change_channel = millis ();
+      }  
+    }
+    yield(); // in attesa dello stabilimento di una connessione
+  }
+  
+   if (stato_connessione_wireless == CONNECTION_STATE::DEVICES_CONNECTED) {
+    //Serial.println("DONGLE - Negosazione completata - associazione dei dispositivi GUN/DONGLE");
+    if (esp_now_del_peer(peerAddress) != ESP_OK) {  // cancella il broadcast dai peer
+      //Serial.println("DONGLE - Errore nella cancellazione del peer broadcast");
+    }
+    memcpy(peerAddress, mac_esp_another_card, 6);
+    memcpy(peerInfo.peer_addr, peerAddress, 6);
+    espnow_wifi_channel=usb_data_wireless.channel;
+    esp_wifi_set_promiscuous(true);
+    esp_wifi_set_channel(espnow_wifi_channel, WIFI_SECOND_CHAN_NONE);
+    esp_wifi_set_promiscuous(false);
+    peerInfo.channel = espnow_wifi_channel;
+    //peerInfo.channel = ESPNOW_WIFI_CHANNEL;
+    //peerInfo.encrypt = false;              
+    if (esp_now_add_peer(&peerInfo) != ESP_OK) {  // inserisce il dongle nei peer
+      //Serial.println("DONGLE - Errore nell'aggiunta del nuovo peer della GUN");
+    } else esp_now_set_peer_rate_config(peerAddress, &rate_config);
+
+    #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO // ==========================================================
+      if (espnow_wifi_power_auto) {
+        SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
+        SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
+        SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
+        //espnow_wifi_power = 45;
+      }
+    #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO // ==========================================================
+
+
+    #if defined(GUN) && defined(USES_DISPLAY)
+      if (animTaskHandleLink != NULL) {
+        vTaskDelete(animTaskHandleLink);
+        animTaskHandleLink = NULL;
+      }
+    #endif // USES_DISPLAY
+
+
+    TinyUSBDevices.onBattery = true;
+    return true;  
+  }
+  
+  #if defined(GUN) && defined(USES_DISPLAY)
+    if (animTaskHandleLink != NULL) {
+      vTaskDelete(animTaskHandleLink);
+      animTaskHandleLink = NULL;
+    }
+  #endif // USES_DISPLAY
+
+  return false; 
+
+}
+
+
+// ============================== ORIGINALE CONNECTION GUN ========= IN CUI IL DONGLE FA IL FARO ===========================
+bool SerialWireless_::connection_gun_original() {
   
   #if defined(GUN) && defined(USES_DISPLAY)
   TaskHandle_t animTaskHandleLink = NULL;  
@@ -1277,6 +1676,7 @@ bool SerialWireless_::connection_gun() {
    
   return false;
 }
+// =================================== FINE ORIGINALE CONNECTION GUN
 
 
 void packet_callback_read_dongle() {
@@ -1424,6 +1824,53 @@ void packet_callback_read_dongle() {
             //Serial.println("DONGLE - ricevuto pacchetto di avvenuta connessione con dati della GUN");
         }
           break;
+        // =========================== NUOVI ==================================
+        case CONNECTION_STATE::TX_GUN_SEARCH_DONGLE_BROADCAST:
+          if ((SerialWireless.stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) &&
+              (aux_buffer[13] == espnow_wifi_channel))
+          { // prende la prima gun disposnibile
+            memcpy(SerialWireless.mac_esp_another_card, &aux_buffer[1], 6);
+            // invia richiesta connessione
+            aux_buffer[0] = CONNECTION_STATE::TX_DONGLE_TO_GUN_PRESENCE;
+            memcpy(&aux_buffer[1], SerialWireless.mac_esp_inteface, 6);
+            memcpy(&aux_buffer[7], SerialWireless.mac_esp_another_card, 6);
+            aux_buffer[13] = espnow_wifi_channel;
+            SerialWireless.SendPacket((const uint8_t *)aux_buffer, 14, PACKET_TX::CONNECTION);
+            SerialWireless.stato_connessione_wireless = CONNECTION_STATE::TX_DONGLE_TO_GUN_PRESENCE;
+            // assicurati che i dati siano stati spediti
+
+          }
+          break;
+        case CONNECTION_STATE::TX_GUN_TO_DONGLE_ACCEPT:
+          if ((memcmp(&aux_buffer[1],SerialWireless.mac_esp_another_card,6) == 0) && 
+             (memcmp(&aux_buffer[7],SerialWireless.mac_esp_inteface,6) == 0) &&
+              SerialWireless.stato_connessione_wireless == CONNECTION_STATE::TX_DONGLE_TO_GUN_PRESENCE) {
+              
+                // SALVA I DATI RELATIVI ALLA GUN VID, PID, PLAYER , ECC.ECC.
+              memcpy(&usb_data_wireless, &aux_buffer[13], sizeof(usb_data_wireless));
+              
+              aux_buffer[0] = CONNECTION_STATE::TX_DONGLE_TO_GUN_CONFERM;
+              memcpy(&aux_buffer[1], SerialWireless.mac_esp_inteface, 6);
+              memcpy(&aux_buffer[7], SerialWireless.mac_esp_another_card, 6);
+                            
+              // =========================================================
+              // INVIARE IL PACCHETTO FINALE PIU' VOLTE  
+              // =========================================================
+              for (uint8_t i = 0; i<3; i++) {
+                if (i>0) {
+                  //vTaskDelay(pdMS_TO_TICKS(1000)); // equivalente a delay(1000) ma non bloccante su esp32
+                  unsigned long lastMillis_tx_packet_gun_to_dongle_conferm = millis();
+                  while ((millis() - lastMillis_tx_packet_gun_to_dongle_conferm) < 70) yield(); 
+                }
+                SerialWireless.SendPacket((const uint8_t *)aux_buffer, 13, PACKET_TX::CONNECTION);
+              }
+              SerialWireless.stato_connessione_wireless = CONNECTION_STATE::DEVICES_CONNECTED;
+          }
+          break;          
+        // =========================== FINE NUOVI =============================
+////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////
+
         default:
           break;
       }
@@ -1506,9 +1953,6 @@ void packet_callback_read_gun() {
 
           }
           break;
-        case 2:
-          /* code */
-          break;
         case CONNECTION_STATE::TX_DONGLE_TO_GUN_ACCEPT:
           if ((memcmp(&aux_buffer[1],SerialWireless.mac_esp_another_card,6) == 0) && 
              (memcmp(&aux_buffer[7],SerialWireless.mac_esp_inteface,6) == 0) &&
@@ -1533,7 +1977,31 @@ void packet_callback_read_gun() {
               }
               SerialWireless.stato_connessione_wireless = CONNECTION_STATE::TX_GUN_TO_DONGLE_CONFERM;
           }
-          break;        
+          break;
+        // ================== NUOVI ==================== // AL PRIMO PACCHETTO IL DONGLE TRASMETTE ANCHE IL CANALE PER EVITARE CHE NEL FRATTEMPO IL CICLO VADA AVANTI ED IL CANALE 
+        case CONNECTION_STATE::TX_DONGLE_TO_GUN_PRESENCE:
+          if ((memcmp(&aux_buffer[7],SerialWireless.mac_esp_inteface,6) == 0) && SerialWireless.stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) {
+            memcpy(SerialWireless.mac_esp_another_card, &aux_buffer[1], 6);
+            usb_data_wireless.channel= aux_buffer[13];
+            aux_buffer[0] = CONNECTION_STATE::TX_GUN_TO_DONGLE_ACCEPT;
+            memcpy(&aux_buffer[1], SerialWireless.mac_esp_inteface, 6);
+            memcpy(&aux_buffer[7], SerialWireless.mac_esp_another_card, 6);
+            // INVIA ANCHE DATI RELATIVI A VID, PID, ECC,ECC, DELLA GUN
+            memcpy(&aux_buffer[13], &usb_data_wireless, sizeof(usb_data_wireless));
+            SerialWireless.SendPacket((const uint8_t *)aux_buffer, sizeof(aux_buffer), PACKET_TX::CONNECTION);
+            SerialWireless.stato_connessione_wireless = CONNECTION_STATE::TX_GUN_TO_DONGLE_ACCEPT;
+          }
+          break;
+//////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
+        case CONNECTION_STATE::TX_DONGLE_TO_GUN_CONFERM:
+          if ((memcmp(&aux_buffer[1],SerialWireless.mac_esp_another_card,6) == 0) && 
+             (memcmp(&aux_buffer[7],SerialWireless.mac_esp_inteface,6) == 0) &&
+             SerialWireless.stato_connessione_wireless == CONNECTION_STATE::TX_GUN_TO_DONGLE_ACCEPT) {           
+            SerialWireless.stato_connessione_wireless = CONNECTION_STATE::DEVICES_CONNECTED;
+        }
+          break;
+        // ================== FINE NUOVI =================
         default:
           break;
       }
