@@ -22,7 +22,7 @@ on:
           - "no"
           - "yes"
       release:
-        description: "Voui creare una release ?"
+        description: "Vuoi creare una release ?"
         required: true
         default: "no"
         type: choice
@@ -38,7 +38,7 @@ on:
         required: false
         default: ""
       draft:
-        description: "Voui impostare la release come DRAFT e quindi NON pubblicare subito la release ? (false = NO,pubblica subito  - true = SI,lascialo in draft mode)"
+        description: "Vuoi impostare la release come DRAFT e quindi NON pubblicare subito la release ? (false = NO,pubblica subito  - true = SI,lascialo in draft mode)"
         required: true
         default: "true"
         type: choice
@@ -85,10 +85,8 @@ jobs:
             address_littleFS: '0xc90000'
 
     steps:
-      - name: Checkout repository OpenFIRE-Firmware-Esp32 with submodules
+      - name: Checkout repository OpenFIRE-Firmware-Esp32
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -113,6 +111,7 @@ jobs:
       - if: (matrix.chip == 'esp32s3')
         name: Build firmware OpenFIRE ESP32-S3 - FLASH ${{ matrix.flash_size }} - Compile for ${{ matrix.boards }}
         run: |
+          cd lightgun
           pio run -e ${{ matrix.boards }}
           pio run -e ${{ matrix.boards }} -t buildfs
           python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip ${{ matrix.chip }} merge_bin -o OpenFIREfw-${{ matrix.boards }}.bin --flash_mode ${{ matrix.flash_mode }} --flash_size ${{ matrix.flash_size }} \
@@ -131,14 +130,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: OpenFIRE-${{ matrix.boards }}
-          path: OpenFIREfw-${{ matrix.boards }}.bin
+          path: lightgun/OpenFIREfw-${{ matrix.boards }}.bin
           if-no-files-found: error
 
       - name: Upload OpenFIRE-NoFS firmware
         uses: actions/upload-artifact@v4
         with:
           name: OpenFIRE-NoFS-${{ matrix.boards }}
-          path: OpenFIREfw-NoFS-${{ matrix.boards }}.bin
+          path: lightgun/OpenFIREfw-NoFS-${{ matrix.boards }}.bin
           if-no-files-found: error
 
   package_assets:

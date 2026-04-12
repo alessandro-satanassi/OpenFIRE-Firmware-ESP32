@@ -1,4 +1,4 @@
-name: DONGLE - OpenFIRE Build Package and Upload release assets - DONGLE
+name: PEDAL - OpenFIRE Build Package and Upload release assets - PEDAL
 
 on:
 # release:
@@ -22,7 +22,7 @@ on:
           - "no"
           - "yes"
       release:
-        description: "Voui creare una release ?"
+        description: "Vuoi creare una release ?"
         required: true
         default: "no"
         type: choice
@@ -34,11 +34,11 @@ on:
         required: false
         default: ""
       release_name:
-        description: "Nome leggibile della release (es. v6.0-RC6 OpenFIRE Firmware ESP32 DONGLE- Release Candidate) (usato solo se release=yes)"
+        description: "Nome leggibile della release (es. v6.0-RC6 OpenFIRE Firmware ESP32 PEDAL - Release Candidate) (usato solo se release=yes)"
         required: false
         default: ""
       draft:
-        description: "Voui impostare la release come DRAFT e quindi NON pubblicare subito la release ? (false = NO,pubblica subito  - true = SI,lascialo in draft mode)"
+        description: "Vuoi impostare la release come DRAFT e quindi NON pubblicare subito la release ? (false = NO,pubblica subito  - true = SI,lascialo in draft mode)"
         required: true
         default: "true"
         type: choice
@@ -61,7 +61,7 @@ jobs:
   build_firmware:
     runs-on: ubuntu-latest
     timeout-minutes: 120  # imposta un timeout di 2 ore
-    name: Build DONGLE Firmware for ${{ matrix.boards }}
+    name: Build PEDAL Firmware for ${{ matrix.boards }}
     strategy:
       matrix:
         #os: [windows-latest, ubuntu-latest, macos-latest]
@@ -89,10 +89,8 @@ jobs:
             address_littleFS: '0xc90000'
 
     steps:
-      - name: Checkout repository OpenFIRE-DONGLE-Esp32 with submodules
+      - name: Checkout repository OpenFIRE-PEDAL-Esp32
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -115,20 +113,21 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
 
       - if: (matrix.chip == 'esp32s3')
-        name: Build DONGLE firmware OpenFIRE ESP32-S3 - FLASH ${{ matrix.flash_size }} - Compile for ${{ matrix.boards }}
+        name: Build PEDAL firmware OpenFIRE ESP32-S3 - FLASH ${{ matrix.flash_size }} - Compile for ${{ matrix.boards }}
         run: |
+          cd pedal
           pio run -e ${{ matrix.boards }}
-          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip ${{ matrix.chip }} merge_bin -o OpenFIRE-DONGLE-${{ matrix.boards }}.bin --flash_mode ${{ matrix.flash_mode }} --flash_size ${{ matrix.flash_size }} \
+          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip ${{ matrix.chip }} merge_bin -o OpenFIRE-PEDAL-${{ matrix.boards }}.bin --flash_mode ${{ matrix.flash_mode }} --flash_size ${{ matrix.flash_size }} \
             0x0000 .pio/build/${{ matrix.boards }}/bootloader.bin \
             0x8000 .pio/build/${{ matrix.boards }}/partitions.bin \
             0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
             0x10000 .pio/build/${{ matrix.boards }}/firmware.bin
           
-      - name: Upload OpenFIRE DONGLE firmware
+      - name: Upload OpenFIRE PEDAL firmware
         uses: actions/upload-artifact@v4
         with:
-          name: OpenFIRE-DONGLE-${{ matrix.boards }}
-          path: OpenFIRE-DONGLE-${{ matrix.boards }}.bin
+          name: OpenFIRE-PEDAL-${{ matrix.boards }}
+          path: pedal/OpenFIRE-PEDAL-${{ matrix.boards }}.bin
           if-no-files-found: error
 
   package_assets:
@@ -189,19 +188,19 @@ jobs:
       #- name: Checkout repository (opzionale, per contesto o se gli script sono nel repo)
       #  uses: actions/checkout@v4
 
-      - name: Download DONGLE firmware .bin artifact
+      - name: Download PEDAL firmware .bin artifact
         uses: actions/download-artifact@v4
         with:
-          name: OpenFIRE-DONGLE-${{ matrix.boards.name }} # Corrisponde al nome dell'artefatto caricato da build_firmware
+          name: OpenFIRE-PEDAL-${{ matrix.boards.name }} # Corrisponde al nome dell'artefatto caricato da build_firmware
           path: ./downloaded_firmware # Scarica in una sottocartella per evitare conflitti di nomi
 
       - name: Prepare staging directory
         shell: bash
         run: |
           mkdir staging_dir
-          # Il file firmware scaricato è OpenFIRE-DONGLE-${{ matrix.boards.name }}.bin
-          mv ./downloaded_firmware/OpenFIRE-DONGLE-${{ matrix.boards.name }}.bin ./staging_dir/firmware.bin
-          echo "Moved OpenFIRE-DONGLE-${{ matrix.boards.name }}.bin to staging_dir/firmware.bin"
+          # Il file firmware scaricato è OpenFIRE-PEDAL-${{ matrix.boards.name }}.bin
+          mv ./downloaded_firmware/OpenFIRE-PEDAL-${{ matrix.boards.name }}.bin ./staging_dir/firmware.bin
+          echo "Moved OpenFIRE-PEDAL-${{ matrix.boards.name }}.bin to staging_dir/firmware.bin"
           ls -l ./staging_dir
 
       - name: Download and extract esptool
@@ -251,13 +250,13 @@ jobs:
           FLASH_FREQ="${{ matrix.boards.flash_freq }}"
           BAUD="460800"
 
-          echo "Creating DONGLE script $SCRIPT_PATH for board ${{ matrix.boards.name }} with chip $CHIP_TYPE"
+          echo "Creating PEDAL script $SCRIPT_PATH for board ${{ matrix.boards.name }} with chip $CHIP_TYPE"
           
           if [[ "${{ matrix.os_config.name }}" == "windows-64bit" ]]; then
           # Script per Windows (.bat)
           cat <<EOF > "$SCRIPT_PATH"
           @echo off
-          echo Flashing OpenFIRE DONGLE Firmware for board: ${{ matrix.boards.name }}
+          echo Flashing OpenFIRE PEDAL Firmware for board: ${{ matrix.boards.name }}
           echo.
           set FIRMWARE_FILE=firmware.bin
           set /p COMPORT="Enter the COM port (e.g. COM3), or leave blank for automatic detection: "
@@ -265,9 +264,9 @@ jobs:
           $ESPTOOL_EXECUTABLE_NAME --chip $CHIP_TYPE %COMPORT% --baud $BAUD --before default-reset --after hard-reset write-flash -z --flash-mode $FLASH_MODE --flash-freq $FLASH_FREQ --flash-size detect 0x0000 %FIRMWARE_FILE%
           echo.
           if %errorlevel% neq 0 (
-            echo ERROR: Firmware DONGLE flashing failed. Check connections and micro.
+            echo ERROR: Firmware PEDAL flashing failed. Check connections and micro.
           ) else (
-            echo Firmware DONGLE flashing completed!
+            echo Firmware PEDAL flashing completed!
           )
           pause
           EOF
@@ -275,7 +274,7 @@ jobs:
           else # Script per Linux o macOS (.sh) 
           cat <<EOF > "$SCRIPT_PATH"
           #!/bin/bash
-          echo "Flashing OpenFIRE DONGLE Firmware for board: ${{ matrix.boards.name }}"
+          echo "Flashing OpenFIRE PEDAL Firmware for board: ${{ matrix.boards.name }}"
           # Rende esptool eseguibile (dovrebbe essere gia' stato fatto, ma e' una sicurezza)
           chmod +x ./$ESPTOOL_EXECUTABLE_NAME
           echo ""
@@ -287,9 +286,9 @@ jobs:
           ./$ESPTOOL_EXECUTABLE_NAME --chip $CHIP_TYPE \$COMPORT --baud $BAUD --before default-reset --after hard-reset write-flash -z --flash-mode $FLASH_MODE --flash-freq $FLASH_FREQ --flash-size detect 0x0000 \$FIRMWARE_FILE
           echo ""
           if [[ \$? -ne 0 ]]; then
-            echo "ERROR: Firmware DONGLE flashing failed. Check connections and micro."
+            echo "ERROR: Firmware PEDAL flashing failed. Check connections and micro."
           else
-            echo "Firmware DONGLE flashing completed!"
+            echo "Firmware PEDAL flashing completed!"
           fi
           read -r -p "Press Enter to exit."          
           EOF
@@ -305,7 +304,7 @@ jobs:
       - name: Create ZIP archive
         shell: bash
         run: |
-          ARCHIVE_FILENAME="OpenFIRE-DONGLE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip"
+          ARCHIVE_FILENAME="OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip"
           echo "ARCHIVE_FILENAME=$ARCHIVE_FILENAME" >> $GITHUB_ENV
           
           echo "Creating archive: $ARCHIVE_FILENAME from staging_dir contents..."
@@ -322,8 +321,8 @@ jobs:
       - name: Upload ZIP Assets
         uses: actions/upload-artifact@v4
         with:
-          name: OpenFIRE-DONGLE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip # Nome dell'asset sulla release
-          path: ${{ github.workspace }}/OpenFIRE-DONGLE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip # Path all'archivio ZIP creato
+          name: OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip # Nome dell'asset sulla release
+          path: ${{ github.workspace }}/OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip # Path all'archivio ZIP creato
           if-no-files-found: error
 
 
