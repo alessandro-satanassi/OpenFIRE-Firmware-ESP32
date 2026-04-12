@@ -1,4 +1,4 @@
-name: OpenFIRE Build Package and Upload release assets
+name: LIGHTGUN - OpenFIRE Build Package and Upload release assets - LIGHTGUN
 
 on:
 # release:
