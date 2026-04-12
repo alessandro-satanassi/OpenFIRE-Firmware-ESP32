@@ -122,6 +122,8 @@ enum PACKET_TX {
   GAMEPADE_TX,
   CONNECTION,  // CONNESSIONE E ASSOCIAZIONE DONGLE CON GUN
   CHECK_CONNECTION_LAST_DONGLE, //VERIFICA LA CONNESSIONE WIRELESS TRA GUN E DONGLE E VICEVERSA
+  CONNECTION_PEDAL,  // CONNESSIONE E ASSOCIAZIONE PEDAL CON GUN
+  CHECK_CONNECTION_LAST_PEDAL, //VERIFICA LA CONNESSIONE WIRELESS TRA GUN E PEDAL E VICEVERSA
   #ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
   MOUSE_KEY_PAD_TX,
   #endif // OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
@@ -143,10 +145,12 @@ enum PACKET_TX {
 
 enum CONNECTION_STATE {
   NONE_CONNECTION = 0,
+  #ifdef COMMENTO
   TX_DONGLE_SEARCH_GUN_BROADCAST,  //1
   TX_GUN_TO_DONGLE_PRESENCE,  //2
   TX_DONGLE_TO_GUN_ACCEPT,  //3
   TX_GUN_TO_DONGLE_CONFERM,  //4
+  #endif // COMMENTO
   DEVICES_CONNECTED,  //5
   // =============================
   // === per controllo connessione
@@ -154,11 +158,17 @@ enum CONNECTION_STATE {
   TX_CHECK_CONNECTION_LAST_DONGLE, //6  GUN -> DONGLE
   TX_CONFERM_CONNECTION_LAST_DONGLE, //7 DONGLE -> GUN
   DEVICES_CONNECTED_WITH_LAST_DONGLE, // 8
-  //===============================
+  //======CONNESSIONE GUN - DONGLE =========================
   TX_GUN_SEARCH_DONGLE_BROADCAST,  //9
   TX_DONGLE_TO_GUN_PRESENCE,  //10
   TX_GUN_TO_DONGLE_ACCEPT,  //11
   TX_DONGLE_TO_GUN_CONFERM,  //12
+  //====== CONNESSIONE GUN - PEDAL =========================
+  TX_GUN_SEARCH_PEDAL_BROADCAST,  //9
+  TX_PEDAL_TO_GUN_PRESENCE,  //10
+  TX_GUN_TO_PEDAL_ACCEPT,  //11
+  TX_PEDAL_TO_GUN_CONFERM,  //12
+
 };
 
 typedef struct __attribute__ ((packed)) {
@@ -276,9 +286,13 @@ class SerialWireless_ : public Stream
 
   bool connection_dongle();
   bool connection_gun();
+  bool connection_pedal();
+  #ifdef COMMENTO
   bool connection_dongle_original();
   bool connection_gun_original();
+  #endif // COMMENTO
   bool connection_gun_at_last_dongle();
+  bool connection_gun_at_pedal();
 
   // ===============================
   // ===== per i timer ================

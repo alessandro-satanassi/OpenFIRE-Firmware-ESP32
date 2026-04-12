@@ -1,0 +1,15 @@
+<RCC>
+    <qresource prefix="/boardPics">
+        <file alias="rpipico">rpipico.svg</file>
+        <file alias="rpipicow">rpipicow.svg</file>
+        <file alias="rpipico2">rpipico2.svg</file>
+        <file alias="rpipico2w">rpipico2w.svg</file>
+        <file alias="adafruitItsyRP2040">adafruitItsyRP2040.svg</file>
+        <file alias="adafruitKB2040">adafruitKB2040.svg</file>
+        <file alias="arduinoNanoRP2040">arduinoNanoRP2040.svg</file>
+        <file alias="waveshareZero">waveshareZero.svg</file>
+        <file alias="esp32-s3-devkitc-1">esp32-s3-devkitc-1.svg</file>
+        <file alias="waveshare-esp32-s3-pico">waveshare-esp32-s3-pico.svg</file>
+        <file alias="generic">generic.svg</file>
+    </qresource>
+</RCC>

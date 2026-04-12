@@ -1,0 +1,4880 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   id="svg8040"
+   version="1.1"
+   viewBox="0 0 50.4 97.2"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <!-- Generator: Adobe Illustrator 29.2.1, SVG Export Plug-In . SVG Version: 2.1.0 Build 116)  -->
+  <defs
+     id="defs1">
+    <style
+       id="style1">
+      .st0 {
+        font-size: 2.7px;
+      }
+
+      .st0, .st1, .st2 {
+        font-family: ArialMT, Arial;
+      }
+
+      .st0, .st1, .st2, .st3 {
+        isolation: isolate;
+      }
+
+      .st4 {
+        fill: #6e554b;
+      }
+
+      .st5 {
+        fill: #9c8f6d;
+      }
+
+      .st6 {
+        fill: #00b400;
+      }
+
+      .st1 {
+        font-size: 2.4px;
+      }
+
+      .st7, .st8, .st9, .st10, .st11, .st12 {
+        stroke: #fff;
+      }
+
+      .st7, .st8, .st11 {
+        stroke-width: .4px;
+      }
+
+      .st13 {
+        fill: lime;
+      }
+
+      .st8, .st9, .st10, .st11, .st12 {
+        stroke-linecap: round;
+      }
+
+      .st2 {
+        font-size: 2.1px;
+      }
+
+      .st14 {
+        fill: #1e1e1e;
+      }
+
+      .st15 {
+        stroke-width: .7px;
+      }
+
+      .st15, .st9, .st10, .st11, .st12, .st16 {
+        fill: none;
+      }
+
+      .st15, .st16 {
+        stroke: #9a916c;
+      }
+
+      .st17 {
+        fill: #808184;
+      }
+
+      .st18 {
+        fill: #b4b4b4;
+      }
+
+      .st9 {
+        stroke-width: .3px;
+      }
+
+      .st10 {
+        stroke-width: .6px;
+      }
+
+      .st19 {
+        fill: blue;
+      }
+
+      .st12 {
+        stroke-width: .9px;
+      }
+
+      .st20 {
+        fill: #807c73;
+      }
+
+      .st21 {
+        fill: #303030;
+      }
+
+      .st22 {
+        fill: #bebebe;
+      }
+
+      .st23 {
+        fill: #d2d2d4;
+      }
+
+      .st24 {
+        fill: #ebe713;
+        fill-opacity: 0;
+      }
+
+      .st25 {
+        fill: #f0f0f0;
+      }
+
+      .st26 {
+        fill: #666;
+      }
+
+      .st27 {
+        fill: #ff80e5;
+      }
+
+      .st28 {
+        opacity: .8;
+      }
+
+      .st29 {
+        fill: red;
+      }
+
+      .st30 {
+        fill: #8c8c8c;
+      }
+
+      .st31 {
+        fill: #333;
+      }
+
+      .st32 {
+        fill: #9a916c;
+      }
+
+      .st33 {
+        fill: #dcdcdc;
+      }
+
+      .st34 {
+        fill: #999;
+      }
+    </style>
+  </defs>
+  <g
+     id="g1">
+    <path
+       id="OF_pin2"
+       style="opacity:0;fill:#eb0064;fill-opacity:1"
+       class="st24"
+       d="M5.8,43.2c0,1.2-1,2.2-2.2,2.2s-2.2-1-2.2-2.2.9-2.2,2.2-2.2,2.2.9,2.3,2.1" />
+    <path
+       id="OF_pin0"
+       style="opacity:0;fill:#eb0064;fill-opacity:1"
+       class="st24"
+       d="M5.8,14.4c0,1.2-1,2.2-2.2,2.2s-2.2-1-2.2-2.2.9-2.2,2.2-2.2,2.2.9,2.3,2.1" />
+    <path
+       id="OF_pin1"
+       style="opacity:0;fill:#eb0064;fill-opacity:1"
+       class="st24"
+       d="M5.8,21.6c0,1.2-1,2.2-2.2,2.2s-2.2-1-2.2-2.2.9-2.2,2.2-2.2,2.2.9,2.3,2.1" />
+    <path
+       id="OF_pin3"
+       style="opacity:0;fill:#eb0064;fill-opacity:1"
+       class="st24"
+       d="M5.8,50.4c0,1.2-1,2.2-2.2,2.2s-2.2-1-2.2-2.2.9-2.2,2.2-2.2,2.2.9,2.3,2.1" />
+    <path
+       id="OF_pin4"
+       style="opacity:0;fill:#eb0064;fill-opacity:1"
+       class="st24"
+       d="M5.8,57.6c0,1.2-1,2.2-2.2,2.2s-2.2-1-2.2-2.2.9-2.2,2.2-2.2,2.2.9,2.3,2.1" />
+    <path
+       id="OF_pin5"
+       style="opacity:0;fill:#eb0064;fill-opacity:1"
+       class="st24"
+       d="M5.8,64.8c0,1.2-1,2.2-2.2,2.2s-2.2-1-2.2-2.2.9-2.2,2.2-2.2,2.2.9,2.3,2.1" />
+    <path
+       id="OF_pin6"
+       style="opacity:0;fill:#eb0064;fill-opacity:1"
+       class="st24"
+       d="M5.8,72c0,1.2-1,2.2-2.2,2.2s-2.2-1-2.2-2.2.9-2.2,2.2-2.2,2.2.9,2.3,2.1" />
+    <path
+       id="OF_pin7"
+       style="opacity:0;fill:#eb0064;fill-opacity:1"
+       class="st24"
+       d="M5.8,79.2c0,1.2-1,2.2-2.2,2.2s-2.2-1-2.2-2.2.9-2.2,2.2-2.2,2.2.9,2.3,2.1" />
+    <path
+       id="OF_pin8"
+       style="opacity:0;fill:#eb0064;fill-opacity:1"
+       class="st24"
+       d="M5.8,86.4c0,1.2-1,2.2-2.2,2.2s-2.2-1-2.2-2.2.9-2.2,2.2-2.2,2.2.9,2.3,2.1" />
+    <path
+       id="OF_pin9"
+       style="opacity:0;fill:#eb0064;fill-opacity:1"
+       class="st24"
+       d="M5.8,93.6c0,1.2-1,2.2-2.2,2.2s-2.2-1-2.2-2.2.9-2.2,2.2-2.2,2.2.9,2.3,2.1" />
+    <path
+       id="OF_pin10"
+       style="opacity:0;fill:#eb0064;fill-opacity:1"
+       class="st24"
+       d="M49,93.6c0,1.2-1,2.2-2.2,2.2s-2.2-1-2.2-2.2.9-2.2,2.2-2.2,2.2.9,2.3,2.1" />
+    <path
+       id="OF_pin19"
+       style="opacity:0;fill:#eb0064;fill-opacity:1"
+       class="st24"
+       d="M49,86.4c0,1.2-1,2.2-2.2,2.2s-2.2-1-2.2-2.2.9-2.2,2.2-2.2,2.2.9,2.3,2.1" />
+    <path
+       id="OF_pin20"
+       style="opacity:0;fill:#eb0064;fill-opacity:1"
+       class="st24"
+       d="M48.9,79.2c0,1.2-1,2.2-2.2,2.2s-2.2-1-2.2-2.2.9-2.2,2.2-2.2,2.2.9,2.3,2.1" />
+    <path
+       id="OF_pin18"
+       style="opacity:0;fill:#eb0064;fill-opacity:1"
+       class="st24"
+       d="M49,72c0,1.2-1,2.2-2.2,2.2s-2.2-1-2.2-2.2.9-2.2,2.2-2.2,2.2.9,2.3,2.1" />
+    <path
+       id="OF_pin26"
+       style="opacity:0;fill:#eb0064;fill-opacity:1"
+       class="st24"
+       d="M49,64.8c0,1.2-1,2.2-2.2,2.2s-2.2-1-2.2-2.2.9-2.2,2.2-2.2,2.2.9,2.3,2.1" />
+    <path
+       id="OF_pin27"
+       style="opacity:0;fill:#eb0064;fill-opacity:1"
+       class="st24"
+       d="M49,57.6c0,1.2-1,2.2-2.2,2.2s-2.2-1-2.2-2.2.9-2.2,2.2-2.2,2.2.9,2.3,2.1" />
+    <path
+       id="OF_pin28"
+       style="opacity:0;fill:#eb0064;fill-opacity:1"
+       class="st24"
+       d="M49,50.3c0,1.2-1,2.2-2.2,2.2s-2.2-1-2.2-2.2.9-2.2,2.2-2.2,2.2.9,2.3,2.1" />
+    <path
+       id="OF_pin29"
+       style="opacity:0;fill:#eb0064;fill-opacity:1"
+       class="st24"
+       d="M49,43.2c0,1.2-1,2.2-2.2,2.2s-2.2-1-2.2-2.2.9-2.2,2.2-2.2,2.2.9,2.3,2.1" />
+  </g>
+  <g
+     id="board">
+    <path
+       id="path6521"
+       class="st27"
+       d="M50.4,3.6v93.6H0V3.6h50.4M17,17c-.5,0-.9.4-.9.9s.4.9.9.9h0c.5,0,.9-.4.9-.9s-.4-.9-.9-.9h0ZM33.4,17c-.5,0-.9.4-.9.9s.4.9.9.9h0c.5,0,.9-.4.9-.9s-.4-.9-.9-.9h0ZM46.8,92.1c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4h0c.8,0,1.4-.6,1.4-1.4s-.6-1.4-1.4-1.4h0ZM46.8,84.9c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4h0c.8,0,1.4-.6,1.4-1.4s-.6-1.4-1.4-1.4h0ZM46.8,77.7c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4h0c.8,0,1.4-.6,1.4-1.4s-.6-1.4-1.4-1.4h0ZM46.8,70.5c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4h0c.8,0,1.4-.6,1.4-1.4s-.6-1.4-1.4-1.4h0ZM46.8,63.3c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4,1.4-.6,1.4-1.4-.6-1.4-1.4-1.4h0ZM46.8,56.1c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4h0c.8,0,1.4-.6,1.4-1.4s-.6-1.4-1.4-1.4h0ZM46.8,48.9c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4,1.4-.6,1.4-1.4-.6-1.4-1.4-1.4h0ZM46.8,41.7c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4h0c.8,0,1.4-.6,1.4-1.4s-.6-1.4-1.4-1.4h0ZM46.8,34.5c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4,1.4-.6,1.4-1.4-.6-1.4-1.4-1.4h0ZM46.8,27.3c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4h0c.8,0,1.4-.6,1.4-1.4s-.6-1.4-1.4-1.4h0ZM46.8,20.1c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4h0c.8,0,1.4-.6,1.4-1.4s-.6-1.4-1.4-1.4h0ZM46.8,12.9c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4h0c.8,0,1.4-.6,1.4-1.4s-.6-1.4-1.4-1.4h0ZM46.8,5.7c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4h0c.8,0,1.4-.6,1.4-1.4s-.6-1.4-1.4-1.4h0ZM3.6,5.7c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4h0c.8,0,1.4-.6,1.4-1.4s-.6-1.4-1.4-1.4h0ZM3.6,12.9c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4h0c.8,0,1.4-.6,1.4-1.4s-.6-1.4-1.4-1.4h0ZM3.6,20.1c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4h0c.8,0,1.4-.6,1.4-1.4s-.6-1.4-1.4-1.4h0ZM3.6,27.3c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4h0c.8,0,1.4-.6,1.4-1.4s-.6-1.4-1.4-1.4h0ZM3.6,34.5c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4,1.4-.6,1.4-1.4-.6-1.4-1.4-1.4h0ZM3.6,41.7c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4h0c.8,0,1.4-.6,1.4-1.4s-.6-1.4-1.4-1.4h0ZM3.6,48.9c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4,1.4-.6,1.4-1.4-.6-1.4-1.4-1.4h0ZM3.6,56.1c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4h0c.8,0,1.4-.6,1.4-1.4s-.6-1.4-1.4-1.4h0ZM3.6,63.3c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4,1.4-.6,1.4-1.4-.6-1.4-1.4-1.4h0ZM3.6,70.5c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4h0c.8,0,1.4-.6,1.4-1.4s-.6-1.4-1.4-1.4h0ZM3.6,77.7c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4h0c.8,0,1.4-.6,1.4-1.4s-.6-1.4-1.4-1.4h0ZM3.6,84.9c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4h0c.8,0,1.4-.6,1.4-1.4s-.6-1.4-1.4-1.4h0ZM3.6,92.1c-.8,0-1.4.6-1.4,1.4s.6,1.4,1.4,1.4h0c.8,0,1.4-.6,1.4-1.4s-.6-1.4-1.4-1.4h0ZM37.4,18.5c-.5,0-.9.4-.9.8s.4.9.8.9h0c.5,0,.9-.4.9-.8s-.4-.9-.8-.9h0ZM13,18.5c-.5,0-.9.4-.9.8s.4.9.8.9h0c.5,0,.9-.4.9-.8s-.4-.9-.8-.9h0ZM37.4,6.7c-.5,0-.9.4-.9.8s.4.9.8.9h0c.5,0,.9-.4.9-.8s-.4-.9-.8-.9h0ZM13,6.7c-.5,0-.9.4-.9.8s.4.9.8.9h0c.5,0,.9-.4.9-.8s-.4-.9-.8-.9h0Z" />
+    <g
+       id="g3">
+      <g
+         id="g6533">
+        <g
+           id="g2">
+          <g
+             id="g6531">
+            <g
+               id="g11"
+               data-name="g1">
+              <g
+                 id="g6529">
+                <g
+                   id="text6527"
+                   class="st3">
+                  <text
+                     class="st0"
+                     transform="translate(6.9 4.6) rotate(90)"
+                     id="text1"><tspan
+                       x="0"
+                       y="0"
+                       id="tspan1">D+</tspan></text>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g6">
+      <g
+         id="g6543">
+        <g
+           id="g5">
+          <g
+             id="g6541">
+            <g
+               id="g4">
+              <g
+                 id="g6539">
+                <g
+                   id="text6537"
+                   class="st3">
+                  <text
+                     class="st0"
+                     transform="translate(6.8 16.2)"
+                     id="text2"><tspan
+                       x="0"
+                       y="0"
+                       id="tspan2">T</tspan></text>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g7">
+      <g
+         id="g6549">
+        <g
+           id="text6547"
+           class="st3">
+          <text
+             class="st0"
+             transform="translate(6.4 20.5) rotate(90)"
+             id="text3"><tspan
+               x="0"
+               y="0"
+               id="tspan3">RX</tspan></text>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g8">
+      <g
+         id="g6555">
+        <g
+           id="text6553"
+           class="st3">
+          <text
+             class="st0"
+             transform="translate(6.2 29.8) rotate(90)"
+             id="text4"><tspan
+               x="0"
+               y="0"
+               id="tspan4">GND</tspan></text>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g12">
+      <g
+         id="g6565">
+        <g
+           id="g10">
+          <g
+             id="g6563">
+            <g
+               id="g9">
+              <g
+                 id="g6561">
+                <g
+                   id="text6559"
+                   class="st3">
+                  <text
+                     class="st0"
+                     transform="translate(6.7 44.4)"
+                     id="text5"><tspan
+                       x="0"
+                       y="0"
+                       id="tspan5">2</tspan></text>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g15">
+      <g
+         id="g6575">
+        <g
+           id="g14">
+          <g
+             id="g6573">
+            <g
+               id="g13">
+              <g
+                 id="g6571">
+                <g
+                   id="text6569"
+                   class="st3">
+                  <text
+                     class="st0"
+                     transform="translate(6.5 51.5)"
+                     id="text12"><tspan
+                       x="0"
+                       y="0"
+                       id="tspan12">3</tspan></text>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g18">
+      <g
+         id="g6585">
+        <g
+           id="g17">
+          <g
+             id="g6583">
+            <g
+               id="g16">
+              <g
+                 id="g6581">
+                <g
+                   id="text6579"
+                   class="st3">
+                  <text
+                     class="st0"
+                     transform="translate(6.7 58.8)"
+                     id="text15"><tspan
+                       x="0"
+                       y="0"
+                       id="tspan15">4</tspan></text>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g21">
+      <g
+         id="g6595">
+        <g
+           id="g20">
+          <g
+             id="g6593">
+            <g
+               id="g19">
+              <g
+                 id="g6591">
+                <g
+                   id="text6589"
+                   class="st3">
+                  <text
+                     class="st0"
+                     transform="translate(6.8 65.8)"
+                     id="text18"><tspan
+                       x="0"
+                       y="0"
+                       id="tspan18">5</tspan></text>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g24">
+      <g
+         id="g6605">
+        <g
+           id="g23">
+          <g
+             id="g6603">
+            <g
+               id="g22">
+              <g
+                 id="g6601">
+                <g
+                   id="text6599"
+                   class="st3">
+                  <text
+                     class="st0"
+                     transform="translate(6.7 73)"
+                     id="text21"><tspan
+                       x="0"
+                       y="0"
+                       id="tspan21">6</tspan></text>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g27">
+      <g
+         id="g6615">
+        <g
+           id="g26">
+          <g
+             id="g6613">
+            <g
+               id="g25">
+              <g
+                 id="g6611">
+                <g
+                   id="text6609"
+                   class="st3">
+                  <text
+                     class="st0"
+                     transform="translate(6.7 80.1)"
+                     id="text24"><tspan
+                       x="0"
+                       y="0"
+                       id="tspan24">7</tspan></text>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g28">
+      <g
+         id="g6621">
+        <g
+           id="text6619"
+           class="st3">
+          <text
+             class="st2"
+             transform="translate(3.7 82.2) rotate(90)"
+             id="text27"><tspan
+               x="0"
+               y="0"
+               id="tspan27">8</tspan></text>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g29">
+      <g
+         id="g6627">
+        <g
+           id="text6625"
+           class="st3">
+          <text
+             class="st2"
+             transform="translate(3.7 89.4) rotate(90)"
+             id="text28"><tspan
+               x="0"
+               y="0"
+               id="tspan28">9</tspan></text>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g30">
+      <g
+         id="g6633">
+        <g
+           id="text6631"
+           class="st3">
+          <text
+             class="st2"
+             transform="translate(41.5 77.6) rotate(90)"
+             id="text29"><tspan
+               x="0"
+               y="0"
+               id="tspan29">MI</tspan></text>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g31">
+      <g
+         id="g6639">
+        <g
+           id="text6637"
+           class="st3">
+          <text
+             class="st0"
+             transform="translate(41.3 63) rotate(90)"
+             id="text30"><tspan
+               x="0"
+               y="0"
+               id="tspan30">A0</tspan></text>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g32">
+      <g
+         id="g6645">
+        <g
+           id="text6643"
+           class="st3">
+          <text
+             class="st0"
+             transform="translate(41.2 55.9) rotate(90)"
+             id="text31"><tspan
+               x="0"
+               y="0"
+               id="tspan31">A1</tspan></text>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g33">
+      <g
+         id="g6651">
+        <g
+           id="text6649"
+           class="st3">
+          <text
+             class="st0"
+             transform="translate(41.5 48.6) rotate(90)"
+             id="text32"><tspan
+               x="0"
+               y="0"
+               id="tspan32">A2</tspan></text>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g34">
+      <g
+         id="g6657">
+        <g
+           id="text6655"
+           class="st3">
+          <text
+             class="st0"
+             transform="translate(41.3 41.2) rotate(90)"
+             id="text33"><tspan
+               x="0"
+               y="0"
+               id="tspan33">A3</tspan></text>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g35">
+      <g
+         id="g6663">
+        <g
+           id="text6661"
+           class="st3">
+          <text
+             class="st0"
+             transform="translate(41.3 33.8) rotate(90)"
+             id="text34"><tspan
+               x="0"
+               y="0"
+               id="tspan34">3V</tspan></text>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g36">
+      <g
+         id="g6669">
+        <g
+           id="text6667"
+           class="st3">
+          <text
+             class="st2"
+             transform="translate(41.7 26.1) rotate(90)"
+             id="text35"><tspan
+               x="0"
+               y="0"
+               id="tspan35">RST</tspan></text>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g37">
+      <g
+         id="g6675">
+        <g
+           id="text6673"
+           class="st3">
+          <text
+             class="st0"
+             transform="translate(41.5 20.5) rotate(90)"
+             id="text36"><tspan
+               x="0"
+               y="0"
+               id="tspan36">G</tspan></text>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g38">
+      <g
+         id="g6681">
+        <g
+           id="text6679"
+           class="st3">
+          <text
+             class="st2"
+             transform="translate(41.7 12.2) rotate(90)"
+             id="text37"><tspan
+               x="0"
+               y="0"
+               id="tspan37">RAW</tspan></text>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g39">
+      <g
+         id="g6687">
+        <g
+           id="text6685"
+           class="st3">
+          <text
+             class="st0"
+             transform="translate(42.3 3.7) rotate(90)"
+             id="text38"><tspan
+               x="0"
+               y="0"
+               id="tspan38">D-</tspan></text>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g40">
+      <g
+         id="g6693">
+        <g
+           id="text6691"
+           class="st3">
+          <text
+             class="st1"
+             transform="translate(41.5 69.3) rotate(90)"
+             id="text39"><tspan
+               x="0"
+               y="0"
+               id="tspan39">SCK</tspan></text>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g41">
+      <g
+         id="g6699">
+        <g
+           id="text6697"
+           class="st3">
+          <text
+             class="st2"
+             transform="translate(13.1 75.2) rotate(90)"
+             id="text40"><tspan
+               x="0"
+               y="0"
+               id="tspan40">BOOT</tspan></text>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g44">
+      <g
+         id="g6709">
+        <g
+           id="g43">
+          <g
+             id="g6707">
+            <g
+               id="g42">
+              <g
+                 id="g6705">
+                <g
+                   id="text6703"
+                   class="st3">
+                  <text
+                     class="st2"
+                     transform="translate(36.3 81.8)"
+                     id="text41"><tspan
+                       x="0"
+                       y="0"
+                       id="tspan41">RST</tspan></text>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g45">
+      <g
+         id="g6715">
+        <g
+           id="text6713"
+           class="st3">
+          <text
+             class="st2"
+             transform="translate(30.6 78.3) rotate(90)"
+             id="text44"><tspan
+               x="0"
+               y="0"
+               id="tspan44">I2C</tspan></text>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g46">
+      <g
+         id="g6721">
+        <g
+           id="text6719"
+           class="st3">
+          <text
+             class="st0"
+             transform="translate(11.8 52.4) rotate(90)"
+             id="text45"><tspan
+               x="0"
+               y="0"
+               id="tspan45">KB2040</tspan></text>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g47">
+      <g
+         id="g6731">
+        <g
+           id="g6729">
+          <line
+             id="line6727"
+             class="st10"
+             x1="40.6"
+             y1="28.1"
+             x2="37.7"
+             y2="28.1" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g48">
+      <g
+         id="g6741">
+        <g
+           id="g6739">
+          <line
+             id="line6737"
+             class="st10"
+             x1="36.2"
+             y1="44.8"
+             x2="36.2"
+             y2="43.3" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g49">
+      <g
+         id="g6751">
+        <g
+           id="g6749">
+          <line
+             id="line6747"
+             class="st10"
+             x1="27.9"
+             y1="34"
+             x2="27.9"
+             y2="36.9" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g50">
+      <g
+         id="g6761">
+        <g
+           id="g6759">
+          <line
+             id="line6757"
+             class="st10"
+             x1="29.9"
+             y1="75.9"
+             x2="28.4"
+             y2="75.9" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g51">
+      <g
+         id="g6771">
+        <g
+           id="g6769">
+          <line
+             id="line6767"
+             class="st10"
+             x1="38.1"
+             y1="38.1"
+             x2="39.6"
+             y2="38.1" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g52">
+      <g
+         id="g6781">
+        <g
+           id="g6779">
+          <line
+             id="line6777"
+             class="st10"
+             x1="31"
+             y1="75.1"
+             x2="32.4"
+             y2="75.1" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g53">
+      <g
+         id="g6791">
+        <g
+           id="g6789">
+          <line
+             id="line6787"
+             class="st10"
+             x1="33.8"
+             y1="38.1"
+             x2="35.2"
+             y2="38.1" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g54">
+      <g
+         id="g6801">
+        <g
+           id="g6799">
+          <line
+             id="line6797"
+             class="st10"
+             x1="10.1"
+             y1="48.1"
+             x2="10.1"
+             y2="46.6" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g55">
+      <g
+         id="g6811">
+        <g
+           id="g6809">
+          <line
+             id="line6807"
+             class="st10"
+             x1="38.2"
+             y1="58.7"
+             x2="39.6"
+             y2="58.7" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g56">
+      <g
+         id="g6821">
+        <g
+           id="g6819">
+          <line
+             id="line6817"
+             class="st12"
+             x1="17.1"
+             y1="31.9"
+             x2="17.1"
+             y2="29.6" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g57">
+      <g
+         id="g6831">
+        <g
+           id="g6829">
+          <line
+             id="line6827"
+             class="st10"
+             x1="11.1"
+             y1="63.3"
+             x2="9.7"
+             y2="63.3" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g58">
+      <g
+         id="g6841">
+        <g
+           id="g6839">
+          <line
+             id="line6837"
+             class="st10"
+             x1="39.3"
+             y1="49.1"
+             x2="40.8"
+             y2="49.1" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g59">
+      <g
+         id="g6851">
+        <g
+           id="g6849">
+          <line
+             id="line6847"
+             class="st10"
+             x1="16.2"
+             y1="73"
+             x2="17.6"
+             y2="73" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g60">
+      <g
+         id="g6861">
+        <g
+           id="g6859">
+          <line
+             id="line6857"
+             class="st10"
+             x1="17.6"
+             y1="79"
+             x2="16.2"
+             y2="79" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g61">
+      <g
+         id="g6879">
+        <g
+           id="g6877">
+          <line
+             id="line6867"
+             class="st11"
+             x1="16.7"
+             y1="91.1"
+             x2="16.7"
+             y2="83.7" />
+          <line
+             id="line6869"
+             class="st11"
+             x1="16.7"
+             y1="83.7"
+             x2="19.8"
+             y2="83.7" />
+          <line
+             id="line6871"
+             class="st11"
+             x1="30.6"
+             y1="83.7"
+             x2="34"
+             y2="83.7" />
+          <line
+             id="line6873"
+             class="st11"
+             x1="34"
+             y1="83.7"
+             x2="34"
+             y2="91.1" />
+          <line
+             id="line6875"
+             class="st11"
+             x1="19.2"
+             y1="95.9"
+             x2="31.2"
+             y2="95.9" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g62">
+      <g
+         id="g6901">
+        <g
+           id="g6899">
+          <line
+             id="line6885"
+             class="st11"
+             x1="25.4"
+             y1="26"
+             x2="25.4"
+             y2="30.8" />
+          <line
+             id="line6887"
+             class="st11"
+             x1="25.4"
+             y1="30.8"
+             x2="21.7"
+             y2="30.8" />
+          <line
+             id="line6889"
+             class="st11"
+             x1="21.7"
+             y1="30.8"
+             x2="21.7"
+             y2="26" />
+          <line
+             id="line6891"
+             class="st11"
+             x1="21.7"
+             y1="26"
+             x2="25.4"
+             y2="26" />
+          <line
+             id="line6893"
+             class="st11"
+             x1="25.3"
+             y1="29.5"
+             x2="21.9"
+             y2="29.5" />
+          <line
+             id="line6895"
+             class="st11"
+             x1="21.9"
+             y1="29.5"
+             x2="21.9"
+             y2="29.3" />
+          <line
+             id="line6897"
+             class="st11"
+             x1="21.9"
+             y1="29.3"
+             x2="25.3"
+             y2="29.3" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g64">
+      <g
+         id="g6919">
+        <g
+           id="g6917">
+          <g
+             id="g6911">
+            <path
+               id="path6909"
+               class="st8"
+               d="M40.7,8.1l-.7-.9h1.4l-.7.9" />
+          </g>
+          <g
+             id="g63">
+            <g
+               id="g6915">
+              <rect
+                 id="rect6913"
+                 x="39.6"
+                 y="8.1"
+                 width="2.2"
+                 height=".4" />
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g65">
+      <g
+         id="g6941">
+        <g
+           id="g6939">
+          <line
+             id="line6925"
+             class="st11"
+             x1="12.8"
+             y1="74.7"
+             x2="12.8"
+             y2="79.5" />
+          <line
+             id="line6927"
+             class="st11"
+             x1="12.8"
+             y1="79.5"
+             x2="9.1"
+             y2="79.5" />
+          <line
+             id="line6929"
+             class="st11"
+             x1="9.1"
+             y1="79.5"
+             x2="9.1"
+             y2="74.7" />
+          <line
+             id="line6931"
+             class="st11"
+             x1="9.1"
+             y1="74.7"
+             x2="12.8"
+             y2="74.7" />
+          <line
+             id="line6933"
+             class="st11"
+             x1="12.6"
+             y1="78.2"
+             x2="9.2"
+             y2="78.2" />
+          <line
+             id="line6935"
+             class="st11"
+             x1="9.2"
+             y1="78.2"
+             x2="9.2"
+             y2="77.9" />
+          <line
+             id="line6937"
+             class="st11"
+             x1="9.2"
+             y1="77.9"
+             x2="12.6"
+             y2="77.9" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g66">
+      <g
+         id="g6967">
+        <g
+           id="g6965">
+          <line
+             id="line6947"
+             class="st11"
+             x1="16.1"
+             y1="50.4"
+             x2="16.1"
+             y2="48.5" />
+          <line
+             id="line6949"
+             class="st11"
+             x1="16.1"
+             y1="48.5"
+             x2="17.8"
+             y2="48.5" />
+          <line
+             id="line6951"
+             class="st11"
+             x1="34.2"
+             y1="48.5"
+             x2="35.9"
+             y2="48.5" />
+          <line
+             id="line6953"
+             class="st11"
+             x1="35.9"
+             y1="48.5"
+             x2="35.9"
+             y2="50.2" />
+          <line
+             id="line6955"
+             class="st11"
+             x1="34.2"
+             y1="68.4"
+             x2="35.9"
+             y2="68.4" />
+          <line
+             id="line6957"
+             class="st11"
+             x1="35.9"
+             y1="68.4"
+             x2="35.9"
+             y2="66.7" />
+          <line
+             id="line6959"
+             class="st11"
+             x1="16.1"
+             y1="66.7"
+             x2="16.1"
+             y2="68.4" />
+          <line
+             id="line6961"
+             class="st11"
+             x1="16.1"
+             y1="68.4"
+             x2="17.8"
+             y2="68.4" />
+          <circle
+             id="circle6963"
+             class="st7"
+             cx="16.1"
+             cy="48.5"
+             r="1" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g68">
+      <g
+         id="g6997">
+        <g
+           id="g6995">
+          <line
+             id="line6989"
+             class="st11"
+             x1="40"
+             y1="69.3"
+             x2="40"
+             y2="73.8" />
+          <line
+             id="line6991"
+             class="st11"
+             x1="37.5"
+             y1="73.5"
+             x2="37.5"
+             y2="72" />
+          <line
+             id="line6993"
+             class="st11"
+             x1="34.9"
+             y1="69.3"
+             x2="34.9"
+             y2="73.8" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g69">
+      <g
+         id="g7007">
+        <g
+           id="g7005">
+          <line
+             id="line7003"
+             class="st10"
+             x1="10.4"
+             y1="16.9"
+             x2="9"
+             y2="16.9" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g70">
+      <g
+         id="g7017">
+        <g
+           id="g7015">
+          <line
+             id="line7013"
+             class="st10"
+             x1="9"
+             y1="10.9"
+             x2="10.4"
+             y2="10.9" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g71">
+      <g
+         id="g7027">
+        <g
+           id="g7025">
+          <line
+             id="line7023"
+             class="st10"
+             x1="28.2"
+             y1="43.2"
+             x2="29.6"
+             y2="43.2" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g72">
+      <g
+         id="g7037">
+        <g
+           id="g7035">
+          <line
+             id="line7033"
+             class="st10"
+             x1="30.9"
+             y1="43.2"
+             x2="32.3"
+             y2="43.2" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g73">
+      <g
+         id="g7047">
+        <g
+           id="g7045">
+          <line
+             id="line7043"
+             class="st10"
+             x1="15"
+             y1="47.6"
+             x2="13.5"
+             y2="47.6" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g74">
+      <g
+         id="g7057">
+        <g
+           id="g7055">
+          <line
+             id="line7053"
+             class="st10"
+             x1="25.9"
+             y1="76.1"
+             x2="27.4"
+             y2="76.1" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g75">
+      <g
+         id="g7067">
+        <g
+           id="g7065">
+          <line
+             id="line7063"
+             class="st10"
+             x1="40.7"
+             y1="13.8"
+             x2="39.2"
+             y2="13.8" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g76">
+      <g
+         id="g7077">
+        <g
+           id="g7075">
+          <line
+             id="line7073"
+             class="st12"
+             x1="16.9"
+             y1="24.8"
+             x2="16.9"
+             y2="27.7" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g77">
+      <g
+         id="g7087">
+        <g
+           id="g7085">
+          <line
+             id="line7083"
+             class="st10"
+             x1="40.7"
+             y1="76.6"
+             x2="39.2"
+             y2="76.6" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g78">
+      <g
+         id="g7097">
+        <g
+           id="g7095">
+          <line
+             id="line7093"
+             class="st10"
+             x1="38"
+             y1="76.6"
+             x2="36.5"
+             y2="76.6" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g79">
+      <g
+         id="g7107">
+        <g
+           id="g7105">
+          <line
+             id="line7103"
+             class="st10"
+             x1="10.2"
+             y1="29.6"
+             x2="11.6"
+             y2="29.6" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g80">
+      <g
+         id="g7117">
+        <g
+           id="g7115">
+          <line
+             id="line7113"
+             class="st10"
+             x1="35.1"
+             y1="78.3"
+             x2="33.7"
+             y2="78.3" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g82">
+      <g
+         id="g7137">
+        <g
+           id="g7135">
+          <line
+             id="line7131"
+             class="st10"
+             x1="43.6"
+             y1="83.3"
+             x2="43.6"
+             y2="95.2" />
+          <line
+             id="line7133"
+             class="st10"
+             x1="34.9"
+             y1="95.2"
+             x2="34.9"
+             y2="83.3" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g83">
+      <g
+         id="g7149">
+        <g
+           id="g7147">
+          <line
+             id="line7143"
+             class="st10"
+             x1="6.7"
+             y1="95.2"
+             x2="6.7"
+             y2="83.3" />
+          <line
+             id="line7145"
+             class="st10"
+             x1="15.3"
+             y1="83.3"
+             x2="15.3"
+             y2="95.2" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g88">
+      <g
+         id="g7195">
+        <g
+           id="g7193">
+          <line
+             id="line7187"
+             class="st10"
+             x1="28.7"
+             y1="32.9"
+             x2="33.3"
+             y2="32.9" />
+          <line
+             id="line7189"
+             class="st10"
+             x1="28.7"
+             y1="23.5"
+             x2="33.3"
+             y2="23.5" />
+          <line
+             id="line7191"
+             class="st10"
+             x1="28"
+             y1="29.4"
+             x2="28"
+             y2="27.1" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g89">
+      <g
+         id="g7213">
+        <g
+           id="g7211">
+          <line
+             id="line7201"
+             class="st11"
+             x1="10.4"
+             y1="32.8"
+             x2="21.7"
+             y2="32.8" />
+          <line
+             id="line7203"
+             class="st11"
+             x1="21.7"
+             y1="32.8"
+             x2="21.7"
+             y2="44.2" />
+          <line
+             id="line7205"
+             class="st11"
+             x1="21.7"
+             y1="44.2"
+             x2="10.4"
+             y2="44.2" />
+          <line
+             id="line7207"
+             class="st11"
+             x1="10.4"
+             y1="44.2"
+             x2="10.4"
+             y2="32.8" />
+          <circle
+             id="circle7209"
+             class="st7"
+             cx="10.4"
+             cy="32.8"
+             r=".6" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g90">
+      <g
+         id="g7231">
+        <g
+           id="g7229">
+          <line
+             id="line7219"
+             class="st9"
+             x1="37.9"
+             y1="11.5"
+             x2="37.9"
+             y2="15.3" />
+          <line
+             id="line7221"
+             class="st9"
+             x1="12.5"
+             y1="15.3"
+             x2="12.5"
+             y2="11.5" />
+          <line
+             id="line7223"
+             class="st9"
+             x1="12.5"
+             y1="0"
+             x2="37.9"
+             y2="0" />
+          <line
+             id="line7225"
+             class="st9"
+             x1="37.9"
+             y1="0"
+             x2="37.9"
+             y2="4" />
+          <line
+             id="line7227"
+             class="st9"
+             x1="12.5"
+             y1="4"
+             x2="12.5"
+             y2="0" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g91">
+      <g
+         id="g7247">
+        <g
+           id="g7245">
+          <line
+             id="line7237"
+             class="st11"
+             x1="18.2"
+             y1="79.1"
+             x2="18.2"
+             y2="70.6" />
+          <line
+             id="line7239"
+             class="st11"
+             x1="18.2"
+             y1="70.6"
+             x2="25.3"
+             y2="70.6" />
+          <line
+             id="line7241"
+             class="st11"
+             x1="25.3"
+             y1="70.6"
+             x2="25.3"
+             y2="79.1" />
+          <line
+             id="line7243"
+             class="st11"
+             x1="25.3"
+             y1="79.1"
+             x2="18.2"
+             y2="79.1" />
+        </g>
+      </g>
+    </g>
+    <rect
+       id="connector5pin"
+       class="st32"
+       x="37.3"
+       y="23.5"
+       width="3.7"
+       height="3.4" />
+    <rect
+       id="connector6pin"
+       class="st32"
+       x="37.3"
+       y="29.3"
+       width="3.7"
+       height="3.4" />
+    <g
+       id="g92">
+      <g
+         id="g7254">
+        <rect
+           id="connector7pin"
+           class="st32"
+           x="36.8"
+           y="43.2"
+           width="1.7"
+           height="1.7" />
+      </g>
+    </g>
+    <g
+       id="g93">
+      <g
+         id="g7257">
+        <rect
+           id="connector8pin"
+           class="st32"
+           x="33.9"
+           y="43.2"
+           width="1.7"
+           height="1.7" />
+      </g>
+    </g>
+    <g
+       id="g94">
+      <g
+         id="g7260">
+        <rect
+           id="connector9pin"
+           class="st32"
+           x="23.3"
+           y="33.6"
+           width="3.4"
+           height="3.7" />
+      </g>
+    </g>
+    <g
+       id="g95">
+      <g
+         id="g7263">
+        <rect
+           id="connector10pin"
+           class="st32"
+           x="29.1"
+           y="33.6"
+           width="3.4"
+           height="3.7" />
+      </g>
+    </g>
+    <rect
+       id="connector11pin"
+       class="st32"
+       x="28.3"
+       y="73.6"
+       width="1.7"
+       height="1.7" />
+    <rect
+       id="connector12pin"
+       class="st32"
+       x="28.3"
+       y="76.5"
+       width="1.7"
+       height="1.7" />
+    <g
+       id="g96">
+      <g
+         id="g7268">
+        <rect
+           id="connector13pin"
+           class="st32"
+           x="37.7"
+           y="39.1"
+           width="2.3"
+           height="2.3" />
+      </g>
+    </g>
+    <g
+       id="g97">
+      <g
+         id="g7271">
+        <rect
+           id="connector14pin"
+           class="st32"
+           x="37.7"
+           y="34.8"
+           width="2.3"
+           height="2.3" />
+      </g>
+    </g>
+    <g
+       id="g98">
+      <g
+         id="g7274">
+        <rect
+           id="connector15pin"
+           class="st32"
+           x="30.8"
+           y="75.7"
+           width="1.7"
+           height="1.7" />
+      </g>
+    </g>
+    <g
+       id="g99">
+      <g
+         id="g7277">
+        <rect
+           id="connector16pin"
+           class="st32"
+           x="30.8"
+           y="72.8"
+           width="1.7"
+           height="1.7" />
+      </g>
+    </g>
+    <g
+       id="g100">
+      <g
+         id="g7280">
+        <rect
+           id="connector17pin"
+           class="st32"
+           x="33.4"
+           y="39.1"
+           width="2.3"
+           height="2.3" />
+      </g>
+    </g>
+    <g
+       id="g101">
+      <g
+         id="g7283">
+        <rect
+           id="connector18pin"
+           class="st32"
+           x="33.4"
+           y="34.8"
+           width="2.3"
+           height="2.3" />
+      </g>
+    </g>
+    <g
+       id="g102">
+      <g
+         id="g7286">
+        <rect
+           id="connector19pin"
+           class="st32"
+           x="10.7"
+           y="46.5"
+           width="1.7"
+           height="1.7" />
+      </g>
+    </g>
+    <g
+       id="g103">
+      <g
+         id="g7289">
+        <rect
+           id="connector20pin"
+           class="st32"
+           x="7.8"
+           y="46.5"
+           width="1.7"
+           height="1.7" />
+      </g>
+    </g>
+    <g
+       id="g104">
+      <g
+         id="g7292">
+        <rect
+           id="connector21pin"
+           class="st32"
+           x="38"
+           y="59.3"
+           width="1.7"
+           height="1.7" />
+      </g>
+    </g>
+    <g
+       id="g105">
+      <g
+         id="g7295">
+        <rect
+           id="connector22pin"
+           class="st32"
+           x="38"
+           y="56.4"
+           width="1.7"
+           height="1.7" />
+      </g>
+    </g>
+    <g
+       id="g106">
+      <g
+         id="g7298">
+        <rect
+           id="connector23pin"
+           class="st32"
+           x="18"
+           y="29.3"
+           width="3"
+           height="2.8" />
+      </g>
+    </g>
+    <g
+       id="g107">
+      <g
+         id="g7301">
+        <rect
+           id="connector24pin"
+           class="st32"
+           x="13.2"
+           y="29.3"
+           width="3"
+           height="2.8" />
+      </g>
+    </g>
+    <rect
+       id="connector25pin"
+       class="st32"
+       x="9.6"
+       y="61"
+       width="1.7"
+       height="1.7" />
+    <rect
+       id="connector26pin"
+       class="st32"
+       x="9.6"
+       y="63.9"
+       width="1.7"
+       height="1.7" />
+    <g
+       id="g108">
+      <g
+         id="g7306">
+        <rect
+           id="connector27pin"
+           class="st32"
+           x="39.2"
+           y="49.7"
+           width="1.7"
+           height="1.7" />
+      </g>
+    </g>
+    <g
+       id="g109">
+      <g
+         id="g7309">
+        <rect
+           id="connector28pin"
+           class="st32"
+           x="39.2"
+           y="46.8"
+           width="1.7"
+           height="1.7" />
+      </g>
+    </g>
+    <g
+       id="g110">
+      <g
+         id="g7312">
+        <rect
+           id="connector29pin"
+           class="st32"
+           x="16.1"
+           y="73.6"
+           width="1.7"
+           height="1.7" />
+      </g>
+    </g>
+    <g
+       id="g111">
+      <g
+         id="g7315">
+        <rect
+           id="connector30pin"
+           class="st32"
+           x="16.1"
+           y="70.8"
+           width="1.7"
+           height="1.7" />
+      </g>
+    </g>
+    <rect
+       id="connector31pin"
+       class="st32"
+       x="16.1"
+       y="76.7"
+       width="1.7"
+       height="1.7" />
+    <rect
+       id="connector32pin"
+       class="st32"
+       x="16.1"
+       y="79.6"
+       width="1.7"
+       height="1.7" />
+    <g
+       id="g112">
+      <g
+         id="g7320">
+        <rect
+           id="connector33pin"
+           class="st32"
+           x="20.2"
+           y="80.6"
+           width="1.4"
+           height="4.4" />
+      </g>
+    </g>
+    <g
+       id="g113">
+      <g
+         id="g7323">
+        <rect
+           id="connector34pin"
+           class="st32"
+           x="23.1"
+           y="80.6"
+           width="1.4"
+           height="4.4" />
+      </g>
+    </g>
+    <g
+       id="g114">
+      <g
+         id="g7326">
+        <rect
+           id="connector35pin"
+           class="st32"
+           x="25.9"
+           y="80.6"
+           width="1.4"
+           height="4.4" />
+      </g>
+    </g>
+    <g
+       id="g115">
+      <g
+         id="g7329">
+        <rect
+           id="connector36pin"
+           class="st32"
+           x="28.7"
+           y="80.6"
+           width="1.4"
+           height="4.4" />
+      </g>
+    </g>
+    <g
+       id="g116">
+      <g
+         id="g7332">
+        <rect
+           id="connector37pin"
+           class="st32"
+           x="15.6"
+           y="91.3"
+           width="3.4"
+           height="5.1" />
+      </g>
+    </g>
+    <g
+       id="g117">
+      <g
+         id="g7335">
+        <rect
+           id="connector38pin"
+           class="st32"
+           x="31.4"
+           y="91.3"
+           width="3.4"
+           height="5.1" />
+      </g>
+    </g>
+    <rect
+       id="connector39pin"
+       class="st32"
+       x="22.4"
+       y="24.2"
+       width="2.3"
+       height="2.8" />
+    <rect
+       id="connector40pin"
+       class="st32"
+       x="22.4"
+       y="29.8"
+       width="2.3"
+       height="2.8" />
+    <g
+       id="g118">
+      <g
+         id="g7340">
+        <rect
+           id="connector41pin"
+           class="st32"
+           x="39.5"
+           y="4.4"
+           width="2.3"
+           height="2.3" />
+      </g>
+    </g>
+    <g
+       id="g119">
+      <g
+         id="g7343">
+        <rect
+           id="connector42pin"
+           class="st32"
+           x="39.5"
+           y="8.7"
+           width="2.3"
+           height="2.3" />
+      </g>
+    </g>
+    <rect
+       id="connector43pin"
+       class="st32"
+       x="9.8"
+       y="72.8"
+       width="2.3"
+       height="2.8" />
+    <rect
+       id="connector44pin"
+       class="st32"
+       x="9.8"
+       y="78.5"
+       width="2.3"
+       height="2.8" />
+    <g
+       id="g120">
+      <g
+         id="g7348">
+        <rect
+           id="connector45pin"
+           class="st32"
+           x="15"
+           y="50.8"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g121">
+      <g
+         id="g7351">
+        <rect
+           id="connector46pin"
+           class="st32"
+           x="15"
+           y="51.9"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g122">
+      <g
+         id="g7354">
+        <rect
+           id="connector47pin"
+           class="st32"
+           x="15"
+           y="53.1"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g123">
+      <g
+         id="g7357">
+        <rect
+           id="connector48pin"
+           class="st32"
+           x="15"
+           y="54.2"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g124">
+      <g
+         id="g7360">
+        <rect
+           id="connector49pin"
+           class="st32"
+           x="15"
+           y="55.3"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g125">
+      <g
+         id="g7363">
+        <rect
+           id="connector50pin"
+           class="st32"
+           x="15"
+           y="56.5"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g126">
+      <g
+         id="g7366">
+        <rect
+           id="connector51pin"
+           class="st32"
+           x="15"
+           y="57.6"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g127">
+      <g
+         id="g7369">
+        <rect
+           id="connector52pin"
+           class="st32"
+           x="15"
+           y="58.7"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g128">
+      <g
+         id="g7372">
+        <rect
+           id="connector53pin"
+           class="st32"
+           x="15"
+           y="59.9"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g129">
+      <g
+         id="g7375">
+        <rect
+           id="connector54pin"
+           class="st32"
+           x="15"
+           y="61"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g130">
+      <g
+         id="g7378">
+        <rect
+           id="connector55pin"
+           class="st32"
+           x="15"
+           y="62.1"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g131">
+      <g
+         id="g7381">
+        <rect
+           id="connector56pin"
+           class="st32"
+           x="15"
+           y="63.3"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g132">
+      <g
+         id="g7384">
+        <rect
+           id="connector57pin"
+           class="st32"
+           x="15"
+           y="64.4"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g133">
+      <g
+         id="g7387">
+        <rect
+           id="connector58pin"
+           class="st32"
+           x="15"
+           y="65.6"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <rect
+       id="connector59pin"
+       class="st32"
+       x="18.4"
+       y="67"
+       width=".6"
+       height="2.5" />
+    <rect
+       id="connector60pin"
+       class="st32"
+       x="19.5"
+       y="67"
+       width=".6"
+       height="2.5" />
+    <rect
+       id="connector61pin"
+       class="st32"
+       x="20.6"
+       y="67"
+       width=".6"
+       height="2.5" />
+    <rect
+       id="connector62pin"
+       class="st32"
+       x="21.8"
+       y="67"
+       width=".6"
+       height="2.5" />
+    <rect
+       id="connector63pin"
+       class="st32"
+       x="22.9"
+       y="67"
+       width=".6"
+       height="2.5" />
+    <rect
+       id="connector64pin"
+       class="st32"
+       x="24"
+       y="67"
+       width=".6"
+       height="2.5" />
+    <rect
+       id="connector65pin"
+       class="st32"
+       x="25.2"
+       y="67"
+       width=".6"
+       height="2.5" />
+    <rect
+       id="connector66pin"
+       class="st32"
+       x="26.3"
+       y="67"
+       width=".6"
+       height="2.5" />
+    <rect
+       id="connector67pin"
+       class="st32"
+       x="27.4"
+       y="67"
+       width=".6"
+       height="2.5" />
+    <rect
+       id="connector68pin"
+       class="st32"
+       x="28.6"
+       y="67"
+       width=".6"
+       height="2.5" />
+    <rect
+       id="connector69pin"
+       class="st32"
+       x="29.7"
+       y="67"
+       width=".6"
+       height="2.5" />
+    <rect
+       id="connector70pin"
+       class="st32"
+       x="30.8"
+       y="67"
+       width=".6"
+       height="2.5" />
+    <rect
+       id="connector71pin"
+       class="st32"
+       x="32"
+       y="67"
+       width=".6"
+       height="2.5" />
+    <rect
+       id="connector72pin"
+       class="st32"
+       x="33.1"
+       y="67"
+       width=".6"
+       height="2.5" />
+    <g
+       id="g134">
+      <g
+         id="g7404">
+        <rect
+           id="connector73pin"
+           class="st32"
+           x="34.6"
+           y="65.6"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g135">
+      <g
+         id="g7407">
+        <rect
+           id="connector74pin"
+           class="st32"
+           x="34.6"
+           y="64.4"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g136">
+      <g
+         id="g7410">
+        <rect
+           id="connector75pin"
+           class="st32"
+           x="34.6"
+           y="63.3"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g137">
+      <g
+         id="g7413">
+        <rect
+           id="connector76pin"
+           class="st32"
+           x="34.6"
+           y="62.1"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g138">
+      <g
+         id="g7416">
+        <rect
+           id="connector77pin"
+           class="st32"
+           x="34.6"
+           y="61"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g139">
+      <g
+         id="g7419">
+        <rect
+           id="connector78pin"
+           class="st32"
+           x="34.6"
+           y="59.9"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g140">
+      <g
+         id="g7422">
+        <rect
+           id="connector79pin"
+           class="st32"
+           x="34.6"
+           y="58.7"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g141">
+      <g
+         id="g7425">
+        <rect
+           id="connector80pin"
+           class="st32"
+           x="34.6"
+           y="57.6"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g142">
+      <g
+         id="g7428">
+        <rect
+           id="connector81pin"
+           class="st32"
+           x="34.6"
+           y="56.5"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g143">
+      <g
+         id="g7431">
+        <rect
+           id="connector82pin"
+           class="st32"
+           x="34.6"
+           y="55.3"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g144">
+      <g
+         id="g7434">
+        <rect
+           id="connector83pin"
+           class="st32"
+           x="34.6"
+           y="54.2"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g145">
+      <g
+         id="g7437">
+        <rect
+           id="connector84pin"
+           class="st32"
+           x="34.6"
+           y="53.1"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g146">
+      <g
+         id="g7440">
+        <rect
+           id="connector85pin"
+           class="st32"
+           x="34.6"
+           y="51.9"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g147">
+      <g
+         id="g7443">
+        <rect
+           id="connector86pin"
+           class="st32"
+           x="34.6"
+           y="50.8"
+           width="2.5"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g148">
+      <g
+         id="g7446">
+        <rect
+           id="connector87pin"
+           class="st32"
+           x="33.1"
+           y="47.4"
+           width=".6"
+           height="2.5" />
+      </g>
+    </g>
+    <g
+       id="g149">
+      <g
+         id="g7449">
+        <rect
+           id="connector88pin"
+           class="st32"
+           x="32"
+           y="47.4"
+           width=".6"
+           height="2.5" />
+      </g>
+    </g>
+    <g
+       id="g150">
+      <g
+         id="g7452">
+        <rect
+           id="connector89pin"
+           class="st32"
+           x="30.8"
+           y="47.4"
+           width=".6"
+           height="2.5" />
+      </g>
+    </g>
+    <g
+       id="g151">
+      <g
+         id="g7455">
+        <rect
+           id="connector90pin"
+           class="st32"
+           x="29.7"
+           y="47.4"
+           width=".6"
+           height="2.5" />
+      </g>
+    </g>
+    <g
+       id="g152">
+      <g
+         id="g7458">
+        <rect
+           id="connector91pin"
+           class="st32"
+           x="28.6"
+           y="47.4"
+           width=".6"
+           height="2.5" />
+      </g>
+    </g>
+    <g
+       id="g153">
+      <g
+         id="g7461">
+        <rect
+           id="connector92pin"
+           class="st32"
+           x="27.4"
+           y="47.4"
+           width=".6"
+           height="2.5" />
+      </g>
+    </g>
+    <g
+       id="g154">
+      <g
+         id="g7464">
+        <rect
+           id="connector93pin"
+           class="st32"
+           x="26.3"
+           y="47.4"
+           width=".6"
+           height="2.5" />
+      </g>
+    </g>
+    <g
+       id="g155">
+      <g
+         id="g7467">
+        <rect
+           id="connector94pin"
+           class="st32"
+           x="25.2"
+           y="47.4"
+           width=".6"
+           height="2.5" />
+      </g>
+    </g>
+    <g
+       id="g156">
+      <g
+         id="g7470">
+        <rect
+           id="connector95pin"
+           class="st32"
+           x="24"
+           y="47.4"
+           width=".6"
+           height="2.5" />
+      </g>
+    </g>
+    <g
+       id="g157">
+      <g
+         id="g7473">
+        <rect
+           id="connector96pin"
+           class="st32"
+           x="22.9"
+           y="47.4"
+           width=".6"
+           height="2.5" />
+      </g>
+    </g>
+    <g
+       id="g158">
+      <g
+         id="g7476">
+        <rect
+           id="connector97pin"
+           class="st32"
+           x="21.8"
+           y="47.4"
+           width=".6"
+           height="2.5" />
+      </g>
+    </g>
+    <g
+       id="g159">
+      <g
+         id="g7479">
+        <rect
+           id="connector98pin"
+           class="st32"
+           x="20.6"
+           y="47.4"
+           width=".6"
+           height="2.5" />
+      </g>
+    </g>
+    <g
+       id="g160">
+      <g
+         id="g7482">
+        <rect
+           id="connector99pin"
+           class="st32"
+           x="19.5"
+           y="47.4"
+           width=".6"
+           height="2.5" />
+      </g>
+    </g>
+    <g
+       id="g161">
+      <g
+         id="g7485">
+        <rect
+           id="connector100pin"
+           class="st32"
+           x="18.4"
+           y="47.4"
+           width=".6"
+           height="2.5" />
+      </g>
+    </g>
+    <g
+       id="g162">
+      <g
+         id="g7488">
+        <path
+           id="connector101pin"
+           class="st32"
+           d="M21.9,53.9h8.2c.3,0,.5.2.5.5v8.2c0,.3-.2.5-.5.5h-8.2c-.3,0-.5-.2-.5-.5v-8.2c0-.3.2-.5.5-.5Z" />
+      </g>
+    </g>
+    <circle
+       id="connector102pin"
+       class="st16"
+       cx="46.799999"
+       cy="93.498436"
+       r="1.9" />
+    <circle
+       id="connector103pin"
+       class="st16"
+       cx="46.799999"
+       cy="86.298439"
+       r="1.9" />
+    <circle
+       id="connector104pin"
+       class="st16"
+       cx="46.799999"
+       cy="79.098434"
+       r="1.9" />
+    <circle
+       id="connector105pin"
+       class="st16"
+       cx="46.799999"
+       cy="71.898438"
+       r="1.9" />
+    <circle
+       id="connector106pin"
+       class="st16"
+       cx="46.799999"
+       cy="64.698441"
+       r="1.9" />
+    <circle
+       id="connector107pin"
+       class="st16"
+       cx="46.799999"
+       cy="57.498436"
+       r="1.9" />
+    <circle
+       id="connector108pin"
+       class="st16"
+       cx="46.799999"
+       cy="50.298439"
+       r="1.9" />
+    <circle
+       id="connector109pin"
+       class="st16"
+       cx="46.799999"
+       cy="43.098438"
+       r="1.9" />
+    <circle
+       id="connector110pin"
+       class="st16"
+       cx="46.799999"
+       cy="35.898438"
+       r="1.9" />
+    <circle
+       id="connector111pin"
+       class="st16"
+       cx="46.799999"
+       cy="28.698437"
+       r="1.9" />
+    <circle
+       id="connector112pin"
+       class="st16"
+       cx="46.799999"
+       cy="21.498438"
+       r="1.9" />
+    <circle
+       id="connector113pin"
+       class="st16"
+       cx="46.799999"
+       cy="14.298437"
+       r="1.9" />
+    <circle
+       id="connector114pin"
+       class="st16"
+       cx="46.799999"
+       cy="7.0984373"
+       r="1.9" />
+    <circle
+       id="connector115pin"
+       class="st16"
+       cx="3.5999999"
+       cy="7.0984373"
+       r="1.9" />
+    <circle
+       id="connector116pin"
+       class="st16"
+       cx="3.5999999"
+       cy="14.298437"
+       r="1.9" />
+    <circle
+       id="connector117pin"
+       class="st16"
+       cx="3.5999999"
+       cy="21.498438"
+       r="1.9" />
+    <circle
+       id="connector118pin"
+       class="st16"
+       cx="3.5999999"
+       cy="28.698437"
+       r="1.9" />
+    <circle
+       id="connector119pin"
+       class="st16"
+       cx="3.5999999"
+       cy="35.898438"
+       r="1.9" />
+    <circle
+       id="connector120pin"
+       class="st16"
+       cx="3.5999999"
+       cy="43.098438"
+       r="1.9" />
+    <circle
+       id="connector121pin"
+       class="st16"
+       cx="3.5999999"
+       cy="50.298439"
+       r="1.9" />
+    <circle
+       id="connector122pin"
+       class="st16"
+       cx="3.5999999"
+       cy="57.498436"
+       r="1.9" />
+    <circle
+       id="connector123pin"
+       class="st16"
+       cx="3.5999999"
+       cy="64.698441"
+       r="1.9" />
+    <circle
+       id="connector124pin"
+       class="st16"
+       cx="3.5999999"
+       cy="71.898438"
+       r="1.9" />
+    <circle
+       id="connector125pin"
+       class="st16"
+       cx="3.5999999"
+       cy="79.098434"
+       r="1.9" />
+    <circle
+       id="connector126pin"
+       class="st16"
+       cx="3.5999999"
+       cy="86.298439"
+       r="1.9" />
+    <circle
+       id="connector127pin"
+       class="st16"
+       cx="3.5999999"
+       cy="93.498436"
+       r="1.9" />
+    <rect
+       id="connector128pin"
+       class="st32"
+       x="35.5"
+       y="69.4"
+       width="1.4"
+       height="1.4" />
+    <rect
+       id="connector129pin"
+       class="st32"
+       x="35.5"
+       y="72.2"
+       width="1.4"
+       height="1.4" />
+    <rect
+       id="connector130pin"
+       class="st32"
+       x="38"
+       y="72.2"
+       width="1.4"
+       height="1.4" />
+    <rect
+       id="connector131pin"
+       class="st32"
+       x="38"
+       y="69.4"
+       width="1.4"
+       height="1.4" />
+    <rect
+       id="connector132pin"
+       class="st32"
+       x="8.9"
+       y="14.6"
+       width="1.7"
+       height="1.7" />
+    <rect
+       id="connector133pin"
+       class="st32"
+       x="8.9"
+       y="17.5"
+       width="1.7"
+       height="1.7" />
+    <g
+       id="g163">
+      <g
+         id="g7523">
+        <rect
+           id="connector134pin"
+           class="st32"
+           x="8.9"
+           y="11.5"
+           width="1.7"
+           height="1.7" />
+      </g>
+    </g>
+    <g
+       id="g164">
+      <g
+         id="g7526">
+        <rect
+           id="connector135pin"
+           class="st32"
+           x="8.9"
+           y="8.7"
+           width="1.7"
+           height="1.7" />
+      </g>
+    </g>
+    <g
+       id="g165">
+      <g
+         id="g7529">
+        <rect
+           id="connector136pin"
+           class="st32"
+           x="28"
+           y="43.8"
+           width="1.7"
+           height="1.7" />
+      </g>
+    </g>
+    <g
+       id="g166">
+      <g
+         id="g7532">
+        <rect
+           id="connector137pin"
+           class="st32"
+           x="28"
+           y="40.9"
+           width="1.7"
+           height="1.7" />
+      </g>
+    </g>
+    <g
+       id="g167">
+      <g
+         id="g7535">
+        <rect
+           id="connector138pin"
+           class="st32"
+           x="30.7"
+           y="43.8"
+           width="1.7"
+           height="1.7" />
+      </g>
+    </g>
+    <g
+       id="g168">
+      <g
+         id="g7538">
+        <rect
+           id="connector139pin"
+           class="st32"
+           x="30.7"
+           y="40.9"
+           width="1.7"
+           height="1.7" />
+      </g>
+    </g>
+    <rect
+       id="connector140pin"
+       class="st32"
+       x="13.4"
+       y="45.3"
+       width="1.7"
+       height="1.7" />
+    <rect
+       id="connector141pin"
+       class="st32"
+       x="13.4"
+       y="48.2"
+       width="1.7"
+       height="1.7" />
+    <g
+       id="g169">
+      <g
+         id="g7543">
+        <rect
+           id="connector142pin"
+           class="st32"
+           x="25.8"
+           y="76.7"
+           width="1.7"
+           height="1.7" />
+      </g>
+    </g>
+    <g
+       id="g170">
+      <g
+         id="g7546">
+        <rect
+           id="connector143pin"
+           class="st32"
+           x="25.8"
+           y="73.8"
+           width="1.7"
+           height="1.7" />
+      </g>
+    </g>
+    <rect
+       id="connector144pin"
+       class="st32"
+       x="39.1"
+       y="11.5"
+       width="1.7"
+       height="1.7" />
+    <rect
+       id="connector145pin"
+       class="st32"
+       x="39.1"
+       y="14.4"
+       width="1.7"
+       height="1.7" />
+    <g
+       id="g171">
+      <g
+         id="g7551">
+        <rect
+           id="connector146pin"
+           class="st32"
+           x="12.5"
+           y="24.1"
+           width="3.5"
+           height="4.3" />
+      </g>
+    </g>
+    <g
+       id="g172">
+      <g
+         id="g7554">
+        <rect
+           id="connector147pin"
+           class="st32"
+           x="17.9"
+           y="24.1"
+           width="3.5"
+           height="4.3" />
+      </g>
+    </g>
+    <rect
+       id="connector148pin"
+       class="st32"
+       x="39.1"
+       y="74.4"
+       width="1.7"
+       height="1.7" />
+    <rect
+       id="connector149pin"
+       class="st32"
+       x="39.1"
+       y="77.2"
+       width="1.7"
+       height="1.7" />
+    <rect
+       id="connector150pin"
+       class="st32"
+       x="36.4"
+       y="74.4"
+       width="1.7"
+       height="1.7" />
+    <rect
+       id="connector151pin"
+       class="st32"
+       x="36.4"
+       y="77.2"
+       width="1.7"
+       height="1.7" />
+    <g
+       id="g173">
+      <g
+         id="g7561">
+        <rect
+           id="connector152pin"
+           class="st32"
+           x="10"
+           y="30.2"
+           width="1.7"
+           height="1.7" />
+      </g>
+    </g>
+    <g
+       id="g174">
+      <g
+         id="g7564">
+        <rect
+           id="connector153pin"
+           class="st32"
+           x="10"
+           y="27.3"
+           width="1.7"
+           height="1.7" />
+      </g>
+    </g>
+    <rect
+       id="connector154pin"
+       class="st32"
+       x="33.5"
+       y="76"
+       width="1.7"
+       height="1.7" />
+    <rect
+       id="connector155pin"
+       class="st32"
+       x="33.5"
+       y="78.9"
+       width="1.7"
+       height="1.7" />
+    <rect
+       id="connector156pin"
+       class="st32"
+       x="40.2"
+       y="93.8"
+       width="2.6"
+       height="2.6" />
+    <rect
+       id="connector157pin"
+       class="st32"
+       x="40.2"
+       y="82.2"
+       width="2.6"
+       height="2.6" />
+    <rect
+       id="connector158pin"
+       class="st32"
+       x="35.7"
+       y="93.8"
+       width="2.6"
+       height="2.6" />
+    <rect
+       id="connector159pin"
+       class="st32"
+       x="35.7"
+       y="82.2"
+       width="2.6"
+       height="2.6" />
+    <g
+       id="g175">
+      <g
+         id="g7573">
+        <rect
+           id="connector160pin"
+           class="st32"
+           x="7.4"
+           y="82.2"
+           width="2.6"
+           height="2.6" />
+      </g>
+    </g>
+    <g
+       id="g176">
+      <g
+         id="g7576">
+        <rect
+           id="connector161pin"
+           class="st32"
+           x="7.4"
+           y="93.8"
+           width="2.6"
+           height="2.6" />
+      </g>
+    </g>
+    <g
+       id="g177">
+      <g
+         id="g7579">
+        <rect
+           id="connector162pin"
+           class="st32"
+           x="12"
+           y="82.2"
+           width="2.6"
+           height="2.6" />
+      </g>
+    </g>
+    <g
+       id="g178">
+      <g
+         id="g7582">
+        <rect
+           id="connector163pin"
+           class="st32"
+           x="12"
+           y="93.8"
+           width="2.6"
+           height="2.6" />
+      </g>
+    </g>
+    <g
+       id="g179">
+      <g
+         id="g7585">
+        <path
+           id="connector164pin"
+           class="st32"
+           d="M38.7,92.3h0c-.8,0-1.4-.6-1.4-1.4h0c0-.8.6-1.4,1.4-1.4h0c.8,0,1.4.6,1.4,1.4h0c0,.8-.6,1.4-1.4,1.4Z" />
+      </g>
+    </g>
+    <g
+       id="g180">
+      <g
+         id="g7588">
+        <path
+           id="connector165pin"
+           class="st32"
+           d="M31.3,7.8h0c-.8,0-1.4-.6-1.4-1.4h0c0-.8.6-1.4,1.4-1.4h0c.8,0,1.4.6,1.4,1.4h0c0,.8-.6,1.4-1.4,1.4Z" />
+      </g>
+    </g>
+    <g
+       id="g181">
+      <g
+         id="g7591">
+        <rect
+           id="connector166pin"
+           class="st32"
+           x="33"
+           y="30.1"
+           width="3.4"
+           height="1.6" />
+      </g>
+    </g>
+    <g
+       id="g182">
+      <g
+         id="g7594">
+        <rect
+           id="connector167pin"
+           class="st32"
+           x="33"
+           y="27.4"
+           width="3.4"
+           height="1.6" />
+      </g>
+    </g>
+    <g
+       id="g183">
+      <g
+         id="g7597">
+        <rect
+           id="connector168pin"
+           class="st32"
+           x="33"
+           y="24.8"
+           width="3.4"
+           height="1.6" />
+      </g>
+    </g>
+    <g
+       id="g184">
+      <g
+         id="g7600">
+        <rect
+           id="connector169pin"
+           class="st32"
+           x="25.6"
+           y="24.8"
+           width="3.4"
+           height="1.6" />
+      </g>
+    </g>
+    <g
+       id="g185">
+      <g
+         id="g7603">
+        <rect
+           id="connector170pin"
+           class="st32"
+           x="25.6"
+           y="30.1"
+           width="3.4"
+           height="1.6" />
+      </g>
+    </g>
+    <g
+       id="g186">
+      <g
+         id="g7606">
+        <rect
+           id="connector171pin"
+           class="st32"
+           x="9.9"
+           y="34.5"
+           width="1.7"
+           height="1.1" />
+      </g>
+    </g>
+    <g
+       id="g187">
+      <g
+         id="g7609">
+        <rect
+           id="connector172pin"
+           class="st32"
+           x="9.9"
+           y="36.8"
+           width="1.7"
+           height="1.1" />
+      </g>
+    </g>
+    <g
+       id="g188">
+      <g
+         id="g7612">
+        <rect
+           id="connector173pin"
+           class="st32"
+           x="9.9"
+           y="39.1"
+           width="1.7"
+           height="1.1" />
+      </g>
+    </g>
+    <g
+       id="g189">
+      <g
+         id="g7615">
+        <rect
+           id="connector174pin"
+           class="st32"
+           x="9.9"
+           y="41.3"
+           width="1.7"
+           height="1.1" />
+      </g>
+    </g>
+    <g
+       id="g190">
+      <g
+         id="g7618">
+        <rect
+           id="connector175pin"
+           class="st32"
+           x="20.4"
+           y="41.3"
+           width="1.7"
+           height="1.1" />
+      </g>
+    </g>
+    <g
+       id="g191">
+      <g
+         id="g7621">
+        <rect
+           id="connector176pin"
+           class="st32"
+           x="20.4"
+           y="39.1"
+           width="1.7"
+           height="1.1" />
+      </g>
+    </g>
+    <g
+       id="g192">
+      <g
+         id="g7624">
+        <rect
+           id="connector177pin"
+           class="st32"
+           x="20.4"
+           y="36.8"
+           width="1.7"
+           height="1.1" />
+      </g>
+    </g>
+    <g
+       id="g193">
+      <g
+         id="g7627">
+        <rect
+           id="connector178pin"
+           class="st32"
+           x="20.4"
+           y="34.5"
+           width="1.7"
+           height="1.1" />
+      </g>
+    </g>
+    <g
+       id="g194">
+      <g
+         id="g7630">
+        <rect
+           id="connector179pin"
+           class="st32"
+           x="13.2"
+           y="34.2"
+           width="5.7"
+           height="8.5" />
+      </g>
+    </g>
+    <g
+       id="g195">
+      <g
+         id="g7633">
+        <rect
+           id="connector180pin"
+           class="st32"
+           x="33.5"
+           y="19.4"
+           width="1.6"
+           height="3.3" />
+      </g>
+    </g>
+    <g
+       id="g196">
+      <g
+         id="g7636">
+        <rect
+           id="connector181pin"
+           class="st32"
+           x="31.2"
+           y="19.4"
+           width="1.6"
+           height="3.3" />
+      </g>
+    </g>
+    <g
+       id="g197">
+      <g
+         id="g7639">
+        <rect
+           id="connector182pin"
+           class="st32"
+           x="28.4"
+           y="19.4"
+           width=".8"
+           height="3.3" />
+      </g>
+    </g>
+    <g
+       id="g198">
+      <g
+         id="g7642">
+        <rect
+           id="connector183pin"
+           class="st32"
+           x="25.5"
+           y="19.4"
+           width=".8"
+           height="3.3" />
+      </g>
+    </g>
+    <g
+       id="g199">
+      <g
+         id="g7645">
+        <rect
+           id="connector184pin"
+           class="st32"
+           x="24.1"
+           y="19.4"
+           width=".8"
+           height="3.3" />
+      </g>
+    </g>
+    <g
+       id="g200">
+      <g
+         id="g7648">
+        <rect
+           id="connector185pin"
+           class="st32"
+           x="21.3"
+           y="19.4"
+           width=".8"
+           height="3.3" />
+      </g>
+    </g>
+    <g
+       id="g201">
+      <g
+         id="g7651">
+        <rect
+           id="connector186pin"
+           class="st32"
+           x="15.3"
+           y="19.4"
+           width="1.6"
+           height="3.3" />
+      </g>
+    </g>
+    <g
+       id="g202">
+      <g
+         id="g7654">
+        <rect
+           id="connector187pin"
+           class="st32"
+           x="17.6"
+           y="19.4"
+           width="1.6"
+           height="3.3" />
+      </g>
+    </g>
+    <g
+       id="g203">
+      <g
+         id="g7657">
+        <rect
+           id="connector188pin"
+           class="st32"
+           x="19.8"
+           y="19.4"
+           width=".8"
+           height="3.3" />
+      </g>
+    </g>
+    <g
+       id="g204">
+      <g
+         id="g7660">
+        <rect
+           id="connector189pin"
+           class="st32"
+           x="22.7"
+           y="19.4"
+           width=".8"
+           height="3.3" />
+      </g>
+    </g>
+    <g
+       id="g205">
+      <g
+         id="g7663">
+        <rect
+           id="connector190pin"
+           class="st32"
+           x="26.9"
+           y="19.4"
+           width=".8"
+           height="3.3" />
+      </g>
+    </g>
+    <g
+       id="g206">
+      <g
+         id="g7666">
+        <rect
+           id="connector191pin"
+           class="st32"
+           x="29.8"
+           y="19.4"
+           width=".8"
+           height="3.3" />
+      </g>
+    </g>
+    <circle
+       id="connector192pin"
+       class="st15"
+       cx="37.4"
+       cy="19.4"
+       r="1.2" />
+    <path
+       id="path7669"
+       class="st32"
+       d="M38.7,16.6v5.6h-2.4v-5.6h2.4M37.4,18.2c-.7,0-1.2.5-1.2,1.2s.5,1.2,1.2,1.2,1.2-.5,1.2-1.2-.5-1.2-1.2-1.2Z" />
+    <circle
+       id="connector193pin"
+       class="st15"
+       cx="13"
+       cy="19.4"
+       r="1.2" />
+    <path
+       id="path7672"
+       class="st32"
+       d="M14.2,16.6v5.6h-2.4v-5.6h2.4M13,18.2c-.7,0-1.2.5-1.2,1.2s.5,1.2,1.2,1.2,1.2-.5,1.2-1.2-.5-1.2-1.2-1.2Z" />
+    <circle
+       id="connector194pin"
+       class="st15"
+       cx="37.4"
+       cy="7.5"
+       r="1.2" />
+    <path
+       id="path7675"
+       class="st32"
+       d="M38.7,4.7v5.6h-2.4v-5.6h2.4M37.4,6.3c-.7,0-1.2.5-1.2,1.2s.5,1.2,1.2,1.2,1.2-.5,1.2-1.2-.5-1.2-1.2-1.2Z" />
+    <circle
+       id="connector195pin"
+       class="st15"
+       cx="13"
+       cy="7.5"
+       r="1.2" />
+    <path
+       id="path7678"
+       class="st32"
+       d="M14.2,4.7v5.6h-2.4v-5.6h2.4M13,6.3c-.7,0-1.2.5-1.2,1.2s.5,1.2,1.2,1.2,1.2-.5,1.2-1.2-.5-1.2-1.2-1.2Z" />
+    <g
+       id="g207">
+      <g
+         id="g7681">
+        <rect
+           id="connector196pin"
+           class="st32"
+           x="22.5"
+           y="75.9"
+           width="2.1"
+           height="2.6" />
+      </g>
+    </g>
+    <g
+       id="g208">
+      <g
+         id="g7684">
+        <rect
+           id="connector197pin"
+           class="st32"
+           x="22.5"
+           y="71.2"
+           width="2.1"
+           height="2.6" />
+      </g>
+    </g>
+    <g
+       id="g209">
+      <g
+         id="g7687">
+        <rect
+           id="connector198pin"
+           class="st32"
+           x="18.9"
+           y="71.2"
+           width="2.1"
+           height="2.6" />
+      </g>
+    </g>
+    <g
+       id="g210">
+      <g
+         id="g7690">
+        <rect
+           id="connector199pin"
+           class="st32"
+           x="18.9"
+           y="75.9"
+           width="2.1"
+           height="2.6" />
+      </g>
+    </g>
+    <g
+       id="g211">
+      <g
+         id="_x30_805-cap">
+        <path
+           id="path7693"
+           class="st33"
+           d="M37.4,30.7v-5.1c0-.2,0-.3.3-.3h3c.2,0,.3.1.3.3v5.1c0,.2,0,.3-.3.3h-3c-.2,0-.3-.1-.3-.3Z" />
+        <rect
+           id="rect7695"
+           class="st4"
+           x="37.4"
+           y="26.3"
+           width="3.5"
+           height="3.5" />
+      </g>
+    </g>
+    <g
+       id="g213">
+      <g
+         id="_0402no">
+        <g
+           id="g212">
+          <g
+             id="g7702">
+            <path
+               id="path7698"
+               class="st33"
+               d="M35,43.4h2.3c.2,0,.3,0,.3.3v.8c0,.2,0,.3-.3.3h-2.3c-.2,0-.3,0-.3-.3v-.9c0-.2,0-.3.3-.3h0Z" />
+            <rect
+               id="rect7700"
+               class="st31"
+               x="35.5"
+               y="43.4"
+               width="1.4"
+               height="1.4" />
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g215">
+      <g
+         id="g7711">
+        <g
+           id="g214">
+          <g
+             id="g7709">
+            <path
+               id="path7705"
+               class="st33"
+               d="M30.5,37.2h-5.1c-.2,0-.3,0-.3-.3v-3c0-.2.1-.3.3-.3h5.1c.2,0,.3,0,.3.3v3c0,.2-.1.3-.3.3Z" />
+            <rect
+               id="rect7707"
+               class="st4"
+               x="26.1"
+               y="33.7"
+               width="3.5"
+               height="3.5" />
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g216">
+      <g
+         id="g7717">
+        <path
+           id="path7713"
+           class="st33"
+           d="M28.5,77.1v-2.3c0-.2.1-.3.3-.3h.8c.2,0,.3,0,.3.3v2.3c0,.2-.1.3-.3.3h-.9c-.2,0-.3,0-.3-.3h.1Z" />
+        <rect
+           id="rect7715"
+           class="st31"
+           x="28.5"
+           y="75.2"
+           width="1.4"
+           height="1.4" />
+      </g>
+    </g>
+    <g
+       id="g218">
+      <g
+         id="_x30_603-cap">
+        <g
+           id="g217">
+          <g
+             id="g7723">
+            <path
+               id="path7719"
+               class="st33"
+               d="M40,36.1v4c0,.2,0,.3-.3.3h-1.7c-.2,0-.3,0-.3-.3v-4c0-.2,0-.3.3-.3h1.7c.2,0,.3,0,.3.3Z" />
+            <rect
+               id="rect7721"
+               class="st4"
+               x="37.7"
+               y="37"
+               width="2.3"
+               height="2.3" />
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g220">
+      <g
+         id="g7732">
+        <g
+           id="g219">
+          <g
+             id="g7730">
+            <path
+               id="path7726"
+               class="st33"
+               d="M32.4,74v2.3c0,.2,0,.3-.3.3h-.8c-.2,0-.3,0-.3-.3v-2.3c0-.2.1-.3.3-.3h.9c.2,0,.3,0,.3.3h-.1Z" />
+            <rect
+               id="rect7728"
+               class="st31"
+               x="31"
+               y="74.4"
+               width="1.4"
+               height="1.4" />
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g222">
+      <g
+         id="g7740">
+        <g
+           id="g221">
+          <g
+             id="g7738">
+            <path
+               id="path7734"
+               class="st33"
+               d="M35.6,36.1v4c0,.2,0,.3-.3.3h-1.7c-.2,0-.3,0-.3-.3v-4c0-.2,0-.3.3-.3h1.7c.2,0,.3,0,.3.3Z" />
+            <rect
+               id="rect7736"
+               class="st4"
+               x="33.4"
+               y="37"
+               width="2.3"
+               height="2.3" />
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g224">
+      <g
+         id="g7748">
+        <g
+           id="g223">
+          <g
+             id="g7746">
+            <path
+               id="path7742"
+               class="st33"
+               d="M8.9,46.6h2.3c.2,0,.3,0,.3.3v.8c0,.2-.1.3-.3.3h-2.3c-.2,0-.3,0-.3-.3v-.9c0-.2.1-.3.3-.3h0Z" />
+            <rect
+               id="rect7744"
+               class="st31"
+               x="9.4"
+               y="46.6"
+               width="1.4"
+               height="1.4" />
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g226">
+      <g
+         id="g7756">
+        <g
+           id="g225">
+          <g
+             id="g7754">
+            <path
+               id="path7750"
+               class="st33"
+               d="M39.6,57.5v2.3c0,.2,0,.3-.3.3h-.8c-.2,0-.3,0-.3-.3v-2.3c0-.2,0-.3.3-.3h.9c.2,0,.3,0,.3.3h-.1Z" />
+            <rect
+               id="rect7752"
+               class="st31"
+               x="38.2"
+               y="58"
+               width="1.4"
+               height="1.4" />
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g228">
+      <g
+         id="g7764">
+        <g
+           id="g227">
+          <g
+             id="g7762">
+            <path
+               id="path7758"
+               class="st33"
+               d="M15.1,29.6h4c.2,0,.3.1.3.3v1.7c0,.2-.1.3-.3.3h-4c-.2,0-.3-.1-.3-.3v-1.7c0-.2.1-.3.3-.3Z" />
+            <rect
+               id="rect7760"
+               class="st4"
+               x="16"
+               y="29.6"
+               width="2.3"
+               height="2.3" />
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g229">
+      <g
+         id="g7770">
+        <path
+           id="path7766"
+           class="st33"
+           d="M9.7,64.5v-2.3c0-.2.1-.3.3-.3h.8c.2,0,.3,0,.3.3v2.3c0,.2-.1.3-.3.3h-.9c-.2,0-.3,0-.3-.3h0Z" />
+        <rect
+           id="rect7768"
+           class="st31"
+           x="9.7"
+           y="62.6"
+           width="1.4"
+           height="1.4" />
+      </g>
+    </g>
+    <g
+       id="g231">
+      <g
+         id="g7778">
+        <g
+           id="g230">
+          <g
+             id="g7776">
+            <path
+               id="path7772"
+               class="st33"
+               d="M40.8,47.9v2.3c0,.2,0,.3-.3.3h-.8c-.2,0-.3,0-.3-.3v-2.3c0-.2,0-.3.3-.3h.9c.2,0,.3,0,.3.3h-.1Z" />
+            <rect
+               id="rect7774"
+               class="st31"
+               x="39.4"
+               y="48.4"
+               width="1.4"
+               height="1.4" />
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g233">
+      <g
+         id="g7786">
+        <g
+           id="g232">
+          <g
+             id="g7784">
+            <path
+               id="path7780"
+               class="st33"
+               d="M17.6,71.9v2.3c0,.2-.1.3-.3.3h-.8c-.2,0-.3,0-.3-.3v-2.3c0-.2.1-.3.3-.3h.9c.2,0,.3,0,.3.3h-.1Z" />
+            <rect
+               id="rect7782"
+               class="st31"
+               x="16.2"
+               y="72.3"
+               width="1.4"
+               height="1.4" />
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g234">
+      <g
+         id="g7792">
+        <path
+           id="path7788"
+           class="st33"
+           d="M16.2,80.1v-2.3c0-.2.1-.3.3-.3h.8c.2,0,.3,0,.3.3v2.3c0,.2-.1.3-.3.3h-.9c-.2,0-.3,0-.3-.3h.1Z" />
+        <rect
+           id="rect7790"
+           class="st31"
+           x="16.2"
+           y="78.3"
+           width="1.4"
+           height="1.4" />
+      </g>
+    </g>
+    <g
+       id="g245">
+      <g
+         id="jst_sh4_skinny">
+        <g
+           id="g244">
+          <g
+             id="g7814">
+            <path
+               id="polygon5"
+               class="st5"
+               d="M18.2,84.9h14.2v1.4h1.4v10h-17v-10h1.4s0-1.4,0-1.4Z" />
+            <g
+               id="g235">
+              <rect
+                 id="rect7"
+                 x="30.2"
+                 y="87.6"
+                 width="1.4"
+                 height="4.4"
+                 transform="translate(-.6 .2) rotate(-.4)" />
+            </g>
+            <g
+               id="g236">
+              <rect
+                 id="rect9"
+                 x="18.9"
+                 y="87.7"
+                 width="1.4"
+                 height="4.4"
+                 transform="translate(-.6 .1) rotate(-.4)" />
+            </g>
+            <g
+               id="g237">
+              <rect
+                 id="rect11"
+                 class="st20"
+                 x="30.2"
+                 y="86.1"
+                 width="1.4"
+                 height="1.5"
+                 transform="translate(-.6 .2) rotate(-.4)" />
+            </g>
+            <g
+               id="g238">
+              <rect
+                 id="rect13"
+                 class="st20"
+                 x="18.9"
+                 y="86.2"
+                 width="1.4"
+                 height="1.5"
+                 transform="translate(-.6 .1) rotate(-.4)" />
+            </g>
+            <g
+               id="g239">
+              <rect
+                 id="rect19"
+                 class="st33"
+                 x="29"
+                 y="82.5"
+                 width="1"
+                 height="3.6"
+                 transform="translate(-.6 .2) rotate(-.4)" />
+            </g>
+            <g
+               id="g240">
+              <rect
+                 id="rect21"
+                 class="st33"
+                 x="26.2"
+                 y="82.5"
+                 width="1"
+                 height="3.6"
+                 transform="translate(-.6 .2) rotate(-.4)" />
+            </g>
+            <g
+               id="g241">
+              <rect
+                 id="rect4164"
+                 class="st33"
+                 x="26.2"
+                 y="82.5"
+                 width="1"
+                 height="3.6"
+                 transform="translate(-.6 .2) rotate(-.4)" />
+            </g>
+            <g
+               id="g242">
+              <rect
+                 id="rect4188"
+                 class="st33"
+                 x="23.3"
+                 y="82.5"
+                 width="1"
+                 height="3.6"
+                 transform="translate(-.6 .2) rotate(-.4)" />
+            </g>
+            <g
+               id="g243">
+              <rect
+                 id="rect4143"
+                 class="st33"
+                 x="20.5"
+                 y="82.6"
+                 width="1"
+                 height="3.6"
+                 transform="translate(-.6 .1) rotate(-.4)" />
+            </g>
+            <path
+               id="path594"
+               d="M16.8,91.4v-5h1.4v-1.4h2.2v1.3h1v-1.3h1.8v1.3h1v-1.3h1.8v1.2h1v-1.4h1.8v1.2h1v-1.2h2.4v1.4h1.4v10.1h-17.1l.3-4.8h0ZM20.3,91.8v-5.5h-1.4v5.8h1.4c0,0,0-.2,0-.2h0ZM31.7,92v-5.7h-1.4v5.8h1.4Z" />
+            <path
+               id="path596"
+               d="M18.9,87.6v-1.3h1.5v1.4h-1.5Z" />
+            <path
+               id="path598"
+               d="M30.2,87.4v-1.3h1.4v1.4h-1.4Z" />
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g246">
+      <g
+         id="sod-323f">
+        <rect
+           id="rect3"
+           class="st33"
+           x="23.2"
+           y="24.9"
+           width=".9"
+           height="7.1" />
+        <rect
+           id="rect5"
+           class="st21"
+           x="21.8"
+           y="26"
+           width="3.5"
+           height="4.8" />
+        <rect
+           id="rect3339"
+           class="st26"
+           x="21.8"
+           y="26.4"
+           width="3.6"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g249">
+      <g
+         id="_x30_603-led-green">
+        <g
+           id="g248">
+          <g
+             id="g7830">
+            <path
+               id="path7824"
+               class="st33"
+               d="M39.5,9.7v-4c0-.2,0-.3.3-.3h1.7c.2,0,.3,0,.3.3v4c0,.2,0,.3-.3.3h-1.7c-.2,0-.3-.1-.3-.3Z" />
+            <g
+               id="g247">
+              <rect
+                 id="rect7826"
+                 class="st13"
+                 x="39.5"
+                 y="6.6"
+                 width="2.3"
+                 height="2.3" />
+            </g>
+            <circle
+               id="circle7828"
+               class="st6"
+               cx="40.7"
+               cy="7.7"
+               r=".4" />
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g250">
+      <g
+         id="g7845">
+        <rect
+           id="rect7839"
+           class="st33"
+           x="10.5"
+           y="73.5"
+           width=".9"
+           height="7.1" />
+        <rect
+           id="rect7841"
+           class="st21"
+           x="9.1"
+           y="74.7"
+           width="3.5"
+           height="4.8" />
+        <rect
+           id="rect7843"
+           class="st26"
+           x="9.1"
+           y="75.1"
+           width="3.6"
+           height=".6" />
+      </g>
+    </g>
+    <g
+       id="g253">
+      <g
+         id="qfn56_7mm_reducedepad">
+        <g
+           id="g252">
+          <g
+             id="g7853">
+            <g
+               id="g251">
+              <g
+                 id="layer1">
+                <rect
+                   id="rect9367"
+                   class="st31"
+                   x="16"
+                   y="48.4"
+                   width="19.8"
+                   height="19.8" />
+                <circle
+                   id="path10169"
+                   class="st34"
+                   cx="17.8"
+                   cy="50.3"
+                   r=".6" />
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g255">
+      <g
+         id="sk6805_1515">
+        <g
+           id="g853">
+          <g
+             id="g254">
+            <rect
+               id="rect4"
+               class="st5"
+               x="35.2"
+               y="69.3"
+               width="4.5"
+               height="4.5" />
+            <rect
+               id="rect6"
+               class="st20"
+               x="36.1"
+               y="69.6"
+               width="2.7"
+               height="2.7" />
+          </g>
+          <circle
+             id="path833"
+             class="st29"
+             cx="38"
+             cy="70.6"
+             r=".5" />
+          <circle
+             id="circle835"
+             class="st13"
+             cx="37"
+             cy="70.7"
+             r=".5" />
+          <circle
+             id="circle837"
+             class="st19"
+             cx="37.5"
+             cy="71.6"
+             r=".5" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g256">
+      <g
+         id="g7872">
+        <path
+           id="path7868"
+           class="st33"
+           d="M9,18v-2.3c0-.2.1-.3.3-.3h.8c.2,0,.3.1.3.3v2.3c0,.2-.1.3-.3.3h-.9c-.2,0-.3-.1-.3-.3h0Z" />
+        <rect
+           id="rect7870"
+           class="st31"
+           x="9"
+           y="16.2"
+           width="1.4"
+           height="1.4" />
+      </g>
+    </g>
+    <g
+       id="g258">
+      <g
+         id="g7880">
+        <g
+           id="g257">
+          <g
+             id="g7878">
+            <path
+               id="path7874"
+               class="st33"
+               d="M10.4,9.8v2.3c0,.2-.1.3-.3.3h-.8c-.2,0-.3-.1-.3-.3v-2.3c0-.2.1-.3.3-.3h.9c.2,0,.3.1.3.3h0Z" />
+            <rect
+               id="rect7876"
+               class="st31"
+               x="9"
+               y="10.2"
+               width="1.4"
+               height="1.4" />
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g260">
+      <g
+         id="g7888">
+        <g
+           id="g259">
+          <g
+             id="g7886">
+            <path
+               id="path7882"
+               class="st33"
+               d="M29.6,42v2.3c0,.2-.1.3-.3.3h-.8c-.2,0-.3,0-.3-.3v-2.3c0-.2.1-.3.3-.3h.9c.2,0,.3,0,.3.3h-.1Z" />
+            <rect
+               id="rect7884"
+               class="st31"
+               x="28.2"
+               y="42.5"
+               width="1.4"
+               height="1.4" />
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g262">
+      <g
+         id="g7896">
+        <g
+           id="g261">
+          <g
+             id="g7894">
+            <path
+               id="path7890"
+               class="st33"
+               d="M32.3,42v2.3c0,.2,0,.3-.3.3h-.8c-.2,0-.3,0-.3-.3v-2.3c0-.2.1-.3.3-.3h.9c.2,0,.3,0,.3.3h-.1Z" />
+            <rect
+               id="rect7892"
+               class="st31"
+               x="30.9"
+               y="42.5"
+               width="1.4"
+               height="1.4" />
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g263">
+      <g
+         id="g7902">
+        <path
+           id="path7898"
+           class="st33"
+           d="M13.5,48.8v-2.3c0-.2.1-.3.3-.3h.8c.2,0,.3,0,.3.3v2.3c0,.2-.1.3-.3.3h-.9c-.2,0-.3,0-.3-.3h0Z" />
+        <rect
+           id="rect7900"
+           class="st31"
+           x="13.5"
+           y="46.9"
+           width="1.4"
+           height="1.4" />
+      </g>
+    </g>
+    <g
+       id="g265">
+      <g
+         id="g7910">
+        <g
+           id="g264">
+          <g
+             id="g7908">
+            <path
+               id="path7904"
+               class="st33"
+               d="M27.3,75v2.3c0,.2-.1.3-.3.3h-.8c-.2,0-.3,0-.3-.3v-2.3c0-.2.1-.3.3-.3h.9c.2,0,.3,0,.3.3h-.1Z" />
+            <rect
+               id="rect7906"
+               class="st31"
+               x="25.9"
+               y="75.4"
+               width="1.4"
+               height="1.4" />
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g266">
+      <g
+         id="g7916">
+        <path
+           id="path7912"
+           class="st33"
+           d="M39.3,15v-2.3c0-.2,0-.3.3-.3h.8c.2,0,.3.1.3.3v2.3c0,.2,0,.3-.3.3h-.9c-.2,0-.3-.1-.3-.3h.1Z" />
+        <rect
+           id="rect7914"
+           class="st31"
+           x="39.3"
+           y="13.1"
+           width="1.4"
+           height="1.4" />
+      </g>
+    </g>
+    <g
+       id="g268">
+      <g
+         id="_x30_805-res">
+        <g
+           id="g267">
+          <g
+             id="g7922">
+            <path
+               id="path7918"
+               class="st33"
+               d="M19.5,28h-5.1c-.2,0-.3-.1-.3-.3v-3c0-.2.1-.3.3-.3h5.1c.2,0,.3.1.3.3v3c0,.2-.1.3-.3.3Z" />
+            <rect
+               id="rect7920"
+               class="st31"
+               x="15.1"
+               y="24.5"
+               width="3.5"
+               height="3.5" />
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g269">
+      <g
+         id="g7929">
+        <path
+           id="path7925"
+           class="st33"
+           d="M39.3,77.8v-2.3c0-.2,0-.3.3-.3h.8c.2,0,.3,0,.3.3v2.3c0,.2,0,.3-.3.3h-.9c-.2,0-.3,0-.3-.3h.1Z" />
+        <rect
+           id="rect7927"
+           class="st31"
+           x="39.3"
+           y="75.9"
+           width="1.4"
+           height="1.4" />
+      </g>
+    </g>
+    <g
+       id="g270">
+      <g
+         id="g7935">
+        <path
+           id="path7931"
+           class="st33"
+           d="M36.6,77.8v-2.3c0-.2,0-.3.3-.3h.8c.2,0,.3,0,.3.3v2.3c0,.2,0,.3-.3.3h-.9c-.2,0-.3,0-.3-.3h.1Z" />
+        <rect
+           id="rect7933"
+           class="st31"
+           x="36.6"
+           y="75.9"
+           width="1.4"
+           height="1.4" />
+      </g>
+    </g>
+    <g
+       id="g272">
+      <g
+         id="g7943">
+        <g
+           id="g271">
+          <g
+             id="g7941">
+            <path
+               id="path7937"
+               class="st33"
+               d="M11.6,28.5v2.3c0,.2-.1.3-.3.3h-.8c-.2,0-.3-.1-.3-.3v-2.3c0-.2.1-.3.3-.3h.9c.2,0,.3.1.3.3h0Z" />
+            <rect
+               id="rect7939"
+               class="st31"
+               x="10.2"
+               y="28.9"
+               width="1.4"
+               height="1.4" />
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g273">
+      <g
+         id="g7949">
+        <path
+           id="path7945"
+           class="st33"
+           d="M33.7,79.4v-2.3c0-.2,0-.3.3-.3h.8c.2,0,.3,0,.3.3v2.3c0,.2,0,.3-.3.3h-.9c-.2,0-.3,0-.3-.3h.1Z" />
+        <rect
+           id="rect7947"
+           class="st31"
+           x="33.7"
+           y="77.6"
+           width="1.4"
+           height="1.4" />
+      </g>
+    </g>
+    <g
+       id="g274">
+      <g
+         id="btn_kmr2_4.6x2.8">
+        <g
+           id="g7959">
+          <polygon
+             id="polygon7951"
+             class="st33"
+             points="40.8 82.9 40.8 84.3 37.7 84.3 37.7 82.9 36.3 82.9 36.3 84.3 35 84.3 35 94.2 36.3 94.2 36.3 95.6 37.7 95.6 37.7 94.2 40.8 94.2 40.8 95.6 42.2 95.6 42.2 94.2 43.5 94.2 43.5 84.3 42.2 84.3 42.2 82.9 40.8 82.9" />
+          <circle
+             id="circle7953"
+             class="st14"
+             cx="39.2"
+             cy="89.2"
+             r="2.5" />
+          <rect
+             id="rect7955"
+             class="st18"
+             x="35"
+             y="83.9"
+             width="8.5"
+             height=".6" />
+          <rect
+             id="rect7957"
+             class="st18"
+             x="35"
+             y="94.1"
+             width="8.5"
+             height=".6" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g276">
+      <g
+         id="g7974">
+        <g
+           id="g275">
+          <g
+             id="g7972">
+            <g
+               id="g7970">
+              <polygon
+                 id="polygon7962"
+                 class="st33"
+                 points="9.4 95.6 9.4 94.2 12.5 94.2 12.5 95.6 14 95.6 14 94.2 15.2 94.2 15.2 84.3 14 84.3 14 82.9 12.5 82.9 12.5 84.3 9.4 84.3 9.4 82.9 8 82.9 8 84.3 6.7 84.3 6.7 94.2 8 94.2 8 95.6 9.4 95.6" />
+              <circle
+                 id="circle7964"
+                 class="st14"
+                 cx="11"
+                 cy="89.2"
+                 r="2.5" />
+              <rect
+                 id="rect7966"
+                 class="st18"
+                 x="6.7"
+                 y="94.1"
+                 width="8.5"
+                 height=".6" />
+              <rect
+                 id="rect7968"
+                 class="st18"
+                 x="6.7"
+                 y="83.9"
+                 width="8.5"
+                 height=".6" />
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g278">
+      <g
+         id="adafruit_2.5mm">
+        <g
+           id="g277">
+          <g
+             id="g7978">
+            <path
+               id="path7976"
+               class="st33"
+               d="M21.3,45.2c0,0,.1.2.3.2s1.1.2,1.1.2c0,0,.7,0,1.1-.3,0,0,.1,0,.2-.2,0,0,0,.2-.1.2-.3.5.1,1.2.1,1.2,0,0,.5.9.5,1,0,.2.1.2.3.2s.2,0,.3-.2c0,0,.5-1,.5-1,0,0,.3-.6,0-1.2,0,0,0,0-.1-.2,0,0,.1,0,.2.2.4.4,1.1.3,1.1.3,0,0,1-.2,1.1-.2s.3,0,.3-.2,0-.2-.2-.3c-.1,0-.8-.8-.8-.8,0,0-.5-.5-1.1-.4h-.3s.2,0,.2,0c.5-.3.6-1,.6-1,0,0,.1-1,.2-1.1v-.4h-.4c-.1,0-1,.5-1,.5,0,0-.6.3-.7.9v.3-.3c-.1-.6-.8-.9-.8-.9,0,0-.9-.4-1-.5-.2,0-.3,0-.4,0-.1,0-.1.2,0,.4,0,0,.2,1.1.2,1.1,0,0,0,.7.6,1,0,0,.2,0,.2,0h-.3c-.6,0-1.1.5-1.1.5l-.8.8c-.1,0-.2.2-.1.3h0ZM24.8,45.3c-.1,0-.2-.2-.2-.5s0-.5.2-.5.2.2.2.5,0,.5-.2.5ZM26,44.4c0,0-.3,0-.5,0-.3,0-.4-.2-.4-.3s.3,0,.5,0c.3,0,.4.2.4.3ZM25,43.2c.2-.2.4-.4.4-.3,0,0,0,.3-.1.5-.2.2-.4.4-.4.3,0,0,0-.3.1-.5ZM23.9,42.9s.3,0,.5.3c.2.2.2.4.1.5,0,0-.3,0-.5-.3-.2-.2-.2-.4-.1-.5ZM23.9,44.1h.5c0,0-.1.3-.4.3h-.5c0,0,.1-.3.4-.3Z" />
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g280">
+      <g
+         id="sot23-5">
+        <g
+           id="g279">
+          <g
+             id="g7991">
+            <g
+               id="g7989">
+              <rect
+                 id="rect7981"
+                 class="st33"
+                 x="27.2"
+                 y="30.4"
+                 width="7.7"
+                 height="1.1" />
+              <rect
+                 id="rect7983"
+                 class="st33"
+                 x="27.2"
+                 y="25"
+                 width="7.7"
+                 height="1.1" />
+              <rect
+                 id="rect7985"
+                 class="st33"
+                 x="31.7"
+                 y="27.7"
+                 width="3.1"
+                 height="1.1" />
+              <rect
+                 id="rect7987"
+                 class="st21"
+                 x="28.7"
+                 y="24.1"
+                 width="4.5"
+                 height="8.2" />
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g282">
+      <g
+         id="uson8_4x4">
+        <g
+           id="g281">
+          <g
+             id="g8001">
+            <g
+               id="g3335">
+              <path
+                 id="rect7997"
+                 class="st31"
+                 d="M10.8,32.5h10.2c.3,0,.6.3.6.6v10.2c0,.3-.3.6-.6.6h-10.2c-.3,0-.6-.3-.6-.6v-10.2c0-.3.3-.6.6-.6Z" />
+              <circle
+                 id="path3333"
+                 class="st26"
+                 cx="11.5"
+                 cy="33.9"
+                 r=".5" />
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g285">
+      <g
+         id="usb_c_cusb31-cfm2ax-01-x">
+        <g
+           id="g284">
+          <g
+             id="g8020">
+            <g
+               id="g8018">
+              <rect
+                 id="rect8004"
+                 class="st33"
+                 x="12.5"
+                 y=".6"
+                 width="25.3"
+                 height="20.8" />
+              <path
+                 id="path8006"
+                 class="st33"
+                 d="M34.4,20.9h.6v1.3h-.6v-1.3ZM33.6,22.2h.6v-1.3h-.6v1.3ZM32.1,22.2h.6v-1.3h-.6v1.3ZM31.3,22.2h.6v-1.3h-.6v1.3ZM29.9,22.2h.6v-1.3h-.6v1.3ZM28.5,22.2h.6v-1.3h-.6v1.3ZM27,22.2h.6v-1.3h-.6v1.3ZM25.6,22.2h.6v-1.3h-.6v1.3ZM24.2,22.2h.6v-1.3h-.6v1.3ZM22.8,22.2h.6v-1.3h-.6v1.3ZM21.4,22.2h.6v-1.3h-.6v1.3ZM20,22.2h.6v-1.3h-.6v1.3ZM18.5,22.2h.6v-1.3h-.6v1.3ZM17.7,22.2h.6v-1.3h-.6v1.3ZM16.3,22.2h.6v-1.3h-.6v1.3ZM15.4,22.2h.6v-1.3h-.6v1.3Z" />
+              <rect
+                 id="rect8008"
+                 class="st25"
+                 x="34.5"
+                 y=".6"
+                 width="1.3"
+                 height="20.8" />
+              <rect
+                 id="rect8010"
+                 class="st22"
+                 x="14.6"
+                 y=".6"
+                 width="1.3"
+                 height="20.8" />
+              <path
+                 id="path8012"
+                 class="st30"
+                 d="M12.5,21.4v-2h.3c.3,0,.6.3.6.6v.5c0,.3.3.6.6.6h2.8c.3,0,.6-.3.6-.6v-2c0-.3.3-.6.6-.6h3.4c.3,0,.6.3.6.6h0c0,.4-.3.7-.6.7h-1.5c-.3,0-.6.3-.6.6v.7c0,.3.3.6.6.6h10.4c.3,0,.6-.3.6-.6v-.7c0-.3-.3-.6-.6-.6h-1.5c-.3,0-.6-.3-.6-.6h0c0-.4.3-.7.6-.7h3.4c.3,0,.6.3.6.6v2c0,.3.3.6.6.6h2.8c.3,0,.6-.3.6-.6v-.5c0-.3.3-.6.6-.6h.3v2H12.5Z" />
+              <rect
+                 id="rect8014"
+                 class="st30"
+                 x="28.5"
+                 y="14.2"
+                 width="3.5"
+                 height="1.4" />
+              <g
+                 id="g283">
+                <rect
+                   id="rect8016"
+                   class="st30"
+                   x="18.4"
+                   y="14.2"
+                   width="3.5"
+                   height="1.4" />
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       id="g290">
+      <g
+         id="crystal_2.5x2">
+        <g
+           id="g289">
+          <g
+             id="g8036">
+            <g
+               id="g288">
+              <g
+                 id="g8034">
+                <g
+                   id="g286">
+                  <g
+                     id="g2855">
+                    <path
+                       id="path2857"
+                       class="st23"
+                       d="M24.6,78.3s0,0-.2,0h-5.2c-.1,0-.2,0-.2,0v-6.8s0,0,.2,0h5.2c.1,0,.2,0,.2,0,0,0,0,6.8,0,6.8Z" />
+                    <path
+                       id="path2859"
+                       class="st17"
+                       d="M24.4,78.4h-5.2c-.1,0-.2,0-.2,0v-6.8s.1,0,.2,0h5.2c.1,0,.2,0,.2,0v6.8s-.1,0-.2,0h0ZM19.2,71.3h-.1v6.8h5.4v-6.8h-5.3Z" />
+                  </g>
+                </g>
+                <g
+                   id="g287">
+                  <g
+                     id="g2861">
+                    <g
+                       id="g2863"
+                       class="st28">
+                      <path
+                         id="path2865"
+                         class="st23"
+                         d="M24,77.5c0,.2-.4.5-.9.5h-2.5c-.5,0-.9-.2-.9-.5v-5.4c0-.2.4-.5.9-.5h2.5c.5,0,.9.2.9.5v5.4Z" />
+                      <path
+                         id="path2867"
+                         class="st17"
+                         d="M23,78h-2.5c-.5,0-1-.2-1-.5v-5.4c0-.3.4-.5,1-.5h2.5c.5,0,1,.2,1,.5v5.4c0,.3-.4.5-1,.5h0ZM20.5,71.7c-.5,0-.9.2-.9.4v5.4c0,.2.4.4.9.4h2.5c.5,0,.9-.2.9-.4v-5.4c0-.2-.4-.4-.9-.4h-2.5Z" />
+                    </g>
+                  </g>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>
