@@ -261,25 +261,19 @@ jobs:
           @echo off
           echo Flashing OpenFIRE Firmware for board: ${{ matrix.boards.name }}
           set FIRMWARE_FILE=firmware-NoFS.bin
-          set /p FIRMWARE_CHOICE="If you want to flash the firmware with the entire filesystem (previous configurations will be erased) type '1' otherwise press Enter: "
+          set /p FIRMWARE_CHOICE="If you want to flash the firmware with the entire filesystem type '1': "
           if "%FIRMWARE_CHOICE%"=="1" set FIRMWARE_FILE=firmware.bin
-          set /p COMPORT="Enter the COM port (e.g. COM3), or leave blank for automatic detection: "
-          if not "%COMPORT%"=="" set COMPORT=--port "%COMPORT%"
-          ${{ matrix.os_config.esptool_filename_in_zip }} --chip ${{ matrix.boards.chip }} %COMPORT% --baud 460800 --before default-reset --after hard-reset write-flash -z --flash-mode ${{ matrix.boards.flash_mode }} --flash-freq ${{ matrix.boards.flash_freq }} --flash-size detect 0x0000 %FIRMWARE_FILE%
+          ${{ matrix.os_config.esptool_filename_in_zip }} --chip ${{ matrix.boards.chip }} --baud 460800 write-flash -z --flash-mode ${{ matrix.boards.flash_mode }} --flash-freq ${{ matrix.boards.flash_freq }} 0x0000 %FIRMWARE_FILE%
           pause
           EOF
           else
           cat <<EOF > "$SCRIPT_PATH"
           #!/bin/bash
           echo "Flashing OpenFIRE Firmware for board: ${{ matrix.boards.name }}"
-          chmod +x ./${{ matrix.os_config.esptool_filename_in_zip }}
           FIRMWARE_FILE="firmware-NoFS.bin"
-          read -r -p "If you want to flash the firmware with the entire filesystem (previous configurations will be erased) type '1' otherwise press Enter: " FIRMWARE_CHOICE
+          read -r -p "If you want to flash the firmware with the entire filesystem type '1': " FIRMWARE_CHOICE
           if [[ \$FIRMWARE_CHOICE == "1" ]]; then FIRMWARE_FILE="firmware.bin"; fi
-          read -r -p "Enter the COM port (e.g. /dev/ttyUSB0), or leave blank for automatic detection: " COMPORT
-          if [[ -n \$COMPORT ]]; then COMPORT="--port \$COMPORT"; fi
-          ./${{ matrix.os_config.esptool_filename_in_zip }} --chip ${{ matrix.boards.chip }} \$COMPORT --baud 460800 --before default-reset --after hard-reset write-flash -z --flash-mode ${{ matrix.boards.flash_mode }} --flash-freq ${{ matrix.boards.flash_freq }} --flash-size detect 0x0000 \$FIRMWARE_FILE
-          read -r -p "Press Enter to exit."          
+          ./${{ matrix.os_config.esptool_filename_in_zip }} --chip ${{ matrix.boards.chip }} --baud 460800 write-flash -z --flash-mode ${{ matrix.boards.flash_mode }} --flash-freq ${{ matrix.boards.flash_freq }} 0x0000 \$FIRMWARE_FILE
           EOF
           chmod +x "$SCRIPT_PATH"
           fi
@@ -295,7 +289,6 @@ jobs:
         with:
           name: OpenFIRE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
           path: ${{ github.workspace }}/OpenFIRE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
-          if-no-files-found: error
 
   package_dongle:
     needs: build_dongle
@@ -332,22 +325,13 @@ jobs:
           cat <<EOF > "$SCRIPT_PATH"
           @echo off
           echo Flashing OpenFIRE DONGLE Firmware for board: ${{ matrix.boards.name }}
-          set FIRMWARE_FILE=firmware.bin
-          set /p COMPORT="Enter the COM port (e.g. COM3), or leave blank for automatic detection: "
-          if not "%COMPORT%"=="" set COMPORT=--port "%COMPORT%"
-          ${{ matrix.os_config.esptool_filename_in_zip }} --chip ${{ matrix.boards.chip }} %COMPORT% --baud 460800 --before default-reset --after hard-reset write-flash -z --flash-mode ${{ matrix.boards.flash_mode }} --flash-freq ${{ matrix.boards.flash_freq }} --flash-size detect 0x0000 %FIRMWARE_FILE%
+          ${{ matrix.os_config.esptool_filename_in_zip }} --chip ${{ matrix.boards.chip }} --baud 460800 write-flash -z --flash-mode ${{ matrix.boards.flash_mode }} --flash_freq ${{ matrix.boards.flash_freq }} 0x0000 firmware.bin
           pause
           EOF
           else
           cat <<EOF > "$SCRIPT_PATH"
           #!/bin/bash
-          echo "Flashing OpenFIRE DONGLE Firmware for board: ${{ matrix.boards.name }}"
-          chmod +x ./${{ matrix.os_config.esptool_filename_in_zip }}
-          FIRMWARE_FILE="firmware.bin"
-          read -r -p "Enter the COM port (e.g. /dev/ttyUSB0), or leave blank for automatic detection: " COMPORT
-          if [[ -n \$COMPORT ]]; then COMPORT="--port \$COMPORT"; fi
-          ./${{ matrix.os_config.esptool_filename_in_zip }} --chip ${{ matrix.boards.chip }} \$COMPORT --baud 460800 --before default-reset --after hard-reset write-flash -z --flash-mode ${{ matrix.boards.flash_mode }} --flash-freq ${{ matrix.boards.flash_freq }} --flash-size detect 0x0000 \$FIRMWARE_FILE
-          read -r -p "Press Enter to exit."          
+          ./${{ matrix.os_config.esptool_filename_in_zip }} --chip ${{ matrix.boards.chip }} --baud 460800 write-flash -z --flash-mode ${{ matrix.boards.flash_mode }} --flash_freq ${{ matrix.boards.flash_freq }} 0x0000 firmware.bin
           EOF
           chmod +x "$SCRIPT_PATH"
           fi
@@ -363,7 +347,6 @@ jobs:
         with:
           name: OpenFIRE-DONGLE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
           path: ${{ github.workspace }}/OpenFIRE-DONGLE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
-          if-no-files-found: error
 
   package_pedal:
     needs: build_pedal
@@ -393,32 +376,6 @@ jobs:
           if [[ "${{ matrix.os_config.esptool_tipo_file }}" == "zip" ]]; then curl -L -o esptool_archive.zip "${{ matrix.os_config.esptool_url }}"; unzip -j esptool_archive.zip "${{ matrix.os_config.esptool_path_in_zip }}${{ matrix.os_config.esptool_filename_in_zip }}" -d staging_dir; fi
           if [[ "${{ matrix.os_config.esptool_tipo_file }}" == "tar.gz" ]]; then curl -L -o esptool_archive.tar.gz "${{ matrix.os_config.esptool_url }}"; tar -xzf esptool_archive.tar.gz -C staging_dir --strip-components=1 "${{ matrix.os_config.esptool_path_in_zip }}${{ matrix.os_config.esptool_filename_in_zip }}"; fi
           if [[ "${{ matrix.os_config.name }}" == "linux-amd-64bit" || "${{ matrix.os_config.name }}" == "macos-64bit" ]]; then chmod +x "staging_dir/${{ matrix.os_config.esptool_filename_in_zip }}"; fi
-      - shell: bash 
-        run: |
-          SCRIPT_PATH="staging_dir/${{ matrix.os_config.script_name }}"
-          if [[ "${{ matrix.os_config.name }}" == "windows-64bit" ]]; then
-          cat <<EOF > "$SCRIPT_PATH"
-          @echo off
-          echo Flashing OpenFIRE PEDAL Firmware for board: ${{ matrix.boards.name }}
-          set FIRMWARE_FILE=firmware.bin
-          set /p COMPORT="Enter the COM port (e.g. COM3), or leave blank for automatic detection: "
-          if not "%COMPORT%"=="" set COMPORT=--port "%COMPORT%"
-          ${{ matrix.os_config.esptool_filename_in_zip }} --chip ${{ matrix.boards.chip }} %COMPORT% --baud 460800 --before default-reset --after hard-reset write-flash -z --flash-mode ${{ matrix.boards.flash_mode }} --flash-freq ${{ matrix.boards.flash_freq }} --flash-size detect 0x0000 %FIRMWARE_FILE%
-          pause
-          EOF
-          else
-          cat <<EOF > "$SCRIPT_PATH"
-          #!/bin/bash
-          echo "Flashing OpenFIRE PEDAL Firmware for board: ${{ matrix.boards.name }}"
-          chmod +x ./${{ matrix.os_config.esptool_filename_in_zip }}
-          FIRMWARE_FILE="firmware.bin"
-          read -r -p "Enter the COM port (e.g. /dev/ttyUSB0), or leave blank for automatic detection: " COMPORT
-          if [[ -n \$COMPORT ]]; then COMPORT="--port \$COMPORT"; fi
-          ./${{ matrix.os_config.esptool_filename_in_zip }} --chip ${{ matrix.boards.chip }} \$COMPORT --baud 460800 --before default-reset --after hard-reset write-flash -z --flash-mode ${{ matrix.boards.flash_mode }} --flash-freq ${{ matrix.boards.flash_freq }} --flash-size detect 0x0000 \$FIRMWARE_FILE
-          read -r -p "Press Enter to exit."          
-          EOF
-          chmod +x "$SCRIPT_PATH"
-          fi
       - shell: bash
         run: |
           ARCHIVE_FILENAME="OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip"
@@ -431,7 +388,6 @@ jobs:
         with:
           name: OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
           path: ${{ github.workspace }}/OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
-          if-no-files-found: error
 
   # ==========================================
   # 3. CREAZIONE DELLA RELEASE GLOBALE
@@ -441,6 +397,22 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.release == 'yes' && github.event.inputs.sistemi_operativi == 'yes' }}
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4 # Fondamentale per leggere GLOBAL_template.md
+
+      - name: Prepare GLOBAL Release Body
+        id: prepare_body
+        run: |
+          TEMPLATE_PATH=".github/release_templates/GLOBAL_template.md"
+          
+          # Sostituisce <TAG> con il valore inserito nel trigger
+          sed "s/<TAG>/${{ github.event.inputs.tag_name }}/g" "$TEMPLATE_PATH" > final_body.md
+          
+          # Carica il contenuto in GITHUB_ENV gestendo correttamente i ritorni a capo
+          echo "RELEASE_BODY<<EOF" >> $GITHUB_ENV
+          cat final_body.md >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
       - name: Download ALL artifacts
         uses: actions/download-artifact@v4
         with:
@@ -451,6 +423,7 @@ jobs:
         with:
           tag_name: ${{ github.event.inputs.tag_name }}
           name: ${{ github.event.inputs.release_name }}
+          body: ${{ env.RELEASE_BODY }} # <--- Usa il corpo generato dal template globale
           draft: ${{ github.event.inputs.draft }}
           prerelease: ${{ github.event.inputs.prerelease }}
         env:

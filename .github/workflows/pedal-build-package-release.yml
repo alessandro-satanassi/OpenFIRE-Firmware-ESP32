@@ -1,17 +1,7 @@
 name: PEDAL - OpenFIRE Build Package and Upload release assets - PEDAL
 
 on:
-# release:
-#   types: [created]
-#   types: [published]
-# push:
-#   tags:
-#     - "v*"
-# push:
-#   branches: [ main ]
-# pull_request:
-#   branches: [ main ]
-  workflow_dispatch: # Permetti l'attivazione manuale - devi mettere si per creare i file pacchetto per i vari sistemi operativi
+  workflow_dispatch:
     inputs:
       sistemi_operativi:
         description: "Vuoi Creare anche i file per i sistemi operativi ? (necessario per creare release)"
@@ -55,16 +45,15 @@ on:
           - "false"  
 
 permissions:
-  contents: write # Necessario per actions/upload-release-asset per caricare asset sulla release
+  contents: write
 
 jobs:
   build_firmware:
     runs-on: ubuntu-latest
-    timeout-minutes: 120  # imposta un timeout di 2 ore
+    timeout-minutes: 120
     name: Build PEDAL Firmware for ${{ matrix.boards }}
     strategy:
       matrix:
-        #os: [windows-latest, ubuntu-latest, macos-latest]
         include:
           - name: 'ESP32_S3_WROOM1_DevKitC_1_N16R8' 
             boards: 'ESP32_S3_WROOM1_DevKitC_1_N16R8'
@@ -95,14 +84,14 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13" # la versione 3.14 non è supportata da espressif32@55.3.34 (non so perchè solo da 3.10 e 3.13), basterebbe python-version: "3.13", ma installa la 3.14
+          python-version: "3.13"
 
       - name: Install PlatformIO Core
         run: |
           python -m pip install --upgrade pip
           pip install --upgrade platformio
 
-      - name: Install esptool dependencies   # la nuova versione di esptool vuole questi pacchetti e non li installa da solo
+      - name: Install esptool dependencies
         run: |
           pip install --upgrade rich_click intelhex    
 
@@ -132,7 +121,7 @@ jobs:
 
   package_assets:
     name: Package for ${{ matrix.boards.name }} on ${{ matrix.os_config.name }}
-    needs: build_firmware # Esegui solo se build_firmware ha successo
+    needs: build_firmware
     if: ${{ github.event.inputs.sistemi_operativi == 'yes' }}
     runs-on: ${{ matrix.os_config.runner }}
     strategy:
@@ -143,34 +132,28 @@ jobs:
             flash_size: '16MB'
             flash_mode: 'dio'
             flash_freq: '80m'
-            address_littleFS: '0xc90000'
           - name: 'WAVESHARE_ESP32_S3_PICO' 
             chip: 'esp32s3'
             flash_size: '16MB'
             flash_mode: 'dio'
-            flash_freq: '80m'         
-            address_littleFS: '0xc90000'
+            flash_freq: '80m'
           - name: 'LILYGO_T_DONGLE_S3' 
-            boards: 'LILYGO_T_DONGLE_S3'
             chip: 'esp32s3'
             flash_size: '16MB'
             flash_mode: 'dio'
-            flash_freq: '80m'       
-            address_littleFS: '0xc90000'
+            flash_freq: '80m'
           
         os_config:
           - name: windows-64bit
             runner: windows-latest
             esptool_url: https://github.com/espressif/esptool/releases/download/v5.1.0/esptool-v5.1.0-windows-amd64.zip
-            #esptool_url: https://github.com/espressif/esptool/releases/download/v4.10.0/esptool-v4.10.0-windows-amd64.zip
             esptool_tipo_file: zip
             esptool_path_in_zip: esptool-windows-amd64/
-            esptool_filename_in_zip: esptool.exe # Nome del file eseguibile dentro lo ZIP di esptool
+            esptool_filename_in_zip: esptool.exe
             script_name: flash_firmware.bat
           - name: linux-amd-64bit
             runner: ubuntu-latest
             esptool_url: https://github.com/espressif/esptool/releases/download/v5.1.0/esptool-v5.1.0-linux-amd64.tar.gz
-            # esptool_url: https://github.com/espressif/esptool/releases/download/v4.10.0/esptool-v4.10.0-linux-amd64.tar.gz
             esptool_tipo_file: tar.gz
             esptool_path_in_zip: esptool-linux-amd64/
             esptool_filename_in_zip: esptool
@@ -178,82 +161,52 @@ jobs:
           - name: macos-64bit
             runner: macos-latest
             esptool_url: https://github.com/espressif/esptool/releases/download/v5.1.0/esptool-v5.1.0-macos-amd64.tar.gz
-            #esptool_url: https://github.com/espressif/esptool/releases/download/v4.10.0/esptool-v4.10.0-macos-amd64.tar.gz
             esptool_tipo_file: tar.gz
             esptool_path_in_zip: esptool-macos-amd64/
             esptool_filename_in_zip: esptool
             script_name: flash_firmware.sh
             
     steps:
-      #- name: Checkout repository (opzionale, per contesto o se gli script sono nel repo)
-      #  uses: actions/checkout@v4
-
       - name: Download PEDAL firmware .bin artifact
         uses: actions/download-artifact@v4
         with:
-          name: OpenFIRE-PEDAL-${{ matrix.boards.name }} # Corrisponde al nome dell'artefatto caricato da build_firmware
-          path: ./downloaded_firmware # Scarica in una sottocartella per evitare conflitti di nomi
+          name: OpenFIRE-PEDAL-${{ matrix.boards.name }}
+          path: ./downloaded_firmware
 
       - name: Prepare staging directory
         shell: bash
         run: |
           mkdir staging_dir
-          # Il file firmware scaricato è OpenFIRE-PEDAL-${{ matrix.boards.name }}.bin
           mv ./downloaded_firmware/OpenFIRE-PEDAL-${{ matrix.boards.name }}.bin ./staging_dir/firmware.bin
-          echo "Moved OpenFIRE-PEDAL-${{ matrix.boards.name }}.bin to staging_dir/firmware.bin"
           ls -l ./staging_dir
 
       - name: Download and extract esptool
         shell: bash 
         run: |
-          echo "Downloading esptool from ${{ matrix.os_config.esptool_url }}"
-          
           if [[ "${{ matrix.os_config.esptool_tipo_file }}" == "zip" ]]; then
             curl -L -o esptool_archive.zip "${{ matrix.os_config.esptool_url }}"
-          fi
-          if [[ "${{ matrix.os_config.esptool_tipo_file }}" == "tar.gz" ]]; then
-            curl -L -o esptool_archive.tar.gz "${{ matrix.os_config.esptool_url }}"
-          fi
-          
-          echo "Extracting ${{ matrix.os_config.esptool_path_in_zip }}${{ matrix.os_config.esptool_filename_in_zip }} from esptool_archive.${{ matrix.os_config.esptool_tipo_file }} to staging_dir/"
-          # L'opzione -j di unzip estrae i file senza creare le loro directory originali (li mette direttamente in -d)
-          if [[ "${{ matrix.os_config.esptool_tipo_file }}" == "zip" ]]; then
             unzip -j esptool_archive.zip "${{ matrix.os_config.esptool_path_in_zip }}${{ matrix.os_config.esptool_filename_in_zip }}" -d staging_dir
           fi
           if [[ "${{ matrix.os_config.esptool_tipo_file }}" == "tar.gz" ]]; then
+            curl -L -o esptool_archive.tar.gz "${{ matrix.os_config.esptool_url }}"
             tar -xzf esptool_archive.tar.gz -C staging_dir --strip-components=1 "${{ matrix.os_config.esptool_path_in_zip }}${{ matrix.os_config.esptool_filename_in_zip }}"
           fi
 
-          echo "Contents of staging_dir after esptool extraction:"
-          ls -l staging_dir
-          
-          # Rendi esptool eseguibile su Linux/macOS
           if [[ "${{ matrix.os_config.name }}" == "linux-amd-64bit" || "${{ matrix.os_config.name }}" == "macos-64bit" ]]; then
-            if [ -f "staging_dir/${{ matrix.os_config.esptool_filename_in_zip }}" ]; then
-              chmod +x "staging_dir/${{ matrix.os_config.esptool_filename_in_zip }}"
-              echo "Made staging_dir/${{ matrix.os_config.esptool_filename_in_zip }} executable."
-            else
-              echo "Error: esptool executable not found at staging_dir/${{ matrix.os_config.esptool_filename_in_zip }}"
-              exit 1
-            fi
+             chmod +x "staging_dir/${{ matrix.os_config.esptool_filename_in_zip }}"
           fi
 
       - name: Create flashing script
         shell: bash 
         run: |
           SCRIPT_PATH="staging_dir/${{ matrix.os_config.script_name }}"
-          # ATTENZIONE: Questo chip_type è preso dalla matrice os_config. 
-          # Se hai chip diversi per diverse 'matrix.board', dovrai modificare questa logica.
           CHIP_TYPE="${{ matrix.boards.chip }}" 
           ESPTOOL_EXECUTABLE_NAME="${{ matrix.os_config.esptool_filename_in_zip }}"
           FLASH_MODE="${{ matrix.boards.flash_mode }}"
           FLASH_FREQ="${{ matrix.boards.flash_freq }}"
           BAUD="460800"
-
-          echo "Creating PEDAL script $SCRIPT_PATH for board ${{ matrix.boards.name }} with chip $CHIP_TYPE"
           
           if [[ "${{ matrix.os_config.name }}" == "windows-64bit" ]]; then
-          # Script per Windows (.bat)
           cat <<EOF > "$SCRIPT_PATH"
           @echo off
           echo Flashing OpenFIRE PEDAL Firmware for board: ${{ matrix.boards.name }}
@@ -271,11 +224,10 @@ jobs:
           pause
           EOF
 
-          else # Script per Linux o macOS (.sh) 
+          else
           cat <<EOF > "$SCRIPT_PATH"
           #!/bin/bash
           echo "Flashing OpenFIRE PEDAL Firmware for board: ${{ matrix.boards.name }}"
-          # Rende esptool eseguibile (dovrebbe essere gia' stato fatto, ma e' una sicurezza)
           chmod +x ./$ESPTOOL_EXECUTABLE_NAME
           echo ""
           FIRMWARE_FILE="firmware.bin"
@@ -292,45 +244,43 @@ jobs:
           fi
           read -r -p "Press Enter to exit."          
           EOF
-
-          chmod +x "$SCRIPT_PATH" # Rende lo script generato eseguibile
+          chmod +x "$SCRIPT_PATH"
           fi
-          
-          echo "Creato script: $SCRIPT_PATH"
-          echo "--- Contenuto dello script ---"
-          cat "$SCRIPT_PATH"
-          echo "---------------------------"
 
       - name: Create ZIP archive
         shell: bash
         run: |
           ARCHIVE_FILENAME="OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip"
-          echo "ARCHIVE_FILENAME=$ARCHIVE_FILENAME" >> $GITHUB_ENV
-          
-          echo "Creating archive: $ARCHIVE_FILENAME from staging_dir contents..."
           if [[ "${{ matrix.os_config.name }}" == "windows-64bit" ]]; then
-            # Utilizza Compress-Archive di PowerShell, standard su Windows runners
             powershell -Command "Compress-Archive -Path staging_dir\* -DestinationPath ${{ github.workspace }}/$ARCHIVE_FILENAME -Force"
           else
-            # Utilizza zip, standard su Linux/macOS runners
             (cd staging_dir && zip -r "${{ github.workspace }}/$ARCHIVE_FILENAME" .)
           fi
-          echo "Archive $ARCHIVE_FILENAME created successfully."
-          ls -l "${{ github.workspace }}/$ARCHIVE_FILENAME"
 
       - name: Upload ZIP Assets
         uses: actions/upload-artifact@v4
         with:
-          name: OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip # Nome dell'asset sulla release
-          path: ${{ github.workspace }}/OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip # Path all'archivio ZIP creato
+          name: OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
+          path: ${{ github.workspace }}/OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
           if-no-files-found: error
-
 
   create_release:
     needs: package_assets
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.release == 'yes' && github.event.inputs.sistemi_operativi == 'yes' }}
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare Release Body from Template
+        id: prepare_body
+        run: |
+          TEMPLATE_PATH=".github/release_templates/pedal_template.md"
+          sed "s/<TAG>/${{ github.event.inputs.tag_name }}/g" "$TEMPLATE_PATH" > final_body.md
+          echo "RELEASE_BODY<<EOF" >> $GITHUB_ENV
+          cat final_body.md >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -341,11 +291,11 @@ jobs:
         with:
           tag_name: ${{ github.event.inputs.tag_name }}
           name: ${{ github.event.inputs.release_name }}
+          body: ${{ env.RELEASE_BODY }}
           draft: ${{ github.event.inputs.draft }}
           prerelease: ${{ github.event.inputs.prerelease }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
 
       - name: Upload all assets with original names
         run: |
@@ -355,4 +305,3 @@ jobs:
           done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
