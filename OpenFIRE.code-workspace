@@ -12,7 +12,7 @@
       "name": "PEDAL",
       "path": "pedal"
     },
-	{
+    {
       "name": "BOARDS",
       "path": "shared_boards"
     },
@@ -20,7 +20,7 @@
       "name": "SHARED LIB",
       "path": "shared_lib"
     },
-	{
+    {
       "name": "HOME",
       "path": "."
     }
