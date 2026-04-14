@@ -113,7 +113,7 @@ jobs:
             0x10000 .pio/build/${{ matrix.boards }}/firmware.bin
           
       - name: Upload OpenFIRE PEDAL firmware
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: OpenFIRE-PEDAL-${{ matrix.boards }}
           path: pedal/OpenFIRE-PEDAL-${{ matrix.boards }}.bin
@@ -168,7 +168,7 @@ jobs:
             
     steps:
       - name: Download PEDAL firmware .bin artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: OpenFIRE-PEDAL-${{ matrix.boards.name }}
           path: ./downloaded_firmware
@@ -258,7 +258,7 @@ jobs:
           fi
 
       - name: Upload ZIP Assets
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
           path: ${{ github.workspace }}/OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
@@ -282,7 +282,7 @@ jobs:
           echo "EOF" >> $GITHUB_ENV
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           path: ./release_assets
 
