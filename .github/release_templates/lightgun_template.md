@@ -1,85 +1,106 @@
-============== ENGLISH TRANSLATION ===============
+# **LIGHTGUN** FIRMWARE - OpenFIRE ESP32
 
-This release is updated to commit 80166a6 (16 jan 2026) of the original firmware https://github.com/TeamOpenFIRE/OpenFIRE-Firmware
-At the moment two Esp32-S3 boards are supported:
 
-- **_ESP32 S3 WROOM-1 DevKitC-1 N16R8_**
-- **_WAVESHARE ESP32 S3 PICO_**
+This release is updated to commit **80166a6** (January 16, 2026) of the original [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) firmware.
 
-The firmwares for both micros are provided below: I have prepared a full filesystem version that will overwrite any previous settings and a base (indicated with NoFS) that will not overwrite the previous calibration/configuration settings, but in any case if the filesystem is not yet present in the flash it will be created automatically.
-FIRMWARE Base version (updates only the program or installs it if it is missing):
+### Supported Boards (ESP32-S3)
+- **ESP32_S3_WROOM1_DevKitC_1_N16R8**
+- **WAVESHARE_ESP32_S3_PICO**
 
-- [OpenFIREfw-NoFS-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIREfw-NoFS-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
-- [OpenFIREfw-NoFS-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIREfw-NoFS-WAVESHARE_ESP32_S3_PICO.bin)
+---
 
-FIRMWARE Complete version of filesystem (deletes all micro data):
+### INSTALLATION
 
-- [OpenFIREfw-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIREfw-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
-- [OpenFIREfw-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIREfw-WAVESHARE_ESP32_S3_PICO.bin)
+#### *OPTION 1: Manual Installation (.bin Files)*
+This option is for those who wish to flash the firmware manually using the official [esptool](https://github.com/espressif/esptool) utility or the [NodeMCU PyFlasher](https://github.com/marcelstoer/nodemcu-pyflasher) graphical interface.
 
-To upload the firmware on the micro you can use the command line utility "esptool" https://github.com/espressif/esptool or I recommend the following simple program with GUI interface https://github.com/marcelstoer/nodemcu-pyflasherhttps://github.com/marcelstoer/nodemcu-pyflasher
+**1. Base Version (NoFS):** Updates only the application part. **Does not overwrite** existing calibrations or configurations. If the filesystem is missing, it will still be created on first boot.
+- [OpenFIRE-LIGHTGUN-NoFS-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
+- [OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_PICO.bin)
 
-If you want things even simpler and more automatic, I have prepared a .zip package, one for each operating system (windows, linux, macos), that you can download to your computer. Just run the "flash_firmware" script that you will find inside the unzipped directory; the script will ask you if you want to install the basic or filesystem version of the firmware and the serial port where the micro is connected, but if you do not know it, it will automatically search for it. N.B. (the version of esptool.exe for Windows is identified as if it had a virus, but the file is clean, downloaded from the original archive).
+**2. Full Version (Full):** Installs both firmware and factory filesystem. **Warning:** this procedure formats the microcontroller and deletes all previous data or settings.
+- [OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
+- [OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_PICO.bin)
 
-Packages . zip for Windows:
+---
 
-- [OpenFIRE-ESP32_S3_WROOM1_DevKitC_1_N16R8-windows-64bit.zip](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-ESP32_S3_WROOM1_DevKitC_1_N16R8-windows-64bit.zip)
-- [OpenFIRE-WAVESHARE_ESP32_S3_PICO-windows-64bit.zip](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-WAVESHARE_ESP32_S3_PICO-windows-64bit.zip)
+#### *OPTION 2: Simplified Procedure (Ready-made Packages)*
+As an alternative to the manual procedure, you can use these packages which already include the firmware files and tools for a guided installation.
+Extract the entire contents of the ZIP into a folder on your PC. Then, run the **"flash_firmware"** script. The script will allow you to choose between Base or Full versions and will automatically search for the serial port.
+*Note for Windows users: the esptool.exe file might trigger an antivirus false positive; the file is safe and is extracted from official Espressif sources.*
 
-Packages .zip for Linux:
+* **Windows (64bit)**
+  - [Download for ESP32_S3_WROOM1_DevKitC_1_N16R8](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8-windows-64bit.zip)
+  - [Download for WAVESHARE_ESP32_S3_PICO](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_PICO-windows-64bit.zip)
+* **Linux (64bit)**
+  - [Download for ESP32_S3_WROOM1_DevKitC_1_N16R8](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8-linux-amd-64bit.zip)
+  - [Download for WAVESHARE_ESP32_S3_PICO](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_PICO-linux-amd-64bit.zip)
+* **MacOS (64bit)**
+  - [Download for ESP32_S3_WROOM1_DevKitC_1_N16R8](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8-macos-64bit.zip)
+  - [Download for WAVESHARE_ESP32_S3_PICO](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_PICO-macos-64bit.zip)
 
-- [OpenFIRE-ESP32_S3_WROOM1_DevKitC_1_N16R8-linux-amd-64bit.zip](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-ESP32_S3_WROOM1_DevKitC_1_N16R8-linux-amd-64bit.zip)
-- [OpenFIRE-WAVESHARE_ESP32_S3_PICO-linux-amd-64bit.zip](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-WAVESHARE_ESP32_S3_PICO-linux-amd-64bit.zip)
+---
 
-Packages .zip for Macos:
+#### Compatibility
+This version of the **Lightgun** firmware is compatible with:
+* **Dongle** firmware version: ______ 
+* **Pedal** firmware version: ______ 
 
-- [OpenFIRE-ESP32_S3_WROOM1_DevKitC_1_N16R8-macos-64bit.zip](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-ESP32_S3_WROOM1_DevKitC_1_N16R8-macos-64bit.zip)
-- [OpenFIRE-WAVESHARE_ESP32_S3_PICO-macos-64bit.zip](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-WAVESHARE_ESP32_S3_PICO-macos-64bit.zip)
+To configure all lightgun features (pins, buttons, name, player, etc.), the original **OpenFIRE App** (commit **35e91f0** of January 16, 2026) **or later versions** is required:
+[Download for Linux](https://github.com/TeamOpenFIRE/OpenFIRE-App/actions/runs/21079466755) | [Download for Windows](https://github.com/TeamOpenFIRE/OpenFIRE-App/actions/runs/21079466753)
 
-For those who want to use the lightgun in wireless mode espnow using the wireless DONGLE, I indicate below the repository where to download the firmware for the DONGLE: https://github.com/alessandro-satanassi/OpenFIRE-DONGLE-ESP32/releases/tag/<TAG>
-This firmware version is compatible with the original OpenFIRE App updated to commit 35e91f0 (16 Jan 2026) 
-https://github.com/TeamOpenFIRE/OpenFIRE-App/actions/runs/21079466755 (linux)
-https://github.com/TeamOpenFIRE/OpenFIRE-App/actions/runs/21079466753 (windows)
+---
+---
 
-============== TRADUZIONE ITALIANA ===============
+# FIRMWARE **LIGHTGUN** - OpenFIRE ESP32
 
-Questa release è aggiornata al commit 80166a6 (16 gennaio 2026) del firmware originale https://github.com/TeamOpenFIRE/OpenFIRE-Firmware
-Al momento sono supportate due schede Esp32-S3:
 
-- **_ESP32 S3 WROOM-1 DevKitC-1 N16R8_**
-- **_WAVESHARE ESP32 S3 PICO_**
+Questa release è aggiornata al commit **80166a6** (16 gennaio 2026) del firmware originale [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware).
 
-Vengono di seguito forniti i firmware di entrambi i micro: ho preparato una versione completa di filesystem che sovrascriverà qualsiasi precedente impostazione ed una base (indicata con NoFS) che non sovrascriverà le precedenti impostazioni di calibrazione/configurazione, ma comunque se il filesystem non è  ancora presente nella flash verrà creato in automatico.
-FIRMWARE Versione base (aggiorna solo il programma o lo installa se assente):
+### Schede Supportate (ESP32-S3)
+- **ESP32_S3_WROOM1_DevKitC_1_N16R8**
+- **WAVESHARE_ESP32_S3_PICO**
 
-- [OpenFIREfw-NoFS-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIREfw-NoFS-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
-- [OpenFIREfw-NoFS-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIREfw-NoFS-WAVESHARE_ESP32_S3_PICO.bin)
+---
 
-FIRMWARE Versione completa di filesystem (cancella tutti i dati del micro):
+### INSTALLAZIONE
 
-- [OpenFIREfw-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIREfw-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
-- [OpenFIREfw-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIREfw-WAVESHARE_ESP32_S3_PICO.bin)
+#### *OPZIONE 1: Installazione Manuale (File .bin)*
+Questa opzione è dedicata a chi vuole caricare il firmware manualmente utilizzando l'utility ufficiale [esptool](https://github.com/espressif/esptool) o l'interfaccia grafica [NodeMCU PyFlasher](https://github.com/marcelstoer/nodemcu-pyflasher).
 
-Per fare l'upload del firmware sul micro potete usare  l'utility a riga di comando "esptool" https://github.com/espressif/esptool  oppure vi segnalo  il seguente  programmino semplice semplice con interfaccia GUI https://github.com/marcelstoer/nodemcu-pyflasherhttps://github.com/marcelstoer/nodemcu-pyflasher
+**1. Versione Base (NoFS):** Aggiorna solo la parte applicativa. **Non sovrascrive** calibrazioni o configurazioni esistenti. Se il filesystem è assente, verrà comunque creato al primo avvio.
+- [OpenFIRE-LIGHTGUN-NoFS-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
+- [OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_PICO.bin)
 
-Se volete le cose ancor più semplici ed automatiche, ho preparato un pacchetto .zip, uno per ogni sistema operativo (windows, linux, macos), che potete scaricare sul vostro computer. Basta eseguire lo script "flash_firmware" che troverete dentro alla directory scompattata; lo script vi chiederà se volete installare la versione base o con filesystem del firmware e la porta seriale ove è collegato il micro, ma se non la conoscete  la ricerca in automatico. N.B. (la versione di esptool.exe per windows viene identificato come se avesse un virus, ma il file è pulito, scaricato dall'archivio originale).
+**2. Versione Completa (Full):** Installa firmware e filesystem di fabbrica. **Attenzione:** questa procedura formatta il microcontrollore e cancella ogni dato o impostazione precedente.
+- [OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
+- [OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_PICO.bin)
 
-Pacchetti . zip Windows:
+---
 
-- [OpenFIRE-ESP32_S3_WROOM1_DevKitC_1_N16R8-windows-64bit.zip](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-ESP32_S3_WROOM1_DevKitC_1_N16R8-windows-64bit.zip)
-- [OpenFIRE-WAVESHARE_ESP32_S3_PICO-windows-64bit.zip](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-WAVESHARE_ESP32_S3_PICO-windows-64bit.zip)
+#### *OPZIONE 2: Procedura Semplificata (Pacchetti pronti)*
+In alternativa alla procedura manuale, puoi utilizzare questi pacchetti che includono già i file firmware e gli strumenti per l'installazione guidata.
+Estrai l'intero contenuto dello ZIP in una cartella sul tuo PC. Successivamente, avvia lo script **"flash_firmware"**. Lo script ti permetterà di scegliere tra versione Base o Full e cercherà automaticamente la porta seriale.
+*Nota per utenti Windows: il file esptool.exe potrebbe generare un falso positivo dell'antivirus; il file è sicuro ed è estratto dai sorgenti originali Espressif.*
 
-Pacchetti .zip per Linux:
+* **Windows (64bit)**
+  - [Download per ESP32_S3_WROOM1_DevKitC_1_N16R8](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8-windows-64bit.zip)
+  - [Download per WAVESHARE_ESP32_S3_PICO](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_PICO-windows-64bit.zip)
+* **Linux (64bit)**
+  - [Download per ESP32_S3_WROOM1_DevKitC_1_N16R8](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8-linux-amd-64bit.zip)
+  - [Download per WAVESHARE_ESP32_S3_PICO](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_PICO-linux-amd-64bit.zip)
+* **MacOS (64bit)**
+  - [Download per ESP32_S3_WROOM1_DevKitC_1_N16R8](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8-macos-64bit.zip)
+  - [Download per WAVESHARE_ESP32_S3_PICO](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_PICO-macos-64bit.zip)
 
-- [OpenFIRE-ESP32_S3_WROOM1_DevKitC_1_N16R8-linux-amd-64bit.zip](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-ESP32_S3_WROOM1_DevKitC_1_N16R8-linux-amd-64bit.zip)
-- [OpenFIRE-WAVESHARE_ESP32_S3_PICO-linux-amd-64bit.zip](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-WAVESHARE_ESP32_S3_PICO-linux-amd-64bit.zip)
+---
 
-Pacchetti .zip per Macos:
+#### Compatibilità
+Questa versione del firmware **Lightgun** è compatibile con:
+* Firmware **Dongle** versione: ______ 
+* Firmware **Pedale** versione: ______ 
 
-- [OpenFIRE-ESP32_S3_WROOM1_DevKitC_1_N16R8-macos-64bit.zip](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-ESP32_S3_WROOM1_DevKitC_1_N16R8-macos-64bit.zip)
-- [OpenFIRE-WAVESHARE_ESP32_S3_PICO-macos-64bit.zip](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-WAVESHARE_ESP32_S3_PICO-macos-64bit.zip)
+Per configurare la lightgun (pin, pulsanti, nome, player, ecc.) è richiesta l'**App OpenFIRE** originale (commit **35e91f0** del 16 gennaio 2026) **o versioni successive**:
+[Scarica per Linux](https://github.com/TeamOpenFIRE/OpenFIRE-App/actions/runs/21079466755) | [Scarica per Windows](https://github.com/TeamOpenFIRE/OpenFIRE-App/actions/runs/21079466753)
 
-Per chi vuole utilizzare la lightgun in modalità wireless espnow utilizzando il DONGLE wireless, indico di seguito il repository ove scaricare il firmware per il DONGLE: https://github.com/alessandro-satanassi/OpenFIRE-DONGLE-ESP32/releases/tag/<TAG>
-Questa versione del firmware è compatibile con l'App OpenFIRE originale aggiornata al commit 35e91f0 (16 gennaio 2026)  
-https://github.com/TeamOpenFIRE/OpenFIRE-App/actions/runs/21079466755 (linux)
-https://github.com/TeamOpenFIRE/OpenFIRE-App/actions/runs/21079466753 (windows)
+---
