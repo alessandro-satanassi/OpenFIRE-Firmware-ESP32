@@ -47,9 +47,6 @@ on:
 permissions:
   contents: write
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   # ==========================================
   # 1. BUILD FIRMWARE (PARALLELO)
@@ -76,14 +73,14 @@ jobs:
             flash_freq: '80m'       
             address_littleFS: '0xc90000'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
       - run: |
           python -m pip install --upgrade pip
           pip install --upgrade platformio rich_click intelhex
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: ~/.platformio
           key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
@@ -92,26 +89,26 @@ jobs:
           cd lightgun
           pio run -e ${{ matrix.boards }}
           pio run -e ${{ matrix.boards }} -t buildfs
-          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip ${{ matrix.chip }} merge_bin -o OpenFIREfw-${{ matrix.boards }}.bin --flash_mode ${{ matrix.flash_mode }} --flash_size ${{ matrix.flash_size }} \
+          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip ${{ matrix.chip }} merge_bin -o OpenFIRE-LIGHTGUN-${{ matrix.boards }}.bin --flash_mode ${{ matrix.flash_mode }} --flash_size ${{ matrix.flash_size }} \
             0x0000 .pio/build/${{ matrix.boards }}/bootloader.bin \
             0x8000 .pio/build/${{ matrix.boards }}/partitions.bin \
             0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
             0x10000 .pio/build/${{ matrix.boards }}/firmware.bin \
             ${{ matrix.address_littleFS }} .pio/build/${{ matrix.boards }}/littlefs.bin
-          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip ${{ matrix.chip }} merge_bin -o OpenFIREfw-NoFS-${{ matrix.boards }}.bin --flash_mode ${{ matrix.flash_mode }} --flash_size ${{ matrix.flash_size }} \
+          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip ${{ matrix.chip }} merge_bin -o OpenFIRE-LIGHTGUN-NoFS-${{ matrix.boards }}.bin --flash_mode ${{ matrix.flash_mode }} --flash_size ${{ matrix.flash_size }} \
             0x0000 .pio/build/${{ matrix.boards }}/bootloader.bin \
             0x8000 .pio/build/${{ matrix.boards }}/partitions.bin \
             0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
             0x10000 .pio/build/${{ matrix.boards }}/firmware.bin
       - uses: actions/upload-artifact@v4
         with:
-          name: OpenFIRE-${{ matrix.boards }}
-          path: lightgun/OpenFIREfw-${{ matrix.boards }}.bin
+          name: OpenFIRE-LIGHTGUN-${{ matrix.boards }}
+          path: lightgun/OpenFIRE-LIGHTGUN-${{ matrix.boards }}.bin
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
-          name: OpenFIRE-NoFS-${{ matrix.boards }}
-          path: lightgun/OpenFIREfw-NoFS-${{ matrix.boards }}.bin
+          name: OpenFIRE-LIGHTGUN-NoFS-${{ matrix.boards }}
+          path: lightgun/OpenFIRE-LIGHTGUN-NoFS-${{ matrix.boards }}.bin
           if-no-files-found: error
 
   build_dongle:
@@ -140,14 +137,14 @@ jobs:
             flash_mode: 'dio'
             flash_freq: '80m'       
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
       - run: |
           python -m pip install --upgrade pip
           pip install --upgrade platformio rich_click intelhex
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: ~/.platformio
           key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
@@ -192,14 +189,14 @@ jobs:
             flash_mode: 'dio'
             flash_freq: '80m'       
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
       - run: |
           python -m pip install --upgrade pip
           pip install --upgrade platformio rich_click intelhex
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: ~/.platformio
           key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
@@ -237,17 +234,17 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: OpenFIRE-${{ matrix.boards.name }}
+          name: OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}
           path: ./downloaded_firmware
       - uses: actions/download-artifact@v4
         with:
-          name: OpenFIRE-NoFS-${{ matrix.boards.name }}
+          name: OpenFIRE-LIGHTGUN-NoFS-${{ matrix.boards.name }}
           path: ./downloaded_firmware
       - shell: bash
         run: |
           mkdir staging_dir
-          mv ./downloaded_firmware/OpenFIREfw-${{ matrix.boards.name }}.bin ./staging_dir/firmware.bin
-          mv ./downloaded_firmware/OpenFIREfw-NoFS-${{ matrix.boards.name }}.bin ./staging_dir/firmware-NoFS.bin
+          mv ./downloaded_firmware/OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}.bin ./staging_dir/firmware.bin
+          mv ./downloaded_firmware/OpenFIRE-LIGHTGUN-NoFS-${{ matrix.boards.name }}.bin ./staging_dir/firmware-NoFS.bin
       - shell: bash 
         run: |
           if [[ "${{ matrix.os_config.esptool_tipo_file }}" == "zip" ]]; then curl -L -o esptool_archive.zip "${{ matrix.os_config.esptool_url }}"; unzip -j esptool_archive.zip "${{ matrix.os_config.esptool_path_in_zip }}${{ matrix.os_config.esptool_filename_in_zip }}" -d staging_dir; fi
@@ -259,7 +256,7 @@ jobs:
           if [[ "${{ matrix.os_config.name }}" == "windows-64bit" ]]; then
           cat <<EOF > "$SCRIPT_PATH"
           @echo off
-          echo Flashing OpenFIRE Firmware for board: ${{ matrix.boards.name }}
+          echo Flashing OpenFIRE LIGHTGUN Firmware for board: ${{ matrix.boards.name }}
           set FIRMWARE_FILE=firmware-NoFS.bin
           set /p FIRMWARE_CHOICE="If you want to flash the firmware with the entire filesystem type '1': "
           if "%FIRMWARE_CHOICE%"=="1" set FIRMWARE_FILE=firmware.bin
@@ -269,7 +266,7 @@ jobs:
           else
           cat <<EOF > "$SCRIPT_PATH"
           #!/bin/bash
-          echo "Flashing OpenFIRE Firmware for board: ${{ matrix.boards.name }}"
+          echo "Flashing OpenFIRE LIGHTGUN Firmware for board: ${{ matrix.boards.name }}"
           FIRMWARE_FILE="firmware-NoFS.bin"
           read -r -p "If you want to flash the firmware with the entire filesystem type '1': " FIRMWARE_CHOICE
           if [[ \$FIRMWARE_CHOICE == "1" ]]; then FIRMWARE_FILE="firmware.bin"; fi
@@ -279,7 +276,7 @@ jobs:
           fi
       - shell: bash
         run: |
-          ARCHIVE_FILENAME="OpenFIRE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip"
+          ARCHIVE_FILENAME="OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip"
           if [[ "${{ matrix.os_config.name }}" == "windows-64bit" ]]; then
             powershell -Command "Compress-Archive -Path staging_dir\* -DestinationPath ${{ github.workspace }}/$ARCHIVE_FILENAME -Force"
           else
@@ -287,8 +284,8 @@ jobs:
           fi
       - uses: actions/upload-artifact@v4
         with:
-          name: OpenFIRE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
-          path: ${{ github.workspace }}/OpenFIRE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
+          name: OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
+          path: ${{ github.workspace }}/OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
 
   package_dongle:
     needs: build_dongle
@@ -398,7 +395,7 @@ jobs:
     if: ${{ github.event.inputs.release == 'yes' && github.event.inputs.sistemi_operativi == 'yes' }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4 # Fondamentale per leggere GLOBAL_template.md
+        uses: actions/checkout@v6 # Fondamentale per leggere GLOBAL_template.md
 
       - name: Prepare GLOBAL Release Body
         id: prepare_body
@@ -419,7 +416,7 @@ jobs:
           path: ./release_assets
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event.inputs.tag_name }}
           name: ${{ github.event.inputs.release_name }}

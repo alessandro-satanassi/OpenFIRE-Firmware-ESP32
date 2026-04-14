@@ -24,7 +24,7 @@ on:
         required: false
         default: ""
       release_name:
-        description: "Nome leggibile della release (es. v6.0-RC6 OpenFIRE Firmware ESP32 - Release Candidate) (usato solo se release=yes)"
+        description: "Nome leggibile della release (es. v6.0-RC6 OpenFIRE Firmware ESP32 LIGHTGUN - Release Candidate) (usato solo se release=yes)"
         required: false
         default: ""
       draft:
@@ -47,14 +47,11 @@ on:
 permissions:
   contents: write
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build_firmware:
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    name: Build Firmware for ${{ matrix.boards }}
+    name: Build LIGHTGUN Firmware for ${{ matrix.boards }}
     strategy:
       matrix:
         include:
@@ -75,10 +72,10 @@ jobs:
 
     steps:
       - name: Checkout repository OpenFIRE-Firmware-Esp32
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.13"
 
@@ -92,41 +89,41 @@ jobs:
           pip install --upgrade rich_click intelhex
 
       - name: Cache PlatformIO
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.platformio
           key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
 
       - if: (matrix.chip == 'esp32s3')
-        name: Build firmware OpenFIRE ESP32-S3 - FLASH ${{ matrix.flash_size }} - Compile for ${{ matrix.boards }}
+        name: Build LIGHTGUN firmware OpenFIRE ESP32-S3 - FLASH ${{ matrix.flash_size }} - Compile for ${{ matrix.boards }}
         run: |
           cd lightgun
           pio run -e ${{ matrix.boards }}
           pio run -e ${{ matrix.boards }} -t buildfs
-          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip ${{ matrix.chip }} merge_bin -o OpenFIREfw-${{ matrix.boards }}.bin --flash_mode ${{ matrix.flash_mode }} --flash_size ${{ matrix.flash_size }} \
+          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip ${{ matrix.chip }} merge_bin -o OpenFIRE-LIGHTGUN-${{ matrix.boards }}.bin --flash_mode ${{ matrix.flash_mode }} --flash_size ${{ matrix.flash_size }} \
             0x0000 .pio/build/${{ matrix.boards }}/bootloader.bin \
             0x8000 .pio/build/${{ matrix.boards }}/partitions.bin \
             0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
             0x10000 .pio/build/${{ matrix.boards }}/firmware.bin \
             ${{ matrix.address_littleFS }} .pio/build/${{ matrix.boards }}/littlefs.bin
-          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip ${{ matrix.chip }} merge_bin -o OpenFIREfw-NoFS-${{ matrix.boards }}.bin --flash_mode ${{ matrix.flash_mode }} --flash_size ${{ matrix.flash_size }} \
+          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip ${{ matrix.chip }} merge_bin -o OpenFIRE-LIGHTGUN-NoFS-${{ matrix.boards }}.bin --flash_mode ${{ matrix.flash_mode }} --flash_size ${{ matrix.flash_size }} \
             0x0000 .pio/build/${{ matrix.boards }}/bootloader.bin \
             0x8000 .pio/build/${{ matrix.boards }}/partitions.bin \
             0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
             0x10000 .pio/build/${{ matrix.boards }}/firmware.bin
           
-      - name: Upload OpenFIRE firmware
+      - name: Upload OpenFIRE LIGHTGUN firmware
         uses: actions/upload-artifact@v4
         with:
-          name: OpenFIRE-${{ matrix.boards }}
-          path: lightgun/OpenFIREfw-${{ matrix.boards }}.bin
+          name: OpenFIRE-LIGHTGUN-${{ matrix.boards }}
+          path: lightgun/OpenFIRE-LIGHTGUN-${{ matrix.boards }}.bin
           if-no-files-found: error
 
-      - name: Upload OpenFIRE-NoFS firmware
+      - name: Upload OpenFIRE LIGHTGUN-NoFS firmware
         uses: actions/upload-artifact@v4
         with:
-          name: OpenFIRE-NoFS-${{ matrix.boards }}
-          path: lightgun/OpenFIREfw-NoFS-${{ matrix.boards }}.bin
+          name: OpenFIRE-LIGHTGUN-NoFS-${{ matrix.boards }}
+          path: lightgun/OpenFIRE-LIGHTGUN-NoFS-${{ matrix.boards }}.bin
           if-no-files-found: error
 
   package_assets:
@@ -173,24 +170,24 @@ jobs:
             script_name: flash_firmware.sh
             
     steps:
-      - name: Download firmware .bin artifact
+      - name: Download LIGHTGUN firmware .bin artifact
         uses: actions/download-artifact@v4
         with:
-          name: OpenFIRE-${{ matrix.boards.name }}
+          name: OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}
           path: ./downloaded_firmware
 
-      - name: Download firmware .bin artifact - NoFS
+      - name: Download LIGHTGUN firmware .bin artifact - NoFS
         uses: actions/download-artifact@v4
         with:
-          name: OpenFIRE-NoFS-${{ matrix.boards.name }}
+          name: OpenFIRE-LIGHTGUN-NoFS-${{ matrix.boards.name }}
           path: ./downloaded_firmware
 
       - name: Prepare staging directory
         shell: bash
         run: |
           mkdir staging_dir
-          mv ./downloaded_firmware/OpenFIREfw-${{ matrix.boards.name }}.bin ./staging_dir/firmware.bin
-          mv ./downloaded_firmware/OpenFIREfw-NoFS-${{ matrix.boards.name }}.bin ./staging_dir/firmware-NoFS.bin
+          mv ./downloaded_firmware/OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}.bin ./staging_dir/firmware.bin
+          mv ./downloaded_firmware/OpenFIRE-LIGHTGUN-NoFS-${{ matrix.boards.name }}.bin ./staging_dir/firmware-NoFS.bin
           ls -l ./staging_dir
 
       - name: Download and extract esptool
@@ -198,7 +195,7 @@ jobs:
         run: |
           if [[ "${{ matrix.os_config.esptool_tipo_file }}" == "zip" ]]; then
             curl -L -o esptool_archive.zip "${{ matrix.os_config.esptool_url }}"
-            unzip -j esptool_archive.zip "${{ matrix.os_config.esptool_path_in_zip }}${{ matrix.os_config.esptool_filename_in_zip }}" -d staging_dir
+            unzip -j esptool_archive.zip "${{ matrix.os_config.esptool_path_in_zip }}${ matrix.os_config.esptool_filename_in_zip }" -d staging_dir
           fi
           if [[ "${{ matrix.os_config.esptool_tipo_file }}" == "tar.gz" ]]; then
             curl -L -o esptool_archive.tar.gz "${{ matrix.os_config.esptool_url }}"
@@ -222,7 +219,7 @@ jobs:
           if [[ "${{ matrix.os_config.name }}" == "windows-64bit" ]]; then
           cat <<EOF > "$SCRIPT_PATH"
           @echo off
-          echo Flashing OpenFIRE Firmware for board: ${{ matrix.boards.name }}
+          echo Flashing OpenFIRE LIGHTGUN Firmware for board: ${{ matrix.boards.name }}
           echo.
           set FIRMWARE_FILE=firmware-NoFS.bin
           set /p FIRMWARE_CHOICE="If you want to flash the firmware with the entire filesystem (previous configurations will be erased) type '1' otherwise press Enter: "
@@ -232,9 +229,9 @@ jobs:
           $ESPTOOL_EXECUTABLE_NAME --chip $CHIP_TYPE %COMPORT% --baud $BAUD --before default-reset --after hard-reset write-flash -z --flash-mode $FLASH_MODE --flash-freq $FLASH_FREQ --flash-size detect 0x0000 %FIRMWARE_FILE%
           echo.
           if %errorlevel% neq 0 (
-            echo ERROR: Firmware flashing failed. Check connections and micro.
+            echo ERROR: Firmware LIGHTGUN flashing failed. Check connections and micro.
           ) else (
-            echo Firmware flashing completed!
+            echo Firmware LIGHTGUN flashing completed!
           )
           pause
           EOF
@@ -242,7 +239,7 @@ jobs:
           else
           cat <<EOF > "$SCRIPT_PATH"
           #!/bin/bash
-          echo "Flashing OpenFIRE Firmware for board: ${{ matrix.boards.name }}"
+          echo "Flashing OpenFIRE LIGHTGUN Firmware for board: ${{ matrix.boards.name }}"
           chmod +x ./$ESPTOOL_EXECUTABLE_NAME
           echo ""
           FIRMWARE_FILE="firmware-NoFS.bin"
@@ -257,9 +254,9 @@ jobs:
           ./$ESPTOOL_EXECUTABLE_NAME --chip $CHIP_TYPE \$COMPORT --baud $BAUD --before default-reset --after hard-reset write-flash -z --flash-mode $FLASH_MODE --flash-freq $FLASH_FREQ --flash-size detect 0x0000 \$FIRMWARE_FILE
           echo ""
           if [[ \$? -ne 0 ]]; then
-            echo "ERROR: Firmware flashing failed. Check connections and micro."
+            echo "ERROR: Firmware LIGHTGUN flashing failed. Check connections and micro."
           else
-            echo "Firmware flashing completed!"
+            echo "Firmware LIGHTGUN flashing completed!"
           fi
           read -r -p "Press Enter to exit."          
           EOF
@@ -269,7 +266,7 @@ jobs:
       - name: Create ZIP archive
         shell: bash
         run: |
-          ARCHIVE_FILENAME="OpenFIRE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip"
+          ARCHIVE_FILENAME="OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip"
           if [[ "${{ matrix.os_config.name }}" == "windows-64bit" ]]; then
             powershell -Command "Compress-Archive -Path staging_dir\* -DestinationPath ${{ github.workspace }}/$ARCHIVE_FILENAME -Force"
           else
@@ -279,8 +276,8 @@ jobs:
       - name: Upload ZIP Assets
         uses: actions/upload-artifact@v4
         with:
-          name: OpenFIRE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
-          path: ${{ github.workspace }}/OpenFIRE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
+          name: OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
+          path: ${{ github.workspace }}/OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
           if-no-files-found: error
 
   create_release:
@@ -289,7 +286,7 @@ jobs:
     if: ${{ github.event.inputs.release == 'yes' && github.event.inputs.sistemi_operativi == 'yes' }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4 # Necessario per leggere il file del template
+        uses: actions/checkout@v6
 
       - name: Prepare Release Body from Template
         id: prepare_body
@@ -310,11 +307,11 @@ jobs:
           path: ./release_assets
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event.inputs.tag_name }}
           name: ${{ github.event.inputs.release_name }}
-          body: ${{ env.RELEASE_BODY }} # <--- Usa il corpo generato dal template
+          body: ${{ env.RELEASE_BODY }}
           draft: ${{ github.event.inputs.draft }}
           prerelease: ${{ github.event.inputs.prerelease }}
         env:
