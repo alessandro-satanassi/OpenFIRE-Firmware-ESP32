@@ -3,6 +3,10 @@
 
 This release is updated to commit **80166a6** (January 16, 2026) of the original [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) firmware.
 
+> [!WARNING]
+> **PEDAL FIRMWARE NOTICE:** The download links for the **PEDAL** firmware are currently included for placeholders only. The pedal firmware is **NOT yet complete or functional**. A fully working version will be released with the next PreRelease.
+
+
 ### Supported Boards (ESP32-S3)
 
 ***Lightgun:***
@@ -112,6 +116,9 @@ To configure all lightgun features (pins, buttons, name, player, etc.), the orig
 
 
 Questa release è aggiornata al commit **80166a6** (16 gennaio 2026) del firmware originale [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware).
+
+> [!WARNING]
+> **AVVISO SUL FIRMWARE PEDAL:** I link per il download del firmware **PEDAL** sono attualmente presenti solo a scopo dimostrativo. Il firmware del pedale **NON è ancora completo né funzionante**. Il rilascio della versione operativa è previsto con la prossima PreRelease.
 
 ---
 
