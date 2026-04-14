@@ -195,7 +195,7 @@ jobs:
         run: |
           if [[ "${{ matrix.os_config.esptool_tipo_file }}" == "zip" ]]; then
             curl -L -o esptool_archive.zip "${{ matrix.os_config.esptool_url }}"
-            unzip -j esptool_archive.zip "${{ matrix.os_config.esptool_path_in_zip }}${ matrix.os_config.esptool_filename_in_zip }" -d staging_dir
+            unzip -j esptool_archive.zip "${{ matrix.os_config.esptool_path_in_zip }}${{ matrix.os_config.esptool_filename_in_zip }}" -d staging_dir
           fi
           if [[ "${{ matrix.os_config.esptool_tipo_file }}" == "tar.gz" ]]; then
             curl -L -o esptool_archive.tar.gz "${{ matrix.os_config.esptool_url }}"

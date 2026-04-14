@@ -23,6 +23,9 @@
     {
       "name": "HOME",
       "path": "."
+    },
+    {
+      "path": "../../../OpenFIRE-Firmware-ESP32/workflows_backup"
     }
   ]
 }
