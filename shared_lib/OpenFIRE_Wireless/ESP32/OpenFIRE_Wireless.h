@@ -120,6 +120,7 @@ enum PACKET_TX {
   KEYBOARD_TX,
   MOUSE_TX,
   GAMEPADE_TX,
+  PEDAL_TX,
   CONNECTION,  // CONNESSIONE E ASSOCIAZIONE DONGLE CON GUN
   CHECK_CONNECTION_LAST_DONGLE, //VERIFICA LA CONNESSIONE WIRELESS TRA GUN E DONGLE E VICEVERSA
   CONNECTION_PEDAL,  // CONNESSIONE E ASSOCIAZIONE PEDAL CON GUN
@@ -297,10 +298,17 @@ class SerialWireless_ : public Stream
   // ===============================
   // ===== per i timer ================
 
-//void setupTimer(uint64_t duration_us);
-void setupTimer();
+//void setupTimerSerial(uint64_t duration_us);
+void setupTimerSerial();
 void stopTimer_serial();
 void resetTimer_serial(uint64_t duration_us);
+
+//void setupTimerPedal();
+//void stopTimer_pedal();
+//void resetTimer_pedal(uint64_t duration_us);
+//esp_timer_handle_t timer_handle_pedal;
+//bool last_pedal;
+//bool last_pedal2;
 
 private:
 

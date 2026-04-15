@@ -5,47 +5,8 @@
 
 #include "TinyUSB_Devices.h"
 
-#ifdef USES_DISPLAY
-  #include "OpenFIRE_logo.h"
-  #ifdef USE_LOVYAN_GFX
-    #define LGFX_USE_V1
-    #include <LovyanGFX.hpp>
-    #include "LGFX_096_ST7735S_80x160.hpp"
 
-    LGFX tft;
-
-    #define WHITE            TFT_WHITE
-    #define BLACK            TFT_BLACK
-    #define BLUE             TFT_BLUE
-    #define RED              TFT_RED
-    #define MAGENTA          TFT_MAGENTA
-    #define GREEN            TFT_GREEN
-    #define CYAN             TFT_CYAN
-    #define YELLOW           TFT_YELLOW
-    #define BROWN            TFT_BROWN
-    #define GRAY             TFT_LIGHTGRAY
-    #define ORANGE           TFT_ORANGE
-  #else
-    #include <Adafruit_ST7735.h>
-    Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCLK, TFT_RST);
-
-    #define WHITE            ST7735_WHITE
-    #define BLACK            ST7735_BLACK
-    #define BLUE             ST7735_BLUE
-    #define RED              ST7735_RED
-    #define MAGENTA          ST7735_MAGENTA
-    #define GREEN            ST7735_GREEN
-    #define CYAN             ST7735_CYAN
-    #define YELLOW           ST7735_YELLOW
-    #define BROWN            0XBC40
-    #define GRAY             0X8430
-    #define ORANGE           ST7735_ORANGE
-  
-  #endif // USE_LOVYAN_GFX
-
-#endif // USES_DISPLAY
-
-#include "OpenFIRE-DONGLE-version.h"
+#include "OpenFIRE-PEDAL-version.h"
 
 // ================== GESTIONE DUAL CORE ============================
 #if defined(DUAL_CORE) && defined(ESP_PLATFORM) && false
@@ -61,88 +22,75 @@
 
 bool display_init = false;
 
+const int8_t leds[4] = {PIN_LED1, 
+                        PIN_LED2, 
+                        PIN_LED3, 
+                        PIN_LED4}; // I tuoi 4 GPIO
+
+
+void animTaskLink(void *pvParameters) {
+  
+  for (uint8_t i = 0; i < 4; i++) {
+    pinMode(leds[i], OUTPUT);
+    digitalWrite(leds[i], LOW); 
+  }
+  
+  // Variabili di stato dell'animazione (fuori dal loop infinito)
+  int currentLed = 0;
+  int direction = 1;
+
+  // Loop del task
+  for (;;) {
+    // ========= inserire codice di animazione led 'kit supercar' qui ========
+    // 1. Accende SOLO il led attuale
+    digitalWrite(leds[currentLed], HIGH);
+
+    // 2. Mantiene l'animazione in pausa per far vedere il led acceso
+    vTaskDelay(pdMS_TO_TICKS(150)); 
+
+    // 3. Il tempo è scaduto: spegne SOLO il led attuale PRIMA di passare al prossimo
+    digitalWrite(leds[currentLed], LOW);
+
+    // 4. Prepara l'indice per il prossimo giro
+    currentLed += direction;
+
+    // 5. Se tocca i bordi (0 o 3), inverte la marcia
+    if (currentLed >= 3) {
+      direction = -1;
+    } else if (currentLed <= 0) {
+      direction = 1;
+    }
+    // =======================================================================
+    //vTaskDelay(pdMS_TO_TICKS(150)); // piccolo delay per non saturare la CPU
+  } 
+}
+
 // The main show!
 void setup() {
-  // =========================== X GESTIONE DUAL CORE =============================== 
-  #if defined(DUAL_CORE) && defined(ESP_PLATFORM) && false
-    xTaskCreatePinnedToCore(
-    esploop1,               /* Task function. */
-    "loop1",                /* name of task. */
-    10000,                  /* Stack size of task */
-    NULL,                   /* parameter of the task */
-    1,                      /* priority of the task */
-    &task_loop1,            /* Task handle to keep track of created task */
-    !ARDUINO_RUNNING_CORE); /* pin task to core 0 */
-  #endif
-  // ======================== FINE X GESTIONE DUAL CORE =================================       
 
-  #ifdef USES_DISPLAY
-    #ifdef USE_LOVYAN_GFX
-      display_init = tft.init();
-      tft.setSwapBytes(true);
-      tft.setColorDepth(16);
-      //tft.setBrightness(255); 
-    #else
-      display_init = tft.initR(INITR_MINI160x80_PLUGIN);  // Init ST7735S mini display
-      pinMode(TFT_PIN_BL, OUTPUT);
-      digitalWrite(TFT_PIN_BL, 0); // accende retroilluminazione del display
-    #endif // USE_LOVYAN_GFX
-    
-    tft.setRotation(3);
-    
-    /*
-    // logo OpenFire
-    tft.fillScreen(BLACK);
-    tft.drawBitmap(40, 0, customSplashBanner, CUSTSPLASHBANN_WIDTH, CUSTSPLASHBANN_HEIGHT, BLUE); // logo tondo
-    tft.drawBitmap(56, 23, customSplash, CUSTSPLASH_WIDTH, CUSTSPLASH_HEIGHT, RED); // scritta "OpenFire"
-    //tft.drawXBitmap();
-    delay (1000);
-    tft.fillScreen(BLACK);
-    tft.drawRGBBitmap(50,17,(uint16_t *)logo_rgb,LOGO_RGB_WIDTH,LOGO_RGB_HEIGHT);
-    delay (1000);
-    tft.fillScreen(BLACK);
-    tft.drawRGBBitmap(55,20,(uint16_t *)logo_rgb_alpha,LOGO_RGB_ALPHA_WIDTH,LOGO_RGB_ALPHA_HEIGHT);
-    delay (1000);
-    */
-    tft.fillScreen(BLACK);
-    #ifdef USE_LOVYAN_GFX
-      tft.pushImage(10,1,LOGO_RGB_ALPHA_OPEN_WIDTH, LOGO_RGB_ALPHA_OPEN_HEIGHT, (uint16_t *)logo_rgb_alpha_open);
-    #else
-      tft.drawRGBBitmap(10,1,(uint16_t *)logo_rgb_alpha_open,LOGO_RGB_ALPHA_OPEN_WIDTH,LOGO_RGB_ALPHA_OPEN_HEIGHT);
-    #endif //USE_LOVYAN_GFX
-    
-    //delay (3000);
-    vTaskDelay(pdMS_TO_TICKS(3000));
+  // Configurazione Pedali (Ingressi con Pull-Up)
+  pinMode(PIN_PEDAL, INPUT_PULLUP);
+  pinMode(PIN_PEDAL2, INPUT_PULLUP);
 
-    tft.fillScreen(BLACK);
-    tft.setTextSize(2);
-    tft.setCursor(0, 0);
-    tft.setTextColor(RED);
-    //tft.setTextColor(WHITE);
-    ///////tft.println("..SEARCHING..");
-    tft.drawBitmap(40, 0, customSplashBanner, CUSTSPLASHBANN_WIDTH, CUSTSPLASHBANN_HEIGHT, BLUE);
-    //tft.drawRGBBitmap(0,20,(uint16_t *)logo_rgb,LOGO_RGB_WIDTH,LOGO_RGB_HEIGHT);
-    //tft.drawRGBBitmap(5,25,(uint16_t *)logo_rgb_alpha,LOGO_RGB_ALPHA_WIDTH,LOGO_RGB_ALPHA_HEIGHT);
-    //tft.drawBitmap(10, 25, customSplash, CUSTSPLASH_WIDTH, CUSTSPLASH_HEIGHT, BLUE);
-    tft.drawBitmap(10, 25, customSplash, CUSTSPLASH_WIDTH, CUSTSPLASH_HEIGHT, RED);
-    ///////tft.setTextSize(2);
-    ///////tft.setCursor(65, 30);
-    ///////tft.setTextColor(GRAY);
-    ///////tft.println("Channel");
-    tft.setTextSize(2);
-    //tft.setCursor(100, 60);
-    tft.setTextColor(WHITE);
-    //tft.printf("Player: %2d", 1);
-    //tft.println("1");
-    //tft.fillRect(100,60,50,20,0/*BLACK*/);
-  #endif //USES_DISPLAY
-
+  TaskHandle_t animTaskHandleLink = NULL;  
+  xTaskCreatePinnedToCore(
+        animTaskLink,          // funzione del task
+        "AnimTaskLink",        // nome
+        4096,              // stack size
+        NULL,              // parametri
+        1,                 // priorità
+        &animTaskHandleLink,   // handle
+        APP_CPU_NUM        // core (puoi usare 0 o 1)
+  );  
+  
   // ====== gestione connessione wireless ====================
   SerialWireless.init_wireless();
   SerialWireless.begin();
-  SerialWireless.connection_dongle();
+  SerialWireless.connection_pedal();
   // ====== fine gestione wireless .. va avanti solo dopo che si è accoppiato il dispositivo =======
 
+
+  ///////////////////////// POI ANDRA' TOLTO ////////////////////////////////////////////////
   // ====== connessione USB ====== imposta VID e PID come quello che gli passa la pistola ===============
   if (!TinyUSBDevice.isInitialized()) { // aggiunto ..funzionava lo stesso, ma così è più sicuro .. sicuramente serve per Esp32 con libreria non integrfata nel core
     TinyUSBDevice.begin(0);
@@ -154,6 +102,9 @@ void setup() {
 
   // Initializing the USB devices chunk.
   TinyUSBDevices.begin(1);
+  //////////////////////////// FINE POI ANDRA' TOLDO /////////////////////////////////////////
+
+
   Serial.begin(9600);
   Serial.setTimeout(0);
   ////////////////////Serial.setTxTimeoutMs(0);
@@ -161,36 +112,22 @@ void setup() {
   #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
   vTaskDelay(pdMS_TO_TICKS(100)); // per aggiornare espnow_wifi_power
   #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO
+  
+  if (animTaskHandleLink != NULL) {
+      vTaskDelete(animTaskHandleLink);
+      animTaskHandleLink = NULL;
+  }
 
-  #ifdef USES_DISPLAY   
-    tft.fillScreen(BLACK);
-    /*
-    tft.setTextSize(2);
-    tft.setCursor(0, 0);
-    tft.setTextColor(RED);
-    tft.println("CONNESSO");
-    */
-    tft.drawBitmap(40, 0, customSplashBanner, CUSTSPLASHBANN_WIDTH, CUSTSPLASHBANN_HEIGHT, BLUE);
-    tft.setTextSize(2);
-    tft.setCursor(0, 20);
-    tft.setTextColor(RED);
-    tft.println(usb_data_wireless.deviceName);
-    tft.setTextColor(RED);
-    tft.setCursor(0, 40);
-    tft.printf("Player: %d", usb_data_wireless.devicePlayer);
-    tft.setTextSize(2);
-    tft.setCursor(0, 60);
-    tft.setTextColor(GRAY); 
-    //tft.printf("Channel: %d", usb_data_wireless.channel);
-    #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
-    //tft.printf("Ch:%2d-Pow:%3d", usb_data_wireless.channel, espnow_wifi_power);
-    //tft.printf("P:%2d-Rssi:%3d", espnow_wifi_power, espnow_rssi_ricevuto);
-    tft.printf("L:%3d-D:%3d", ultimo_rssi_trasmesso, espnow_rssi_ricevuto);
-    #else
-    tft.printf("Channel: %d", usb_data_wireless.channel);
-    #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO
-    
-  #endif // USES_DISPLAY
+  vTaskDelay(pdMS_TO_TICKS(150));
+
+  for (uint8_t i = 0; i < 4; i++) {
+    pinMode(leds[i], OUTPUT);
+    digitalWrite(leds[i], LOW); 
+  }
+
+  digitalWrite(leds[usb_data_wireless.devicePlayer -1 ], HIGH); // accende fisso il led del player corrispondente 1,2,3,4
+
+
 }
 
 #define FIFO_SIZE_READ_SER 200  // l'originale era 32

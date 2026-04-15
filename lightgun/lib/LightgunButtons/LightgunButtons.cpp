@@ -142,7 +142,11 @@ uint32_t LightgunButtons::Poll(unsigned long minTicks)
                 // 696969
                 if (is_current_wireless_pedal) {
                     // Mappa true (premuto) in 0, e false (rilasciato) in 1
-                    state = (i == OF_Const::btnPedal) ? (TinyUSBDevices.pedal_wireless ? 0 : 1) : (TinyUSBDevices.pedal2_wireless ? 0 : 1);
+                    //state = (i == OF_Const::btnPedal) ? (TinyUSBDevices.pedal_wireless ? 0 : 1) : (TinyUSBDevices.pedal2_wireless ? 0 : 1);
+                    // Seleziona la maschera giusta in base al pedale che stiamo scansionando
+                    uint8_t mask = (i == OF_Const::btnPedal) ? 0b00000001 : 0b00000010;
+                    // Se il bit corrispondente è a 1 (premuto), state = 0, altrimenti state = 1
+                    state = (TinyUSBDevices.pedals_wireless_state & mask) ? 0 : 1;
                 } else {
                     // read the pin, expected to return 0 or 1
                     state = digitalRead(btn.pin);

@@ -90,8 +90,9 @@ public:
 
   uint8_t wireless_mode = 0; // 0 = nessuna connessione wireless altro valore connessione // qualsiasi altro valore deve essere diverso da zero - spostato in SerialWireless
   bool is_pedal_wireless = false; // true se connesso un pedale wifi (può essere true solo se i pedali non sono abbinati a qualche pin del micro)
-  bool pedal_wireless = false; // true se premuto pedale altrimenti false
-  bool pedal2_wireless = false; // true se premuto secondo pedale
+  uint8_t pedals_wireless_state = 0;
+  //bool pedal_wireless = false; // true se premuto pedale altrimenti false
+  //bool pedal2_wireless = false; // true se premuto secondo pedale
 
 };
 extern TinyUSBDevices_ TinyUSBDevices;

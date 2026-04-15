@@ -24,5 +24,8 @@
       "name": "HOME",
       "path": "."
     }
-  ]
+  ],
+  "settings": {
+    "platformio-ide.activateProjectOnTextEditorChange": true
+  }
 }

@@ -82,7 +82,7 @@ uint8_t espnow_wifi_power = OPENFIRE_ESPNOW_WIFI_POWER;      // FATTA VARIABILE 
 
 
 #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
-bool espnow_wifi_power_auto = true;
+  bool espnow_wifi_power_auto = true;
 #endif // OPENFIRE_ESPNOW_WIFI_POWER_AUTO
 
 
@@ -160,7 +160,15 @@ const uint8_t BROADCAST_ADDR[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   uint8_t lastDongleAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   uint8_t lastDongleChannel = OPENFIRE_ESPNOW_WIFI_CHANNEL;
   bool lastDongleSave = false; // se true significa che abbiamo un indirizzo dell'ultimo dongle altrimenti false
-#elif defined(GUN)
+  #elif defined(PEDAL)
+  ///////////////////////uint8_t peerAddress[6] = {0x24, 0x58, 0x7C, 0xDA, 0x38, 0xA0}; // quello montato con piedini su breackboard
+  uint8_t peerAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; // broadcast
+
+  const functionPtr callbackArr[] = { packet_callback_read_dongle };
+  uint8_t lastDongleAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  uint8_t lastDongleChannel = OPENFIRE_ESPNOW_WIFI_CHANNEL;
+  bool lastDongleSave = false; // se true significa che abbiamo un indirizzo dell'ultimo dongle altrimenti false
+  #elif defined(GUN)
   //const uint8_t peerAddress[6] = {0xA0, 0x85, 0xE3, 0xE8, 0x0F, 0xB8}; // espe32s3 con piedini (riceve ma non trasmette)
   ///////////////////////////uint8_t peerAddress[6] = {0xA0, 0x85, 0xE3, 0xE7, 0x65, 0xD4}; // espe32s3 senz apiedini
   uint8_t peerAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; // broadcast
@@ -177,8 +185,14 @@ const uint8_t BROADCAST_ADDR[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 #endif
 
 uint8_t peerAddress_pedal[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; // broadcast
-
-
+//unsigned long lastMillis_packet_pedal = 0;
+#define MAX_TIMEOUT_LAST_PACKET 100000   // = 100  ms  .. il valore va specificato in microsecondi
+void setupTimerPedal();
+//void stopTimer_pedal();
+//void resetTimer_pedal(uint64_t duration_us);
+esp_timer_handle_t timer_handle_pedal;
+//bool last_pedal;
+//bool last_pedal2;
 
 ///////////////////////////////////////////////////////////////////
 // Definizione globale della configurazione del rate
@@ -216,7 +230,10 @@ uint8_t calcolaPotenzaOttimale(int8_t rssi_remoto) {
         potenza_attuale = constrain(potenza_attuale, WIFI_POWER_MIN, WIFI_POWER_MAX);
     #elif defined(DONGLE)
         // Il DONGLE resta mediamente alto (minimo 40) perché ha la corrente via USB
-        potenza_attuale = constrain(potenza_attuale, 40, WIFI_POWER_MAX); 
+        potenza_attuale = constrain(potenza_attuale, 40, WIFI_POWER_MAX);
+    #elif defined(PEDAL)
+        // Il DONGLE resta mediamente alto (minimo 40) perché ha la corrente via USB
+        potenza_attuale = constrain(potenza_attuale, 40, WIFI_POWER_MAX);   
     #endif
 
     return (uint8_t)potenza_attuale;
@@ -230,6 +247,7 @@ uint8_t calcolaPotenzaOttimale(int8_t rssi_remoto) {
 
 volatile uint8_t channel_display = espnow_wifi_channel;
 volatile uint8_t seconds_display = 30;
+
 
 /////////////////////////////////////////////////////////////////////////////
 // VERSIONE GRAFICA RICERCA CANALE PER GUN //////////////////////////////////
@@ -1063,7 +1081,7 @@ void SerialWireless_::init_wireless() {
   //myConfig.callbacksLen = 0;
   packet.begin(myConfig);
 
-  setupTimer(); // crea i timer .. timer per invio dati seriali
+  setupTimerSerial(); // crea i timer .. timer per invio dati seriali
 
 }
 
@@ -1097,6 +1115,9 @@ void SerialWireless_::begin() {
      
   #endif // DONGLE
 
+  #ifdef PEDAL
+      espnow_wifi_channel=OPENFIRE_ESPNOW_WIFI_CHANNEL;
+  #endif //GUN
 
 
   WiFi.mode(WIFI_STA); 
@@ -1240,7 +1261,7 @@ if (err != ESP_OK) {
 
   TinyUSBDevices.wireless_mode = WIRELESS_MODE::ENABLE_ESP_NOW_TO_DONGLE;
   #ifdef COMMENTO
-  setupTimer(); // crea i timer .. timer per invio dati seriali
+  setupTimerSerial(); // crea i timer .. timer per invio dati seriali
   #endif // COMMENTO
 }
 
@@ -1750,6 +1771,8 @@ bool SerialWireless_::connection_gun_at_pedal() {
       //Serial.println("DONGLE - Errore nell'aggiunta del nuovo peer della GUN");
     } else esp_now_set_peer_rate_config(peerAddress_pedal, &rate_config);
 
+    setupTimerPedal();  // CREA IL TIMER PER GESTIRE IN SICUREZZA IL PEDALE
+
     #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO // ==========================================================
       if (espnow_wifi_power_auto) {
         SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
@@ -1787,17 +1810,13 @@ bool SerialWireless_::connection_gun_at_pedal() {
 // ======================= IMPLEMENTAZIONE PEDAL - RIMANE IN ASCOLTO SU TUTTI I CANALI ===============
 bool SerialWireless_::connection_pedal() {
   
-  channel_display = espnow_wifi_channel;
-
-  
+    
   uint8_t channel = espnow_wifi_channel;   // tra e 1 e 13 (il 14 dovrebbe essere riservato)
-  #define TIMEOUT_TX_PACKET 500 // in millisecondi
+  
   #define TIMEOUT_CHANGE_CHANNEL 2000 // in millisecondi - cambia canale ogni
   #define TIMEOUT_DIALOGUE 6000 // in millisecondi - tempo massimo per completare operazione accoppiamento
   unsigned long lastMillis_change_channel = millis ();
   unsigned long lastMillis_start_dialogue = millis ();
-  uint8_t aux_buffer_tx[14]; // aggiunto un byte per trasmettere anche il canale di trasmissione
-                             // durante tx pacchetto pubblicazione presenza, mette anche il canale
   
    
   
@@ -1813,6 +1832,9 @@ bool SerialWireless_::connection_pedal() {
           //Serial.printf("DONGLE - esp_wifi_set_channel failed!");
         }
         esp_wifi_set_promiscuous(false);
+        
+        espnow_wifi_channel = channel;
+        
         peerInfo.channel = channel;
         if (esp_now_mod_peer(&peerInfo) != ESP_OK) {  // modifica il canale del peer
           //Serial.println("DONGLE - Errore nella modifica del canale");
@@ -2183,7 +2205,19 @@ void packet_callback_read_gun() {
       break;
     case PACKET_TX::KEYBOARD_TX:
       /* code */  
-      break; 
+      break;
+    case PACKET_TX::PEDAL_TX:
+      {
+        //uint8_t pedali;
+        //  pedal attivo = 00000001 - pedal2 attivo = 00000010 - entrambi pedali attivi = 00000011 - tutti i pedali non premuti = 00000000
+        //pedali = aux_buffer[0];
+        TinyUSBDevices.pedals_wireless_state = aux_buffer[0];
+        //TinyUSBDevices.pedal_wireless = (pedali & 0b00000001) != 0;  //false = pedale non premuto;
+        //TinyUSBDevices.pedal2_wireless = (pedali & 0b00000010) != 0; //false = pedale non premuto;
+        if (TinyUSBDevices.pedals_wireless_state) esp_timer_restart(timer_handle_pedal, MAX_TIMEOUT_LAST_PACKET);
+          else esp_timer_stop(timer_handle_pedal);
+      }
+      break;
     #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
     case PACKET_TX::DUMMY_PACKET:
       /* pacchetto vuoto - non fare nulla - per eventuali test - da implementare se necessario */
@@ -2305,7 +2339,7 @@ void packet_callback_read_gun() {
         case CONNECTION_STATE::TX_PEDAL_TO_GUN_PRESENCE:
           if ((memcmp(&aux_buffer[7],SerialWireless.mac_esp_inteface,6) == 0) && SerialWireless.stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) {
             memcpy(SerialWireless.mac_esp_another_card, &aux_buffer[1], 6);
-            usb_data_wireless.channel= aux_buffer[13];  ////// ???????????????????????????????????????????????????
+            ////////////////usb_data_wireless.channel= aux_buffer[13];  ////// ???????????????????????????????????????????????????
             aux_buffer[0] = CONNECTION_STATE::TX_GUN_TO_PEDAL_ACCEPT;
             memcpy(&aux_buffer[1], SerialWireless.mac_esp_inteface, 6);
             memcpy(&aux_buffer[7], SerialWireless.mac_esp_another_card, 6);
@@ -2407,15 +2441,15 @@ void packet_callback_read_pedal() {
         // =========================== NUOVI ==================================
         case CONNECTION_STATE::TX_GUN_SEARCH_PEDAL_BROADCAST:
           if ((SerialWireless.stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) &&
-              (aux_buffer[13] == espnow_wifi_channel))
+              (aux_buffer[13] == espnow_wifi_channel))  // sistema espnow_wifi_channel
           { // prende la prima gun disposnibile
             memcpy(SerialWireless.mac_esp_another_card, &aux_buffer[1], 6);
             // invia richiesta connessione
             aux_buffer[0] = CONNECTION_STATE::TX_PEDAL_TO_GUN_PRESENCE;
             memcpy(&aux_buffer[1], SerialWireless.mac_esp_inteface, 6);
             memcpy(&aux_buffer[7], SerialWireless.mac_esp_another_card, 6);
-            aux_buffer[13] = espnow_wifi_channel;  //??????????????????????????????????????????????????????????????????????
-            SerialWireless.SendPacket((const uint8_t *)aux_buffer, 14, PACKET_TX::CONNECTION_PEDAL);
+            /////aux_buffer[13] = espnow_wifi_channel;  //??????????????????????????????????????????????????????????????????????
+            SerialWireless.SendPacket((const uint8_t *)aux_buffer, 13, PACKET_TX::CONNECTION_PEDAL);
             SerialWireless.stato_connessione_wireless = CONNECTION_STATE::TX_PEDAL_TO_GUN_PRESENCE;
             // assicurati che i dati siano stati spediti
 
@@ -2506,7 +2540,7 @@ static void _esp_now_rx_cb(const esp_now_recv_info_t *info, const uint8_t *data,
   xSemaphoreGive(mutex_writer_bin);
 }
 
-// ================================== TIMER ===================================
+// ================================== TIMER PER SERIALE ===================================
 // CALLBACK
 void timer_callback_serial(void* arg) {
   //Serial.println("Timer scaduto!");
@@ -2522,7 +2556,7 @@ void timer_callback_serial(void* arg) {
 }
 // ===============================================================================
 
-void SerialWireless_::setupTimer() {
+void SerialWireless_::setupTimerSerial() {
     esp_timer_create_args_t timer_args = {
         .callback = &timer_callback_serial,
         .arg = NULL,
@@ -2538,12 +2572,51 @@ void SerialWireless_::stopTimer_serial() {
 }
 
 void SerialWireless_::resetTimer_serial(uint64_t duration_us) {
-    esp_timer_stop(timer_handle_serial);
-    esp_timer_start_once(timer_handle_serial, duration_us);
+    //esp_timer_stop(timer_handle_serial);
+    //esp_timer_start_once(timer_handle_serial, duration_us);
+    esp_timer_restart(timer_handle_serial, duration_us);
 }
 
 
-// ==========================   FINE TIMER ====================================
+// ==========================   FINE TIMER PER SERIALE ====================================
+
+
+// ================================== TIMER PER PEDAL ===================================
+// CALLBACK
+void timer_callback_pedal(void* arg) {
+  //Serial.println("Timer scaduto!");
+  
+  TinyUSBDevices.pedals_wireless_state = 0;
+  //TinyUSBDevices.pedal_wireless = false;
+  //TinyUSBDevices.pedal2_wireless = false;
+  
+}
+// ===============================================================================
+
+void setupTimerPedal() {
+    esp_timer_create_args_t timer_args = {
+        .callback = &timer_callback_pedal,
+        .arg = NULL,
+        .dispatch_method = ESP_TIMER_TASK,
+        .name = "timer_pedal"
+    };
+    
+    esp_timer_create(&timer_args, &timer_handle_pedal);
+}
+
+/*
+void SerialWireless_::stopTimer_pedal() {
+    esp_timer_stop(timer_handle_pedal);
+}
+
+void SerialWireless_::resetTimer_pedal(uint64_t duration_us) {
+    //esp_timer_stop(timer_handle_pedal);
+    //esp_timer_start_once(timer_handle_pedal, duration_us);
+    esp_timer_restart(timer_handle_pedal, duration_us);
+}
+*/
+
+// ======================== FINE TIMER PER PEDAL =============================
 
 
 #endif //OPENFIRE_WIRELESS_ENABLE
