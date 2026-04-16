@@ -199,7 +199,7 @@ class SerialWireless_ : public Stream
   
   uint8_t mac_esp_inteface[6];
   uint8_t mac_esp_another_card[6];
-  uint8_t stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION; //0;
+  volatile uint8_t stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION; //0;
 
   // ======= per FIFO SERIAL ===============
   // ===== per write === buffer lineare ====

@@ -186,7 +186,7 @@ const uint8_t BROADCAST_ADDR[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 uint8_t peerAddress_pedal[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; // broadcast
 //unsigned long lastMillis_packet_pedal = 0;
-#define MAX_TIMEOUT_LAST_PACKET 100000   // = 100  ms  .. il valore va specificato in microsecondi
+#define MAX_TIMEOUT_LAST_PACKET 100000ULL   // = 100  ms  .. il valore va specificato in microsecondi
 void setupTimerPedal();
 //void stopTimer_pedal();
 //void resetTimer_pedal(uint64_t duration_us);
@@ -1314,6 +1314,7 @@ bool SerialWireless_::connection_dongle() {
     if (((millis() - lastMillis_start_dialogue) > TIMEOUT_GUN_DIALOGUE) && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
       stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
     }
+    vTaskDelay(pdMS_TO_TICKS(10));
   }
     
   //Serial.println("DONGLE - Negosazione completata - associazione dei dispositivi GUN/DONGLE");
@@ -1484,7 +1485,8 @@ bool SerialWireless_::connection_gun_at_last_dongle() {
         SerialWireless.SendPacket((const uint8_t *)aux_buffer_tx, 13, PACKET_TX::CHECK_CONNECTION_LAST_DONGLE); 
         lastMillis_tx_packet_last_dongle = millis();
       }
-    yield();
+      vTaskDelay(pdMS_TO_TICKS(10));
+      //yield();
   }
   if (stato_connessione_wireless == CONNECTION_STATE::DEVICES_CONNECTED_WITH_LAST_DONGLE) {    
     stato_connessione_wireless = CONNECTION_STATE::DEVICES_CONNECTED;
@@ -1558,27 +1560,11 @@ bool SerialWireless_::connection_gun() {
   while (!TinyUSBDevice.mounted() && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
     if (stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) {
       if (((millis() - lastMillis_change_channel) > TIMEOUT_CHANGE_CHANNEL) && 
-         ((millis() - (lastMillis_tx_packet-50))) > TIMEOUT_TX_PACKET) {  // aggiunta impostato 50 ms come margine, per evitare che quando invia pacchetto cambi subito casnale senza dare possibilità risposta
+         ((millis() - lastMillis_tx_packet)) >= (TIMEOUT_TX_PACKET - 50) {  // aggiunta impostato 50 ms come margine, per evitare che quando invia pacchetto cambi subito casnale senza dare possibilità risposta
         //channel++;
         //if (channel >13) channel = 1;
         aux_buffer_tx[13] = channel;
-        channel_display = channel;
-        
-        #ifdef GUN______
-          #ifdef USES_DISPLAY
-              
-              display_OLED->setCursor(19, 2);
-              //display_OLED->setTextSize(1);
-              //display_OLED->setTextColor(WHITE, BLACK);
-              ///////////display_OLED->fillRect(0, 0, 128, 16, BLACK);
-              //display_OLED->drawFastHLine(0, 15, 128, WHITE);
-              char buffer[5];
-              sprintf(buffer, "%2d", channel);
-              display_OLED->print(buffer);
-              //display_OLED->display();          
-              
-            #endif //USES_DISPLAY
-        #endif //DONGLE
+        channel_display = channel;      
         
         esp_wifi_set_promiscuous(true);
         if (esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE) != ESP_OK) {
@@ -1610,7 +1596,8 @@ bool SerialWireless_::connection_gun() {
         lastMillis_change_channel = millis ();
       }  
     }
-    yield(); // in attesa dello stabilimento di una connessione
+    //yield(); // in attesa dello stabilimento di una connessione
+    vTaskDelay(pdMS_TO_TICKS(10));
   }
   
    if (stato_connessione_wireless == CONNECTION_STATE::DEVICES_CONNECTED) {
@@ -1664,7 +1651,7 @@ bool SerialWireless_::connection_gun() {
 
 }
 
-// ======================= NUOVA IMPLEMENTAZIONE DOVE LA GUN FA IL FARO ===============
+// ======================= NUOVA IMPLEMENTAZIONE DOVE LA GUN FA IL FARO per connetersi al pedal ===============
 bool SerialWireless_::connection_gun_at_pedal() {
   
   channel_display = espnow_wifi_channel;
@@ -1723,7 +1710,7 @@ bool SerialWireless_::connection_gun_at_pedal() {
   while ( (seconds > 1) && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
     if (stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) {
       if (((millis() - lastMillis_change_seconds) > TIMEOUT_CHANGE_SECONDS) && 
-         ((millis() - (lastMillis_tx_packet-50))) > TIMEOUT_TX_PACKET) {  // aggiunta impostato 50 ms come margine, per evitare che quando invia pacchetto cambi subito casnale senza dare possibilità risposta
+         ((millis() - lastMillis_tx_packet)) >= (TIMEOUT_TX_PACKET - 50)) {  // aggiunta impostato 50 ms come margine, per evitare che quando invia pacchetto cambi subito casnale senza dare possibilità risposta
         //channel++;
         //if (channel >13) channel = 1;
         aux_buffer_tx[13] = espnow_wifi_channel;
@@ -1750,7 +1737,8 @@ bool SerialWireless_::connection_gun_at_pedal() {
         lastMillis_change_seconds = millis ();
       }  
     }
-    yield(); // in attesa dello stabilimento di una connessione
+    //yield(); // in attesa dello stabilimento di una connessione
+    vTaskDelay(pdMS_TO_TICKS(10));
   }
   
    if (stato_connessione_wireless == CONNECTION_STATE::DEVICES_CONNECTED) {
@@ -1855,7 +1843,8 @@ bool SerialWireless_::connection_pedal() {
         lastMillis_change_channel = millis ();
       }  
     }
-    yield(); // in attesa dello stabilimento di una connessione
+    vTaskDelay(pdMS_TO_TICKS(10));
+    //yield(); // in attesa dello stabilimento di una connessione
   }
   
     //Serial.println("DONGLE - Negosazione completata - associazione dei dispositivi GUN/DONGLE");

@@ -199,5 +199,5 @@ void loop()
   }
 
   
-  vTaskDelay(pdMS_TO_TICKS(5));  
+  vTaskDelay(pdMS_TO_TICKS(5));  // fai polling ogni 5ms
 }
