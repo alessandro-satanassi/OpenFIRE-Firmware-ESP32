@@ -2214,8 +2214,8 @@ void packet_callback_read_gun() {
         TinyUSBDevices.pedals_wireless_state = aux_buffer[0];
         //TinyUSBDevices.pedal_wireless = (pedali & 0b00000001) != 0;  //false = pedale non premuto;
         //TinyUSBDevices.pedal2_wireless = (pedali & 0b00000010) != 0; //false = pedale non premuto;
-        if (TinyUSBDevices.pedals_wireless_state) esp_timer_restart(timer_handle_pedal, MAX_TIMEOUT_LAST_PACKET);
-          else esp_timer_stop(timer_handle_pedal);
+        esp_timer_stop(timer_handle_pedal); 
+        if (TinyUSBDevices.pedals_wireless_state) esp_timer_start_once(timer_handle_pedal, MAX_TIMEOUT_LAST_PACKET);
       }
       break;
     #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
