@@ -103,6 +103,7 @@ extern uint8_t lastDongleAddress[6];
 extern uint8_t lastDongleChannel;
 extern uint8_t peerAddress[6];
 extern bool lastDongleSave;
+extern const uint8_t BROADCAST_ADDR[6];
  
  
 

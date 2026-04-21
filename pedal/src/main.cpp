@@ -76,7 +76,8 @@ esp_timer_handle_t timer_handle_send_repeat;
 void setup() {
   //TinyUSBDevices.begin(1);
   //TinyUSBDevice.begin(0);
-  //Serial.begin(115200);
+  //SerialTinyUSB.begin(115200);
+  Serial.begin(115200);
 
   // Configurazione Pedali (Ingressi con Pull-Up)
   for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
@@ -125,9 +126,12 @@ void setup() {
 
 
   //Serial.begin(115200);
-  //Serial.printf("\n\nWireless channel da USB_DATA = %d\n\n", usb_data_wireless.channel);
-  //Serial.printf("\n\nWireless channel da espnow_wifi_channel = %d\n\n", espnow_wifi_channel);
-  
+  Serial.printf("\n\nWireless channel da USB_DATA = %d\n\n", usb_data_wireless.channel);
+  Serial.printf("\n\nWireless channel da espnow_wifi_channel = %d\n\n", espnow_wifi_channel);
+  Serial.printf("Mac PeerAddres: %02X:%02X:%02X:%02X:%02X:%02X\n", peerAddress[0], peerAddress[1], peerAddress[2], peerAddress[3], peerAddress[4], peerAddress[5]);
+  Serial.printf("PreeAddres presente nei peer: %s\n", esp_now_is_peer_exist(peerAddress) ? "SI": "NO");
+  Serial.printf("BROADCAST presente nei peer: %s\n", esp_now_is_peer_exist(BROADCAST_ADDR) ? "SI": "NO");
+
   /*
   Serial.begin(9600);
   Serial.setTimeout(0);

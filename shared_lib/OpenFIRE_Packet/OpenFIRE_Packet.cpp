@@ -72,6 +72,8 @@ uint8_t Packet::constructPacket(uint8_t messageLen, uint8_t packetID)
 
 uint8_t Packet::parse(uint8_t recChar, bool valid)
 {
+	
+	/*
 	bool packet_fresh = (packetStart == 0) || ((millis() - packetStart) < timeout);
 	if (!packet_fresh) {
 		//if (debug) debugPort->println("ERROR: STALE PACKET");
@@ -84,6 +86,27 @@ uint8_t Packet::parse(uint8_t recChar, bool valid)
 	}
 
 	if (valid) {
+	*/
+
+// ======================= prova nuovo ====================	
+bool packet_fresh = (packetStart == 0) || ((millis() - packetStart) < timeout);
+	if (!packet_fresh) {
+		reset();
+		// RIMOSSO: return 0; 
+		// Il byte arrivato DEVE essere passato al blocco valid qui sotto, 
+		// perché quasi certamente è lo START_BYTE di un nuovo pacchetto in ritardo!
+	}
+
+	if (valid) {
+		// FIX FONDAMENTALE: Hard-Sync. 
+		// Nel protocollo COBS, lo START_BYTE non compare MAI nei dati. 
+		// Se ne ricevi uno, significa matematicamente che sta iniziando un nuovo pacchetto.
+		if (recChar == START_BYTE && state != find_start_byte) {
+			reset(); // Azzera tutto istantaneamente
+			// Lasciamo che lo switch qui sotto elabori questo START_BYTE in modo pulito!
+		}
+// ================= fine prova nuovo sistema =========================
+
 		switch (state) {
 			case find_start_byte: /////////////////////////////////////////
 			{

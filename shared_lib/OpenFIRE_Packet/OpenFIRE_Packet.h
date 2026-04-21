@@ -37,7 +37,7 @@ const uint8_t POSTAMBLE_SIZE  = 2;    // CRC + STOP_BYTE
 const uint8_t MAX_PACKET_SIZE = 0xF4; // 244 = 250-6  =====   //0xFE; // 254 Maximum allowed payload bytes per packet
 const uint8_t MAX_COBS        = 0xFE; // 254 aggiunto da me
 
-const uint8_t DEFAULT_TIMEOUT = 50;
+const uint8_t DEFAULT_TIMEOUT = 50; // prima era 50, ma 20 dovrebbero bastare .. vedere come funziona con 20
 
 
 struct configST

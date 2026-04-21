@@ -152,6 +152,7 @@ uint8_t tipo_connessione = 0;
 // 3 = arrivara accettazione di connessione
 
 const uint8_t BROADCAST_ADDR[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
 #if defined(DONGLE)
   ///////////////////////uint8_t peerAddress[6] = {0x24, 0x58, 0x7C, 0xDA, 0x38, 0xA0}; // quello montato con piedini su breackboard
   uint8_t peerAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; // broadcast
@@ -771,11 +772,12 @@ bool SerialWireless_::checkForRxPacket() {
   uint8_t dato;
   for (uint16_t i = 0; i<numAvailableBin; i++) {
     dato = (uint8_t) readBin();
-    if (dato == START_BYTE) packet.reset(); //resetta inizio pacchetto - // controllo dato .. se è uguale a packet::start_byte .. azzera tutto e fai partire da capo altrimenti
+    if (dato == START_BYTE) packet.reset(); // si potrebbe anche togliere, ho aggiunto garanzia nel parse //resetta inizio pacchetto - // controllo dato .. se è uguale a packet::start_byte .. azzera tutto e fai partire da capo altrimenti
     packet.parse(dato, true);
   }
   return true;
 }
+
 
 int SerialWireless_::readBin() {
   if (_readLen) {
@@ -2146,9 +2148,15 @@ static void _esp_now_rx_cb(const esp_now_recv_info_t *info, const uint8_t *data,
   if ((FIFO_SIZE_READ - SerialWireless._readLen) >= len) {
     size_t firstChunk = FIFO_SIZE_READ - SerialWireless._writer;
     if (firstChunk < len) {
+      //memcpy(&SerialWireless._queue[SerialWireless._writer], data, firstChunk);
+      //SerialWireless._writer = len - firstChunk;  
+      //memcpy(&SerialWireless._queue[0], data + firstChunk, SerialWireless._writer);
+      // ======================== dovrebbe essere più sicuro per la concorrenza
+      uint16_t new_writer = len - firstChunk;
       memcpy(&SerialWireless._queue[SerialWireless._writer], data, firstChunk);
-      SerialWireless._writer = len - firstChunk;  
-      memcpy(&SerialWireless._queue[0], data + firstChunk, SerialWireless._writer);
+      memcpy(&SerialWireless._queue[0], data + firstChunk, new_writer);
+      SerialWireless._writer = new_writer;
+
     }
     else {
       memcpy(&SerialWireless._queue[SerialWireless._writer], data, len);
@@ -2244,5 +2252,73 @@ void setupTimerPedal() {
 
 // ======================== FINE TIMER PER PEDAL =============================
 
+
+
+#ifdef COMMENTO
+// ##############################################################################
+TaskHandle_t ParserTaskHandle = NULL;
+
+
+//====
+
+void ParserTask(void *pvParameters) {
+  for (;;) {
+    // Il Task si "addormenta" qui e non consuma CPU.
+    // Si sveglierà istantaneamente solo quando la callback riceve qualcosa.
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+    // Quando si sveglia, estrae i dati dal buffer e processa i pacchetti
+    // Finché ci sono dati disponibili, continua a chiamare il parser
+    while(SerialWireless.availableBin() > 0) {
+        SerialWireless.checkForRxPacket();
+    }
+  }
+}
+
+// ======
+
+void setup() {
+  // ... il tuo codice esistente ...
+
+  // Crea il task parallelo. 
+  // Priorità 2 (più alta del loop standard che è 1, ma più bassa del Wi-Fi)
+  xTaskCreatePinnedToCore(
+    ParserTask,        // Funzione del task
+    "ParserTask",      // Nome 
+    4096,              // Dimensione Stack in byte (4KB bastano e avanzano)
+    NULL,              // Parametri
+    2,                 // Priorità del task
+    &ParserTaskHandle, // L'handle creato allo Step 1
+    0                  // Esegui sul Core 0 (se il loop() è sull'1) o usa tskNO_AFFINITY
+  );
+}
+
+// =========
+
+// Assicurati che l'handle sia visibile usando extern se sei in un altro file
+extern TaskHandle_t ParserTaskHandle; 
+
+static void _esp_now_rx_cb(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
+  // ... i tuoi controlli iniziali e i memcmp ...
+  
+  // ... le tue memcpy per il buffer circolare ...
+  // (assicurati di fare l'aggiornamento atomico del _writer come detto prima!)
+
+  // RIMUOVI QUESTA RIGA:
+  // SerialWireless.checkForRxPacket(); 
+
+  // AGGIUNGI QUESTE RIGHE:
+  // Sveglia il Task del parser istantaneamente dicendogli "C'è posta!"
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  vTaskNotifyGiveFromISR(ParserTaskHandle, &xHigherPriorityTaskWoken);
+  
+  if (xHigherPriorityTaskWoken) {
+      portYIELD_FROM_ISR(); // Cambia contesto all'istante
+  }
+}
+
+
+// ##############################################################################
+#endif // COMMENTO
 
 #endif //OPENFIRE_WIRELESS_ENABLE
