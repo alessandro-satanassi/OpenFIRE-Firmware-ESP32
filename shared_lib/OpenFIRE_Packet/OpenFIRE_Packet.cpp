@@ -17,7 +17,7 @@ void Packet::generateTable_crc()
 	}
 }
 	
-uint8_t Packet::calculate_crc(const uint8_t& val)
+uint8_t Packet::calculate_crc(uint8_t val)
 {
 	if (val < 256) return csTable_crc[val];
 	return 0;
@@ -54,7 +54,7 @@ void Packet::begin(Stream& _port, const bool& _debug, Stream& _debugPort, const 
 	generateTable_crc();
 }
 
-uint8_t Packet::constructPacket(const uint8_t& messageLen, const uint8_t& packetID)
+uint8_t Packet::constructPacket(uint8_t messageLen, uint8_t packetID)
 {
 	txBuff[2] = packetID;
 	txBuff[3] = messageLen;
@@ -70,7 +70,7 @@ uint8_t Packet::constructPacket(const uint8_t& messageLen, const uint8_t& packet
 	return (uint8_t)messageLen;
 }
 
-uint8_t Packet::parse(const uint8_t& recChar, const bool& valid)
+uint8_t Packet::parse(uint8_t recChar, bool valid)
 {
 	bool packet_fresh = (packetStart == 0) || ((millis() - packetStart) < timeout);
 	if (!packet_fresh) {
@@ -205,7 +205,7 @@ uint8_t Packet::currentPacketID()
 	return idByte;
 }
 
-void Packet::calcOverhead(uint8_t arr[], const uint8_t& len)
+void Packet::calcOverhead(uint8_t arr[], uint8_t len)
 {
 	overheadByte = MAX_COBS;  // 254 ===== //0xFF;
 
@@ -217,13 +217,13 @@ void Packet::calcOverhead(uint8_t arr[], const uint8_t& len)
 	}
 }
 
-int16_t Packet::findLast(uint8_t arr[], const uint8_t& len)
+int16_t Packet::findLast(uint8_t arr[], uint8_t len)
 {
 	for (uint8_t i = (len - 1); i != 0xFF; i--) if (arr[i] == START_BYTE) return i;
 	return -1;
 }
 
-void Packet::stuffPacket(uint8_t arr[], const uint8_t& len)
+void Packet::stuffPacket(uint8_t arr[], uint8_t len)
 {
 	int16_t refByte = findLast(arr, len);
 
@@ -237,7 +237,7 @@ void Packet::stuffPacket(uint8_t arr[], const uint8_t& len)
 	}
 }
 
-void Packet::unpackPacket(uint8_t arr[], const uint8_t &len)
+void Packet::unpackPacket(uint8_t arr[], uint8_t len)
 {
 	uint8_t testIndex = recOverheadByte;
 	uint8_t delta     = 0;

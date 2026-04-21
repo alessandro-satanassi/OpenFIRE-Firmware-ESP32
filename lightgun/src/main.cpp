@@ -424,6 +424,10 @@ void setup() {
         TinyUSBDevice.clearConfiguration();
         TinyUSBDevice.detach();
         Serial_OpenFIRE_Stream = &SerialWireless;
+        // ======================== POI SPOSTARLO
+        SerialWireless.connection_gun_at_pedal(); // 696969 POI DECIDERE DOVE METTERLO
+        // ===== FIEN POI SPOSTARLO ================
+
     }
     #endif
 

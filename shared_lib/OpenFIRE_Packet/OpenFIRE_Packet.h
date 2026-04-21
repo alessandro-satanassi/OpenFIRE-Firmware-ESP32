@@ -65,20 +65,20 @@ class Packet
 
 	void    begin(const configST& configs);
 	void    begin(Stream& _port, const bool& _debug = true, Stream& _debugPort = Serial, const uint32_t& _timeout = DEFAULT_TIMEOUT);
-	uint8_t constructPacket(const uint8_t& messageLen, const uint8_t& packetID = 0);
-	uint8_t parse(const uint8_t& recChar, const bool& valid = true);
+	uint8_t constructPacket(uint8_t messageLen, uint8_t packetID = 0);
+	uint8_t parse(uint8_t recChar, bool valid = true);
 	uint8_t currentPacketID();
 	void    reset();
 
 	template <typename T>
-	uint8_t txObj(const T* val, const uint8_t& index = 0, const uint8_t& len = sizeof(T))
+	uint8_t txObj(const T* val, uint8_t index = 0, uint8_t len = sizeof(T))
 	{
 		memcpy(&txBuff[PREAMBLE_SIZE + index], val, len);
 		return len + index;
 	}
 
 	template <typename T>
-	uint16_t rxObj(const T* val, uint8_t& index = 0, const uint8_t& len = sizeof(T))
+	uint16_t rxObj(const T* val, uint8_t index = 0, uint8_t len = sizeof(T))
 	{
 		memcpy(val, &txBuff[PREAMBLE_SIZE + index], len);
 		return len + index;
@@ -116,13 +116,13 @@ class Packet
 
 	uint8_t csTable_crc[256]; 
 	void generateTable_crc();
-	uint8_t calculate_crc(const uint8_t& val);
+	uint8_t calculate_crc(uint8_t val);
 	uint8_t calculate_crc(uint8_t arr[], uint8_t len);
 
-	void    calcOverhead(uint8_t arr[], const uint8_t& len);
-	int16_t findLast(uint8_t arr[], const uint8_t& len);
-	void    stuffPacket(uint8_t arr[], const uint8_t& len);
-	void    unpackPacket(uint8_t arr[], const uint8_t &len);
+	void    calcOverhead(uint8_t arr[], uint8_t len);
+	int16_t findLast(uint8_t arr[], uint8_t len);
+	void    stuffPacket(uint8_t arr[], uint8_t len);
+	void    unpackPacket(uint8_t arr[], uint8_t len);
 };
 
 #endif //OPENFIRE_WIRELESS_ENABLE

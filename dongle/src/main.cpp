@@ -141,6 +141,27 @@ void setup() {
   SerialWireless.init_wireless();
   SerialWireless.begin();
   SerialWireless.connection_dongle();
+
+  // =========== attesa segnale del pedale da parte della lightgun .. POI TOGLIERE ==================
+  #ifdef USES_DISPLAY   
+    tft.fillScreen(BLACK);
+    tft.drawBitmap(40, 0, customSplashBanner, CUSTSPLASHBANN_WIDTH, CUSTSPLASHBANN_HEIGHT, BLUE);
+    tft.setTextSize(2);
+    tft.setTextColor(RED);
+    tft.setCursor(0, 40);
+    tft.printf("Attesa PEDAL");
+  #endif // USES_DISPLAY
+
+  SerialWireless.is_pedal_wireless_comunication = false;
+  while (!SerialWireless.is_pedal_wireless_comunication) {
+
+    vTaskDelay(pdMS_TO_TICKS(500));
+  }
+
+
+
+
+  // ====================================================================
   // ====== fine gestione wireless .. va avanti solo dopo che si è accoppiato il dispositivo =======
 
   // ====== connessione USB ====== imposta VID e PID come quello che gli passa la pistola ===============

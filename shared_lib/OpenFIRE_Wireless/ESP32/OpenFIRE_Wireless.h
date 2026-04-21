@@ -159,6 +159,11 @@ enum CONNECTION_STATE {
   TX_CHECK_CONNECTION_LAST_DONGLE, //6  GUN -> DONGLE
   TX_CONFERM_CONNECTION_LAST_DONGLE, //7 DONGLE -> GUN
   DEVICES_CONNECTED_WITH_LAST_DONGLE, // 8
+  // ========================================
+  NONE_CONNECTION_PEDAL,
+  TX_CHECK_CONNECTION_LAST_PEDAL,
+  TX_CONFERM_CONNECTION_LAST_PEDAL, //7 DONGLE -> GUN
+  DEVICES_CONNECTED_WITH_LAST_PEDAL, // 8
   //======CONNESSIONE GUN - DONGLE =========================
   TX_GUN_SEARCH_DONGLE_BROADCAST,  //9
   TX_DONGLE_TO_GUN_PRESENCE,  //10
@@ -281,7 +286,7 @@ class SerialWireless_ : public Stream
   // ======== generiche ============
   void SendData();  // utilizziamo anche flush
   void SendData_sem();
-  void SendPacket(const uint8_t *data, const uint8_t &len,const uint8_t &packetID); // non penso lo utilizzeremo
+  void SendPacket(const uint8_t *data, uint8_t len,uint8_t packetID); // non penso lo utilizzeremo
 
   bool checkForRxPacket(); // andrà nel ciclo principale .. messo nella callback
 
@@ -309,6 +314,7 @@ void resetTimer_serial(uint64_t duration_us);
 //esp_timer_handle_t timer_handle_pedal;
 //bool last_pedal;
 //bool last_pedal2;
+volatile bool is_pedal_wireless_comunication; // poi va tolto serrve per prove
 
 private:
 

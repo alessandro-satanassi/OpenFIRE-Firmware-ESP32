@@ -1,7 +1,7 @@
 # GLOBAL RELEASE - FIRMWARE **LIGHTGUN** **DONGLE** **PEDAL** - OpenFIRE ESP32
 
 
-This release is updated to commit **80166a6** (January 16, 2026) of the original [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) firmware.
+This release is updated to commit **8b651a2** (April 19, 2026) of the original [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) firmware.
 
 > [!WARNING]
 > **PEDAL FIRMWARE NOTICE:** The download links for the **PEDAL** firmware are currently included for placeholders only. The pedal firmware is **NOT yet complete or functional**. A fully working version will be released with the next PreRelease.
@@ -106,8 +106,8 @@ The script will guide you through the installation and automatically search for 
 #### Compatibility
 Compatibility between **lightgun**, **dongle**, and **pedal** is guaranteed using the firmware listed above.
 
-To configure all lightgun features (pins, buttons, name, player, etc.), the original **OpenFIRE App** (commit **35e91f0** of January 16, 2026) **or later versions** is required:
-[Download for Linux](https://github.com/TeamOpenFIRE/OpenFIRE-App/actions/runs/21079466755) | [Download for Windows](https://github.com/TeamOpenFIRE/OpenFIRE-App/actions/runs/21079466753)
+To configure all lightgun features (pins, buttons, name, player, etc.), the original **OpenFIRE App** (commit **d0f3334** of April 19, 2026) **Release 3.0.3 - Tokinomiya Turbo: Hyper Fighting** is required:
+[Download OpenFIRE App Release 3.0.3](https://github.com/TeamOpenFIRE/OpenFIRE-App/releases/tag/v3.0.3)
 
 ---
 ---
@@ -115,7 +115,7 @@ To configure all lightgun features (pins, buttons, name, player, etc.), the orig
 # GLOBAL RELEASE - FIRMWARE **LIGHTGUN** **DONGLE** **PEDAL** - OpenFIRE ESP32
 
 
-Questa release è aggiornata al commit **80166a6** (16 gennaio 2026) del firmware originale [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware).
+Questa release è aggiornata al commit **8b651a2** (19 aprile 2026) del firmware originale [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware).
 
 > [!WARNING]
 > **AVVISO SUL FIRMWARE PEDAL:** I link per il download del firmware **PEDAL** sono attualmente presenti solo a scopo dimostrativo. Il firmware del pedale **NON è ancora completo né funzionante**. Il rilascio della versione operativa è previsto con la prossima PreRelease.
@@ -222,7 +222,7 @@ Lo script ti guiderà nell'installazione e cercherà automaticamente la porta se
 #### Compatibilità
 La compatibilità tra **lightgun**, **dongle** e **pedal** è garantita utilizzando i firmware sopra elencati.
 
-Per configurare la lightgun (pin, pulsanti, nome, player, ecc.) è richiesta l'**App OpenFIRE** originale (commit **35e91f0** del 16 gennaio 2026) **o versioni successive**:
-[Scarica per Linux](https://github.com/TeamOpenFIRE/OpenFIRE-App/actions/runs/21079466755) | [Scarica per Windows](https://github.com/TeamOpenFIRE/OpenFIRE-App/actions/runs/21079466753)
+Per configurare la lightgun (pin, pulsanti, nome, player, ecc.) è richiesta l'**App OpenFIRE** originale (commit **d0f3334** del 19 aprile 2026) **Release 3.0.3 - Tokinomiya Turbo: Hyper Fighting**:
+[Scarica OpenFIRE App Release 3.0.3](https://github.com/TeamOpenFIRE/OpenFIRE-App/releases/tag/v3.0.3)
 
 ---

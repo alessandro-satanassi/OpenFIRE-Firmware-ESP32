@@ -1,7 +1,7 @@
 # **LIGHTGUN** FIRMWARE - OpenFIRE ESP32
 
 
-This release is updated to commit **80166a6** (January 16, 2026) of the original [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) firmware.
+This release is updated to commit **8b651a2** (April 19, 2026) of the original [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) firmware.
 
 ### Supported Boards (ESP32-S3)
 - **ESP32_S3_WROOM1_DevKitC_1_N16R8**
@@ -46,8 +46,9 @@ This version of the **Lightgun** firmware is compatible with:
 * **Dongle** firmware version: ______ 
 * **Pedal** firmware version: ______ 
 
-To configure all lightgun features (pins, buttons, name, player, etc.), the original **OpenFIRE App** (commit **35e91f0** of January 16, 2026) **or later versions** is required:
-[Download for Linux](https://github.com/TeamOpenFIRE/OpenFIRE-App/actions/runs/21079466755) | [Download for Windows](https://github.com/TeamOpenFIRE/OpenFIRE-App/actions/runs/21079466753)
+To configure all lightgun features (pins, buttons, name, player, etc.), the original **OpenFIRE App** (commit **d0f3334** of April 19, 2026) **Release 3.0.3 - Tokinomiya Turbo: Hyper Fighting** is required:
+[Download OpenFIRE App Release 3.0.3](https://github.com/TeamOpenFIRE/OpenFIRE-App/releases/tag/v3.0.3)
+
 
 ---
 ---
@@ -55,7 +56,7 @@ To configure all lightgun features (pins, buttons, name, player, etc.), the orig
 # FIRMWARE **LIGHTGUN** - OpenFIRE ESP32
 
 
-Questa release è aggiornata al commit **80166a6** (16 gennaio 2026) del firmware originale [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware).
+Questa release è aggiornata al commit **8b651a2** (19 aprile 2026) del firmware originale [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware).
 
 ### Schede Supportate (ESP32-S3)
 - **ESP32_S3_WROOM1_DevKitC_1_N16R8**
@@ -100,7 +101,7 @@ Questa versione del firmware **Lightgun** è compatibile con:
 * Firmware **Dongle** versione: ______ 
 * Firmware **Pedale** versione: ______ 
 
-Per configurare la lightgun (pin, pulsanti, nome, player, ecc.) è richiesta l'**App OpenFIRE** originale (commit **35e91f0** del 16 gennaio 2026) **o versioni successive**:
-[Scarica per Linux](https://github.com/TeamOpenFIRE/OpenFIRE-App/actions/runs/21079466755) | [Scarica per Windows](https://github.com/TeamOpenFIRE/OpenFIRE-App/actions/runs/21079466753)
+Per configurare la lightgun (pin, pulsanti, nome, player, ecc.) è richiesta l'**App OpenFIRE** originale (commit **d0f3334** del 19 aprile 2026) **Release 3.0.3 - Tokinomiya Turbo: Hyper Fighting**:
+[Scarica OpenFIRE App Release 3.0.3](https://github.com/TeamOpenFIRE/OpenFIRE-App/releases/tag/v3.0.3)
 
 ---
