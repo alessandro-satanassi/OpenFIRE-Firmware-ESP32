@@ -1,27 +1,6 @@
-#ifndef USE_PERSPECTIVE_ADVANCED
-/*
- * @file OpenFIRE_Perspective.cpp
- * @brief Light Gun library for 4 LED setup
- * @n CPP file for Samco Light Gun 4 LED setup
- *
- * @copyright Samco, https://github.com/samuelballantyne, 2024
- * @copyright GNU Lesser General Public License
- *
- * @author [Sam Ballantyne](samuelballantyne@hotmail.com)
- * @version V1.0
- * @date 2024
+#ifdef USE_PERSPECTIVE_ADVANCED
 
-* Derived from Wiimote Whiteboard library:
-* Copyright 2021 88hcsif
-* Copyright (c) 2008 Stephane Duchesneau
-* by Stephane Duchesneau <stephane.duchesneau@gmail.com>
-* Ported from Johnny Lee's C# WiiWhiteboard project (Warper.cs file)
-
-*/
-
-
-
-#include "OpenFIRE_Perspective.h"
+#include "OpenFIRE_Perspective_Advanced.h"
 #include "math.h"
 
 void computeSquareToQuad(float* mat, float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3) {
@@ -151,5 +130,6 @@ int OpenFIRE_Perspective::getX() {
 int OpenFIRE_Perspective::getY() {
   return dstY;
 }
+
 
 #endif // USE_PERSPECTIVE_ADVANCED

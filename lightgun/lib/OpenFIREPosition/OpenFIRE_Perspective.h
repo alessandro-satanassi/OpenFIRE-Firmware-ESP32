@@ -1,3 +1,4 @@
+#ifndef USE_PERSPECTIVE_ADVANCED
 /*
  * @file OpenFIRE_Perspective.h
  * @brief Light Gun library for 4 LED setup
@@ -55,3 +56,5 @@ public:
 };
 
 #endif
+
+#endif // USE_PERSPECTIVE_ADVANCED

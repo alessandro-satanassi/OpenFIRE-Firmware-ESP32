@@ -58,7 +58,13 @@ uint32_t tone_duty_main = 0;
     TaskHandle_t task_loop1;
     void esploop1(void* pvParameters) {
         setup1();
-        for (;;) loop1();
+        for (;;) {
+            loop1();
+            // Blocca questo task per 1 millisecondo (o 1 tick).
+            // Questo permette all'Idle Task (priorità 0) di girare, 
+            // nutrire il Watchdog e pulire il sistema.
+            vTaskDelay(pdMS_TO_TICKS(1));
+        }
     }
 #endif
 // ======696969============= FINE GESTIONE DUAL CORE ESP32 ==== FINE INIZIALIZZAZIONE ============
@@ -69,8 +75,8 @@ void setup() {
 
 // ======== 696969 =========== X AVVIO DUAL CORE ESP32 =================================== 
 #if defined(ARDUINO_ARCH_ESP32) && defined(DUAL_CORE)
-    #define STACK_SIZE_SECOND_CORE 10000  // basta 4096 ???
-    #define PRIORITY_SECOND_CORE 0  // dovrebbe essere 1 ??? 3 ????
+    #define STACK_SIZE_SECOND_CORE 4096 // 10000  // basta 4096 ???
+    #define PRIORITY_SECOND_CORE 1   //   0  // tra 1 e 24 ?
     xTaskCreatePinnedToCore(
     esploop1,               /* Task function. */
     "loop1",                /* name of task. */
@@ -709,6 +715,15 @@ void loop1()
                 }
             }
         }
+        #ifndef COMMENTO
+        #if defined(ARDUINO_ARCH_ESP32) && defined(DUAL_CORE)
+        // Blocca questo task per 1 millisecondo (o 1 tick).
+        // Questo permette all'Idle Task (priorità 0) di girare, 
+        // nutrire il Watchdog e pulire il sistema.
+        vTaskDelay(pdMS_TO_TICKS(1));
+        //yield();
+        #endif // defined(ARDUINO_ARCH_ESP32) && defined(DUAL_CORE)
+        #endif // COMMENTO
     }
 }
 #endif // DUAL_CORE

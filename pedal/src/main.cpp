@@ -19,7 +19,7 @@ uint8_t buttons_state = 0;
 volatile uint8_t buttons_last_state = 0;
 volatile bool send_packet_pedal = false; // true se bisogna spedire un pacchetto
 #define DEBOUNCE_DELAY 15 // o meglio 20 ms ??// tempo di deboincing per pulsanti
-#define TIME_REPEAT_SEND (uint64_t)69000 // 50 ms // reinvias il pacchetto ogni tot ms solo se qualche buttone è premuto .. il valore va specificato in microsecondi quidi ms x 1000
+#define TIME_REPEAT_SEND (uint64_t)69000 // 50 ms // 69 reinvias il pacchetto ogni tot ms solo se qualche buttone è premuto .. il valore va specificato in microsecondi quidi ms x 1000
 #define NUM_BUTTONS 2
 
 struct Button {
@@ -36,14 +36,7 @@ Button buttons[NUM_BUTTONS] = {
 };
 
 void animTaskLink(void *pvParameters) {
-  
-  /*
-  for (uint8_t i = 0; i < 4; i++) {
-    pinMode(leds[i], OUTPUT);
-    digitalWrite(leds[i], LOW); 
-  }
-  */
-  
+   
   int currentLed = 0;
   int direction = 1;
 
@@ -77,7 +70,10 @@ void setup() {
   //TinyUSBDevices.begin(1);
   //TinyUSBDevice.begin(0);
   //SerialTinyUSB.begin(115200);
+  
+  #ifdef COMMENTO
   Serial.begin(115200);
+  #endif // COMMENTO
 
   // Configurazione Pedali (Ingressi con Pull-Up)
   for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
@@ -124,13 +120,15 @@ void setup() {
   //////////////////////////// FINE POI ANDRA' TOLDO /////////////////////////////////////////
   #endif // COMMENTO
 
-
+  #ifdef COMMENTO
+  //TEST
   //Serial.begin(115200);
   Serial.printf("\n\nWireless channel da USB_DATA = %d\n\n", usb_data_wireless.channel);
   Serial.printf("\n\nWireless channel da espnow_wifi_channel = %d\n\n", espnow_wifi_channel);
   Serial.printf("Mac PeerAddres: %02X:%02X:%02X:%02X:%02X:%02X\n", peerAddress[0], peerAddress[1], peerAddress[2], peerAddress[3], peerAddress[4], peerAddress[5]);
   Serial.printf("PreeAddres presente nei peer: %s\n", esp_now_is_peer_exist(peerAddress) ? "SI": "NO");
   Serial.printf("BROADCAST presente nei peer: %s\n", esp_now_is_peer_exist(BROADCAST_ADDR) ? "SI": "NO");
+  #endif // COMMENTO
 
   /*
   Serial.begin(9600);
@@ -144,6 +142,8 @@ void setup() {
 
   vTaskDelay(pdMS_TO_TICKS(150));
 
+
+  #ifdef COMMENTO
   //if ((usb_data_wireless.channel == espnow_wifi_channel) && (espnow_wifi_channel == 1))  {
   //SerialWireless.mac_esp_another_card, 6) != 0 && // controlla che sia nei peer la board da cui arrivano i paccheti
   //    memcmp(info->des_addr, peerAddress
@@ -156,7 +156,7 @@ void setup() {
     vTaskDelay(pdMS_TO_TICKS(1500));
 
   }
-
+  #endif // COMMENTO
 
   for (uint8_t i = 0; i < 4; i++) {
     //pinMode(leds[i], OUTPUT);
@@ -185,14 +185,12 @@ void setup() {
   esp_timer_create(&timer_args, &timer_handle_send_repeat);
   esp_timer_start_periodic(timer_handle_send_repeat, TIME_REPEAT_SEND);
   
-  //vTaskDelay(pdMS_TO_TICKS(5000));
-
+ 
 }
 
 
 void loop()
 {
-  //vTaskDelay(pdMS_TO_TICKS(5000));
 
   unsigned long millis_current = millis(); 
   
@@ -202,7 +200,6 @@ void loop()
   for (uint8_t i = 0; i < NUM_BUTTONS; i++, bitMask <<= 1) {
     if (!buttons[i].debounceTime) {
       buttons[i].currentState = buttons[i].pin >= 0 ? !(bool)digitalRead(buttons[i].pin) : false;
-      //gpio_get_level((gpio_num_t)buttons[i].pin);
       
       if (buttons[i].currentState) {
         buttons_state |= bitMask; 
@@ -230,8 +227,6 @@ void loop()
     }
   }
 
-  //vTaskDelay(pdMS_TO_TICKS(50000));
-
  
   if ((buttons_state != buttons_last_state) || (send_packet_pedal == true)) {
     // Invia pacchetto con posizione pedali alla lightgun - invia il byte buttons_state
@@ -248,7 +243,7 @@ void loop()
      
     send_packet_pedal = false;
 
-    #ifndef COMMENTO
+    #ifdef COMMENTO
      for (uint8_t i = 0; i < 4; i++) {
     //pinMode(leds[i], OUTPUT);
     digitalWrite(leds[i], LOW); 
@@ -263,9 +258,6 @@ void loop()
     digitalWrite(leds[usb_data_wireless.devicePlayer - 1], HIGH);
    #endif // COMMENTO
   }
-  
-
-  //vTaskDelay(pdMS_TO_TICKS(5000));
-  
+      
   vTaskDelay(pdMS_TO_TICKS(5));  // fai polling ogni 5ms
 }

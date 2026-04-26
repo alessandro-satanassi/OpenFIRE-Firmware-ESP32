@@ -18,16 +18,18 @@
     #include <OpenFIRE_Square.h>
 #endif // USE_SQUARE_ADVANCED
 
-#ifdef USE_POS_KALMAN_FILTER
-    #include <OpenFIRE_Kalman_Filter.h>
-#endif // USE_POS_KALMAN_FILTER
-
-#ifdef USE_POS_ONE_EURO_FILTER
-    #include <OpenFIRE_One_Euro_Filter.h>
-#endif // USE_POS_ONE_EURO_FILTER
+#ifdef USE_MULTI_ONE_EURO_FILTER 
+    #include <OpenFIRE_Multi_One_Euro_Filter.h>
+#endif // USE_MULTI_ONE_EURO_FILTER 
 
 #include <OpenFIRE_Diamond.h>
-#include <OpenFIRE_Perspective.h>
+
+#ifdef USE_PERSPECTIVE_ADVANCED
+    #include <OpenFIRE_Perspective_Advanced.h>
+#else
+    #include <OpenFIRE_Perspective.h>
+#endif
+
 #include <OpenFIREConst.h>
 #include <LightgunButtons.h>
 #include <TinyUSB_Devices.h>
@@ -161,23 +163,17 @@ public:
     //////////////////////////////////////////////////////////////////////////////////////////
     // ================================ 696969 for filter ==================================//
     //////////////////////////////////////////////////////////////////////////////////////////
-    #ifdef TEST_CAM   
-    static inline int positionX[4] = {0};
-    static inline int positionY[4] = {0};
-    #endif // TEST_CAM
-
-    #ifdef USE_POS_KALMAN_FILTER   
-        static inline int X_Kalman;
-        static inline int Y_Kalman;
-        static inline OpenFIRE_Kalman_Filter kf;
+    
+    static inline int X_pos[4];
+    static inline int Y_pos[4];
+    #ifdef USE_MULTI_ONE_EURO_FILTER   
+        // position
+        // 0 = Top_Left;
+        // 1 = Top_Right;
+        // 2 = Botton_Left;
+        // 3 = Botton_Right;      
+        static inline OpenFIRE_One_Euro_Multi oef_multi;
     #endif // USE_POS_KALMAN_FILTER
-
-    #ifdef USE_POS_ONE_EURO_FILTER   
-        static inline int X_One_Euro;
-        static inline int Y_One_Euro;
-        static inline OpenFIRE_One_Euro_Filter oef;
-    #endif // USE_POS_KALMAN_FILTER
-
 
     //////////////////////////////////////////////////////////////////////////////////////////
     // ================================ 696969 for filter ==================================//

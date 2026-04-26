@@ -209,22 +209,31 @@ class SerialWireless_ : public Stream
 
   // ======= per FIFO SERIAL ===============
   // ===== per write === buffer lineare ====
-  #define FIFO_SIZE_WRITE_SERIAL 128
+  #define FIFO_SIZE_WRITE_SERIAL 128 // deve essere una potenza di 2
   #define TIME_OUT_SERIAL_WRITE 3  // in seguito rimuovere o rideterminare in microsecondi
   #define TIMER_HANDLE_SERIAL_DURATION_MICROS 3000 // 3000 microsecondi un 3 millisecondi
   uint8_t bufferSerialWrite[FIFO_SIZE_WRITE_SERIAL];
   unsigned long startTimeSerialWrite = 0; // = millis(); // poi convertire in microsecondi // in seguito rimovere
   volatile uint16_t lenBufferSerialWrite = 0;
   esp_timer_handle_t timer_handle_serial;
+  // Nuove variabili TX Serial (Circolare)
+  volatile uint16_t _writerSerialWrite = 0;
+  volatile uint16_t _readerSerialWrite = 0;
+  const uint16_t MASK_WRITE_SERIAL = FIFO_SIZE_WRITE_SERIAL - 1;
+
   // ====== per read ====== buffer circolare =====
-  #define FIFO_SIZE_READ_SERIAL 200
+  #define FIFO_SIZE_READ_SERIAL 256 // deve essere una potenza di due
   uint8_t bufferSerialRead[FIFO_SIZE_READ_SERIAL];
   volatile uint16_t lenBufferSerialRead = 0;
   volatile uint16_t _writerSerialRead = 0;
   volatile uint16_t _readerSerialRead = 0;
   bool _overflow_bufferSerialRead = false; 
   void write_on_rx_serialBuffer(const uint8_t *data, int len);
+
+  // Maschera per RX Serial
+  const uint16_t MASK_READ_SERIAL = FIFO_SIZE_READ_SERIAL - 1;
   // ============================================
+  volatile bool _serial_needs_recovery = false;
 
   Packet  packet;
   
@@ -232,7 +241,7 @@ class SerialWireless_ : public Stream
   volatile uint16_t _readLen = 0;
   volatile uint16_t _writer = 0;
   volatile uint16_t _reader = 0;
-  #define FIFO_SIZE_READ 1024 // buffer lettura
+  #define FIFO_SIZE_READ 1024 // 1024, 2048, 4096 deve essere una potenza di 2 buffer lettura e si vuole ottimizzazione
   uint8_t _queue[FIFO_SIZE_READ];
   bool _overflow_read = false; 
   // fine per buffer lettura
@@ -241,7 +250,7 @@ class SerialWireless_ : public Stream
   volatile uint16_t writeIndex = 0;
   volatile uint16_t readIndex = 0;
   volatile uint16_t _writeLen = 0;
-  #define BUFFER_SIZE 1024 //buffer scrittura
+  #define BUFFER_SIZE 1024 //buffer scrittura  -- 1024, 2048, 4096 deve essere una potenza di 2
   uint8_t buffer[BUFFER_SIZE];
   bool _overflow_write = false; 
   // fine per buffer scrittura
@@ -272,20 +281,21 @@ class SerialWireless_ : public Stream
   // inserire da me per gestione buffer uscita
   size_t writeBin(uint8_t c);
   size_t writeBin(const uint8_t *data, size_t len);
-  void flushBin();
+  //void flushBin();
   int availableForWriteBin();
   bool flush_sem();
   // inserire da me per gestione buffer ingresso
   int peekBin();
-  int readBin();
+  int readBin(); // mai usata
   int availableBin();
+  int availableBufferSerialWrite();
 
   //inserito per gestire Packet
-  volatile uint16_t numAvailablePacket = 0;
-  int availablePacket();
+  //volatile uint16_t numAvailablePacket = 0;
+  //int availablePacket();
         
   // ======== generiche ============
-  void SendData();  // utilizziamo anche flush
+  //void SendData();  // utilizziamo anche flush
   void SendData_sem();
   void SendPacket(const uint8_t *data, uint8_t len,uint8_t packetID); // non penso lo utilizzeremo
 

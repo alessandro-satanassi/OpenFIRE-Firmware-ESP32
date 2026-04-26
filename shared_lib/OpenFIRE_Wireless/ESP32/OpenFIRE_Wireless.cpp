@@ -80,6 +80,10 @@ uint8_t espnow_wifi_power = OPENFIRE_ESPNOW_WIFI_POWER;      // FATTA VARIABILE 
   hid_gamepad16_report_t gamepad16Report_last_wifi = {0,0,0,0,0,0,0,0};
 #endif // OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
 
+volatile bool absmouse5Report_pending = false; 
+volatile bool keyReport_pending = false;
+volatile bool gamepad16Report_pending = false;
+
 
 #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
   bool espnow_wifi_power_auto = true;
@@ -105,12 +109,22 @@ SemaphoreHandle_t tx_sem = NULL; // usato per callbalck dio fine trasmissione es
 SemaphoreHandle_t mutex_tx_serial = NULL; // usato per trasmettere buffer seriale
 SemaphoreHandle_t mutex_writer_bin = NULL; // usato per trasmettere buffer seriale
 
+portMUX_TYPE mux_write_bin = portMUX_INITIALIZER_UNLOCKED;
+
+// Creazione del Mutex globale (da chiamare possibilmente in setup() se non lo crei globalmente)
+//SemaphoreHandle_t txMutex = xSemaphoreCreateMutex();
+
+static portMUX_TYPE mux_serial_tx = portMUX_INITIALIZER_UNLOCKED;
+static portMUX_TYPE mux_radio_tx = portMUX_INITIALIZER_UNLOCKED;
+
+
 uint8_t buffer_espnow[ESP_NOW_MAX_DATA_LEN];
 esp_now_peer_info_t peerInfo; // deve stare fuori funzioni da funzioni -- globale --variabile di utilità per configurazione
 
 static void _esp_now_rx_cb(const esp_now_recv_info_t *info, const uint8_t *data, int len); // callback esp_now
+static void _esp_now_tx_cb(const esp_now_send_info_t *tx_info, esp_now_send_status_t status);
 
-
+#ifdef COMMENTO
 #if ESP_IDF_VERSION_MAJOR == 5 && ESP_IDF_VERSION_MINOR <= 4
   // Codice per versioni fino alla 5.4
   static void _esp_now_tx_cb(const uint8_t *mac_addr, esp_now_send_status_t status); // callback esp_now
@@ -118,7 +132,7 @@ static void _esp_now_rx_cb(const esp_now_recv_info_t *info, const uint8_t *data,
   // Codice per versioni 5.5 o superiori
   static void _esp_now_tx_cb(const esp_now_send_info_t *tx_info, esp_now_send_status_t status); // callback esp_now // poer nuova versione IDF 55
 #endif
-
+#endif // COMMENTO
 
 void packet_callback_read_dongle(); // callback packet 
 void packet_callback_read_gun(); // callback packet
@@ -252,6 +266,170 @@ uint8_t calcolaPotenzaOttimale(int8_t rssi_remoto) {
 volatile uint8_t channel_display = espnow_wifi_channel;
 volatile uint8_t seconds_display = 30;
 volatile bool broadcast_receiver = false;  // ??????? non serve
+
+//////////////////////////////////////////////////////////////////////////////
+TaskHandle_t xUSBTaskHandle = NULL;
+
+void usbTask(void *pvParameters) {
+  // Teniamo traccia di chi ha il turno. 
+  // 0 = Mouse, 1 = Tastiera, 2 = Gamepad
+  static int currentRotation = 0; 
+
+  for (;;) {
+    // 1. METTI IN PAUSA IL TASK
+    // Si sveglierà istantaneamente se:
+    // - La radio riceve un dato nuovo (il tuo xTaskNotifyGive)
+    // - La USB ha finito di trasmettere (la callback tud_hid_report_complete_cb)
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+    // 2. CONTROLLO HARDWARE
+    // Procediamo solo se l'Endpoint HID è fisicamente libero
+    if (usbHid.ready()) {
+
+      // 3. ROTAZIONE ROUND-ROBIN
+      // Facciamo un ciclo di massimo 3 tentativi per trovare il primo dispositivo con dati pendenti
+      for (int i = 0; i < 3; i++) {
+        int target = (currentRotation + i) % 3;
+
+        // --- TURNO 0: MOUSE ---
+        if (target == 0 && absmouse5Report_pending) {
+          if (usbHid.sendReport(HID_RID_e::HID_RID_MOUSE, &absmouse5Report_last_wifi, sizeof(absmouse5Report_last_wifi))) {
+            absmouse5Report_pending = false; // Dato smaltito
+            currentRotation = 1;            // Prossimo giro tocca alla Tastiera
+            break; // IMPORTANTE: Usciamo dal for. Il buffer USB ora è pieno.
+          }
+        }
+        
+        // --- TURNO 1: TASTIERA ---
+        else if (target == 1 && keyReport_pending) {
+          if (usbHid.sendReport(HID_RID_e::HID_RID_KEYBOARD, &keyReport_last_wifi, sizeof(keyReport_last_wifi))) {
+            keyReport_pending = false; 
+            currentRotation = 2;            // Prossimo giro tocca al Gamepad
+            break; 
+          }
+        }
+        
+        // --- TURNO 2: GAMEPAD ---
+        else if (target == 2 && gamepad16Report_pending) {
+          if (usbHid.sendReport(HID_RID_e::HID_RID_GAMEPAD, &gamepad16Report_last_wifi, sizeof(gamepad16Report_last_wifi))) {
+            gamepad16Report_pending = false;
+            currentRotation = 0;            // Prossimo giro si riparte dal Mouse
+            break; 
+          }
+        }
+        
+      } // Fine del ciclo for
+    }
+    // Se arriviamo qui (che la USB fosse occupata o che abbiamo inviato un report),
+    // il task finisce il giro e torna a dormire all'inizio del for(;;)
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+TaskHandle_t xRadioTaskHandle = NULL;
+volatile bool radioFree = true;
+
+#ifdef COMMENTO
+void radioTask(void *pvParameters) {
+  while (1) {
+    // 1. Attesa ultra-efficiente (0% CPU)
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+    do {
+      if (SerialWireless._readLen > 0) {SerialWireless.checkForRxPacket();}
+      if (SerialWireless._writeLen > 0 && radioFree) {SerialWireless.SendData_sem();}
+    } while ((SerialWireless._writeLen > 0 && radioFree) || SerialWireless._readLen > 0);
+
+    /*
+    // 2. Priorità alla TRASMISSIONE (Spara subito i dati pronti)
+    if (radioLibera && RingBuffer_TX_HasData()) {
+      Invia_Pacchetto_ESPNOW(); // Operazione non bloccante
+    }
+    // 3. Ciclo di RICEZIONE (Svuota tutto il buffer)
+    while(RingBuffer_RX_HasData()) {
+      // Estrai i dati dal Ring Buffer SPSC (senza semafori!)
+      auto pacchetto = RingBuffer_RX_Pop();
+      // Lavoro "pesante"
+      decodificaCOBS(pacchetto);
+      if(calcolaCRC8(pacchetto)) {
+        Invia_Dati_a_PC_USB(pacchetto);
+      }
+      // 4. OTTIMIZZAZIONE CRUCIALE: 
+      // Mentre sei nel ciclo RX, controlla se la radio si è liberata.
+      // Se sì, infila un invio tra un pacchetto e l'altro!
+      if (radioLibera && RingBuffer_TX_HasData()) {
+        Invia_Pacchetto_ESPNOW();
+      }
+    }   
+*/
+
+  } 
+}
+#endif
+// ====== senza LEN ================
+#ifdef COMMENTO
+void radioTask(void *pvParameters) {
+  while (1) {
+    // 1. Aspettiamo un segnale (TX concluso, RX ricevuto o Nuovo dato dal Loop)
+    // pdTRUE resetta il contatore a zero non appena ci svegliamo.
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+    do {
+      // --- PRIORITÀ RICEZIONE ---
+      // Verifichiamo se ci sono dati in entrata (Lock-Free)
+      if (SerialWireless._reader != SerialWireless._writer) {
+        SerialWireless.checkForRxPacket();
+      }
+
+      // --- GESTIONE TRASMISSIONE ---
+      // Verifichiamo se possiamo inviare e se c'è qualcosa da inviare (Lock-Free)
+      if (radioFree && (SerialWireless.readIndex != SerialWireless.writeIndex)) {
+        SerialWireless.SendData_sem();
+      }
+
+      // Cicliamo finché c'è almeno un'operazione possibile per massimizzare il throughput
+    } while ((SerialWireless._reader != SerialWireless._writer) || 
+             (radioFree && (SerialWireless.readIndex != SerialWireless.writeIndex)));
+  } 
+}
+#endif
+
+void radioTask(void *pvParameters) {
+  while (1) {
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    
+    bool progress;
+    
+    do {
+      progress = false;
+
+      // 1. GESTIONE RICEZIONE (Invariata)
+      if (SerialWireless._reader != SerialWireless._writer) {
+        SerialWireless.checkForRxPacket();
+        progress = true;
+      }
+
+      // 2. GESTIONE SERIALE -> RECOVERY MODE!
+      // Interveniamo SOLO se il timer ha fallito in precedenza
+      if (SerialWireless._serial_needs_recovery && (SerialWireless.availableBufferSerialWrite() > 0)) {
+        if (SerialWireless.flush_sem()) {
+          // Salvataggio riuscito! Abbassiamo la bandierina.
+          // SerialWireless._serial_needs_recovery = false; // flush_sem() lo fa già da sola prima di restituire true.
+          progress = true; 
+        }
+      }
+
+      // 3. GESTIONE TRASMISSIONE RADIO (Invariata)
+      if (radioFree && (SerialWireless.readIndex != SerialWireless.writeIndex)) {
+        SerialWireless.SendData_sem();
+        progress = true;
+      }
+
+    } while (progress); 
+  } 
+}
+// =====================================
+
 
 /////////////////////////////////////////////////////////////////////////////
 // VERSIONE GRAFICA RICERCA CANALE PER GUN //////////////////////////////////
@@ -739,132 +917,230 @@ SerialWireless_::operator bool() {
 }
 
 int SerialWireless_::peek() {
-  if (lenBufferSerialRead) {
-    return bufferSerialRead[_readerSerialRead];
-  }
-  return -1;
+  if (_writerSerialRead == _readerSerialRead) return -1;
+  return bufferSerialRead[_readerSerialRead];
 }
 
 int SerialWireless_::peekBin() {
-  if (_readLen) {
-    return _queue[_reader];
-  }
-  return -1;
+  if (writeIndex == readIndex) return -1;
+  return buffer[readIndex];
 }
 
 int SerialWireless_::read() {
-  if (lenBufferSerialRead) {
-    uint8_t ret = bufferSerialRead[_readerSerialRead];
-    //lenBufferSerialRead --;
-    lenBufferSerialRead = lenBufferSerialRead - 1;
-    //_readerSerialRead ++;
-    _readerSerialRead = _readerSerialRead + 1;
-    if (_readerSerialRead >= FIFO_SIZE_READ_SERIAL) {
-      _readerSerialRead -= FIFO_SIZE_READ_SERIAL;
-    }
-    return ret;
-  }
-  return -1;  
+  uint16_t r = _readerSerialRead;
+  if (r == _writerSerialRead) return -1;
+
+  uint8_t ret = bufferSerialRead[r];
+  _readerSerialRead = (r + 1) & MASK_READ_SERIAL;
+  return (int)ret;
+}
+
+int SerialWireless_::readBin() {
+  uint16_t r = _reader;
+  uint16_t w = _writer;
+
+  if (r == w) return -1;
+  uint8_t ret = _queue[r];
+
+  const uint16_t MASK = FIFO_SIZE_READ - 1;
+  _reader = (r + 1) & MASK;
+  return (int)ret;
 }
 
 bool SerialWireless_::checkForRxPacket() {
-  uint16_t numAvailableBin = _readLen;
-  uint8_t dato;
-  for (uint16_t i = 0; i<numAvailableBin; i++) {
-    dato = (uint8_t) readBin();
-    if (dato == START_BYTE) packet.reset(); // si potrebbe anche togliere, ho aggiunto garanzia nel parse //resetta inizio pacchetto - // controllo dato .. se è uguale a packet::start_byte .. azzera tutto e fai partire da capo altrimenti
-    packet.parse(dato, true);
-  }
-  return true;
-}
+    // 1. Snapshot locale degli indici in questo preciso istante
+    uint16_t r = _reader;
+    uint16_t w = _writer; // Guardiamo dove è arrivata la callback ESP-NOW
+    const uint16_t MASK = FIFO_SIZE_READ - 1;
 
+    // 2. Calcolo Lock-Free dei dati disponibili
+    // Questa formula gestisce il wrap-around da sola in un ciclo di clock
+    uint16_t available = (w - r) & MASK;
+    
+    // Uscita rapida se non c'è nulla da leggere
+    if (available == 0) return false;
 
-int SerialWireless_::readBin() {
-  if (_readLen) {
-    uint8_t ret = _queue[_reader];
-    //_readLen --;
-    _readLen = _readLen - 1;
-    //_reader ++;
-    _reader = _reader + 1;
-    if (_reader >= FIFO_SIZE_READ) {
-      _reader -= FIFO_SIZE_READ;
+    // 3. Cache locale per massime prestazioni
+    uint8_t* queuePtr = _queue;
+
+    // 4. Ciclo di "svuotamento" rapido e Parsing
+    for (uint16_t i = 0; i < available; i++) {
+        uint8_t dato = queuePtr[r];
+        
+        // Il parser lavora in tempo reale.
+        packet.parse(dato, true); 
+
+        // Avanzamento con wrap-around bitwise
+        r = (r + 1) & MASK;
     }
-    return ret;
-  }
-  return -1;  
+
+    // --- BARRIERA DEL COMPILATORE ---
+    // Assicura che la CPU finisca fisicamente di leggere tutti i byte dalla RAM 
+    // PRIMA di dire all'ISR che lo spazio è di nuovo libero. 
+    asm volatile ("memw" : : : "memory");
+
+    // 5. Sincronizzazione finale ATOMICA
+    // Aggiorniamo _reader in RAM una sola volta. Appena viene eseguita questa riga,
+    // la callback RX capisce matematicamente che c'è nuovo spazio libero.
+    _reader = r;
+
+    return true;
 }
 
 int SerialWireless_::available() {
-  return lenBufferSerialRead;
+  // Distanza tra chi scrive e chi legge
+  return (_writerSerialRead - _readerSerialRead) & MASK_READ_SERIAL;
 }
 
 int SerialWireless_::availableBin() {
-  return _readLen;
+  return (writeIndex - readIndex) & (BUFFER_SIZE - 1);
 }
 
+// Quanti byte LIBERI rimangono nel buffer (Standard Arduino API)
 int SerialWireless_::availableForWrite() {
-  return FIFO_SIZE_WRITE_SERIAL - lenBufferSerialWrite;
+  return (_readerSerialWrite - _writerSerialWrite - 1) & MASK_WRITE_SERIAL;
+}
+
+// funzione di comodo
+// Quanti byte sono attualmente nel buffer in attesa di essere inviati
+int SerialWireless_::availableBufferSerialWrite() {
+  return (_writerSerialWrite - _readerSerialWrite) & MASK_WRITE_SERIAL;
 }
 
 int SerialWireless_::availableForWriteBin() {
-  return BUFFER_SIZE - _writeLen;
+  return (readIndex - writeIndex - 1) & (BUFFER_SIZE - 1);
 }
 
-// bloccante fino a quando il buffer seriale non è vuoto (non bloccante fino a quando sono stati inviati effettivamente i dati)
 void SerialWireless_::flush() {
-  esp_timer_stop(timer_handle_serial); // spegni timer
-  xSemaphoreTake(mutex_tx_serial, portMAX_DELAY); // prende semaforo / attende finchè è libero
-  while (lenBufferSerialWrite) {
-    flush_sem();
-    taskYIELD(); //yield();
-  }
-  
-  xSemaphoreGive(mutex_tx_serial);  // Rilascio il semaforo dopo la callback
-  
-}
-
-// decidere se controllare se è vuoto anche il buffer_bin
-bool SerialWireless_::flush_sem() { // è bloccante e non esce fino a quando il buffer di uscita è completamente vuoto // in virtual com con TinyUISB non è bloccante .. invia il pacchetto più grande che può e ritorna
-  if (lenBufferSerialWrite) {
-    if ((BUFFER_SIZE - _writeLen) > (lenBufferSerialWrite + PREAMBLE_SIZE + POSTAMBLE_SIZE)) {
-      memcpy(&packet.txBuff[PREAMBLE_SIZE], bufferSerialWrite, lenBufferSerialWrite);
-      packet.constructPacket(lenBufferSerialWrite, PACKET_TX::SERIAL_TX);
-      writeBin(packet.txBuff, lenBufferSerialWrite + PREAMBLE_SIZE+POSTAMBLE_SIZE);
-      lenBufferSerialWrite = 0;
-      SendData(); // completata la transizione lasciare solo questo
-      return true;
+  // 1. Il flush deve attendere finché ci sono dati nel buffer di scrittura seriale
+  while (availableBufferSerialWrite() > 0) {
+    
+    // 2. Chiamiamo flush_sem(). 
+    // Non serve prendere il Mutex qui perché flush_sem() al suo interno 
+    // usa già lo Spinlock (portENTER_CRITICAL) per proteggere i puntatori.
+    if (!flush_sem()) {
+      // Se flush_sem() restituisce false, significa che il buffer RADIO è pieno.
+      // Dobbiamo dare tempo al radioTask di trasmettere per liberare spazio.
+      taskYIELD(); 
     }
-    else SendData();
+    
+    // Un piccolo respiro per non "sequestrare" il Core se il buffer è molto grande
+    taskYIELD(); 
   }
-  return false;
 }
 
-void SerialWireless_::flushBin() { // mai usata
-  SendData();
-}
+bool SerialWireless_::flush_sem() {
+  bool packed_data = false;
+  
+  // 1. Lucchetto Seriale
+  portENTER_CRITICAL(&mux_serial_tx);
 
-void SerialWireless_::SendData() {
-  if (xSemaphoreTake(tx_sem, 0) == pdTRUE) {
-    xSemaphoreTake(mutex_writer_bin, portMAX_DELAY);
-    if (_writeLen > 0) {
-       SendData_sem();
-    } else xSemaphoreGive(tx_sem);
-    xSemaphoreGive(mutex_writer_bin);
+  uint16_t w = _writerSerialWrite;
+  uint16_t r = _readerSerialWrite;
+  uint16_t available_tx = (w - r) & MASK_WRITE_SERIAL;
+
+  if (available_tx > 0) {
+    // 2. LUCCHETTO RADIO PRIMA DI CONTARE LO SPAZIO!
+    // Ora nessuno può rubarci lo spazio mentre calcoliamo il pacchetto
+    portENTER_CRITICAL(&mux_radio_tx);
+
+    uint16_t space_in_radio = availableForWriteBin();
+    const uint16_t overhead = PREAMBLE_SIZE + POSTAMBLE_SIZE;
+
+    if (space_in_radio > overhead) {
+      uint16_t max_payload = space_in_radio - overhead;
+      uint16_t len_to_pack = std::min((uint16_t)available_tx, std::min((uint16_t)200, max_payload));
+
+      uint16_t firstChunk = FIFO_SIZE_WRITE_SERIAL - r;
+      if (firstChunk < len_to_pack) {
+        memcpy(&packet.txBuff[PREAMBLE_SIZE], &bufferSerialWrite[r], firstChunk);
+        memcpy(&packet.txBuff[PREAMBLE_SIZE + firstChunk], &bufferSerialWrite[0], len_to_pack - firstChunk);
+      } else {
+        memcpy(&packet.txBuff[PREAMBLE_SIZE], &bufferSerialWrite[r], len_to_pack);
+      }
+
+      packet.constructPacket(len_to_pack, PACKET_TX::SERIAL_TX);
+      
+      writeBin(packet.txBuff, len_to_pack + overhead);
+      
+      _readerSerialWrite = (r + len_to_pack) & MASK_WRITE_SERIAL;
+      packed_data = true;
+    }
+    
+    // Rilasciamo la radio
+    portEXIT_CRITICAL(&mux_radio_tx);
   }
+
+  // Rilasciamo la seriale
+  portEXIT_CRITICAL(&mux_serial_tx); 
+
+  // API di sistema
+  if (packed_data) {
+    esp_timer_stop(timer_handle_serial);
+    xTaskNotifyGive(xRadioTaskHandle);
+    _serial_needs_recovery = false;
+    return true;
+  }
+
+  return false; 
 }
 
 void SerialWireless_::SendData_sem() {
-  uint16_t len_tx = _writeLen > ESP_NOW_MAX_DATA_LEN ? ESP_NOW_MAX_DATA_LEN : _writeLen;
-  uint16_t bytesToSendEnd = len_tx > (BUFFER_SIZE - readIndex) ? BUFFER_SIZE - readIndex : len_tx;
-  memcpy(buffer_espnow, &buffer[readIndex], bytesToSendEnd);
-  if (len_tx > bytesToSendEnd) {
-    memcpy(&buffer_espnow[bytesToSendEnd], &buffer[0], len_tx - bytesToSendEnd);
+  // 1. Snapshot locale degli indici
+  const uint16_t r = readIndex;
+  const uint16_t w = writeIndex; // Guardiamo dove è arrivato il produttore in questo istante
+  const uint16_t MASK = BUFFER_SIZE - 1;
+
+  // 2. Calcolo Lock-Free dei dati disponibili
+  // Questa formula gestisce il wrap-around automaticamente
+  const uint16_t available_data = (w - r) & MASK;
+
+  // 3. Uscita rapida se non c'è nulla da spedire
+  if (available_data == 0) return;
+
+  uint16_t len_tx = available_data;
+
+  // 4. ALLINEAMENTO PACCHETTI (Prevenzione "taglio")
+  if (available_data > ESP_NOW_MAX_DATA_LEN) {
+    uint16_t aligned_len = 0;
+    
+    // Scansione a ritroso dal limite fisico.
+    for (uint16_t i = ESP_NOW_MAX_DATA_LEN; i > 0; i--) {
+      if (buffer[(r + i) & MASK] == START_BYTE) {
+        aligned_len = i; 
+        break;
+      }
+    }
+
+    len_tx = (aligned_len > 0) ? aligned_len : ESP_NOW_MAX_DATA_LEN;
   }
+
+  // 5. COPIA BATCH
+  const uint16_t firstChunk = BUFFER_SIZE - r;
+  
+  if (firstChunk < len_tx) {
+    const uint16_t secondChunk = len_tx - firstChunk;
+    memcpy(buffer_espnow, &buffer[r], firstChunk);
+    memcpy(&buffer_espnow[firstChunk], &buffer[0], secondChunk);
+  } else {
+    memcpy(buffer_espnow, &buffer[r], len_tx);
+  }
+
+// 6. INVIO E AGGIORNAMENTO
   esp_err_t result = esp_now_send(peerAddress, buffer_espnow, len_tx);
-  if (result == ESP_OK) { // verificare se esistono casi in cui seppur non risporta ESP_OK vengono trasmessi lo steso
-    readIndex += len_tx; 
-    if (readIndex >= BUFFER_SIZE) { readIndex -= BUFFER_SIZE; }
-    _writeLen -= len_tx;
+  
+  if (result == ESP_OK) {
+    radioFree = false; 
+    
+    // Aggiornamento ATOMICO
+    readIndex = (r + len_tx) & MASK; 
+  } else {
+    // IL FREEZE SANO:
+    // L'invio è fallito (es. peer spento/interferenza).
+    // Non avanziamo readIndex per non perdere i dati seriali vitali.
+    // Ma diamo 1 ms di pausa al sistema per non far intervenire il Watchdog
+    // e prevenire un riavvio forzato della Lightgun.
+    vTaskDelay(pdMS_TO_TICKS(1));
   }
 }
 
@@ -877,100 +1153,155 @@ size_t SerialWireless_::writeBin(uint8_t c) {
 }
 
 size_t SerialWireless_::write(const uint8_t *data, size_t len) {
-  size_t len_remainer = len;
-  size_t pos_remainer = 0;
+  size_t written = 0;
+  bool start_timer = false; // Flag di sicurezza
 
-  xSemaphoreTake(mutex_tx_serial, portMAX_DELAY);
-  while (len_remainer > 0) {
-    size_t available_space = FIFO_SIZE_WRITE_SERIAL - lenBufferSerialWrite;
-    if (available_space >= len_remainer) {
-      memcpy(&bufferSerialWrite[lenBufferSerialWrite], &data[pos_remainer], len_remainer);
-      if (lenBufferSerialWrite == 0) {
+  while (written < len) {
+    start_timer = false; // Resettiamo a ogni ciclo
+    
+    portENTER_CRITICAL(&mux_serial_tx); // --- INIZIO LOCK ---
+
+    uint16_t w = _writerSerialWrite;
+    uint16_t r = _readerSerialWrite;
+    uint16_t free_space = (r - w - 1) & MASK_WRITE_SERIAL;
+
+    if (free_space > 0) {
+      size_t toWrite = std::min((size_t)free_space, len - written);
+      uint16_t firstChunk = FIFO_SIZE_WRITE_SERIAL - w;
+      
+      if (firstChunk < toWrite) {
+        memcpy(&bufferSerialWrite[w], &data[written], firstChunk);
+        memcpy(&bufferSerialWrite[0], &data[written + firstChunk], toWrite - firstChunk);
+      } else {
+        memcpy(&bufferSerialWrite[w], &data[written], toWrite);
+      }
+
+      if (w == r) {
+        start_timer = true; // Alziamo la flag invece di chiamare l'API
+      }
+
+      asm volatile ("memw" : : : "memory");
+      _writerSerialWrite = (w + toWrite) & MASK_WRITE_SERIAL;
+      
+      portEXIT_CRITICAL(&mux_serial_tx); // --- FINE LOCK ---
+
+      // Ora siamo al sicuro: avviamo il timer se necessario!
+      if (start_timer) {
         esp_timer_start_once(timer_handle_serial, TIMER_HANDLE_SERIAL_DURATION_MICROS);
       }
-      lenBufferSerialWrite += len_remainer;
-      len_remainer = 0;
-    } else {
-      if (len_remainer == len) esp_timer_stop(timer_handle_serial);
-      if (available_space) {
-        memcpy(&bufferSerialWrite[lenBufferSerialWrite], &data[pos_remainer], available_space);
-        lenBufferSerialWrite = FIFO_SIZE_WRITE_SERIAL;
-        pos_remainer += available_space;
-        len_remainer -= available_space;
+
+      written += toWrite;
+      xTaskNotifyGive(xRadioTaskHandle);
+    } 
+    else {
+      portEXIT_CRITICAL(&mux_serial_tx);
+      
+      if (!flush_sem()) {
+        taskYIELD(); 
       }
-      flush_sem();
     }
-    taskYIELD();
   }
-  xSemaphoreGive(mutex_tx_serial);
-  return len;
+  return written;
 }
 
 size_t SerialWireless_::writeBin(const uint8_t *data, size_t len) {
-  
-  xSemaphoreTake(mutex_writer_bin, portMAX_DELAY);
-  
-  if ((BUFFER_SIZE - _writeLen) >= len) {
-    size_t firstChunk = BUFFER_SIZE - writeIndex;
-    if (firstChunk < len) {
-      memcpy(&buffer[writeIndex], data, firstChunk);
-      writeIndex = len - firstChunk;  
-      memcpy(&buffer[0], data + firstChunk, writeIndex);
-    }
-    else {
-      memcpy(&buffer[writeIndex], data, len);
-      writeIndex += len;
-      if (writeIndex == BUFFER_SIZE) writeIndex = 0;
-    }
-    _writeLen += len;
-    xSemaphoreGive(mutex_writer_bin);
-    return len;
-  }
-  else {
+  // 1. Usa lo stesso lucchetto di SendPacket per coerenza e velocità
+  portENTER_CRITICAL(&mux_radio_tx);
+
+  uint16_t w = writeIndex;
+  uint16_t r = readIndex;
+  const uint16_t MASK = BUFFER_SIZE - 1;
+
+  // 2. Calcolo dello spazio (Regola del Meno Uno) - PERFETTO
+  uint16_t free_space = (r - w - 1) & MASK;
+
+  if (free_space < len) {
     _overflow_write = true;
-    // TODO: gestire overflow
-    //Serial.println("Overflow nello scrivere nel BUFFER scrittura");   
-    xSemaphoreGive(mutex_writer_bin);
-    return 0;
+    portEXIT_CRITICAL(&mux_radio_tx); 
+    return 0; 
   }
+
+  // 3. COPIA BATCH (Wrap-around logic) - PERFETTA
+  uint16_t firstChunk = BUFFER_SIZE - w;
+
+  if (firstChunk < len) {
+    memcpy(&buffer[w], data, firstChunk);
+    memcpy(&buffer[0], data + firstChunk, len - firstChunk);
+  } else {
+    memcpy(&buffer[w], data, len);
+  }
+
+  // 4. BARRIERA DI MEMORIA - Fondamentale per ESP32/Xtensa
+  asm volatile ("memw" : : : "memory");
+
+  // 5. Aggiornamento dell'indice - Atomico
+  writeIndex = (w + len) & MASK; 
+
+  portEXIT_CRITICAL(&mux_radio_tx);
+
+  return len;
 }
 
 void SerialWireless_::SendPacket(const uint8_t *data, uint8_t len, uint8_t packetID) { 
-  
-  if ((BUFFER_SIZE - _writeLen) > (len + PREAMBLE_SIZE + POSTAMBLE_SIZE)) {
-    memcpy(&packet.txBuff[PREAMBLE_SIZE], data, len);
+  const uint16_t totalLen = len + PREAMBLE_SIZE + POSTAMBLE_SIZE;
+
+  // 1. Entriamo in sezione critica (Spinlock hardware)
+  // Velocissimo, protegge il "tavolo da lavoro" packet.txBuff da altri Core o Task
+  portENTER_CRITICAL(&mux_radio_tx);
+
+  // 2. Snapshot Lock-Free dello spazio disponibile
+  uint16_t w = writeIndex;
+  uint16_t r = readIndex;
+  const uint16_t MASK = BUFFER_SIZE - 1;
+  uint16_t free_space = (r - w - 1) & MASK; 
+
+  // 3. Se c'è spazio, costruiamo e scriviamo subito
+  if (free_space >= totalLen) {
+    uint8_t* pDest = packet.txBuff;
+
+    // Copiamo i dati e costruiamo il pacchetto nel buffer temporaneo
+    memcpy(&pDest[PREAMBLE_SIZE], data, len);
     packet.constructPacket(len, packetID);
-    writeBin(packet.txBuff, len + PREAMBLE_SIZE + POSTAMBLE_SIZE);
-    SendData(); // try_Send
+    
+    // Inseriamo nel Ring Buffer principale
+    // (Dato che siamo già in sezione critica, writeBin sarà un fulmine)
+    writeBin(pDest, totalLen);
+    
+    // Usciamo dalla sezione critica prima di notificare
+    portEXIT_CRITICAL(&mux_radio_tx);
+
+    // 4. Svegliamo il radioTask
+    xTaskNotifyGive(xRadioTaskHandle);
+  } 
+  else {
+    portEXIT_CRITICAL(&mux_radio_tx);
+    _overflow_write = true;
   }
 }
 
 void SerialWireless_::write_on_rx_serialBuffer(const uint8_t *data, int len) {
-  if ((FIFO_SIZE_READ_SERIAL - lenBufferSerialRead) >= len) {
-    size_t firstChunk = FIFO_SIZE_READ_SERIAL - _writerSerialRead;
+  uint16_t w = _writerSerialRead;
+  uint16_t r = _readerSerialRead;
+  
+  // Calcolo spazio libero (Regola del Meno Uno)
+  uint16_t free_space = (r - w - 1) & MASK_READ_SERIAL;
+
+  if (free_space >= len) {
+    uint16_t firstChunk = FIFO_SIZE_READ_SERIAL - w;
     if (firstChunk < len) {
-      memcpy(&bufferSerialRead[_writerSerialRead], data, firstChunk);
-      _writerSerialRead = len - firstChunk;  
-      memcpy(&bufferSerialRead[0], data + firstChunk, _writerSerialRead);
+      memcpy(&bufferSerialRead[w], data, firstChunk);
+      memcpy(&bufferSerialRead[0], data + firstChunk, len - firstChunk);
+    } else {
+      memcpy(&bufferSerialRead[w], data, len);
     }
-    else {
-      memcpy(&bufferSerialRead[_writerSerialRead], data, len);
-      _writerSerialRead += len;
-      if (_writerSerialRead == FIFO_SIZE_READ_SERIAL) _writerSerialRead = 0;
-    }
-    lenBufferSerialRead += len;
-  }
-  else {
+    
+    // Barriera di memoria prima di aggiornare il puntatore
+    asm volatile ("memw" : : : "memory");
+    _writerSerialRead = (w + len) & MASK_READ_SERIAL;
+  } else {
     _overflow_bufferSerialRead = true;
-    // TODO: gestire overflow
-    //Serial.println("Overflow nello scrivere nel BUFFER lettura del SERIAL BUFFER");
   }
 }
-
-int SerialWireless_::availablePacket() {
-  return numAvailablePacket;
-}
-
 
 void SerialWireless_::init_wireless() {
   configST myConfig; // variabile di utilità per configurazione
@@ -995,6 +1326,30 @@ void SerialWireless_::init_wireless() {
   packet.begin(myConfig);
 
   setupTimerSerial(); // crea i timer .. timer per invio dati seriali
+
+  // ========= AGGIUNTA PER NUOVA GESTIONE TRASMISSIONE RICEZIONE RADIO X TUTTI===============
+  xTaskCreatePinnedToCore(
+        radioTask,          // funzione del task
+        "radioTask",        // nome
+        4096,              // stack size
+        NULL,              // parametri
+        15,                 // priorità ALTA DA 1 A 24 ?
+        &xRadioTaskHandle,   // handle
+        APP_CPU_NUM        // core (puoi usare 0 o 1)
+      );
+  // ========== FINE AGGIUNTA PER NUOVA GESTIONE =================
+
+  // ========= AGGIUNTA PER NUOVA GESTIONE DONGLE USB (SERVE SOLO AL DONGLE) ===============
+  xTaskCreatePinnedToCore(
+        usbTask,          // funzione del task
+        "usbTask",        // nome
+        4096,              // stack size
+        NULL,              // parametri
+        10,                 // priorità ALTA DA 1 A 24 ?
+        &xUSBTaskHandle,   // handle
+        APP_CPU_NUM        // core (puoi usare 0 o 1) APP_CPU_NUM = 1 (dove gira il loop) PRO_CPU_NUM = 0 (dove gira freertos, wifi, ecc.)
+      );
+  // ========== FINE AGGIUNTA PER NUOVA GESTIONE =================
 
 }
 
@@ -1159,7 +1514,7 @@ bool SerialWireless_::connection_dongle() {
   }
   #endif // USES_DISPLAY
 
-  #define TIMEOUT_GUN_DIALOGUE 1000 // in millisecondi   ?????????????????????????
+  #define TIMEOUT_DONGLE_DIALOGUE 2000 //  1000 // in millisecondi   ?????????????????????????
   unsigned long lastMillis_start_dialogue = millis ();
   
   
@@ -1175,7 +1530,7 @@ bool SerialWireless_::connection_dongle() {
     if (stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) {
       lastMillis_start_dialogue = millis ();
     }
-    if (((millis() - lastMillis_start_dialogue) > TIMEOUT_GUN_DIALOGUE) && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
+    if (((millis() - lastMillis_start_dialogue) > TIMEOUT_DONGLE_DIALOGUE) && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
       stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
     }
     taskYIELD();
@@ -1290,9 +1645,9 @@ bool SerialWireless_::connection_gun() {
   
   
   uint8_t channel = espnow_wifi_channel;   // tra e 1 e 13 (il 14 dovrebbe essere riservato)
-  #define TIMEOUT_TX_PACKET 500 // in millisecondi
-  #define TIMEOUT_CHANGE_CHANNEL 2000 // in millisecondi - cambia canale ogni
-  #define TIMEOUT_DIALOGUE 6000 // in millisecondi - tempo massimo per completare operazione accoppiamento
+  #define TIMEOUT_GUN_TX_PACKET 80  // 500 // in millisecondi
+  #define TIMEOUT_GUN_CHANGE_CHANNEL 250  // 2000 // in millisecondi - cambia canale ogni
+  #define TIMEOUT_GUN_DIALOGUE 3000  //  6000 // in millisecondi - tempo massimo per completare operazione accoppiamento
   unsigned long lastMillis_tx_packet = millis ();
   unsigned long lastMillis_change_channel = millis ();
   unsigned long lastMillis_start_dialogue = millis ();
@@ -1325,8 +1680,8 @@ bool SerialWireless_::connection_gun() {
 
   while (!TinyUSBDevice.mounted() && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
     if (stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) {
-      if (((millis() - lastMillis_change_channel) > TIMEOUT_CHANGE_CHANNEL) && 
-         ((millis() - lastMillis_tx_packet)) >= (TIMEOUT_TX_PACKET - 50)) {  // aggiunta impostato 50 ms come margine, per evitare che quando invia pacchetto cambi subito casnale senza dare possibilità risposta
+      if (((millis() - lastMillis_change_channel) > TIMEOUT_GUN_CHANGE_CHANNEL) && 
+         ((millis() - lastMillis_tx_packet)) >= (TIMEOUT_GUN_TX_PACKET - 50)) {  // aggiunta impostato 50 ms come margine, per evitare che quando invia pacchetto cambi subito casnale senza dare possibilità risposta
         //channel++;
         //if (channel >13) channel = 1;
         aux_buffer_tx[13] = channel;
@@ -1347,7 +1702,7 @@ bool SerialWireless_::connection_gun() {
         channel++;
         if (channel >13) channel = 1;// per fare inviare subito un pacchetto sul nuovo canale
       }
-      if ((millis() - lastMillis_tx_packet) > TIMEOUT_TX_PACKET) {
+      if ((millis() - lastMillis_tx_packet) > TIMEOUT_GUN_TX_PACKET) {
         SerialWireless.SendPacket((const uint8_t *)aux_buffer_tx, 14, PACKET_TX::CONNECTION); // aggiunto un byte per trasmettere anche il canale di trasmissione
         //Serial.print("DONGLE - inviato pacchetto broadcast sul canale: ");
         //Serial.println(channel);
@@ -1356,7 +1711,7 @@ bool SerialWireless_::connection_gun() {
       lastMillis_start_dialogue = millis();
     }
     else {
-      if (((millis() - lastMillis_start_dialogue) > TIMEOUT_DIALOGUE) && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
+      if (((millis() - lastMillis_start_dialogue) > TIMEOUT_GUN_DIALOGUE) && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
         stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
         //Serial.println("DONGLE - Non si è conclusa la negoziazione tra DONGLE/GUN e si riparte da capo");
         lastMillis_change_channel = millis ();
@@ -1444,10 +1799,10 @@ bool SerialWireless_::connection_gun_at_pedal() {
   #endif // USES_DISPLAY
   
   
-  uint8_t seconds = 30;  
-  #define TIMEOUT_TX_PACKET 500 // in millisecondi
-  #define TIMEOUT_CHANGE_SECONDS 1000 // in millisecondi - cambia canale ogni
-  #define TIMEOUT_DIALOGUE 6000 // in millisecondi - tempo massimo per completare operazione accoppiamento
+  uint8_t seconds = 10;  
+  #define TIMEOUT_GUN_AT_PEDAL_TX_PACKET 50 //500 // in millisecondi
+  #define TIMEOUT_GUN_AT_PEDAL_CHANGE_SECONDS 1000 // in millisecondi - cambia canale ogni
+  #define TIMEOUT_GUN_AT_PEDAL_DIALOGUE 3000 //6000 // in millisecondi - tempo massimo per completare operazione accoppiamento
   unsigned long lastMillis_tx_packet = millis ();
   unsigned long lastMillis_change_seconds = millis ();
   unsigned long lastMillis_start_dialogue = millis ();
@@ -1483,8 +1838,8 @@ bool SerialWireless_::connection_gun_at_pedal() {
   
   while ( (seconds > 1) && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
     if (stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) {
-      if (((millis() - lastMillis_change_seconds) > TIMEOUT_CHANGE_SECONDS) && 
-         ((millis() - lastMillis_tx_packet)) >= (TIMEOUT_TX_PACKET - 50)) {  // aggiunta impostato 50 ms come margine, per evitare che quando invia pacchetto cambi subito casnale senza dare possibilità risposta
+      if (((millis() - lastMillis_change_seconds) > TIMEOUT_GUN_AT_PEDAL_CHANGE_SECONDS) && 
+         ((millis() - lastMillis_tx_packet)) >= (TIMEOUT_GUN_AT_PEDAL_TX_PACKET - 50)) {  // aggiunta impostato 50 ms come margine, per evitare che quando invia pacchetto cambi subito casnale senza dare possibilità risposta
         //channel++;
         //if (channel >13) channel = 1;
         aux_buffer_tx[13] = espnow_wifi_channel;
@@ -1495,7 +1850,7 @@ bool SerialWireless_::connection_gun_at_pedal() {
         
         seconds--;
       }
-      if ((millis() - lastMillis_tx_packet) > TIMEOUT_TX_PACKET) {
+      if ((millis() - lastMillis_tx_packet) > TIMEOUT_GUN_AT_PEDAL_TX_PACKET) {
         // ??????????????????????? siatemare per gestione pedal di SendPacket ????????????????? .. ci vorrà un buffer per ogni peer o gestire diversamente le cose a seconda di chi si trasmettono i dati oppure si sposta provvisoriamente il peeraddres solo durante ricerca pedale
         SerialWireless.SendPacket((const uint8_t *)aux_buffer_tx, 14, PACKET_TX::CONNECTION_PEDAL); // aggiunto un byte per trasmettere anche il canale di trasmissione
         //Serial.print("DONGLE - inviato pacchetto broadcast sul canale: ");
@@ -1505,7 +1860,7 @@ bool SerialWireless_::connection_gun_at_pedal() {
       lastMillis_start_dialogue = millis();
     }
     else {
-      if (((millis() - lastMillis_start_dialogue) > TIMEOUT_DIALOGUE) && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
+      if (((millis() - lastMillis_start_dialogue) > TIMEOUT_GUN_AT_PEDAL_DIALOGUE) && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
         stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
         //Serial.println("DONGLE - Non si è conclusa la negoziazione tra DONGLE/GUN e si riparte da capo");
         lastMillis_change_seconds = millis ();
@@ -1590,8 +1945,8 @@ bool SerialWireless_::connection_pedal() {
     
   uint8_t channel = espnow_wifi_channel;   // tra e 1 e 13 (il 14 dovrebbe essere riservato)
   
-  #define TIMEOUT_CHANGE_CHANNEL 2000 // in millisecondi - cambia canale ogni
-  #define TIMEOUT_DIALOGUE 6000 // in millisecondi - tempo massimo per completare operazione accoppiamento
+  #define TIMEOUT_PEDAL_CHANGE_CHANNEL 150 // 2000 // in millisecondi - cambia canale ogni
+  #define TIMEOUT_PEDAL_DIALOGUE 3000 // 6000 // in millisecondi - tempo massimo per completare operazione accoppiamento
   unsigned long lastMillis_change_channel = millis ();
   unsigned long lastMillis_start_dialogue = millis ();
   
@@ -1603,7 +1958,7 @@ bool SerialWireless_::connection_pedal() {
 
   while (stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
     if (stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) {
-      if (((millis() - lastMillis_change_channel) > TIMEOUT_CHANGE_CHANNEL)) { 
+      if (((millis() - lastMillis_change_channel) > TIMEOUT_PEDAL_CHANGE_CHANNEL)) { 
          
         esp_wifi_set_promiscuous(true);
         if (esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE) != ESP_OK) {
@@ -1627,7 +1982,7 @@ bool SerialWireless_::connection_pedal() {
       lastMillis_start_dialogue = millis();
     }
     else {
-      if (((millis() - lastMillis_start_dialogue) > TIMEOUT_DIALOGUE) && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
+      if (((millis() - lastMillis_start_dialogue) > TIMEOUT_PEDAL_DIALOGUE) && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
         stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
         //Serial.println("DONGLE - Non si è conclusa la negoziazione tra DONGLE/GUN e si riparte da capo");
         lastMillis_change_channel = millis ();
@@ -1675,17 +2030,39 @@ void packet_callback_read_dongle() {
   switch (SerialWireless.packet.currentPacketID()) {
     case PACKET_TX::SERIAL_TX:
       Serial.write(&SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
-      Serial.flush(); // ????
+      Serial.flush();
       break;
-    case PACKET_TX::MOUSE_TX :
-      usbHid.sendReport(HID_RID_e::HID_RID_MOUSE, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);  
+    case PACKET_TX::MOUSE_TX : {
+      uint8_t* ptr = &SerialWireless.packet.rxBuff[PREAMBLE_SIZE];
+      if (memcmp(ptr, &absmouse5Report_last_wifi, sizeof(absmouse5Report_last_wifi))) {
+        memcpy(&absmouse5Report_last_wifi, ptr, sizeof(absmouse5Report_last_wifi));
+        absmouse5Report_pending = true;    
+        xTaskNotifyGive(xUSBTaskHandle);
+      }
+      //usbHid.sendReport(HID_RID_e::HID_RID_MOUSE, ptr, sizeof(absmouse5Report_last_wifi)); // per inviare a USB
       break;
-    case PACKET_TX::GAMEPADE_TX:
-      usbHid.sendReport(HID_RID_e::HID_RID_GAMEPAD, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
+    }
+    case PACKET_TX::GAMEPADE_TX: {
+      uint8_t* ptr = &SerialWireless.packet.rxBuff[PREAMBLE_SIZE];
+      // --- GAMEPAD ---
+      if (memcmp(ptr, &gamepad16Report_last_wifi, sizeof(gamepad16Report_last_wifi))) {
+        memcpy(&gamepad16Report_last_wifi, ptr, sizeof(gamepad16Report_last_wifi));
+        gamepad16Report_pending = true;
+        xTaskNotifyGive(xUSBTaskHandle);
+      }
+      //usbHid.sendReport(HID_RID_e::HID_RID_GAMEPAD, ptr, sizeof(gamepad16Report_last_wifi)); // per inviare a USB
       break;
-    case PACKET_TX::KEYBOARD_TX:
-      usbHid.sendReport(HID_RID_e::HID_RID_KEYBOARD, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
+    }
+    case PACKET_TX::KEYBOARD_TX: {
+      uint8_t* ptr = &SerialWireless.packet.rxBuff[PREAMBLE_SIZE];
+      if (memcmp(ptr, &keyReport_last_wifi, sizeof(keyReport_last_wifi))) {
+        memcpy(&keyReport_last_wifi, ptr, sizeof(keyReport_last_wifi));
+        keyReport_pending = true;
+        xTaskNotifyGive(xUSBTaskHandle);
+      }
+      //usbHid.sendReport(HID_RID_e::HID_RID_KEYBOARD, ptr, sizeof(keyReport_last_wifi));  // per inviare a USB
       break;
+    }
     // ====== poi va tolto ================
     case PACKET_TX::PEDAL_TX:
       {
@@ -1704,27 +2081,31 @@ void packet_callback_read_dongle() {
       // --- MOUSE ---
       // Confrontiamo il buffer con l'ultimo stato noto
       if (memcmp(ptr, &absmouse5Report_last_wifi, sizeof(absmouse5Report_last_wifi))) {
-        //memcpy(&absmouse5Report_last_wifi, ptr, sizeof(absmouse5Report_last_wifi));
-        if (usbHid.sendReport(HID_RID_e::HID_RID_MOUSE, ptr, sizeof(absmouse5Report_last_wifi)))
-          memcpy(&absmouse5Report_last_wifi, ptr, sizeof(absmouse5Report_last_wifi));
-      }
+        memcpy(&absmouse5Report_last_wifi, ptr, sizeof(absmouse5Report_last_wifi));
+        absmouse5Report_pending = true;    
+        //xTaskNotifyGive(xUSBTaskHandle);
+      }   
+
       ptr += sizeof(absmouse5Report_last_wifi); // Fai scorrere il puntatore in avanti alla fine dei dati mouse
 
       // --- TASTIERA ---
       if (memcmp(ptr, &keyReport_last_wifi, sizeof(keyReport_last_wifi))) {
-        //memcpy(&keyReport_last_wifi, ptr, sizeof(keyReport_last_wifi));
-        if (usbHid.sendReport(HID_RID_e::HID_RID_KEYBOARD, ptr, sizeof(keyReport_last_wifi)))
-          memcpy(&keyReport_last_wifi, ptr, sizeof(keyReport_last_wifi));
+        memcpy(&keyReport_last_wifi, ptr, sizeof(keyReport_last_wifi));
+        keyReport_pending = true;
+        //xTaskNotifyGive(xUSBTaskHandle);
       }
+      
       ptr += sizeof(keyReport_last_wifi); // Fai scorrere il puntatore in avanti alla fine dei dati tastiera
 
       // --- GAMEPAD ---
       if (memcmp(ptr, &gamepad16Report_last_wifi, sizeof(gamepad16Report_last_wifi))) {
-        //memcpy(&gamepad16Report_last_wifi, ptr, sizeof(gamepad16Report_last_wifi));
-        if (usbHid.sendReport(HID_RID_e::HID_RID_GAMEPAD, ptr, sizeof(gamepad16Report_last_wifi)))
-          memcpy(&gamepad16Report_last_wifi, ptr, sizeof(gamepad16Report_last_wifi));
+        memcpy(&gamepad16Report_last_wifi, ptr, sizeof(gamepad16Report_last_wifi));
+        gamepad16Report_pending = true;
+        //xTaskNotifyGive(xUSBTaskHandle);
       }
       
+      if (absmouse5Report_pending || keyReport_pending || gamepad16Report_pending) xTaskNotifyGive(xUSBTaskHandle);
+
       break;  
     } // Chiusura del blocco del case
     #endif // OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
@@ -1855,18 +2236,7 @@ void packet_callback_read_gun() {
       break;
     case PACKET_TX::PEDAL_TX:
       {
- #if defined(GUN) && defined(USES_DISPLAY)
-        // ==========================================
-        display_OLED->setCursor(1, 30);
-  display_OLED->setTextSize(1);
-  display_OLED->setTextColor(WHITE, BLACK);
-  //display_OLED->fillRect(0, 0, 128, 16, BLACK);
-  //display_OLED->drawFastHLine(0, 15, 128, WHITE);
-  //char buffer[30];
-  //sprintf(buffer, "Ch:%2d Waiting link", channel_tread);
-  display_OLED->print("PEDAL PEDAL");
-  display_OLED->display();
-#endif // defined(GUN) && defined(USES_DISPLAY)
+ 
   // =====================================================
         
         //uint8_t pedali;
@@ -2110,99 +2480,94 @@ void packet_callback_read_pedal() {
   }
 }
 
-
 static void _esp_now_rx_cb(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
-  // 1. FILTRO HARDCORE: memcmp diretto (Velocissimo)
-  // Se non è il mio dispositivo fidato E non è un broadcast...
-  // peerAddress = dove spedisce di default
-  // SerialWireless.mac_esp_inteface = mac addres della board su cui gira software
-  // SerialWireless.mac_esp_another_card = mac della board con cui comunico di default, che tecnicamente è il peerAddres
   
+  // 1. Filtro broadcast (invariato)
   if ((info->des_addr[0] == 0xFF) && (broadcast_receiver == false)) return;
-  #ifdef COMMENTO
-  if (memcmp(info->src_addr, SerialWireless.mac_esp_another_card, 6) != 0 && // controlla che sia nei peer la board da cui arrivano i paccheti
-      memcmp(info->des_addr, peerAddress/*SerialWireless.mac_esp_inteface*/, 6) != 0) { // controlla che siano destinati alla scheda i pacchetti con peeraddres va bene anche broadcast quando lo è impostato
-        // Un ficcanaso mi ha mandato un Unicast! 
-        // Zero chiamate OS, muore all'istante in pochi nanosecondi.
-        info->des_addr[0] == 0xFF;
-        broadcast_receiver = false;
 
-        return; 
-  }
-  #endif // COMMENTO
+  // 2. Cache locale degli indici (Il cuore del Lock-Free)
+  uint16_t w = SerialWireless._writer;
+  uint16_t r = SerialWireless._reader; // Leggiamo dove si trova il task in questo istante
+  const uint16_t MASK = FIFO_SIZE_READ - 1; 
 
-  /*
-  if (!esp_now_is_peer_exist(esp_now_info->src_addr)) {
-        // Un ficcanaso mi ha mandato un Unicast! 
-        // Non è nella mia lista dei peer, lo uccido all'istante.
-        return; 
-    }
-  */
-  #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
-  // ---- AGGIUNTA TPC (Operazione a costo zero in RAM) ----
-    if (info->rx_ctrl != NULL) {
-        last_rssi_percepito = info->rx_ctrl->rssi;
-    }
-  // -------------------------------------------------------
-  #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO
-  if ((FIFO_SIZE_READ - SerialWireless._readLen) >= len) {
-    size_t firstChunk = FIFO_SIZE_READ - SerialWireless._writer;
+  // 3. Calcolo matematico dello spazio disponibile (Regola del Meno Uno)
+  // Questa formula magica gestisce il wrap-around da sola e garantisce che il 
+  // buffer non diventi mai pieno al 100%, lasciando sempre 1 byte di cuscinetto
+  // per distinguere lo stato "vuoto" da quello "pieno".
+  uint16_t free_space = (r - w - 1) & MASK;
+
+  // 4. Controllo capienza
+  if (free_space >= len) {
+    uint16_t firstChunk = FIFO_SIZE_READ - w;
+
+    // COPIA BATCH
     if (firstChunk < len) {
-      //memcpy(&SerialWireless._queue[SerialWireless._writer], data, firstChunk);
-      //SerialWireless._writer = len - firstChunk;  
-      //memcpy(&SerialWireless._queue[0], data + firstChunk, SerialWireless._writer);
-      // ======================== dovrebbe essere più sicuro per la concorrenza
-      uint16_t new_writer = len - firstChunk;
-      memcpy(&SerialWireless._queue[SerialWireless._writer], data, firstChunk);
-      memcpy(&SerialWireless._queue[0], data + firstChunk, new_writer);
-      SerialWireless._writer = new_writer;
-
-    }
+      // Caso a capo: dobbiamo dividere la copia in due
+      uint16_t secondChunk = len - firstChunk;
+      memcpy(SerialWireless._queue + w, data, firstChunk);
+      memcpy(SerialWireless._queue, data + firstChunk, secondChunk);
+    } 
     else {
-      memcpy(&SerialWireless._queue[SerialWireless._writer], data, len);
-      SerialWireless._writer += len;
-      if (SerialWireless._writer == FIFO_SIZE_READ) SerialWireless._writer = 0;
+      // Caso lineare: copia singola
+      memcpy(SerialWireless._queue + w, data, len);
     }
-    SerialWireless._readLen += len;
-  }
+
+    // --- BARRIERA DI MEMORIA ---
+    // Fondamentale: garantisce che la RAM abbia salvato i dati della memcpy 
+    // PRIMA di segnalare al task che ci sono nuovi dati disponibili.
+    asm volatile ("memw" : : : "memory");
+
+    // 5. Aggiornamento ATOMICO del solo indice _writer
+    // Nessun lock necessario! Appena questa riga viene eseguita, 
+    // il task (che sta guardando _writer) vede magicamente apparire i nuovi dati.
+    SerialWireless._writer = (w + len) & MASK;
+    
+    // ADDIO SerialWireless._readLen!
+  } 
   else {
+    // Spazio insufficiente (o pacchetto scartato per evitare l'incrocio dei puntatori)
     SerialWireless._overflow_read = true;
-    //Serial.println("Overflow nello scrivere nel BUFFER lettura");
   }
-  SerialWireless.checkForRxPacket();
+
+  // 6. Notifica Task (Campanello invariato)
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  vTaskNotifyGiveFromISR(xRadioTaskHandle, &xHigherPriorityTaskWoken);
+  if (xHigherPriorityTaskWoken) {
+    portYIELD_FROM_ISR();
+  }
 }
 
-#if ESP_IDF_VERSION_MAJOR == 5 && ESP_IDF_VERSION_MINOR <= 4
-  // Codice per versioni fino alla 5.4
-  static void _esp_now_tx_cb(const uint8_t *mac_addr, esp_now_send_status_t status) {
-#elif ESP_IDF_VERSION_MAJOR > 5 || (ESP_IDF_VERSION_MAJOR == 5 && ESP_IDF_VERSION_MINOR >= 5)
-  // Codice per versioni 5.5 o superiori
-  static void _esp_now_tx_cb(const esp_now_send_info_t *tx_info, esp_now_send_status_t status) { // callback esp_now // poer nuova versione IDF 55
-#endif
+static void _esp_now_tx_cb(const esp_now_send_info_t *tx_info, esp_now_send_status_t status) { 
+  // 1. Liberiamo la radio per il prossimo pacchetto
+  radioFree = true;
 
-  xSemaphoreTake(mutex_writer_bin, portMAX_DELAY);
-
-  if (SerialWireless._writeLen > 0 ) {
-    SerialWireless.SendData_sem();
+  // 2. Controllo Lock-Free: Il buffer TX ha ancora dati da spedire?
+  if (SerialWireless.writeIndex != SerialWireless.readIndex) {   
+    
+    // 3. Svegliamo il radioTask per fargli svuotare il resto
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    vTaskNotifyGiveFromISR(xRadioTaskHandle, &xHigherPriorityTaskWoken);
+    
+    if (xHigherPriorityTaskWoken) {
+      portYIELD_FROM_ISR();
+    }
   }
-  else xSemaphoreGive(tx_sem);
-  
-  xSemaphoreGive(mutex_writer_bin);
 }
 
 // ================================== TIMER PER SERIALE ===================================
 // CALLBACK
+
 void timer_callback_serial(void* arg) {
-    
-  xSemaphoreTake(mutex_tx_serial, portMAX_DELAY);
-  
-  while (SerialWireless.lenBufferSerialWrite) {
-    SerialWireless.flush_sem();
-    taskYIELD(); //yield();
+  while (SerialWireless.availableBufferSerialWrite() > 0) {
+    if (!SerialWireless.flush_sem()) {
+      // LA RADIO È PIENA! Il timer non può fare yield.
+      // Chiediamo aiuto al radioTask per quando si libererà spazio.
+      SerialWireless._serial_needs_recovery = true; 
+      break; 
+    }
   }
-  
-  xSemaphoreGive(mutex_tx_serial);  // Rilascio il semaforo dopo la callback
 }
+
 // ===============================================================================
 
 void SerialWireless_::setupTimerSerial() {
@@ -2225,7 +2590,6 @@ void SerialWireless_::resetTimer_serial(uint64_t duration_us) {
     //esp_timer_start_once(timer_handle_serial, duration_us);
     esp_timer_restart(timer_handle_serial, duration_us);
 }
-
 
 // ==========================   FINE TIMER PER SERIALE ====================================
 
@@ -2252,73 +2616,24 @@ void setupTimerPedal() {
 
 // ======================== FINE TIMER PER PEDAL =============================
 
+// NON VA DEFINITA IN QUANTO SOSTITUISCE QUELLA DI DEFAULT CHE NON FA NULLA
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#ifdef COMMENTO
-// ##############################################################################
-TaskHandle_t ParserTaskHandle = NULL;
-
-
-//====
-
-void ParserTask(void *pvParameters) {
-  for (;;) {
-    // Il Task si "addormenta" qui e non consuma CPU.
-    // Si sveglierà istantaneamente solo quando la callback riceve qualcosa.
-    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-
-    // Quando si sveglia, estrae i dati dal buffer e processa i pacchetti
-    // Finché ci sono dati disponibili, continua a chiamare il parser
-    while(SerialWireless.availableBin() > 0) {
-        SerialWireless.checkForRxPacket();
+void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint16_t len) {
+    // Il PC ha appena liberato il buffer. Svegliamo usbTask!
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    vTaskNotifyGiveFromISR(xUSBTaskHandle, &xHigherPriorityTaskWoken);
+    if (xHigherPriorityTaskWoken) {
+        portYIELD_FROM_ISR();
     }
-  }
 }
 
-// ======
-
-void setup() {
-  // ... il tuo codice esistente ...
-
-  // Crea il task parallelo. 
-  // Priorità 2 (più alta del loop standard che è 1, ma più bassa del Wi-Fi)
-  xTaskCreatePinnedToCore(
-    ParserTask,        // Funzione del task
-    "ParserTask",      // Nome 
-    4096,              // Dimensione Stack in byte (4KB bastano e avanzano)
-    NULL,              // Parametri
-    2,                 // Priorità del task
-    &ParserTaskHandle, // L'handle creato allo Step 1
-    0                  // Esegui sul Core 0 (se il loop() è sull'1) o usa tskNO_AFFINITY
-  );
+#ifdef __cplusplus
 }
+#endif
 
-// =========
-
-// Assicurati che l'handle sia visibile usando extern se sei in un altro file
-extern TaskHandle_t ParserTaskHandle; 
-
-static void _esp_now_rx_cb(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
-  // ... i tuoi controlli iniziali e i memcmp ...
-  
-  // ... le tue memcpy per il buffer circolare ...
-  // (assicurati di fare l'aggiornamento atomico del _writer come detto prima!)
-
-  // RIMUOVI QUESTA RIGA:
-  // SerialWireless.checkForRxPacket(); 
-
-  // AGGIUNGI QUESTE RIGHE:
-  // Sveglia il Task del parser istantaneamente dicendogli "C'è posta!"
-  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-  vTaskNotifyGiveFromISR(ParserTaskHandle, &xHigherPriorityTaskWoken);
-  
-  if (xHigherPriorityTaskWoken) {
-      portYIELD_FROM_ISR(); // Cambia contesto all'istante
-  }
-}
-
-
-// ##############################################################################
-#endif // COMMENTO
 
 #endif //OPENFIRE_WIRELESS_ENABLE
