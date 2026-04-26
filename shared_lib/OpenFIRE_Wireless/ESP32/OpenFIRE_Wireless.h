@@ -214,7 +214,7 @@ class SerialWireless_ : public Stream
   #define TIMER_HANDLE_SERIAL_DURATION_MICROS 3000 // 3000 microsecondi un 3 millisecondi
   uint8_t bufferSerialWrite[FIFO_SIZE_WRITE_SERIAL];
   unsigned long startTimeSerialWrite = 0; // = millis(); // poi convertire in microsecondi // in seguito rimovere
-  volatile uint16_t lenBufferSerialWrite = 0;
+  //volatile uint16_t lenBufferSerialWrite = 0;
   esp_timer_handle_t timer_handle_serial;
   // Nuove variabili TX Serial (Circolare)
   volatile uint16_t _writerSerialWrite = 0;
@@ -224,7 +224,7 @@ class SerialWireless_ : public Stream
   // ====== per read ====== buffer circolare =====
   #define FIFO_SIZE_READ_SERIAL 256 // deve essere una potenza di due
   uint8_t bufferSerialRead[FIFO_SIZE_READ_SERIAL];
-  volatile uint16_t lenBufferSerialRead = 0;
+  //volatile uint16_t lenBufferSerialRead = 0;
   volatile uint16_t _writerSerialRead = 0;
   volatile uint16_t _readerSerialRead = 0;
   bool _overflow_bufferSerialRead = false; 
@@ -238,7 +238,7 @@ class SerialWireless_ : public Stream
   Packet  packet;
   
   // per buffer lettura
-  volatile uint16_t _readLen = 0;
+  //volatile uint16_t _readLen = 0;
   volatile uint16_t _writer = 0;
   volatile uint16_t _reader = 0;
   #define FIFO_SIZE_READ 1024 // 1024, 2048, 4096 deve essere una potenza di 2 buffer lettura e si vuole ottimizzazione
@@ -249,7 +249,7 @@ class SerialWireless_ : public Stream
   // per buffer scrittura 
   volatile uint16_t writeIndex = 0;
   volatile uint16_t readIndex = 0;
-  volatile uint16_t _writeLen = 0;
+  //volatile uint16_t _writeLen = 0;
   #define BUFFER_SIZE 1024 //buffer scrittura  -- 1024, 2048, 4096 deve essere una potenza di 2
   uint8_t buffer[BUFFER_SIZE];
   bool _overflow_write = false; 

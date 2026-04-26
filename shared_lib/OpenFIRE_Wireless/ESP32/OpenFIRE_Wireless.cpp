@@ -329,70 +329,6 @@ void usbTask(void *pvParameters) {
 TaskHandle_t xRadioTaskHandle = NULL;
 volatile bool radioFree = true;
 
-#ifdef COMMENTO
-void radioTask(void *pvParameters) {
-  while (1) {
-    // 1. Attesa ultra-efficiente (0% CPU)
-    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-
-    do {
-      if (SerialWireless._readLen > 0) {SerialWireless.checkForRxPacket();}
-      if (SerialWireless._writeLen > 0 && radioFree) {SerialWireless.SendData_sem();}
-    } while ((SerialWireless._writeLen > 0 && radioFree) || SerialWireless._readLen > 0);
-
-    /*
-    // 2. Priorità alla TRASMISSIONE (Spara subito i dati pronti)
-    if (radioLibera && RingBuffer_TX_HasData()) {
-      Invia_Pacchetto_ESPNOW(); // Operazione non bloccante
-    }
-    // 3. Ciclo di RICEZIONE (Svuota tutto il buffer)
-    while(RingBuffer_RX_HasData()) {
-      // Estrai i dati dal Ring Buffer SPSC (senza semafori!)
-      auto pacchetto = RingBuffer_RX_Pop();
-      // Lavoro "pesante"
-      decodificaCOBS(pacchetto);
-      if(calcolaCRC8(pacchetto)) {
-        Invia_Dati_a_PC_USB(pacchetto);
-      }
-      // 4. OTTIMIZZAZIONE CRUCIALE: 
-      // Mentre sei nel ciclo RX, controlla se la radio si è liberata.
-      // Se sì, infila un invio tra un pacchetto e l'altro!
-      if (radioLibera && RingBuffer_TX_HasData()) {
-        Invia_Pacchetto_ESPNOW();
-      }
-    }   
-*/
-
-  } 
-}
-#endif
-// ====== senza LEN ================
-#ifdef COMMENTO
-void radioTask(void *pvParameters) {
-  while (1) {
-    // 1. Aspettiamo un segnale (TX concluso, RX ricevuto o Nuovo dato dal Loop)
-    // pdTRUE resetta il contatore a zero non appena ci svegliamo.
-    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-
-    do {
-      // --- PRIORITÀ RICEZIONE ---
-      // Verifichiamo se ci sono dati in entrata (Lock-Free)
-      if (SerialWireless._reader != SerialWireless._writer) {
-        SerialWireless.checkForRxPacket();
-      }
-
-      // --- GESTIONE TRASMISSIONE ---
-      // Verifichiamo se possiamo inviare e se c'è qualcosa da inviare (Lock-Free)
-      if (radioFree && (SerialWireless.readIndex != SerialWireless.writeIndex)) {
-        SerialWireless.SendData_sem();
-      }
-
-      // Cicliamo finché c'è almeno un'operazione possibile per massimizzare il throughput
-    } while ((SerialWireless._reader != SerialWireless._writer) || 
-             (radioFree && (SerialWireless.readIndex != SerialWireless.writeIndex)));
-  } 
-}
-#endif
 
 void radioTask(void *pvParameters) {
   while (1) {
@@ -1879,7 +1815,10 @@ bool SerialWireless_::connection_gun_at_pedal() {
 
   memcpy(peerAddress, peerAddress_copy, 6);
 
-  SerialWireless.SendPacket((const uint8_t *)&TinyUSBDevices.is_pedal_wireless, 1, PACKET_TX::PEDAL_TX);
+  for (uint8_t i=0; i<3; i++) {
+    SerialWireless.SendPacket((const uint8_t *)&TinyUSBDevices.is_pedal_wireless, 1, PACKET_TX::PEDAL_TX);
+    vTaskDelay(pdMS_TO_TICKS(69));
+  }
 
   if (stato_connessione_wireless == CONNECTION_STATE::DEVICES_CONNECTED) {
     //Serial.println("DONGLE - Negosazione completata - associazione dei dispositivi GUN/DONGLE");
@@ -2066,8 +2005,8 @@ void packet_callback_read_dongle() {
     // ====== poi va tolto ================
     case PACKET_TX::PEDAL_TX:
       {
-        memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
-        TinyUSBDevices.is_pedal_wireless = (bool)aux_buffer[0];
+        //memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
+        //TinyUSBDevices.is_pedal_wireless = (bool)aux_buffer[0];
         SerialWireless.is_pedal_wireless_comunication = true;
       }
       break;

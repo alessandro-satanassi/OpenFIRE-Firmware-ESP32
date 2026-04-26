@@ -4,7 +4,7 @@
 This release is updated to commit **8b651a2** (April 19, 2026) of the original [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) firmware.
 
 > [!WARNING]
-> **PEDAL FIRMWARE NOTICE:** The download links for the **PEDAL** firmware are currently included for placeholders only. The pedal firmware is **NOT yet complete or functional**. A fully working version will be released with the next PreRelease.
+> **NEW! PEDAL FIRMWARE NOTICE:** The **PEDAL** firmware is implemented and working well, but at the moment I have only preconfigured the WAVESHARE_ESP32_S3_ZERO_N4R2 (Esp32s3 Mini) board..
 
 
 ### Supported Boards (ESP32-S3)
@@ -21,7 +21,7 @@ This release is updated to commit **8b651a2** (April 19, 2026) of the original [
 ***Pedal:***
 - **ESP32_S3_WROOM1_DevKitC_1_N16R8**
 - **WAVESHARE_ESP32_S3_PICO**
-- **LILYGO_T_DONGLE_S3** *(this one has an integrated DISPLAY)* 
+- **WAVESHARE_ESP32_S3_ZERO_N4R2**  *(Mini)*
 
 ---
 
@@ -50,7 +50,7 @@ This option is for those who wish to flash the firmware manually using the offic
 
 - [OpenFIRE-PEDAL-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
 - [OpenFIRE-PEDAL-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-WAVESHARE_ESP32_S3_PICO.bin)
-- [OpenFIRE-PEDAL-LILYGO_T_DONGLE_S3.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-LILYGO_T_DONGLE_S3.bin)
+- [OpenFIRE-PEDAL-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
 
 ---
 
@@ -91,15 +91,15 @@ The script will guide you through the installation and automatically search for 
 * **Windows (64bit)**
   - [Download for ESP32_S3_WROOM1_DevKitC_1_N16R8](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-ESP32_S3_WROOM1_DevKitC_1_N16R8-windows-64bit.zip)
   - [Download for WAVESHARE_ESP32_S3_PICO](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-WAVESHARE_ESP32_S3_PICO-windows-64bit.zip)
-  - [Download for LILYGO_T_DONGLE_S3](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-LILYGO_T_DONGLE_S3-windows-64bit.zip)
+  - [Download for WAVESHARE_ESP32_S3_ZERO_N4R2](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-WAVESHARE_ESP32_S3_ZERO_N4R2-windows-64bit.zip)
 * **Linux (64bit)**
   - [Download for ESP32_S3_WROOM1_DevKitC_1_N16R8](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-ESP32_S3_WROOM1_DevKitC_1_N16R8-linux-amd-64bit.zip)
   - [Download for WAVESHARE_ESP32_S3_PICO](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-WAVESHARE_ESP32_S3_PICO-linux-amd-64bit.zip)
-  - [Download for LILYGO_T_DONGLE_S3](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-LILYGO_T_DONGLE_S3-linux-amd-64bit.zip)
+  - [Download for WAVESHARE_ESP32_S3_ZERO_N4R2](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-WAVESHARE_ESP32_S3_ZERO_N4R2-linux-amd-64bit.zip)
 * **MacOS (64bit)**
   - [Download for ESP32_S3_WROOM1_DevKitC_1_N16R8](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-ESP32_S3_WROOM1_DevKitC_1_N16R8-macos-64bit.zip)
   - [Download for WAVESHARE_ESP32_S3_PICO](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-WAVESHARE_ESP32_S3_PICO-macos-64bit.zip)
-  - [Download for LILYGO_T_DONGLE_S3](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-LILYGO_T_DONGLE_S3-macos-64bit.zip)
+  - [Download for WAVESHARE_ESP32_S3_ZERO_N4R2](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-WAVESHARE_ESP32_S3_ZERO_N4R2-macos-64bit.zip)
 
 ---
 
@@ -118,7 +118,7 @@ To configure all lightgun features (pins, buttons, name, player, etc.), the orig
 Questa release è aggiornata al commit **8b651a2** (19 aprile 2026) del firmware originale [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware).
 
 > [!WARNING]
-> **AVVISO SUL FIRMWARE PEDAL:** I link per il download del firmware **PEDAL** sono attualmente presenti solo a scopo dimostrativo. Il firmware del pedale **NON è ancora completo né funzionante**. Il rilascio della versione operativa è previsto con la prossima PreRelease.
+> **NOVITA! AVVISO SUL FIRMWARE PEDAL:** Il firmware **PEDAL** è implementato e ben funzionante, ma al momento ho preconfigurato solo la board WAVESHARE_ESP32_S3_ZERO_N4R2 (Esp32s3 Mini).
 
 ---
 
@@ -136,7 +136,7 @@ Questa release è aggiornata al commit **8b651a2** (19 aprile 2026) del firmware
 ***Pedal:***
 - **ESP32_S3_WROOM1_DevKitC_1_N16R8**
 - **WAVESHARE_ESP32_S3_PICO**
-- **LILYGO_T_DONGLE_S3** *(questo ha il DISPLAY integrato)* 
+- **WAVESHARE_ESP32_S3_ZERO_N4R2**  *(Mini)*
 
 ---
 
@@ -165,7 +165,7 @@ Questa opzione è dedicata a chi vuole caricare il firmware manualmente utilizza
 
 - [OpenFIRE-PEDAL-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
 - [OpenFIRE-PEDAL-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-WAVESHARE_ESP32_S3_PICO.bin)
-- [OpenFIRE-PEDAL-LILYGO_T_DONGLE_S3.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-LILYGO_T_DONGLE_S3.bin)
+- [OpenFIRE-PEDAL-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
 
 ---
 
@@ -206,15 +206,15 @@ Lo script ti guiderà nell'installazione e cercherà automaticamente la porta se
 * **Windows (64bit)**
   - [Download per ESP32_S3_WROOM1_DevKitC_1_N16R8](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-ESP32_S3_WROOM1_DevKitC_1_N16R8-windows-64bit.zip)
   - [Download per WAVESHARE_ESP32_S3_PICO](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-WAVESHARE_ESP32_S3_PICO-windows-64bit.zip)
-  - [Download per LILYGO_T_DONGLE_S3](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-LILYGO_T_DONGLE_S3-windows-64bit.zip)
+  - [Download per WAVESHARE_ESP32_S3_ZERO_N4R2](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-WAVESHARE_ESP32_S3_ZERO_N4R2-windows-64bit.zip)
 * **Linux (64bit)**
   - [Download per ESP32_S3_WROOM1_DevKitC_1_N16R8](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-ESP32_S3_WROOM1_DevKitC_1_N16R8-linux-amd-64bit.zip)
   - [Download per WAVESHARE_ESP32_S3_PICO](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-WAVESHARE_ESP32_S3_PICO-linux-amd-64bit.zip)
-  - [Download per LILYGO_T_DONGLE_S3](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-LILYGO_T_DONGLE_S3-linux-amd-64bit.zip)
+  - [Download per WAVESHARE_ESP32_S3_ZERO_N4R2](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-WAVESHARE_ESP32_S3_ZERO_N4R2-linux-amd-64bit.zip)
 * **MacOS (64bit)**
   - [Download per ESP32_S3_WROOM1_DevKitC_1_N16R8](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-ESP32_S3_WROOM1_DevKitC_1_N16R8-macos-64bit.zip)
   - [Download per WAVESHARE_ESP32_S3_PICO](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-WAVESHARE_ESP32_S3_PICO-macos-64bit.zip)
-  - [Download per LILYGO_T_DONGLE_S3](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-LILYGO_T_DONGLE_S3-macos-64bit.zip)
+  - [Download per WAVESHARE_ESP32_S3_ZERO_N4R2](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-PEDAL-WAVESHARE_ESP32_S3_ZERO_N4R2-macos-64bit.zip)
 
 
 ---
