@@ -74,11 +74,11 @@ extern bool display_init;
 uint8_t espnow_wifi_channel = OPENFIRE_ESPNOW_WIFI_CHANNEL;  // FATTA VARIABILE PER FUTURA CONFIGURAZIONE TRAMITE APP O OLED
 uint8_t espnow_wifi_power = OPENFIRE_ESPNOW_WIFI_POWER;      // FATTA VARIABILE PER FUTURA CONFIGURAZIONE TRAMITE APP O OLED
 
-#ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
-  hid_abs_mouse_report_t absmouse5Report_last_wifi = {0,0,0,0,0};
-  hid_keyboard_report_t  keyReport_last_wifi = {0,0,{0,0,0,0,0,0}};
-  hid_gamepad16_report_t gamepad16Report_last_wifi = {0,0,0,0,0,0,0,0};
-#endif // OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
+
+hid_abs_mouse_report_t absmouse5Report_last_wifi = {0,0,0,0,0};
+hid_keyboard_report_t  keyReport_last_wifi = {0,0,{0,0,0,0,0,0}};
+hid_gamepad16_report_t gamepad16Report_last_wifi = {0,0,0,0,0,0,0,0};
+
 
 volatile bool absmouse5Report_pending = false; 
 volatile bool keyReport_pending = false;
@@ -383,7 +383,7 @@ void animTaskLink_pedal(void *pvParameters) {
   const uint8_t baseY = 2;
   const uint8_t charWidth = 6;
   uint8_t len_word = strlen(word);
-  uint8_t seconds_tread = 30;
+  uint8_t seconds_tread = seconds_display;
   
   // Setup iniziale display
   display_OLED->setCursor(baseX, baseY);
@@ -1714,6 +1714,9 @@ bool SerialWireless_::connection_gun() {
 // ======================= NUOVA IMPLEMENTAZIONE DOVE LA GUN FA IL FARO per connetersi al pedal ===============
 bool SerialWireless_::connection_gun_at_pedal() {
   
+  uint8_t seconds = 10; 
+  seconds_display = seconds;
+
   channel_display = espnow_wifi_channel;
 
   #if defined(GUN) && defined(USES_DISPLAY)
@@ -1735,7 +1738,7 @@ bool SerialWireless_::connection_gun_at_pedal() {
   #endif // USES_DISPLAY
   
   
-  uint8_t seconds = 10;  
+  //uint8_t seconds = 10;  
   #define TIMEOUT_GUN_AT_PEDAL_TX_PACKET 50 //500 // in millisecondi
   #define TIMEOUT_GUN_AT_PEDAL_CHANGE_SECONDS 1000 // in millisecondi - cambia canale ogni
   #define TIMEOUT_GUN_AT_PEDAL_DIALOGUE 3000 //6000 // in millisecondi - tempo massimo per completare operazione accoppiamento
