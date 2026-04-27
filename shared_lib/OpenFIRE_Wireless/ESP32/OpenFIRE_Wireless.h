@@ -98,12 +98,16 @@ extern int8_t ultimo_rssi_trasmesso;
 extern int8_t espnow_rssi_ricevuto;
 #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO
 extern uint8_t lastDongleAddress[6];
+extern uint8_t lastPedalAddress[6];
 extern uint8_t lastDongleChannel;
 extern uint8_t peerAddress[6];
 extern bool lastDongleSave;
+extern bool lastPedalSave; 
 extern const uint8_t BROADCAST_ADDR[6];
  
- 
+
+
+
 
 enum WIRELESS_MODE {
   NONE_WIRELESS =  0,                
@@ -145,12 +149,6 @@ enum PACKET_TX {
 
 enum CONNECTION_STATE {
   NONE_CONNECTION = 0,
-  #ifdef COMMENTO
-  TX_DONGLE_SEARCH_GUN_BROADCAST,  //1
-  TX_GUN_TO_DONGLE_PRESENCE,  //2
-  TX_DONGLE_TO_GUN_ACCEPT,  //3
-  TX_GUN_TO_DONGLE_CONFERM,  //4
-  #endif // COMMENTO
   DEVICES_CONNECTED,  //5
   // =============================
   // === per controllo connessione
@@ -173,6 +171,8 @@ enum CONNECTION_STATE {
   TX_PEDAL_TO_GUN_PRESENCE,  //10
   TX_GUN_TO_PEDAL_ACCEPT,  //11
   TX_PEDAL_TO_GUN_CONFERM,  //12
+  // ======= CONNESSIONE ULTIMO PEDAL
+
 
 };
 
@@ -302,12 +302,9 @@ class SerialWireless_ : public Stream
   bool connection_dongle();
   bool connection_gun();
   bool connection_pedal();
-  #ifdef COMMENTO
-  bool connection_dongle_original();
-  bool connection_gun_original();
-  #endif // COMMENTO
   bool connection_gun_at_last_dongle();
   bool connection_gun_at_pedal();
+  bool connection_gun_at_last_pedal();
 
   // ===============================
   // ===== per i timer ================

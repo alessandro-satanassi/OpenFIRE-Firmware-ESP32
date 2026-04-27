@@ -173,16 +173,20 @@ const uint8_t BROADCAST_ADDR[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
   const functionPtr callbackArr[] = { packet_callback_read_dongle };
   uint8_t lastDongleAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  uint8_t lastPedalAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   uint8_t lastDongleChannel = OPENFIRE_ESPNOW_WIFI_CHANNEL;
   bool lastDongleSave = false; // se true significa che abbiamo un indirizzo dell'ultimo dongle altrimenti false
+  bool lastPedalSave = false; 
   #elif defined(PEDAL)
   ///////////////////////uint8_t peerAddress[6] = {0x24, 0x58, 0x7C, 0xDA, 0x38, 0xA0}; // quello montato con piedini su breackboard
   uint8_t peerAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; // broadcast
 
   const functionPtr callbackArr[] = { packet_callback_read_pedal };
   uint8_t lastDongleAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  uint8_t lastPedalAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   uint8_t lastDongleChannel = OPENFIRE_ESPNOW_WIFI_CHANNEL;
   bool lastDongleSave = false; // se true significa che abbiamo un indirizzo dell'ultimo dongle altrimenti false
+  bool lastPedalSave = false; 
   #elif defined(GUN)
   //const uint8_t peerAddress[6] = {0xA0, 0x85, 0xE3, 0xE8, 0x0F, 0xB8}; // espe32s3 con piedini (riceve ma non trasmette)
   ///////////////////////////uint8_t peerAddress[6] = {0xA0, 0x85, 0xE3, 0xE7, 0x65, 0xD4}; // espe32s3 senz apiedini
@@ -193,8 +197,10 @@ const uint8_t BROADCAST_ADDR[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
   // nel caso si spenga la pistola ed abbiamo memorizzato l'ultimo dongle connesso, prova a riconnettersi subito
   uint8_t lastDongleAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  uint8_t lastPedalAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   uint8_t lastDongleChannel = OPENFIRE_ESPNOW_WIFI_CHANNEL;
-  bool lastDongleSave = false; // se true significa che abbiamo un indirizzo dell'ultimo dongle altrimenti false
+  bool lastDongleSave = false; // se true significa
+  bool lastPedalSave = false; // se true significa
   // ==========================================================================================================
 
 #endif
@@ -1556,6 +1562,47 @@ bool SerialWireless_::connection_gun_at_last_dongle() {
   }
 }
 
+bool SerialWireless_::connection_gun_at_last_pedal() {
+  #define TIMEOUT_TX_PACKET_LAST_PEDAL 300 // in millisecondi - tempo di invio pacchetti ogni millisecondi quindi 4-5 pacchetti
+  #define TIMEOUT_DIALOGUE_LAST_PEDAL 2000 // in millisecondi - tempo massimo per ricerca ultimo pedal
+  unsigned long lastMillis_tx_packet_last_pedal = 0;
+  unsigned long lastMillis_start_dialogue_last_pedal = millis ();
+
+  uint8_t aux_buffer_tx[13];
+  
+  stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION_PEDAL;
+  aux_buffer_tx[0] = CONNECTION_STATE::TX_CHECK_CONNECTION_LAST_PEDAL;
+  memcpy(&aux_buffer_tx[1], SerialWireless.mac_esp_inteface, 6);
+  memcpy(&aux_buffer_tx[7], peerAddress, 6);
+  lastMillis_tx_packet_last_pedal = 0;
+  lastMillis_start_dialogue_last_pedal = millis();
+  while (/*!TinyUSBDevice.mounted() &&*/ 
+         (stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED_WITH_LAST_PEDAL) &&
+         ((millis() - lastMillis_start_dialogue_last_pedal) < TIMEOUT_DIALOGUE_LAST_PEDAL)) { 
+      if ((millis() - lastMillis_tx_packet_last_pedal) > TIMEOUT_TX_PACKET_LAST_PEDAL)
+      {
+        SerialWireless.SendPacket((const uint8_t *)aux_buffer_tx, 13, PACKET_TX::CHECK_CONNECTION_LAST_PEDAL); 
+        lastMillis_tx_packet_last_pedal = millis();
+      }
+      
+      taskYIELD();
+      //vTaskDelay(pdMS_TO_TICKS(10));
+      //yield();
+  }
+  if (stato_connessione_wireless == CONNECTION_STATE::DEVICES_CONNECTED_WITH_LAST_PEDAL) {    
+    stato_connessione_wireless = CONNECTION_STATE::DEVICES_CONNECTED;
+    TinyUSBDevices.onBattery = true;
+    return true;
+  } else {
+    stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
+    lastPedalSave=false;
+    //esp_now_deinit();
+    //begin();
+    return false;
+  }
+}
+
+
 // ======================= NUOVA IMPLEMENTAZIONE DOVE LA GUN FA IL FARO ===============
 bool SerialWireless_::connection_gun() {
   
@@ -2233,6 +2280,22 @@ void packet_callback_read_gun() {
         break;
       }     
       break;
+    case PACKET_TX::CHECK_CONNECTION_LAST_PEDAL:
+      // CODICE VALUTARE SE FARE CONTROLLO SE PISTOLA ANCORA CONNESSA .. SE NON CONNESSA RIAVVIA LA SCHEDA ?
+      memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
+      switch (aux_buffer[0])
+      {
+      case CONNECTION_STATE::TX_CONFERM_CONNECTION_LAST_PEDAL:
+        if ((memcmp(&aux_buffer[1],peerAddress,6) == 0) && 
+           (memcmp(&aux_buffer[7],SerialWireless.mac_esp_inteface,6) == 0) &&
+           SerialWireless.stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION_PEDAL) { 
+            SerialWireless.stato_connessione_wireless = CONNECTION_STATE::DEVICES_CONNECTED_WITH_LAST_PEDAL;
+        }
+        break;
+      default:
+        break;
+      }     
+      break;
     case PACKET_TX::CONNECTION:
       memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead); //13); //sizeof(aux_buffer)); // qui va bene anche 13 come dati da copiare
       switch (aux_buffer[0]) {
@@ -2353,8 +2416,8 @@ void packet_callback_read_pedal() {
               for (uint8_t i = 0; i<3; i++) {
                 if (i>0) {
                   //vTaskDelay(pdMS_TO_TICKS(1000)); // equivalente a delay(1000) ma non bloccante su esp32
-                  unsigned long lastMillis_tx_packet_connection_last_dongle = millis();
-                  while ((millis() - lastMillis_tx_packet_connection_last_dongle) < 70) taskYIELD();  ////yield(); 
+                  unsigned long lastMillis_tx_packet_connection_last_pedal = millis();
+                  while ((millis() - lastMillis_tx_packet_connection_last_pedal) < 70) taskYIELD();  ////yield(); 
                 }
                 SerialWireless.SendPacket((const uint8_t *)aux_buffer, 13, PACKET_TX::CHECK_CONNECTION_LAST_PEDAL);
               }
