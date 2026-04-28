@@ -103,16 +103,6 @@ USB_Data_GUN_Wireless usb_data_wireless = {
 
 SerialWireless_ SerialWireless;
 extern Adafruit_USBD_HID usbHid;
-SemaphoreHandle_t tx_sem = NULL; // usato per callbalck dio fine trasmissione espnow
-
-
-SemaphoreHandle_t mutex_tx_serial = NULL; // usato per trasmettere buffer seriale
-SemaphoreHandle_t mutex_writer_bin = NULL; // usato per trasmettere buffer seriale
-
-portMUX_TYPE mux_write_bin = portMUX_INITIALIZER_UNLOCKED;
-
-// Creazione del Mutex globale (da chiamare possibilmente in setup() se non lo crei globalmente)
-//SemaphoreHandle_t txMutex = xSemaphoreCreateMutex();
 
 static portMUX_TYPE mux_serial_tx = portMUX_INITIALIZER_UNLOCKED;
 static portMUX_TYPE mux_radio_tx = portMUX_INITIALIZER_UNLOCKED;
@@ -146,20 +136,15 @@ uint8_t aux_buffer[13 + sizeof(usb_data_wireless)];
 // 6 BYTE IL MAC ADDRESS DEL DISPOSITIVO A CUI E' INDIRIZZATO IL PACCHETTO
 // ALL'ULTIMO INVIO LA GUN INVIA ANCHE I DATI DELLA STRUTTURA USB_DATA_WIRELESS CHE CONTIENE VID, PID, ECC. DELLA GUN IN MODO CHE IL DONGLE INZIALIZZI LA CONSSESIONE USB CON QUEI DATI
 
-
-//uint8_t mac_esp_another_card[6];
-//uint8_t stato_conneddione_wireless = 0;
-uint8_t tipo_connessione = 0;
-
 // stato della connessione 
 
-// in caso di DONGLE
+// in caso di GUN
 // 0 = non stabilita
 // 1 = inviata richiesta blroad cast
 // 2 = qualcuno ha risposto alla connessione ed ha chiesto di essere conesso
 // 3 = inviato conferma connessione;
 
-// in caso di GUN
+// in caso di DONGLE
 // 0 = non stabilita
 // 1 = arrivata richiesta broadcast di connessione
 // 2 = accettata ed inviata richiesta di connessione
@@ -175,30 +160,30 @@ const uint8_t BROADCAST_ADDR[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   uint8_t lastDongleAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   uint8_t lastPedalAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   uint8_t lastDongleChannel = OPENFIRE_ESPNOW_WIFI_CHANNEL;
+  uint8_t lastPedalChannel = OPENFIRE_ESPNOW_WIFI_CHANNEL;
   bool lastDongleSave = false; // se true significa che abbiamo un indirizzo dell'ultimo dongle altrimenti false
   bool lastPedalSave = false; 
   #elif defined(PEDAL)
-  ///////////////////////uint8_t peerAddress[6] = {0x24, 0x58, 0x7C, 0xDA, 0x38, 0xA0}; // quello montato con piedini su breackboard
+
   uint8_t peerAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; // broadcast
 
   const functionPtr callbackArr[] = { packet_callback_read_pedal };
   uint8_t lastDongleAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   uint8_t lastPedalAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   uint8_t lastDongleChannel = OPENFIRE_ESPNOW_WIFI_CHANNEL;
+  uint8_t lastPedalChannel = OPENFIRE_ESPNOW_WIFI_CHANNEL;
   bool lastDongleSave = false; // se true significa che abbiamo un indirizzo dell'ultimo dongle altrimenti false
   bool lastPedalSave = false; 
   #elif defined(GUN)
-  //const uint8_t peerAddress[6] = {0xA0, 0x85, 0xE3, 0xE8, 0x0F, 0xB8}; // espe32s3 con piedini (riceve ma non trasmette)
-  ///////////////////////////uint8_t peerAddress[6] = {0xA0, 0x85, 0xE3, 0xE7, 0x65, 0xD4}; // espe32s3 senz apiedini
   uint8_t peerAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; // broadcast
-  //const uint8_t peerAddress[6] = {0xF0, 0x9E, 0x9E, 0x28, 0x9E, 0xB8}; // DONGLE LILYGO
+
 
   const functionPtr callbackArr[] = { packet_callback_read_gun };
 
-  // nel caso si spenga la pistola ed abbiamo memorizzato l'ultimo dongle connesso, prova a riconnettersi subito
   uint8_t lastDongleAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   uint8_t lastPedalAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   uint8_t lastDongleChannel = OPENFIRE_ESPNOW_WIFI_CHANNEL;
+  uint8_t lastPedalChannel = OPENFIRE_ESPNOW_WIFI_CHANNEL;
   bool lastDongleSave = false; // se true significa
   bool lastPedalSave = false; // se true significa
   // ==========================================================================================================
@@ -206,15 +191,10 @@ const uint8_t BROADCAST_ADDR[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 #endif
 
 // ========= per gestione PEDAL ===========
-uint8_t peerAddress_pedal[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; // broadcast
-//unsigned long lastMillis_packet_pedal = 0;
+uint8_t peerAddress_pedal[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; // broadcast
 #define MAX_TIMEOUT_LAST_PACKET (uint64_t)100000   // = 100  ms  .. il valore va specificato in microsecondi
 void setupTimerPedal();
-//void stopTimer_pedal();
-//void resetTimer_pedal(uint64_t duration_us);
 esp_timer_handle_t timer_handle_pedal;
-//bool last_pedal;
-//bool last_pedal2;
 // ===================================================
 
 
@@ -379,16 +359,11 @@ void radioTask(void *pvParameters) {
 
 #if defined(GUN) && defined(USES_DISPLAY)
 void animTaskLink_pedal(void *pvParameters) {
-  unsigned long lastChange = 0;
-  int8_t currentIndex = 0;
-  int8_t direzione = 1;
-  const char* word = "Scanning WiFi (((o)))"; // Waiting link 
   const char* rotazione = "-\\|/-\\|/";
   int8_t rotazioneIndex = 0;
   const uint8_t baseX = 1;
   const uint8_t baseY = 2;
   const uint8_t charWidth = 6;
-  uint8_t len_word = strlen(word);
   uint8_t seconds_tread = seconds_display;
   
   // Setup iniziale display
@@ -407,17 +382,9 @@ void animTaskLink_pedal(void *pvParameters) {
     if (seconds_display != seconds_tread)
     {
       display_OLED->setCursor((14*6)+1, 2);
-              //display_OLED->setTextSize(1);
-              //display_OLED->setTextColor(WHITE, BLACK);
-              ///////////display_OLED->fillRect(0, 0, 128, 16, BLACK);
-              //display_OLED->drawFastHLine(0, 15, 128, WHITE);
       seconds_tread = seconds_display;
       sprintf(buffer, "%2d", seconds_tread);
       display_OLED->print(buffer);
-              //display_OLED->display();          
-      
-
-      //seconds_tread = seconds_display;
     }
     display_OLED->setCursor(baseX + (19 * charWidth), baseY);
     display_OLED->write(rotazione[rotazioneIndex]);
@@ -432,16 +399,11 @@ void animTaskLink_pedal(void *pvParameters) {
 
 #if defined(GUN) && defined(USES_DISPLAY)
 void animTaskLink(void *pvParameters) {
-  unsigned long lastChange = 0;
-  int8_t currentIndex = 0;
-  int8_t direzione = 1;
-  const char* word = "Scanning WiFi (((o)))"; // Waiting link 
   const char* rotazione = "-\\|/-\\|/";
   int8_t rotazioneIndex = 0;
   const uint8_t baseX = 1;
   const uint8_t baseY = 2;
   const uint8_t charWidth = 6;
-  uint8_t len_word = strlen(word);
   uint8_t channel_tread = espnow_wifi_channel;
   
   // Setup iniziale display
@@ -460,17 +422,9 @@ void animTaskLink(void *pvParameters) {
     if (channel_display != channel_tread)
     {
       display_OLED->setCursor(19, 2);
-              //display_OLED->setTextSize(1);
-              //display_OLED->setTextColor(WHITE, BLACK);
-              ///////////display_OLED->fillRect(0, 0, 128, 16, BLACK);
-              //display_OLED->drawFastHLine(0, 15, 128, WHITE);
       channel_tread = channel_display;
       sprintf(buffer, "%2d", channel_tread);
       display_OLED->print(buffer);
-              //display_OLED->display();          
-      
-
-      //channel_tread = channel_display;
     }
     display_OLED->setCursor(baseX + (19 * charWidth), baseY);
     display_OLED->write(rotazione[rotazioneIndex]);
@@ -493,25 +447,16 @@ void animTaskLink(void *pvParameters) {
 
 #if defined(DONGLE) && defined(USES_DISPLAY)
 void animTaskLink(void *pvParameters) {
-  unsigned long lastChange = 0;
-  int8_t currentIndex = 0;
-  int8_t direzione = 1;
-  const char* word = "Scanning WiFi (((o)))"; // Waiting link 
   const char* rotazione = "-\\|/-\\|/";
   int8_t rotazioneIndex = 0;
   const uint8_t baseX = 75;
   const uint8_t baseY = 58;
   const uint8_t charWidth = 6;
-  uint8_t len_word = strlen(word);
-
   
   // Setup iniziale display
-  //tft.setCursor(baseX, baseY);
   tft.setTextSize(1);
   tft.setTextColor(WHITE, BLACK);
   tft.fillRect(70,20,100,60,BLACK);
-  ////////tft.fillRect(0, 0, 128, 16, BLACK);
-  ////////tft.drawFastHLine(0, 15, 128, WHITE);
   tft.setCursor(baseX, baseY - 30);
   tft.print("Selected");
   tft.setCursor(baseX, baseY - 19);
@@ -555,44 +500,33 @@ void animTask(void *pvParameters) {
   tft.setCursor(baseX, baseY);
   tft.setTextSize(1);
   tft.setTextColor(WHITE, BLACK);
-  //tft.fillRect(0, 0, 128, 16, BLACK);
-  //tft.drawFastHLine(0, 15, 128, WHITE);
-  //tft.setTextColor(RED, BLACK);
   tft.setCursor(baseX + 12, baseY - 20);
   tft.print("Searching");
   tft.setCursor(baseX+3, baseY - 10);
   tft.print("best channel");
-  //tft.setTextColor(BLUE, BLACK);
   tft.setCursor(baseX, baseY);
   tft.print("Scanning WiFi");
   tft.display();
   tft.setTextColor(RED, BLACK);
 
-  //tft.setTextColor(WHITE, BLACK);
   // Loop del task
   for (;;) {  
     tft.setCursor(baseX + (3 * charWidth), baseY + 18);
     switch (currentIndex)
     {
     case 0:
-      /* code */
       tft.print("   o   ");
       break;
     case 1:
-      /* code */
       tft.print("  (o)  ");
       break;
     case 2:
-      /* code */
       tft.print(" ((o)) ");
       break;
     case 3:
-      /* code */
       tft.print("(((o)))");
       break;
-    
     default:
-      
     break;
     }
     currentIndex = (currentIndex + 1) % 4;
@@ -1247,24 +1181,13 @@ void SerialWireless_::write_on_rx_serialBuffer(const uint8_t *data, int len) {
 
 void SerialWireless_::init_wireless() {
   configST myConfig; // variabile di utilità per configurazione
-  // ============ inizializzazione semafori =============
-  tx_sem = xSemaphoreCreateBinary();
-  mutex_tx_serial = xSemaphoreCreateMutex();
-  mutex_writer_bin = xSemaphoreCreateMutex();
-
-  xSemaphoreGive(tx_sem);
-  xSemaphoreGive(mutex_tx_serial);
-  xSemaphoreGive(mutex_writer_bin);
-  // ==== fine inizializzazione semafori
 
   myConfig.port         = &Serial; // questo andrà tolta - rimasta solo per contabilità =========================================
   myConfig.debug        = false; //true; //false; //true;
   myConfig.debugPort    = &Serial;
   myConfig.timeout      = DEFAULT_TIMEOUT; // 50ms
   myConfig.callbacks    = callbackArr;
-  //myConfig.callbacks    = NULL;
   myConfig.callbacksLen = sizeof(callbackArr) / sizeof(functionPtr);
-  //myConfig.callbacksLen = 0;
   packet.begin(myConfig);
 
   setupTimerSerial(); // crea i timer .. timer per invio dati seriali
@@ -1297,18 +1220,6 @@ void SerialWireless_::init_wireless() {
 
 
 void SerialWireless_::begin() {
-  #ifdef COMMENTO
-  configST myConfig; // variabile di utilità per configurazione
-  // ============ inizializzazione semafori =============
-  tx_sem = xSemaphoreCreateBinary();
-  mutex_tx_serial = xSemaphoreCreateMutex();
-  mutex_writer_bin = xSemaphoreCreateMutex();
-
-  xSemaphoreGive(tx_sem);
-  xSemaphoreGive(mutex_tx_serial);
-  xSemaphoreGive(mutex_writer_bin);
-  // ==== fine inizializzazione semafori
-  #endif //COMMENTO
 
   #ifdef GUN
     if (lastDongleSave) espnow_wifi_channel=lastDongleChannel;
@@ -1373,10 +1284,6 @@ void SerialWireless_::begin() {
     //Serial.printf("esp_now_init failed! 0x%x", err);
   }
     
-  if (err != ESP_OK) {
-    //Serial.printf("esp_now_init failed! 0x%x", err);
-  }
-
   if (lastDongleSave) {
     memcpy(peerAddress, lastDongleAddress,6);
     stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION_DONGLE;
@@ -1402,28 +1309,11 @@ void SerialWireless_::begin() {
     //Serial.printf("esp_now_register_send_cb failed! 0x%x", err);
   }
 
-  #ifdef COMMENTO
-  myConfig.port         = &Serial; // questo andrà tolta - rimasta solo per contabilità =========================================
-  myConfig.debug        = false; //true; //false; //true;
-  myConfig.debugPort    = &Serial;
-  myConfig.timeout      = DEFAULT_TIMEOUT; // 50ms
-  myConfig.callbacks    = callbackArr;
-  //myConfig.callbacks    = NULL;
-  myConfig.callbacksLen = sizeof(callbackArr) / sizeof(functionPtr);
-  //myConfig.callbacksLen = 0;
-  
-  packet.begin(myConfig);
-  #endif // COMMENTO
-
   TinyUSBDevices.wireless_mode = WIRELESS_MODE::ENABLE_ESP_NOW_TO_DONGLE;
-  #ifdef COMMENTO
-  setupTimerSerial(); // crea i timer .. timer per invio dati seriali
-  #endif // COMMENTO
 }
 
 bool SerialWireless_::end() {
 
-  //esp_now_del_peer(peerAddress); // non serve lo fa direttamente esp_now_deinit()
   esp_err_t err = esp_now_deinit();
   if (err != ESP_OK) {
     //Serial.printf("esp_now_deinit failed! 0x%x", err);
@@ -1459,16 +1349,13 @@ bool SerialWireless_::connection_dongle() {
   #define TIMEOUT_DONGLE_DIALOGUE 2000 //  1000 // in millisecondi   ?????????????????????????
   unsigned long lastMillis_start_dialogue = millis ();
   
-  
-  
-  lastMillis_start_dialogue = millis ();
   stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
     
   // ====================================================
 
   broadcast_receiver = true;
 
-  while(/*!TinyUSBDevice.mounted() && */stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) { 
+  while(stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) { 
     if (stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) {
       lastMillis_start_dialogue = millis ();
     }
@@ -1476,8 +1363,6 @@ bool SerialWireless_::connection_dongle() {
       stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
     }
     taskYIELD();
-    //yield();
-    //vTaskDelay(pdMS_TO_TICKS(10));
   }
   
   broadcast_receiver = false;
@@ -1488,13 +1373,6 @@ bool SerialWireless_::connection_dongle() {
   }
   memcpy(peerAddress, mac_esp_another_card, 6);
   memcpy(peerInfo.peer_addr, peerAddress, 6);
-  ////////////espnow_wifi_channel=usb_data_wireless.channel;
-  ////////////esp_wifi_set_promiscuous(true);
-  ////////////esp_wifi_set_channel(espnow_wifi_channel, WIFI_SECOND_CHAN_NONE);
-  ////////////esp_wifi_set_promiscuous(false);
-  //peerInfo.channel = espnow_wifi_channel;
-  //peerInfo.channel = ESPNOW_WIFI_CHANNEL;
-  //peerInfo.encrypt = false;              
   if (esp_now_add_peer(&peerInfo) != ESP_OK) {  // inserisce il dongle nei peer
     //Serial.println("DONGLE - Errore nell'aggiunta del nuovo peer della GUN");
   } else esp_now_set_peer_rate_config(peerAddress, &rate_config);
@@ -1534,8 +1412,6 @@ bool SerialWireless_::connection_gun_at_last_dongle() {
   aux_buffer_tx[0] = CONNECTION_STATE::TX_CHECK_CONNECTION_LAST_DONGLE;
   memcpy(&aux_buffer_tx[1], SerialWireless.mac_esp_inteface, 6);
   memcpy(&aux_buffer_tx[7], peerAddress, 6);
-  lastMillis_tx_packet_last_dongle = 0;
-  lastMillis_start_dialogue_last_dongle = millis();
   while (!TinyUSBDevice.mounted() && 
          (stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED_WITH_LAST_DONGLE) &&
          ((millis() - lastMillis_start_dialogue_last_dongle) < TIMEOUT_DIALOGUE_LAST_DONGLE)) { 
@@ -1546,8 +1422,6 @@ bool SerialWireless_::connection_gun_at_last_dongle() {
       }
       
       taskYIELD();
-      //vTaskDelay(pdMS_TO_TICKS(10));
-      //yield();
   }
   if (stato_connessione_wireless == CONNECTION_STATE::DEVICES_CONNECTED_WITH_LAST_DONGLE) {    
     stato_connessione_wireless = CONNECTION_STATE::DEVICES_CONNECTED;
@@ -1567,17 +1441,25 @@ bool SerialWireless_::connection_gun_at_last_pedal() {
   #define TIMEOUT_DIALOGUE_LAST_PEDAL 2000 // in millisecondi - tempo massimo per ricerca ultimo pedal
   unsigned long lastMillis_tx_packet_last_pedal = 0;
   unsigned long lastMillis_start_dialogue_last_pedal = millis ();
-
   uint8_t aux_buffer_tx[13];
   
+  // =============================================
+  uint8_t peerAddress_copy[6]; 
+  memcpy(peerAddress_copy, peerAddress, 6);
+
+  memcpy(peerAddress, lastPedalAddress, 6);        
+  memcpy(peerInfo.peer_addr, peerAddress, 6);
+  peerInfo.channel = espnow_wifi_channel;
+  if (esp_now_add_peer(&peerInfo) != ESP_OK) {  // inserisce il dongle nei peer
+    //Serial.println("Errore nell'aggiunta del nuovo peer");
+  } else esp_now_set_peer_rate_config(peerAddress, &rate_config);         
+  // =============================================
+
   stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION_PEDAL;
   aux_buffer_tx[0] = CONNECTION_STATE::TX_CHECK_CONNECTION_LAST_PEDAL;
   memcpy(&aux_buffer_tx[1], SerialWireless.mac_esp_inteface, 6);
   memcpy(&aux_buffer_tx[7], peerAddress, 6);
-  lastMillis_tx_packet_last_pedal = 0;
-  lastMillis_start_dialogue_last_pedal = millis();
-  while (/*!TinyUSBDevice.mounted() &&*/ 
-         (stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED_WITH_LAST_PEDAL) &&
+  while ((stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED_WITH_LAST_PEDAL) &&
          ((millis() - lastMillis_start_dialogue_last_pedal) < TIMEOUT_DIALOGUE_LAST_PEDAL)) { 
       if ((millis() - lastMillis_tx_packet_last_pedal) > TIMEOUT_TX_PACKET_LAST_PEDAL)
       {
@@ -1586,18 +1468,35 @@ bool SerialWireless_::connection_gun_at_last_pedal() {
       }
       
       taskYIELD();
-      //vTaskDelay(pdMS_TO_TICKS(10));
-      //yield();
   }
+  
+  if (esp_now_del_peer(peerAddress) != ESP_OK) {  // cancella il broadcast dai peer
+      //Serial.println("DONGLE - Errore nella cancellazione del peer broadcast");
+  }
+
+  memcpy(peerAddress, peerAddress_copy, 6);
+
   if (stato_connessione_wireless == CONNECTION_STATE::DEVICES_CONNECTED_WITH_LAST_PEDAL) {    
-    stato_connessione_wireless = CONNECTION_STATE::DEVICES_CONNECTED;
-    TinyUSBDevices.onBattery = true;
+    //stato_connessione_wireless = CONNECTION_STATE::DEVICES_CONNECTED;
+    
+    memcpy(peerAddress_pedal, mac_esp_another_card, 6);
+    memcpy(peerInfo.peer_addr, peerAddress_pedal, 6);
+    peerInfo.channel = espnow_wifi_channel;
+    if (esp_now_add_peer(&peerInfo) != ESP_OK) {  // inserisce il dongle nei peer
+      //Serial.println("DONGLE - Errore nell'aggiunta del nuovo peer della GUN");
+    } else esp_now_set_peer_rate_config(peerAddress_pedal, &rate_config);
+
+    setupTimerPedal();  // CREA IL TIMER PER GESTIRE IN SICUREZZA IL PEDA
+
+    
+    TinyUSBDevices.is_pedal_wireless = true;
+
     return true;
   } else {
-    stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
+    //stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
+    TinyUSBDevices.is_pedal_wireless = true;
+    
     lastPedalSave=false;
-    //esp_now_deinit();
-    //begin();
     return false;
   }
 }
@@ -1646,8 +1545,6 @@ bool SerialWireless_::connection_gun() {
   }
   memcpy(peerAddress, BROADCAST_ADDR, 6);
   memcpy(peerInfo.peer_addr, peerAddress, 6);
-  //peerInfo.channel = ESPNOW_WIFI_CHANNEL;
-  //peerInfo.encrypt = false;              
   if (esp_now_add_peer(&peerInfo) != ESP_OK) {  // inserisce il dongle nei peer
     //Serial.println("Errore nell'aggiunta del nuovo peer");
   } else esp_now_set_peer_rate_config(peerAddress, &rate_config);                       
@@ -1657,7 +1554,6 @@ bool SerialWireless_::connection_gun() {
   aux_buffer_tx[0] = CONNECTION_STATE::TX_GUN_SEARCH_DONGLE_BROADCAST;
   memcpy(&aux_buffer_tx[1], SerialWireless.mac_esp_inteface, 6);
   memcpy(&aux_buffer_tx[7], peerAddress, 6);
-  //aux_buffer_tx[13] = espnow_wifi_channel;
  
   broadcast_receiver = true;
 
@@ -1665,8 +1561,6 @@ bool SerialWireless_::connection_gun() {
     if (stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) {
       if (((millis() - lastMillis_change_channel) > TIMEOUT_GUN_CHANGE_CHANNEL) && 
          ((millis() - lastMillis_tx_packet)) >= (TIMEOUT_GUN_TX_PACKET - 50)) {  // aggiunta impostato 50 ms come margine, per evitare che quando invia pacchetto cambi subito casnale senza dare possibilità risposta
-        //channel++;
-        //if (channel >13) channel = 1;
         aux_buffer_tx[13] = channel;
         channel_display = channel;      
         
@@ -1701,8 +1595,6 @@ bool SerialWireless_::connection_gun() {
       }  
     }
     taskYIELD();
-    //yield(); // in attesa dello stabilimento di una connessione
-    //vTaskDelay(pdMS_TO_TICKS(10));
   }
 
   broadcast_receiver = false;  
@@ -1719,8 +1611,6 @@ bool SerialWireless_::connection_gun() {
     esp_wifi_set_channel(espnow_wifi_channel, WIFI_SECOND_CHAN_NONE);
     esp_wifi_set_promiscuous(false);
     peerInfo.channel = espnow_wifi_channel;
-    //peerInfo.channel = ESPNOW_WIFI_CHANNEL;
-    //peerInfo.encrypt = false;              
     if (esp_now_add_peer(&peerInfo) != ESP_OK) {  // inserisce il dongle nei peer
       //Serial.println("DONGLE - Errore nell'aggiunta del nuovo peer della GUN");
     } else esp_now_set_peer_rate_config(peerAddress, &rate_config);
@@ -1785,7 +1675,6 @@ bool SerialWireless_::connection_gun_at_pedal() {
   #endif // USES_DISPLAY
   
   
-  //uint8_t seconds = 10;  
   #define TIMEOUT_GUN_AT_PEDAL_TX_PACKET 50 //500 // in millisecondi
   #define TIMEOUT_GUN_AT_PEDAL_CHANGE_SECONDS 1000 // in millisecondi - cambia canale ogni
   #define TIMEOUT_GUN_AT_PEDAL_DIALOGUE 3000 //6000 // in millisecondi - tempo massimo per completare operazione accoppiamento
@@ -1797,17 +1686,11 @@ bool SerialWireless_::connection_gun_at_pedal() {
   uint8_t peerAddress_copy[6];
   
   
-  
-  ////////// ===== IMPOSTARE IL PEER BOARCAST QUI ====================== SERVE SE SI RIPARTE DA CERCA ULTIMO DONGLE, o forse no, non ricordo .... ????????? verificare  ????
-  //////////if (esp_now_del_peer(peerAddress) != ESP_OK) {  // cancella il broadcast dai peer
-  //////////  //Serial.println("Errore nella cancellazione del peer");
-  //////////}
   memcpy(peerAddress_copy, peerAddress, 6);
 
   memcpy(peerAddress, BROADCAST_ADDR, 6);        
   memcpy(peerInfo.peer_addr, peerAddress, 6);
   peerInfo.channel = espnow_wifi_channel;
-  //peerInfo.encrypt = false;              
   if (esp_now_add_peer(&peerInfo) != ESP_OK) {  // inserisce il dongle nei peer
     //Serial.println("Errore nell'aggiunta del nuovo peer");
   } else esp_now_set_peer_rate_config(peerAddress, &rate_config);                       
@@ -1818,7 +1701,6 @@ bool SerialWireless_::connection_gun_at_pedal() {
   memcpy(&aux_buffer_tx[1], SerialWireless.mac_esp_inteface, 6);
   memcpy(&aux_buffer_tx[7], peerAddress, 6);
   aux_buffer_tx[13] = espnow_wifi_channel;
- 
 
   broadcast_receiver = true;
   
@@ -1826,8 +1708,6 @@ bool SerialWireless_::connection_gun_at_pedal() {
     if (stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) {
       if (((millis() - lastMillis_change_seconds) > TIMEOUT_GUN_AT_PEDAL_CHANGE_SECONDS) && 
          ((millis() - lastMillis_tx_packet)) >= (TIMEOUT_GUN_AT_PEDAL_TX_PACKET - 50)) {  // aggiunta impostato 50 ms come margine, per evitare che quando invia pacchetto cambi subito casnale senza dare possibilità risposta
-        //channel++;
-        //if (channel >13) channel = 1;
         aux_buffer_tx[13] = espnow_wifi_channel;
         seconds_display = seconds;
                         
@@ -1837,7 +1717,6 @@ bool SerialWireless_::connection_gun_at_pedal() {
         seconds--;
       }
       if ((millis() - lastMillis_tx_packet) > TIMEOUT_GUN_AT_PEDAL_TX_PACKET) {
-        // ??????????????????????? siatemare per gestione pedal di SendPacket ????????????????? .. ci vorrà un buffer per ogni peer o gestire diversamente le cose a seconda di chi si trasmettono i dati oppure si sposta provvisoriamente il peeraddres solo durante ricerca pedale
         SerialWireless.SendPacket((const uint8_t *)aux_buffer_tx, 14, PACKET_TX::CONNECTION_PEDAL); // aggiunto un byte per trasmettere anche il canale di trasmissione
         //Serial.print("DONGLE - inviato pacchetto broadcast sul canale: ");
         //Serial.println(channel);
@@ -1853,8 +1732,6 @@ bool SerialWireless_::connection_gun_at_pedal() {
       }  
     }
     taskYIELD();
-    //yield(); // in attesa dello stabilimento di una connessione
-    //vTaskDelay(pdMS_TO_TICKS(10));
   }
   
   broadcast_receiver = false;
@@ -1872,21 +1749,10 @@ bool SerialWireless_::connection_gun_at_pedal() {
 
   if (stato_connessione_wireless == CONNECTION_STATE::DEVICES_CONNECTED) {
     //Serial.println("DONGLE - Negosazione completata - associazione dei dispositivi GUN/DONGLE");
-    /*
-    if (esp_now_del_peer(peerAddress) != ESP_OK) {  // cancella il broadcast dai peer
-      //Serial.println("DONGLE - Errore nella cancellazione del peer broadcast");
-    }
-    */
 
     memcpy(peerAddress_pedal, mac_esp_another_card, 6);
     memcpy(peerInfo.peer_addr, peerAddress_pedal, 6);
-    /////espnow_wifi_channel=usb_data_wireless.channel;
-    /////esp_wifi_set_promiscuous(true);
-    /////esp_wifi_set_channel(espnow_wifi_channel, WIFI_SECOND_CHAN_NONE);
-    /////esp_wifi_set_promiscuous(false);
     peerInfo.channel = espnow_wifi_channel;
-    //peerInfo.channel = ESPNOW_WIFI_CHANNEL;
-    //peerInfo.encrypt = false;              
     if (esp_now_add_peer(&peerInfo) != ESP_OK) {  // inserisce il dongle nei peer
       //Serial.println("DONGLE - Errore nell'aggiunta del nuovo peer della GUN");
     } else esp_now_set_peer_rate_config(peerAddress_pedal, &rate_config);
@@ -1911,7 +1777,6 @@ bool SerialWireless_::connection_gun_at_pedal() {
     #endif // USES_DISPLAY
 
     TinyUSBDevices.is_pedal_wireless = true;
-    //TinyUSBDevices.onBattery = true;
     return true;  
   }
   
@@ -1978,8 +1843,6 @@ bool SerialWireless_::connection_pedal() {
       }  
     }
     taskYIELD();
-    //vTaskDelay(pdMS_TO_TICKS(10));
-    //yield(); // in attesa dello stabilimento di una connessione
   }
     
   broadcast_receiver = false;
@@ -1995,8 +1858,6 @@ bool SerialWireless_::connection_pedal() {
     esp_wifi_set_channel(espnow_wifi_channel, WIFI_SECOND_CHAN_NONE);
     esp_wifi_set_promiscuous(false);
     peerInfo.channel = espnow_wifi_channel;
-    //peerInfo.channel = ESPNOW_WIFI_CHANNEL;
-    //peerInfo.encrypt = false;              
     if (esp_now_add_peer(&peerInfo) != ESP_OK) {  // inserisce il dongle nei peer
       //Serial.println("DONGLE - Errore nell'aggiunta del nuovo peer della GUN");
     } else esp_now_set_peer_rate_config(peerAddress, &rate_config);
@@ -2028,7 +1889,6 @@ void packet_callback_read_dongle() {
         absmouse5Report_pending = true;    
         xTaskNotifyGive(xUSBTaskHandle);
       }
-      //usbHid.sendReport(HID_RID_e::HID_RID_MOUSE, ptr, sizeof(absmouse5Report_last_wifi)); // per inviare a USB
       break;
     }
     case PACKET_TX::GAMEPADE_TX: {
@@ -2039,7 +1899,6 @@ void packet_callback_read_dongle() {
         gamepad16Report_pending = true;
         xTaskNotifyGive(xUSBTaskHandle);
       }
-      //usbHid.sendReport(HID_RID_e::HID_RID_GAMEPAD, ptr, sizeof(gamepad16Report_last_wifi)); // per inviare a USB
       break;
     }
     case PACKET_TX::KEYBOARD_TX: {
@@ -2049,14 +1908,11 @@ void packet_callback_read_dongle() {
         keyReport_pending = true;
         xTaskNotifyGive(xUSBTaskHandle);
       }
-      //usbHid.sendReport(HID_RID_e::HID_RID_KEYBOARD, ptr, sizeof(keyReport_last_wifi));  // per inviare a USB
       break;
     }
     // ====== poi va tolto ================
     case PACKET_TX::PEDAL_TX:
       {
-        //memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
-        //TinyUSBDevices.is_pedal_wireless = (bool)aux_buffer[0];
         SerialWireless.is_pedal_wireless_comunication = true;
       }
       break;
@@ -2072,7 +1928,6 @@ void packet_callback_read_dongle() {
       if (memcmp(ptr, &absmouse5Report_last_wifi, sizeof(absmouse5Report_last_wifi))) {
         memcpy(&absmouse5Report_last_wifi, ptr, sizeof(absmouse5Report_last_wifi));
         absmouse5Report_pending = true;    
-        //xTaskNotifyGive(xUSBTaskHandle);
       }   
 
       ptr += sizeof(absmouse5Report_last_wifi); // Fai scorrere il puntatore in avanti alla fine dei dati mouse
@@ -2081,7 +1936,6 @@ void packet_callback_read_dongle() {
       if (memcmp(ptr, &keyReport_last_wifi, sizeof(keyReport_last_wifi))) {
         memcpy(&keyReport_last_wifi, ptr, sizeof(keyReport_last_wifi));
         keyReport_pending = true;
-        //xTaskNotifyGive(xUSBTaskHandle);
       }
       
       ptr += sizeof(keyReport_last_wifi); // Fai scorrere il puntatore in avanti alla fine dei dati tastiera
@@ -2090,7 +1944,6 @@ void packet_callback_read_dongle() {
       if (memcmp(ptr, &gamepad16Report_last_wifi, sizeof(gamepad16Report_last_wifi))) {
         memcpy(&gamepad16Report_last_wifi, ptr, sizeof(gamepad16Report_last_wifi));
         gamepad16Report_pending = true;
-        //xTaskNotifyGive(xUSBTaskHandle);
       }
       
       if (absmouse5Report_pending || keyReport_pending || gamepad16Report_pending) xTaskNotifyGive(xUSBTaskHandle);
@@ -2124,7 +1977,6 @@ void packet_callback_read_dongle() {
       break; 
     #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO
     case PACKET_TX::CHECK_CONNECTION_LAST_DONGLE:
-      // CODICE
       memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
       switch (aux_buffer[0])
       {
@@ -2139,9 +1991,9 @@ void packet_callback_read_dongle() {
               // lo invia 3 volte - una volta ogni 70ms
               for (uint8_t i = 0; i<3; i++) {
                 if (i>0) {
-                  //vTaskDelay(pdMS_TO_TICKS(1000)); // equivalente a delay(1000) ma non bloccante su esp32
-                  unsigned long lastMillis_tx_packet_connection_last_dongle = millis();
-                  while ((millis() - lastMillis_tx_packet_connection_last_dongle) < 70) taskYIELD(); ///////yield(); 
+                  vTaskDelay(pdMS_TO_TICKS(69)); // equivalente a delay(1000) ma non bloccante su esp32
+                  //unsigned long lastMillis_tx_packet_connection_last_dongle = millis();
+                  //while ((millis() - lastMillis_tx_packet_connection_last_dongle) < 70) taskYIELD(); ///////yield(); 
                 }
                 SerialWireless.SendPacket((const uint8_t *)aux_buffer, 13, PACKET_TX::CHECK_CONNECTION_LAST_DONGLE);
               }
@@ -2189,9 +2041,9 @@ void packet_callback_read_dongle() {
               // =========================================================
               for (uint8_t i = 0; i<3; i++) {
                 if (i>0) {
-                  //vTaskDelay(pdMS_TO_TICKS(1000)); // equivalente a delay(1000) ma non bloccante su esp32
-                  unsigned long lastMillis_tx_packet_gun_to_dongle_conferm = millis();
-                  while ((millis() - lastMillis_tx_packet_gun_to_dongle_conferm) < 70) taskYIELD(); /////yield(); 
+                  vTaskDelay(pdMS_TO_TICKS(69)); // equivalente a delay(1000) ma non bloccante su esp32
+                  //unsigned long lastMillis_tx_packet_gun_to_dongle_conferm = millis();
+                  //while ((millis() - lastMillis_tx_packet_gun_to_dongle_conferm) < 70) taskYIELD(); /////yield(); 
                 }
                 SerialWireless.SendPacket((const uint8_t *)aux_buffer, 13, PACKET_TX::CONNECTION);
               }
@@ -2228,13 +2080,9 @@ void packet_callback_read_gun() {
  
   // =====================================================
         
-        //uint8_t pedali;
         //  pedal attivo = 00000001 - pedal2 attivo = 00000010 - entrambi pedali attivi = 00000011 - tutti i pedali non premuti = 00000000
-        //pedali = aux_buffer[0];
         memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
         TinyUSBDevices.pedals_wireless_state = aux_buffer[0];
-        //TinyUSBDevices.pedal_wireless = (pedali & 0b00000001) != 0;  //false = pedale non premuto;
-        //TinyUSBDevices.pedal2_wireless = (pedali & 0b00000010) != 0; //false = pedale non premuto;
         esp_timer_stop(timer_handle_pedal); 
         if (TinyUSBDevices.pedals_wireless_state) esp_timer_start_once(timer_handle_pedal, MAX_TIMEOUT_LAST_PACKET);
       }
@@ -2265,7 +2113,6 @@ void packet_callback_read_gun() {
       break;
     #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO
     case PACKET_TX::CHECK_CONNECTION_LAST_DONGLE:
-      // CODICE VALUTARE SE FARE CONTROLLO SE PISTOLA ANCORA CONNESSA .. SE NON CONNESSA RIAVVIA LA SCHEDA ?
       memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
       switch (aux_buffer[0])
       {
@@ -2281,7 +2128,6 @@ void packet_callback_read_gun() {
       }     
       break;
     case PACKET_TX::CHECK_CONNECTION_LAST_PEDAL:
-      // CODICE VALUTARE SE FARE CONTROLLO SE PISTOLA ANCORA CONNESSA .. SE NON CONNESSA RIAVVIA LA SCHEDA ?
       memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
       switch (aux_buffer[0])
       {
@@ -2370,9 +2216,9 @@ void packet_callback_read_pedal() {
     case PACKET_TX::KEYBOARD_TX:
       break;
     #ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
-    case PACKET_TX::MOUSE_KEY_PAD_TX: { // ATTENZIONE: Le parentesi graffe qui sono OBBLIGATORIE in C++ per dichiarare variabili dentro un 'case'
+    case PACKET_TX::MOUSE_KEY_PAD_TX: { 
       break;  
-    } // Chiusura del blocco del case
+    } 
     #endif // OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
     #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
     case PACKET_TX::DUMMY_PACKET:
@@ -2400,7 +2246,6 @@ void packet_callback_read_pedal() {
       break; 
     #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO
     case PACKET_TX::CHECK_CONNECTION_LAST_PEDAL:
-      // CODICE
       memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
       switch (aux_buffer[0])
       {
@@ -2415,9 +2260,9 @@ void packet_callback_read_pedal() {
               // lo invia 3 volte - una volta ogni 70ms
               for (uint8_t i = 0; i<3; i++) {
                 if (i>0) {
-                  //vTaskDelay(pdMS_TO_TICKS(1000)); // equivalente a delay(1000) ma non bloccante su esp32
-                  unsigned long lastMillis_tx_packet_connection_last_pedal = millis();
-                  while ((millis() - lastMillis_tx_packet_connection_last_pedal) < 70) taskYIELD();  ////yield(); 
+                  vTaskDelay(pdMS_TO_TICKS(69)); // equivalente a delay(1000) ma non bloccante su esp32
+                  //unsigned long lastMillis_tx_packet_connection_last_pedal = millis();
+                  //while ((millis() - lastMillis_tx_packet_connection_last_pedal) < 70) taskYIELD();  ////yield(); 
                 }
                 SerialWireless.SendPacket((const uint8_t *)aux_buffer, 13, PACKET_TX::CHECK_CONNECTION_LAST_PEDAL);
               }
@@ -2441,7 +2286,6 @@ void packet_callback_read_pedal() {
             aux_buffer[0] = CONNECTION_STATE::TX_PEDAL_TO_GUN_PRESENCE;
             memcpy(&aux_buffer[1], SerialWireless.mac_esp_inteface, 6);
             memcpy(&aux_buffer[7], SerialWireless.mac_esp_another_card, 6);
-            /////aux_buffer[13] = espnow_wifi_channel;  // no??????????????????????????????????????????????????????????????????????
             SerialWireless.SendPacket((const uint8_t *)aux_buffer, 13, PACKET_TX::CONNECTION_PEDAL);
             SerialWireless.stato_connessione_wireless = CONNECTION_STATE::TX_PEDAL_TO_GUN_PRESENCE;
             // assicurati che i dati siano stati spediti
@@ -2465,9 +2309,9 @@ void packet_callback_read_pedal() {
               // =========================================================
               for (uint8_t i = 0; i<3; i++) {
                 if (i>0) {
-                  //vTaskDelay(pdMS_TO_TICKS(1000)); // equivalente a delay(1000) ma non bloccante su esp32
-                  unsigned long lastMillis_tx_packet_gun_to_dongle_conferm = millis();
-                  while ((millis() - lastMillis_tx_packet_gun_to_dongle_conferm) < 70) taskYIELD();  ////yield(); 
+                  vTaskDelay(pdMS_TO_TICKS(69)); // equivalente a delay(1000) ma non bloccante su esp32
+                  //unsigned long lastMillis_tx_packet_gun_to_pedal_conferm = millis();
+                  //while ((millis() - lastMillis_tx_packet_gun_to_pedal_conferm) < 70) taskYIELD();  ////yield(); 
                 }
                 SerialWireless.SendPacket((const uint8_t *)aux_buffer, 13, PACKET_TX::CONNECTION_PEDAL);
               }

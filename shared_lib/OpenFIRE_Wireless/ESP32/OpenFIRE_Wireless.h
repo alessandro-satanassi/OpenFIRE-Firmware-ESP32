@@ -100,10 +100,13 @@ extern int8_t espnow_rssi_ricevuto;
 extern uint8_t lastDongleAddress[6];
 extern uint8_t lastPedalAddress[6];
 extern uint8_t lastDongleChannel;
+extern uint8_t lastPedalChannel;
 extern uint8_t peerAddress[6];
 extern bool lastDongleSave;
 extern bool lastPedalSave; 
 extern const uint8_t BROADCAST_ADDR[6];
+
+extern uint8_t peerAddress_pedal[6];
  
 
 
@@ -211,8 +214,7 @@ class SerialWireless_ : public Stream
   #define TIME_OUT_SERIAL_WRITE 3  // in seguito rimuovere o rideterminare in microsecondi
   #define TIMER_HANDLE_SERIAL_DURATION_MICROS 3000 // 3000 microsecondi un 3 millisecondi
   uint8_t bufferSerialWrite[FIFO_SIZE_WRITE_SERIAL];
-  unsigned long startTimeSerialWrite = 0; // = millis(); // poi convertire in microsecondi // in seguito rimovere
-  //volatile uint16_t lenBufferSerialWrite = 0;
+  
   esp_timer_handle_t timer_handle_serial;
   // Nuove variabili TX Serial (Circolare)
   volatile uint16_t _writerSerialWrite = 0;
@@ -222,7 +224,6 @@ class SerialWireless_ : public Stream
   // ====== per read ====== buffer circolare =====
   #define FIFO_SIZE_READ_SERIAL 256 // deve essere una potenza di due
   uint8_t bufferSerialRead[FIFO_SIZE_READ_SERIAL];
-  //volatile uint16_t lenBufferSerialRead = 0;
   volatile uint16_t _writerSerialRead = 0;
   volatile uint16_t _readerSerialRead = 0;
   bool _overflow_bufferSerialRead = false; 
@@ -279,7 +280,6 @@ class SerialWireless_ : public Stream
   // inserire da me per gestione buffer uscita
   size_t writeBin(uint8_t c);
   size_t writeBin(const uint8_t *data, size_t len);
-  //void flushBin();
   int availableForWriteBin();
   bool flush_sem();
   // inserire da me per gestione buffer ingresso
@@ -288,12 +288,9 @@ class SerialWireless_ : public Stream
   int availableBin();
   int availableBufferSerialWrite();
 
-  //inserito per gestire Packet
-  //volatile uint16_t numAvailablePacket = 0;
-  //int availablePacket();
+  
         
   // ======== generiche ============
-  //void SendData();  // utilizziamo anche flush
   void SendData_sem();
   void SendPacket(const uint8_t *data, uint8_t len,uint8_t packetID); // non penso lo utilizzeremo
 
@@ -309,18 +306,12 @@ class SerialWireless_ : public Stream
   // ===============================
   // ===== per i timer ================
 
-//void setupTimerSerial(uint64_t duration_us);
 void setupTimerSerial();
 void stopTimer_serial();
 void resetTimer_serial(uint64_t duration_us);
 
-//void setupTimerPedal();
-//void stopTimer_pedal();
-//void resetTimer_pedal(uint64_t duration_us);
-//esp_timer_handle_t timer_handle_pedal;
-//bool last_pedal;
-//bool last_pedal2;
-volatile bool is_pedal_wireless_comunication; // poi va tolto serrve per prove
+
+volatile bool is_pedal_wireless_comunication; // serve per sincronizzazione col dongle, ma andrebbe rivisto e poi probabilmente tolto
 
 private:
 

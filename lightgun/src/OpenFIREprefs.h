@@ -227,6 +227,13 @@ public:
         /// @brief Salva le le impostazione dell'ultimo DONGLE a cui è stato connesso // canale e mac addres
         static int SaveLastDongleWireless(uint8_t *address, uint8_t *channel);  
 
+        /// @brief Carica le impostazione dell'ultimo PEDAL a cui è stato connesso // canale e mac addres
+        static int LoadLastPedalWireless(uint8_t *address, uint8_t *channel);
+        
+        /// @brief Salva le le impostazione dell'ultimo PEDAL a cui è stato connesso // canale e mac addres
+        static int SaveLastPedalWireless(uint8_t *address, uint8_t *channel);  
+
+
     #endif //ARDUINO_ARCH_ESP32
 
 };

@@ -28,14 +28,6 @@
     #define delay(ms) vTaskDelay(pdMS_TO_TICKS(ms))                    
 #endif //ARDUINO_ARCH_ESP32
 
-
-// ================= parte poi da rimuovere ==================
-#ifdef CLOCK_CAM_WII
-uint32_t tone_freq_main = 0;
-uint32_t tone_duty_main = 0;
-#endif //CLOCK_CAM_WII
-// ================= fine parte poi da rimuovere =============
-
 // ========== serve per usare display da parte wireless =============
 #ifdef USES_DISPLAY
     #ifdef USE_LOVYAN_GFX
@@ -154,8 +146,12 @@ void setup() {
             }
             */
             //////////////////////////////// FINE MAI USATO //////////////////////////////////////
+            
             if (OF_Prefs::LoadLastDongleWireless(lastDongleAddress, &lastDongleChannel) == OF_Prefs::Error_Success) lastDongleSave = true;
                 else lastDongleSave = false;
+            
+            if (OF_Prefs::LoadLastPedalWireless(lastPedalAddress, &lastPedalChannel) == OF_Prefs::Error_Success) lastPedalSave = true;
+                else lastPedalSave = false;
 
         #endif // defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
         
@@ -239,15 +235,7 @@ void setup() {
         // ========== fine serve per usare display da parte wireless =============
 
         //FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Init);
-        ////////////////////////FW_Common::OLED.TopPanelUpdate(" ... CONNECTION ...");
-        
-        // =================== parte poi da rimuovere ====================
-        #ifdef CLOCK_CAM_WII
-        // char buffer[50];
-        // sprintf(buffer, "Hz: %d - DC: %d ", tone_freq_main, tone_duty_main);
-        // FW_Common::OLED.TopPanelUpdate(buffer);
-        #endif // CLOCK_CAM_WII
-        // ================== fine parte da rimovere =====================
+        ////////////////////////FW_Common::OLED.TopPanelUpdate(" ... CONNECTION ...");      
 
     #endif // USES_DISPLAY
     #endif //ARDUINO_ARCH_ESP32
@@ -374,17 +362,21 @@ void setup() {
             if (lastDongleSave) {
                 // PROVA A CONNETTERTI AL PRECEDENTE DONGLE INVIANDO IL PACCHETTO CHECK_CONNECTION
                 if (SerialWireless.connection_gun_at_last_dongle()) {
+                    
+                    //if (lastPedalSave) SerialWireless.connection_gun_at_last_pedal();
                 } else {
                     //lastDongleSave=false;
                     //SerialWireless.end();
                     //SerialWireless.begin();
                     SerialWireless.connection_gun();
+                    //SerialWireless.connection_gun_at_pedal();
                 }
             }
             else {
                 //TinyUSBDevices.onBattery = false; // lo imposta a true solo dopo che è stata stabilita e riconosciuta connessione tra dongle e gun
                 //uint8_t stato_wireless = 0;
                 SerialWireless.connection_gun();
+                //SerialWireless.connection_gun_at_pedal();
             }
         }
     #endif // OPENFIRE_WIRELESS_ENABLE
@@ -426,13 +418,25 @@ void setup() {
     else {     
         if (!lastDongleSave || 
             (lastDongleSave && (!(memcmp(lastDongleAddress, peerAddress,6) == 0) || !(lastDongleChannel == espnow_wifi_channel)))) OF_Prefs::SaveLastDongleWireless(peerAddress, &espnow_wifi_channel);
+        
+        
         // CHIUDI TUTTO CIO' CHE E' USB SE E' DA CHIUDERE
         TinyUSBDevice.clearConfiguration();
         TinyUSBDevice.detach();
+        
         Serial_OpenFIRE_Stream = &SerialWireless;
-        // ======================== POI SPOSTARLO
-        SerialWireless.connection_gun_at_pedal(); // 696969 POI DECIDERE DOVE METTERLO
-        // ===== FIEN POI SPOSTARLO ================
+        // ======================== PEDAL  POI SPOSTARLO
+        //SerialWireless.connection_gun_at_pedal(); // 696969 POI DECIDERE DOVE METTERLO
+        if (lastPedalSave && (lastPedalChannel == espnow_wifi_channel)) {
+            if (!SerialWireless.connection_gun_at_last_pedal()) SerialWireless.connection_gun_at_pedal();
+        } else SerialWireless.connection_gun_at_pedal();
+        // ======================== FINE PEDAL
+
+        
+        if (TinyUSBDevices.is_pedal_wireless && (!lastPedalSave || 
+            (lastPedalSave && (!(memcmp(lastPedalAddress, peerAddress_pedal,6) == 0) || !(lastPedalChannel == espnow_wifi_channel))))) OF_Prefs::SaveLastPedalWireless(peerAddress_pedal, &espnow_wifi_channel);
+  
+        // ===== PEDAL FIEN POI SPOSTARLO ================
 
     }
     #endif
@@ -451,18 +455,6 @@ void setup() {
         //FW_Common::OLED.TopPanelUpdate(" ... CONNECTION ...");
     #endif // USES_DISPLAY
     #endif //ARDUINO_ARCH_ESP32
-
-    #ifdef COMMENTO
-    ////// 696969 ///////////// PROVA SOLENOIDE //////////////////////////////////////
-    vTaskDelay(pdMS_TO_TICKS(1000));
-    for (;;) {
-        digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], HIGH);
-        vTaskDelay(pdMS_TO_TICKS(15));
-        digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);
-        vTaskDelay(pdMS_TO_TICKS(85));
-    }
-    ////// 696969 ///////////// FINE PROVA SOLENOIDE /////////////////////////////////
-    #endif // COMMENTO
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////// 696969 ////////////////////////////////////////////////

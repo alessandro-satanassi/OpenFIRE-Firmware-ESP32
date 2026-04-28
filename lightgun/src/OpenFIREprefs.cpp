@@ -240,4 +240,26 @@ int OF_Prefs::SaveLastDongleWireless(uint8_t *address, uint8_t *channel)
     } else return Error_NoData;
 }
 
+int OF_Prefs::LoadLastPedalWireless(uint8_t *address, uint8_t *channel)
+{
+    File lastPedalFile = LittleFS.open("/lastPEDAL.conf", "r");
+    if(lastPedalFile) {
+        int bWritten = lastPedalFile.read(address, 6);
+        bWritten += lastPedalFile.read(channel, 1);
+        lastPedalFile.close();
+        if (bWritten == (6 + 1)) return Error_Success; else return Error_NoData;
+    } else return Error_NoData;
+}
+
+int OF_Prefs::SaveLastPedalWireless(uint8_t *address, uint8_t *channel)
+{
+    File lastPedalFile = LittleFS.open("/lastPEDAL.conf", "w");
+    if(lastPedalFile) {
+        int bWritten = lastPedalFile.write(address, 6);
+        bWritten += lastPedalFile.write(channel, 1);
+        lastPedalFile.close();
+        if (bWritten == (6 + 1)) return Error_Success; else return Error_NoData;
+    } else return Error_NoData;
+}
+
 #endif // defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
