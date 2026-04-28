@@ -109,11 +109,6 @@ void report_all_MOUSE_KEY_PAD_TX_wifi_espnow(void)
   // Spara via i dati
   SerialWireless.SendPacket(aux, sizeof(aux), PACKET_TX::MOUSE_KEY_PAD_TX);
 
-  // non azzerarli tutti, perchè per come funziona la logica originale di lightgun buttons, non funzionerebbe bene .. lasciare il reset solo come impostato nei singoli report
-  //TinyUSBDevices.newReport[TinyUSBDevices_::reportMouse]=false;
-  //TinyUSBDevices.newReport[TinyUSBDevices_::reportKeyboard]=false;  
-  //TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad]=false;
-
 }
 #endif // OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
 
@@ -261,11 +256,7 @@ void Keyboard_::report(void)
       #endif // ENABLE_BLUETOOTH_OPENFIRE
       #ifdef OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_ESP_NOW_TO_DONGLE:
-        #ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET______________NONE  
-        report_all_MOUSE_KEY_PAD_TX_wifi_espnow();
-        #else
         SerialWireless.SendPacket((const uint8_t *)&_keyReport, sizeof(_keyReport), PACKET_TX::KEYBOARD_TX);
-        #endif
         break;
         #endif //OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_WIFI_TO_DONGLE:
@@ -497,11 +488,7 @@ void Gamepad16_::report()
       #endif // ENABLE_BLUETOOTH_OPENFIRE
       #ifdef OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_ESP_NOW_TO_DONGLE:
-        #ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET__________NONE  
-        report_all_MOUSE_KEY_PAD_TX_wifi_espnow();
-        #else
         SerialWireless.SendPacket((const uint8_t *)&gamepad16Report, sizeof(gamepad16Report), PACKET_TX::GAMEPADE_TX);
-        #endif
         break;
         #endif //OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_WIFI_TO_DONGLE:
