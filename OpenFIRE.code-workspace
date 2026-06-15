@@ -20,17 +20,25 @@
       "name": "SHARED LIB",
       "path": "shared_lib"
     },
-	  {
+    {
       "name": "WIKI",
       "path": "../OpenFIRE-Firmware-ESP32.wiki" 
     },
-	  {
+    {
       "name": "WEB FLASHER",
       "path": "../OpenFIRE-ESP32-WebFlasher" 
     },
     {
+      "name": "WEB TOOLS",
+      "path": "../OpenFIRE-ESP32-Tools" 
+    },
+    {
       "name": "HOME",
       "path": "."
+    },
+    {
+      "name": "STAGING",
+      "path": "../OpenFIRE-ESP32-Staging"
     }
   ],
   "settings": {

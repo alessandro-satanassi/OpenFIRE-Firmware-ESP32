@@ -21,7 +21,7 @@
 #define OPENFIRE_DONGLE_VERSION_MAJOR 6
 #define OPENFIRE_DONGLE_VERSION_MINOR 2
 #define OPENFIRE_DONGLE_VERSION_PATCH 0
-#define OPENFIRE_DONGLE_VERSION_TYPE "Beta1"  // Per indicare pre-release (alpha, beta, RC(Release Candidate), stable)
+#define OPENFIRE_DONGLE_VERSION_TYPE "stable"  // Per indicare pre-release (alpha, beta, RC(Release Candidate), stable)
 
 // Stringa di versione attuale
 #define OPENFIRE_DONGLE_VERSION_STRING (String(OPENFIRE_DONGLE_VERSION_MAJOR) + "." + String(OPENFIRE_DONGLE_VERSION_MINOR) + "." + String(OPENFIRE_DONGLE_VERSION_PATCH)+ "-" + OPENFIRE_DONGLE_VERSION_TYPE)
