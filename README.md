@@ -28,7 +28,14 @@
   </a>  
 </p>
 
+<br>
 
+<p align="center">
+  <b>🎬 WATCH THE VIDEO SHOWCASE & GAMEPLAY:</b><br><br>
+  <a href="https://youtu.be/dccmurhZ-y4">
+    <img src="https://img.youtube.com/vi/dccmurhZ-y4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase" width="500">
+  </a>
+</p>
 
 ---
 > 🛠️ **Hardware sponsored by [PCBWay](https://www.pcbway.com)**
@@ -238,6 +245,15 @@ In full compliance with the original license and the vision of the OpenFIRE crea
   <a href="https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=it">
     <img src="https://img.shields.io/badge/🛠️_OPENFIRE_ESP32_TOOLS-Download_semplificato_dell'App_OpenFIRE-007ec6?style=for-the-badge" alt="OpenFIRE ESP32 Tools">
   </a>  
+</p>
+
+<br>
+
+<p align="center">
+  <b>🎬 GUARDA IL VIDEO SHOWCASE & GAMEPLAY:</b><br><br>
+  <a href="https://youtu.be/dccmurhZ-y4">
+    <img src="https://img.youtube.com/vi/dccmurhZ-y4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase" width="500">
+  </a>
 </p>
 
 ---
