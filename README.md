@@ -196,6 +196,7 @@ A special thanks to the original authors and the OpenFIRE community, without who
 ### ESP32 Port Contributors
 A massive thank you to those who personally supported the development and testing of this specific ESP32 port:
 * **Reverse Cosmos**: For his invaluable help and time spent testing the OpenFIRE ESP32 firmware.
+* **VINNY!**: For designing the mechanical parts and providing the .stl files for the wireless pedal.
 
 ## ⚖️ License, Commercial Use, and Forks
 
@@ -416,6 +417,7 @@ Un ringraziamento speciale agli autori originali e alla community del progetto O
 ### Contributori al Porting per ESP32
 Un enorme grazie a chi ha supportato personalmente lo sviluppo e i test di questo specifico porting per ESP32:
 * **Reverse Cosmos**: Per il prezioso aiuto e il tempo dedicato ai test del firmware OpenFIRE ESP32.
+* **VINNY!**: Per aver progettato la parte meccanica e i file .stl del pedale wireless.
 
 ## ⚖️ Licenza, Uso Commerciale e Fork
 
