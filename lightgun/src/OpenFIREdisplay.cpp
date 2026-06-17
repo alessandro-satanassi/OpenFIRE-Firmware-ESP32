@@ -62,6 +62,10 @@ bool ExtDisplay::Begin()
                 #ifdef USE_LOVYAN_GFX
                 display = new LGFX_SSD1306(1/*i2c_port wire_1*/,OF_Prefs::pins[OF_Const::periphSDA], OF_Prefs::pins[OF_Const::periphSCL], OF_Prefs::toggles[OF_Const::i2cOLEDaltAddr] ? 0x3D : 0x3C, SCREEN_WIDTH, SCREEN_HEIGHT);
                 #else
+                //Wire1.end();
+                // SDA/SCL are indeed on verified correct pins
+                //Wire1.setSDA(OF_Prefs::pins[OF_Const::periphSDA]);
+                //Wire1.setSCL(OF_Prefs::pins[OF_Const::periphSCL]);
                 display = new Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire1, -1);
                 #endif
             } else return false;
@@ -75,6 +79,10 @@ bool ExtDisplay::Begin()
                 #ifdef USE_LOVYAN_GFX
                 display = new LGFX_SSD1306(0/*i2c_port wire*/,OF_Prefs::pins[OF_Const::periphSDA], OF_Prefs::pins[OF_Const::periphSCL], OF_Prefs::toggles[OF_Const::i2cOLEDaltAddr] ? 0x3D : 0x3C, SCREEN_WIDTH, SCREEN_HEIGHT);
                 #else
+                //Wire.end();
+                // SDA/SCL are indeed on verified correct pins
+                //Wire.setSDA(OF_Prefs::pins[OF_Const::periphSDA]);
+                //Wire.setSCL(OF_Prefs::pins[OF_Const::periphSCL]);
                 display = new Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
                 #endif
             } else return false;

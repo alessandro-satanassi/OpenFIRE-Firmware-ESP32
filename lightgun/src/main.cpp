@@ -10,7 +10,7 @@
  * @copyright GNU Lesser General Public License
  *
  * @author [Alessandro Satanassi](alessandro@cittini.it)
- * @version V6.0 PreRelease7
+ * @version V6.2.0 stable
  * @date 2026
  * 
  * I thank you for producing the first original code:
@@ -116,8 +116,10 @@ void setup() {
 
     // In case some I2C devices deadlock the program
     // (can happen due to bad pin mappings)
+    
     Wire.setTimeout(100);
     Wire1.setTimeout(100);
+    
   
     #ifdef ARDUINO_ADAFRUIT_ITSYBITSY_RP2040
         // SAMCO 1.1 needs Pin 5 normally HIGH for the camera
