@@ -386,10 +386,10 @@ public:
         // Notes: Raspberry Pi boards do not expose pins 23-25; pin 29/A3 is used for builtin chipset temp monitor
         {"rpipicow",                {/*00*/ btnGunA,        btnGunB,        btnGunC,        btnStart,       btnSelect,
                                      /*05*/ btnHome,        btnGunUp,       btnGunDown,     btnGunLeft,     btnGunRight,
-                                     /*10*/ periphSDA,      periphSCL,      btnUnmapped,    btnPump,        btnPedal,
-                                     /*15*/ btnTrigger,     solenoidPin,    rumblePin,      btnUnmapped,    btnUnmapped,
+                                     /*10*/ ledR,           ledG,           ledB,           btnPump,        btnPedal,
+                                     /*15*/ btnTrigger,     solenoidPin,    rumblePin,      periphSDA,      periphSCL,
                                      /*20*/ camSDA,         camSCL,         btnUnmapped,    unavailable,    unavailable,
-                                     /*25*/ unavailable,    analogY,        analogX,        tempPin,        unavailable     }},
+                                     /*25*/ unavailable,    btnUnmapped,    btnUnmapped,    tempPin,        unavailable     }},
         //=====================================================================================================================
         // Raspberry Pi Pico 2
         // Board Type: RP2350A
@@ -836,6 +836,60 @@ public:
                                         unavailable,   unavailable,    unavailable,    btnUnmapped,    btnUnmapped,
                                         btnUnmapped,   unavailable,    unavailable,    unavailable,    btnUnmapped,
                                         btnUnmapped,   btnUnmapped,    btnPedal,       btnUnmapped,    btnUnmapped}}},
+        //=====================================================================================================
+        // Raspberry Pi Pico Presets
+        // Notes: Raspberry Pi boards do not expose pins 23-25; pin 29/A3 is used for builtin chipset temp monitor
+        {"rpipico",                 {"ESP32-S3 Pico Default Pin Mapping",
+                                    {/*00*/ btnGunA,        btnGunB,        btnGunC,        btnStart,       btnSelect,
+                                     /*05*/ btnHome,        btnGunUp,       btnGunDown,     btnGunLeft,     btnGunRight,
+                                     /*10*/ periphSDA,      periphSCL,      btnUnmapped,    btnPump,        btnPedal,
+                                     /*15*/ btnTrigger,     solenoidPin,    rumblePin,      btnUnmapped,    btnUnmapped,
+                                     /*20*/ camSDA,         camSCL,         btnUnmapped,    unavailable,    unavailable,
+                                     /*25*/ unavailable,    analogY,        analogX,        tempPin,        unavailable}}},
+        //=====================================================================================================
+        // Raspberry Pi Pico W Presets
+        // Notes: Raspberry Pi boards do not expose pins 23-25; pin 29/A3 is used for builtin chipset temp monitor
+        {"rpipicow",                {"ESP32-S3 Pico Default Pin Mapping",
+                                    {/*00*/ btnGunA,        btnGunB,        btnGunC,        btnStart,       btnSelect,
+                                     /*05*/ btnHome,        btnGunUp,       btnGunDown,     btnGunLeft,     btnGunRight,
+                                     /*10*/ periphSDA,      periphSCL,      btnUnmapped,    btnPump,        btnPedal,
+                                     /*15*/ btnTrigger,     solenoidPin,    rumblePin,      btnUnmapped,    btnUnmapped,
+                                     /*20*/ camSDA,         camSCL,         btnUnmapped,    unavailable,    unavailable,
+                                     /*25*/ unavailable,    analogY,        analogX,        tempPin,        unavailable}}},
+        //=====================================================================================================
+        // Raspberry Pi Pico 2 Presets
+        // Notes: Pico 2 boards are pin-identical to Pico 1 boards
+        {"rpipico2",                {"ESP32-S3 Pico Default Pin Mapping",
+                                    {/*00*/ btnGunA,        btnGunB,        btnGunC,        btnStart,       btnSelect,
+                                     /*05*/ btnHome,        btnGunUp,       btnGunDown,     btnGunLeft,     btnGunRight,
+                                     /*10*/ periphSDA,      periphSCL,      btnUnmapped,    btnPump,        btnPedal,
+                                     /*15*/ btnTrigger,     solenoidPin,    rumblePin,      btnUnmapped,    btnUnmapped,
+                                     /*20*/ camSDA,         camSCL,         btnUnmapped,    unavailable,    unavailable,
+                                     /*25*/ unavailable,    analogY,        analogX,        tempPin,        unavailable}}},
+        //=====================================================================================================
+        // Raspberry Pi Pico 2W Presets
+        // Notes: Pico 2 boards are pin-identical to Pico 1 boards
+        {"rpipico2w",               {"ESP32-S3 Pico Default Pin Mapping",
+                                    {/*00*/ btnGunA,        btnGunB,        btnGunC,        btnStart,       btnSelect,
+                                     /*05*/ btnHome,        btnGunUp,       btnGunDown,     btnGunLeft,     btnGunRight,
+                                     /*10*/ periphSDA,      periphSCL,      btnUnmapped,    btnPump,        btnPedal,
+                                     /*15*/ btnTrigger,     solenoidPin,    rumblePin,      btnUnmapped,    btnUnmapped,
+                                     /*20*/ camSDA,         camSCL,         btnUnmapped,    unavailable,    unavailable,
+                                     /*25*/ unavailable,    analogY,        analogX,        tempPin,        unavailable}}},
+        //=====================================================================================================
+        // Waveshare ESP32 S3 Pico Presets
+        {"waveshare-esp32-s3-pico", {"Raspberry Pi Pico (all) Default Pin Mapping",
+                                    {/*00*/ unavailable,    periphSDA,      periphSCL,      unavailable,    camSDA,
+                                     /*05*/ camSCL,         btnUnmapped,    btnUnmapped,    btnUnmapped,    tempPin,
+                                     /*10*/ btnUnmapped,    btnGunA,        btnGunB,        btnGunC,        btnStart,
+                                     /*15*/ btnSelect,      btnHome,        btnGunUp,       btnGunDown,     unavailable,
+                                     /*20*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
+                                     /*25*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
+                                     /*30*/ unavailable,    unavailable,    unavailable,    btnGunLeft,     btnGunRight,
+                                     /*35*/ ledR,           ledG,           ledB,           btnPump,        btnPedal,
+                                     /*40*/ btnTrigger,     rumblePin,      solenoidPin,    unavailable,    unavailable,
+                                     /*45*/ unavailable,    unavailable,    unavailable,    unavailable                     }}},
+
     };
 
 #endif
