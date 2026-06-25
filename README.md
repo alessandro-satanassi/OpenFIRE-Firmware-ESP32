@@ -33,8 +33,12 @@
 <p align="center">
   <b>🎬 WATCH THE VIDEO SHOWCASE & GAMEPLAY:</b><br><br>
   <a href="https://youtu.be/dccmurhZ-y4">
-    <img src="https://img.youtube.com/vi/dccmurhZ-y4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase" width="500">
+    <img src="https://img.youtube.com/vi/dccmurhZ-y4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase" width="400">
   </a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://youtu.be/D_I9fdZGsl4">
+    <img src="https://img.youtube.com/vi/D_I9fdZGsl4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 2" width="400">
+  </a>   
 </p>
 
 ---
@@ -253,8 +257,12 @@ In full compliance with the original license and the vision of the OpenFIRE crea
 <p align="center">
   <b>🎬 GUARDA IL VIDEO SHOWCASE & GAMEPLAY:</b><br><br>
   <a href="https://youtu.be/dccmurhZ-y4">
-    <img src="https://img.youtube.com/vi/dccmurhZ-y4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase" width="500">
+    <img src="https://img.youtube.com/vi/dccmurhZ-y4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase" width="400">
   </a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://youtu.be/D_I9fdZGsl4">
+    <img src="https://img.youtube.com/vi/D_I9fdZGsl4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 2" width="400">
+  </a>   
 </p>
 
 ---

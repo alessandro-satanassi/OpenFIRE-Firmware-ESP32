@@ -284,6 +284,7 @@ void setup() {
     #endif // LED_ENABLE
 // ====== [ESP32_PORT] ==== fine del blocco che per opportunità è spostato sopra prima della connessione =======
 
+
 // ===================================================================================
 // CALIBRAZIONE EMPIRICA HARDWARE DEGLI STICK ANALOGICI
 // ===================================================================================
@@ -296,7 +297,11 @@ void setup() {
     // [ESP32_PORT] == CODICE PER CALIBRARE LEVETTA STICK IN POSIZIONE CENTRALE =============
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     #if defined(ARDUINO_ARCH_ESP32) && defined(USES_ANALOG)   // la facciamo solo per ESP32 e lasciamo RP2040 come gestione originale
-        
+
+    // ======== fai la calibrazione solo se lo stick analogico è configurato nei gpio
+    if(OF_Prefs::pins[OF_Const::analogX] >= 0 && OF_Prefs::pins[OF_Const::analogY] >= 0 &&
+           OF_Prefs::pins[OF_Const::analogX] != OF_Prefs::pins[OF_Const::analogY]) {
+
     #ifdef USES_DISPLAY
         unsigned long lastChange = 0;
         int8_t currentIndex = 0;
@@ -371,6 +376,7 @@ void setup() {
     ANALOG_STICK_DEADZONE_Y_MIN = constrain((int)ANALOG_STICK_DEADZONE_Y_MIN - buffer, 0, 4095);
     ANALOG_STICK_DEADZONE_Y_MAX = constrain((int)ANALOG_STICK_DEADZONE_Y_MAX + buffer, 0, 4095);
 
+    }
 
     #endif
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
