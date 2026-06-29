@@ -32,9 +32,11 @@
 
 <p align="center">
   <b>🎬 WATCH THE VIDEO SHOWCASE & GAMEPLAY:</b><br><br>
-  <a href="https://youtu.be/dccmurhZ-y4"><img src="https://img.youtube.com/vi/dccmurhZ-y4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 1" width="400"></a>
+  <a href="https://youtu.be/dccmurhZ-y4"><img src="https://img.youtube.com/vi/dccmurhZ-y4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 1" width="260"></a>
   &nbsp;&nbsp;&nbsp;
-  <a href="https://youtu.be/D_I9fdZGsl4"><img src="https://img.youtube.com/vi/D_I9fdZGsl4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 2" width="400"></a>
+  <a href="https://youtu.be/D_I9fdZGsl4"><img src="https://img.youtube.com/vi/D_I9fdZGsl4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 2" width="260"></a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://youtu.be/Lfmg6ow8PW4"><img src="https://img.youtube.com/vi/Lfmg6ow8PW4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 3" width="260"></a>
 </p>
 
 ---
@@ -252,9 +254,11 @@ In full compliance with the original license and the vision of the OpenFIRE crea
 
 <p align="center">
   <b>🎬 GUARDA IL VIDEO SHOWCASE & GAMEPLAY:</b><br><br>
-  <a href="https://youtu.be/dccmurhZ-y4"><img src="https://img.youtube.com/vi/dccmurhZ-y4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 1" width="400"></a>
+  <a href="https://youtu.be/dccmurhZ-y4"><img src="https://img.youtube.com/vi/dccmurhZ-y4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 1" width="260"></a>
   &nbsp;&nbsp;&nbsp;
-  <a href="https://youtu.be/D_I9fdZGsl4"><img src="https://img.youtube.com/vi/D_I9fdZGsl4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 2" width="400"></a>
+  <a href="https://youtu.be/D_I9fdZGsl4"><img src="https://img.youtube.com/vi/D_I9fdZGsl4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 2" width="260"></a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://youtu.be/Lfmg6ow8PW4"><img src="https://img.youtube.com/vi/Lfmg6ow8PW4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 3" width="260"></a>
 </p>
 
 ---
