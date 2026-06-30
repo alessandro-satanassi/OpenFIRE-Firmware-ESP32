@@ -160,7 +160,13 @@ void setup() {
   TinyUSBDevice.setManufacturerDescriptor(usb_data_wireless.deviceManufacturer);
   TinyUSBDevice.setProductDescriptor(usb_data_wireless.deviceName);
   TinyUSBDevice.setID(usb_data_wireless.deviceVID, usb_data_wireless.devicePID);
-
+  
+  // Aggiunge il serial number della descrizione della porta USB in modo che venga mappata sempre la stessa COM per ogni lightgun
+  // Formatta l'array di byte in una stringa esadecimale.
+  static char serialNumber[13]; 
+  snprintf(serialNumber, sizeof(serialNumber), "%02X%02X%02X%02X%02X%02X", MAC2STR(peerAddress)); // SerialWireless.mac_esp_another_card  
+  TinyUSBDevice.setSerialDescriptor(serialNumber);
+  
   // Initializing the USB devices chunk.
   TinyUSBDevices.begin(1);
   Serial.begin(9600);
