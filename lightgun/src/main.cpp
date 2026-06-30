@@ -264,6 +264,20 @@ void setup() {
             #endif // PLAYER_NUMBER
             );
         }
+        
+        #if defined(ARDUINO_ARCH_ESP32)
+        {
+            // Aggiunge il serial number della descrizione della porta USB in modo che venga mappata sempre la stessa COM per ogni lightgun
+            // Formatta l'array di byte in una stringa esadecimale.
+            uint8_t mac_esp_interface[6];
+            esp_err_t err_mac = esp_read_mac(mac_esp_interface, ESP_MAC_WIFI_STA);
+            if (err_mac == ESP_OK) {
+                static char serialNumber[13]; 
+                snprintf(serialNumber, sizeof(serialNumber), "%02X%02X%02X%02X%02X%02X", MAC2STR(mac_esp_interface));
+                TinyUSBDevice.setSerialDescriptor(serialNumber);
+            }
+        }
+        #endif // ARDUINO_ARCH_ESP32
 
 #endif //USE_TINYUSB
 
