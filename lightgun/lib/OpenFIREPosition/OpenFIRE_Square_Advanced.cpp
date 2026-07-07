@@ -68,15 +68,19 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
     // ================= FASE 0: INIT E ACQUISIZIONE DATI REALI ================//
     // =========================================================================//
     
+    // --- FASE 0: Inizializzazione e Controllo di Visibilità ---
+    
     seenFlags = seen;
 
     // Il sistema richiede un lock visivo completo su tutti i LED almeno una volta (0x0F = 1111).
     // Questo garantisce che la metrica geometrica iniziale (ideal_aspect_ratio) sia calcolata 
     // su dati reali e non su approssimazioni di partenza.
-    if (seenFlags == 0x0F) { 
+
+    // Il sistema richiede di vedere tutti e 4 i sensori almeno una volta per inizializzarsi.
+    if (seenFlags == 0x0F) { // 0x0F in binario è 1111, tutti i sensori visti.
         start = 0xFF;
     } else if (!start) {
-        return; 
+        return; // Esci se non siamo ancora stati inizializzati.
     }
 
     uint8_t num_points_seen = 0;
@@ -91,6 +95,8 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
 
     // Fondiamo estrazione, shift e backup in un unico ciclo per saturare la cache L1 
     // e azzerare cicli e salti logici inutili della CPU.
+
+    // Estrae i punti visibili, li mette negli array di lavoro e applica la trasformazione.
     for (uint8_t i = 0; i < 4; ++i) {
         if ((seenFlags >> i) & 0x01) {
             int calc_x = (CamMaxX - px[i]) << CamToMouseShift;
@@ -297,6 +303,8 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         // sottende la diagonale più lunga), genera il quarto vertice mancante mediante
         // pura addizione vettoriale. Molto economico per la CPU.
         else if (num_points_seen == 3) {
+            // Se vediamo 3 punti, eseguiamo la stima semplice e veloce del quarto punto.
+            
             dx = positionXX[0] - positionXX[1]; dy = positionYY[0] - positionYY[1];
             int32_t d01_sq = dx * dx + dy * dy;
 
@@ -306,25 +314,51 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
             dx = positionXX[0] - positionXX[2]; dy = positionYY[0] - positionYY[2];
             int32_t d02_sq = dx * dx + dy * dy;
             
-            uint8_t a_idx, b_idx, c_idx;  
+            uint8_t a_idx;  // uno dei due punti del lato più lungo del triangolo che corrisponde ad una diagonale del rettangolo
+            uint8_t b_idx;  // vertice tra lato lungo e lato corto del triangolo 
+            uint8_t c_idx;  // uno dei due punti del lato più lungo del triangolo che corrisponde ad una diagonale del rettangolo
 
-            if (d01_sq >= d12_sq && d01_sq >= d02_sq) { a_idx = 0; c_idx = 1; b_idx = 2; } 
-            else if (d12_sq >= d02_sq) { a_idx = 1; c_idx = 2; b_idx = 0; } 
-            else { a_idx = 0; c_idx = 2; b_idx = 1; }
-            
+            if (d01_sq >= d12_sq && d01_sq >= d02_sq) { 
+                // d01 è la diagonale del rettangolo
+                // b, il punto tra lato lungo e lato corto è per forza il punto 2 
+                a_idx = 0; c_idx = 1; b_idx = 2; 
+            } 
+            else if (d12_sq >= d02_sq) { 
+                //d12 è la diagonale  del rettangolo
+                // b, il punto tra lato lungo e lato corto è per forza il punto 0
+                a_idx = 1; c_idx = 2; b_idx = 0; 
+            } 
+            else { 
+                //d02 è la diagonale  del rettangolo
+                // b, il punto tra lato lungo e lato corto è per forza il punto 2 
+                a_idx = 0; c_idx = 2; b_idx = 1; 
+            }
+                      
+            // utilizzando le proprietà del Parallelogramma calcolo il 4 vertice mancante, 
+            // senza comunque conoscerne l'esatta posizione logica, che verrà individuata successiva dalla gestione dei 4 punti            
             positionXX[3] = positionXX[a_idx] + positionXX[c_idx] - positionXX[b_idx];
             positionYY[3] = positionYY[a_idx] + positionYY[c_idx] - positionYY[b_idx];
         }
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // =============== logica per l'ordinamento dei 4 punti disordinati ================================= //
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // =========================================================================//
         // ======== ORDINAMENTO PER TUTTI I PUNTI E IDENTIFICAZIONE A,B,C,D ========//
         // =========================================================================//
         
+        // Questa sezione viene eseguita sempre, per garantire che FinalX/Y
+        // abbiano sempre un ordine coerente A,B,C,D.
+
         uint8_t orderX[4] = {0, 1, 2, 3}, orderY[4] = {0, 1, 2, 3}, a, b, c, d;
 
         // Implementazione di un "Sorting Network" statico a 5 confronti. 
         // È matematicamente provato essere la strada più rapida per ordinare 4 elementi 
         // senza incorrere nei pesanti overhead logici tipici dei loop di ordinamento classici (es. Bubble Sort).
+        
+        // ordinanmento più verboso, ma più performante
+        // Ordinamento degli indici in base alla coordinata X (sorting network ottimizzato)
         { uint8_t tmp;
             if (positionXX[orderX[0]] > positionXX[orderX[1]]) { tmp = orderX[0]; orderX[0] = orderX[1]; orderX[1] = tmp; }
             if (positionXX[orderX[2]] > positionXX[orderX[3]]) { tmp = orderX[2]; orderX[2] = orderX[3]; orderX[3] = tmp; }
@@ -333,6 +367,8 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
             if (positionXX[orderX[1]] > positionXX[orderX[2]]) { tmp = orderX[1]; orderX[1] = orderX[2]; orderX[2] = tmp; }
         }
 
+        // ordinanmento più verboso, ma più performante
+        // Ordinamento degli indici in base alla coordinata Y (sorting network ottimizzato)        
         { uint8_t tmp;
             if (positionYY[orderY[0]] > positionYY[orderY[1]]) { tmp = orderY[0]; orderY[0] = orderY[1]; orderY[1] = tmp; }
             if (positionYY[orderY[2]] > positionYY[orderY[3]]) { tmp = orderY[2]; orderY[2] = orderY[3]; orderY[3] = tmp; }
@@ -341,18 +377,20 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
             if (positionYY[orderY[1]] > positionYY[orderY[2]]) { tmp = orderY[1]; orderY[1] = orderY[2]; orderY[2] = tmp; }
         }
 
+        // Assegnazione dei vertici A,B,C,D tramite euristiche
         dx = positionXX[orderY[0]] - positionXX[orderX[0]]; dy = positionYY[orderY[0]] - positionYY[orderX[0]];
         int32_t dist_sq1 = (dx * dx) + (dy * dy);
 
         dx = positionXX[orderY[3]] - positionXX[orderX[0]]; dy = positionYY[orderY[3]] - positionYY[orderX[0]];
         int32_t dist_sq2 = (dx * dx) + (dy * dy);
         
-        const int CRITICAL_ZONE = (30 * CamToMouseMult); 
+        const int CRITICAL_ZONE = (30 * CamToMouseMult); // 30 è un valore provato in tante situazioni e pare andare bene
 
         // Se l'arma è inclinata severamente (oltre ~45 gradi, superando la CRITICAL_ZONE), 
         // l'ordinamento ingenuo Y non basta. Valutiamo le distanze relative per mantenere coerenti
         // le etichette A, B, C, D e impedire l'incrocio letale degli assi.
         if ((positionYY[orderY[1]] - positionYY[orderY[0]]) > CRITICAL_ZONE) {
+            // Caso Normale
             if (dist_sq1 < dist_sq2) {
                 a = orderX[0]; d = orderX[3];
                 if (orderX[1] == orderY[3]) { c = orderX[1]; b = orderX[2]; } else { b = orderX[1]; c = orderX[2]; }
@@ -360,8 +398,14 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
                 c = orderX[0]; b = orderX[3];
                 if (orderX[1] == orderY[3]) { d = orderX[1]; a = orderX[2]; } else { a = orderX[1]; d = orderX[2]; }
             }
-        } else { a = orderY[0]; b = orderY[1]; c = orderY[2]; d = orderY[3]; }
+        } else { 
+            // Caso Zona Critica (rettangolo quasi verticale)
+            a = orderY[0]; b = orderY[1]; c = orderY[2]; d = orderY[3]; 
+        }
 
+        // sarebbe sufficiente per la zona critica questo ulteriore controllo, ma poichè ha
+        // un piccolo peso computazionale, lo facciamo sempre per casi limiti e come maggiore robustezza 
+        // Correzione finale per garantire la convenzione (A=TL, B=TR, C=BL, D=BR)        
         { uint8_t aux_swap;
             if (positionYY[a] > positionYY[c]) { aux_swap = a; a = c; c = aux_swap; }
             if (positionYY[b] > positionYY[d]) { aux_swap = b; b = d; d = aux_swap; }
@@ -372,7 +416,24 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         // =========================================================================//
         // ======== COSTRUZIONE MASCHERA: QUALI PUNTI ORDINATI SONO VERI? ==========//
         // =========================================================================//
+        // confronta i punti ordinati finali
+        // con il backup "real_x/y". Segnala alla logica quali di questi 
+        // sono veri punti fisici e quali sono il risultato delle predizioni matematiche 
+        // calcolate sopra. Essenziale per pilotare la molla cinematica.
+
+        current_point_seen_mask = 0;
+
+        for (uint8_t i = 0; i < num_points_seen; i++) {
+            const int rx = real_x[i];
+            const int ry = real_y[i];
+
+            if (positionXX[a] == rx && positionYY[a] == ry) current_point_seen_mask |= 0b1000;
+            if (positionXX[b] == rx && positionYY[b] == ry) current_point_seen_mask |= 0b0100;
+            if (positionXX[c] == rx && positionYY[c] == ry) current_point_seen_mask |= 0b0010;
+            if (positionXX[d] == rx && positionYY[d] == ry) current_point_seen_mask |= 0b0001;
+        }
         
+        /*
         current_point_seen_mask = 0;
         
         // Lambda in-place (Il Setaccio Universale): confronta i punti ordinati finali
@@ -381,7 +442,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         // calcolate sopra. Essenziale per pilotare la molla cinematica.
         auto is_real_point = [&](int px, int py) {
             for(uint8_t i=0; i<num_points_seen; i++) {
-                if (abs(px - real_x[i]) <= 1 && abs(py - real_y[i]) <= 1) return true;
+                if (px == real_x[i] && py == real_y[i]) return true;
             }
             return false;
         };
@@ -390,6 +451,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         if (is_real_point(positionXX[b], positionYY[b])) current_point_seen_mask |= 0b0100;
         if (is_real_point(positionXX[c], positionYY[c])) current_point_seen_mask |= 0b0010;
         if (is_real_point(positionXX[d], positionYY[d])) current_point_seen_mask |= 0b0001;
+        */
 
 
         // OTTIMIZZAZIONE: Unrolling Booleano puro per l'emulatore Shift-Register.
@@ -471,6 +533,9 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         
         // OTTIMIZZAZIONE: Lookup array per evitare lunghe clausole if/else nidificate.
         // Assegna l'offset alla geometria, spingendo la correzione smorzata sui finali di frame.
+        
+        // --- Assegnazione Finale e Calcoli Derivati ---
+        
         uint8_t assign_map[4] = {a, b, c, d};
         for (uint8_t i = 0; i < 4; i++) {
             FinalX[i] = GeomX[i] + fast_roundf(offset_X[i]);
@@ -486,22 +551,24 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         prev2_medianX = medianX;
         prev2_medianY = medianY;
 
+        // Calcolo del centroide con arrotondamento (il +2 è un trucco per l'arrotondamento all'intero più vicino)
         medianX = (FinalX[A] + FinalX[B] + FinalX[C] + FinalX[D] + 2) / 4;
         medianY = (FinalY[A] + FinalY[B] + FinalY[C] + FinalY[D] + 2) / 4;
-
+        
+        // Calcoli finali mantenuti per compatibilità
         // OTTIMIZZAZIONE: Sottrazione eseguita sui registri interi *prima* della
         // conversione per non caricare la FPU (Floating Point Unit hardware) di stress doppio.
         float dX_AC = (float)(FinalX[A] - FinalX[C]), dY_AC = (float)(FinalY[A] - FinalY[C]);
-        height_left = sqrtf(dX_AC*dX_AC + dY_AC*dY_AC); 
+        height_left = sqrtf(dX_AC*dX_AC + dY_AC*dY_AC); // lunghezza lato AC
         
         float dX_BD = (float)(FinalX[B] - FinalX[D]), dY_BD = (float)(FinalY[B] - FinalY[D]);
-        height_right = sqrtf(dX_BD*dX_BD + dY_BD*dY_BD); 
+        height_right = sqrtf(dX_BD*dX_BD + dY_BD*dY_BD); // lunghezza lato BD
         
         float dX_AB = (float)(FinalX[A] - FinalX[B]), dY_AB = (float)(FinalY[A] - FinalY[B]);
-        width_top = sqrtf(dX_AB*dX_AB + dY_AB*dY_AB); 
+        width_top = sqrtf(dX_AB*dX_AB + dY_AB*dY_AB); // lunghezza lato AB
         
         float dX_CD = (float)(FinalX[C] - FinalX[D]), dY_CD = (float)(FinalY[C] - FinalY[D]);
-        width_bottom = sqrtf(dX_CD*dX_CD + dY_CD*dY_CD); 
+        width_bottom = sqrtf(dX_CD*dX_CD + dY_CD*dY_CD); // lunghezza lato CD
         
         // OTTIMIZZAZIONE: In algebra computazionale IEEE-754 la moltiplicazione per 0.5f 
         // è radicalmente più veloce rispetto alla divisione in virgola mobile e produce esatto output.
@@ -509,6 +576,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         width = (width_top + width_bottom) * 0.5f;
         
         if (num_points_seen == 4) {
+            // Aggiorna la nostra "verità assoluta" sulla forma
             if (height > 1e-6f) { ideal_aspect_ratio = width / height; }
         }
 

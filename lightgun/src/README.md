@@ -34,7 +34,27 @@ The IR emitters can be arranged in either two ways:
 
 if you're playing on a small PC monitor, you can use 2 Wii sensor bars; one on top of your screen and one below. However, if you're playing on a TV, you should consider building or buying a set of high power black IR LEDs and arranging them like (larger) sensor bars at the top and bottom of the display.
 
-The **OpenFIRE Desktop App** has an alignment assistant that can be used to help align your emitters to the display (by selecting ***Help->Open IR Emitter Alignment Assistant***) - alternatively, you can refer to this online alignment guide [here @ diylightgun.com](https://diylightgun.com/align/)
+The **OpenFIRE Desktop App** has an alignment assistant that can be used to help align your emitters to the display (by selecting ***Help->Open IR Emitter Alignment Assistant***). 
+
+<table>
+  <tr>
+    <td valign="middle" width="33%">
+      <a href="../docs/img/IR_Emitter_app_001.png">
+        <img src="../docs/img/IR_Emitter_app_001.png">
+      </a>
+    </td>
+    <td valign="middle" width="33%">
+      <a href="../docs/img/IR_Emitter_app_002.png">
+        <img src="../docs/img/IR_Emitter_app_002.png">
+      </a>
+    </td>
+    <td valign="middle" width="33%">
+      <a href="../docs/img/IR_Emitter_monitor.jpeg">
+        <img src="../docs/img/IR_Emitter_monitor.jpeg">
+      </a>
+    </td>
+  </tr>
+</table>
 
 ## Board Configuration
 The gun is configured through the companion [OpenFIRE Desktop Application](https://github.com/TeamOpenFIRE/OpenFIRE-App), which can be launched even without a microcontroller plugged in and will automatically search for compatible flashed devices. You can easily download the latest version of the App from the **[OpenFIRE ESP32 Tools](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=en)** portal.
@@ -210,7 +230,27 @@ Gli emettitori IR possono essere disposti in due modi:
 
 Se giochi su un piccolo monitor per PC, puoi usare 2 barre sensore Wii; una sopra lo schermo e una sotto. Tuttavia, se giochi su una TV, dovresti prendere in considerazione la costruzione o l'acquisto di un set di LED IR neri ad alta potenza e disporli come barre sensore (più grandi) nella parte superiore e inferiore del display.
 
-L'App Desktop OpenFIRE dispone di un assistente di allineamento che può aiutarti ad allineare gli emettitori al display (selezionando *Help -> Open IR Emitter Alignment Assistant*) - in alternativa, puoi fare riferimento a questa guida all'allineamento online [qui su diylightgun.com](https://diylightgun.com/align/).
+L'App Desktop OpenFIRE dispone di un assistente di allineamento che può aiutarti ad allineare gli emettitori al display (selezionando *Help -> Open IR Emitter Alignment Assistant*).
+
+<table>
+  <tr>
+    <td valign="middle" width="33%">
+      <a href="../docs/img/IR_Emitter_app_001.png">
+        <img src="../docs/img/IR_Emitter_app_001.png">
+      </a>
+    </td>
+    <td valign="middle" width="33%">
+      <a href="../docs/img/IR_Emitter_app_002.png">
+        <img src="../docs/img/IR_Emitter_app_002.png">
+      </a>
+    </td>
+    <td valign="middle" width="33%">
+      <a href="../docs/img/IR_Emitter_monitor.jpeg">
+        <img src="../docs/img/IR_Emitter_monitor.jpeg">
+      </a>
+    </td>
+  </tr>
+</table>
 
 <a id="configurazione-della-scheda-italiano"></a>
 

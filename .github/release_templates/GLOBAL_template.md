@@ -4,9 +4,29 @@
   <a href="#english-version"><img src="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/raw/main/docs/img/gb.png" width="20" alt="English"> English Version</a> &nbsp;•&nbsp; <a href="#versione-italiana"><img src="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/raw/main/docs/img/it.png" width="20" alt="Italiano"> Versione Italiana</a>
 </p>
 
-# GLOBAL RELEASE - FIRMWARE FOR:  **LIGHTGUN** - **DONGLE** - **PEDAL** - OpenFIRE ESP32
+## Release Notes
 
-This release is updated to commit **8b651a2** (April 19, 2026) of the original firmware **(version 6.2 - Long Bridge)** [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware).
+**[OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) Core:** Aligned to commit `8b651a2` of April 19, 2026 (version 6.2 - Long Bridge)
+
+### Quick Install
+Update the firmware directly from your browser via the WebFlasher: [Launch WebFlasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher)
+
+---
+
+### New Features
+* *No new features introduced*
+
+### Bug Fixes
+* *No bugs fixed*
+
+### Documentation
+* *No documentation updates*
+
+### Chores
+* *No minor changes*
+
+### Known Issues
+* *No known issues*
 
 ---
 
@@ -194,10 +214,29 @@ You can easily download the most recent pre-compiled binaries for your operating
   <a href="#english-version"><img src="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/raw/main/docs/img/gb.png" width="20" alt="English"> English Version</a> &nbsp;•&nbsp; <a href="#versione-italiana"><img src="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/raw/main/docs/img/it.png" width="20" alt="Italiano"> Versione Italiana</a>
 </p>
 
+## Note di rilascio
 
-# RILASCIO GLOBALE - FIRMWARE PER: **LIGHTGUN** - **DONGLE** - **PEDAL** - OpenFIRE ESP32
+**Core di [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware):** Allineato al commit `8b651a2` del 19 aprile 2026 (versione 6.2 - Long Bridge)
 
-Questa release è aggiornata al commit **8b651a2** (19 aprile 2026) del firmware originale **(versione 6.2 - Long Bridge)** [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware).
+### Installazione Rapida
+Aggiorna il firmware direttamente dal browser tramite il WebFlasher: [Avvia WebFlasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher)
+
+---
+
+### Nuove funzionalità
+* *Nessuna nuova funzionalità introdotta*
+
+### Correzione di bug
+* *Nessun bug corretto*
+
+### Documentazione
+* *Nessun aggiornamento alla documentazione*
+
+### Modifiche minori
+* *Nessuna modifica minore*
+
+### Problemi noti
+* *Nessun problema noto*
 
 ---
 
