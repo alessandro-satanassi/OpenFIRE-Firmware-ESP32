@@ -421,18 +421,20 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         // sono veri punti fisici e quali sono il risultato delle predizioni matematiche 
         // calcolate sopra. Essenziale per pilotare la molla cinematica.
 
-        current_point_seen_mask = 0;
+        if (num_points_seen == 4) current_point_seen_mask = 0b1111;
+        else {
+            current_point_seen_mask = 0;
 
-        for (uint8_t i = 0; i < num_points_seen; i++) {
-            const int rx = real_x[i];
-            const int ry = real_y[i];
+            for (uint8_t i = 0; i < num_points_seen; i++) {
+                const int rx = real_x[i];
+                const int ry = real_y[i];
 
-            if (positionXX[a] == rx && positionYY[a] == ry) current_point_seen_mask |= 0b1000;
-            if (positionXX[b] == rx && positionYY[b] == ry) current_point_seen_mask |= 0b0100;
-            if (positionXX[c] == rx && positionYY[c] == ry) current_point_seen_mask |= 0b0010;
-            if (positionXX[d] == rx && positionYY[d] == ry) current_point_seen_mask |= 0b0001;
+                if (positionXX[a] == rx && positionYY[a] == ry) current_point_seen_mask |= 0b1000;
+                if (positionXX[b] == rx && positionYY[b] == ry) current_point_seen_mask |= 0b0100;
+                if (positionXX[c] == rx && positionYY[c] == ry) current_point_seen_mask |= 0b0010;
+                if (positionXX[d] == rx && positionYY[d] == ry) current_point_seen_mask |= 0b0001;
+            }
         }
-        
         /*
         current_point_seen_mask = 0;
         

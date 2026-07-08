@@ -483,14 +483,14 @@ public:
         // Board Type: ESP32
         {"waveshare-esp32-s3-zero", {/*00*/ unavailable,    btnUnmapped,    btnUnmapped,    btnUnmapped,    camSDA,
                                      /*05*/ camSCL,         btnTrigger,     btnGunA,        btnGunB,        btnGunC,
-                                     /*10*/ btnStart,       btnSelect,      rumblePin,      solenoidPin,    unavailable,
-                                     /*15*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
+                                     /*10*/ btnStart,       btnSelect,      rumblePin,      solenoidPin,    btnUnmapped,
+                                     /*15*/ btnUnmapped,    btnUnmapped,    btnUnmapped,    btnUnmapped,    unavailable,
                                      /*20*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
                                      /*25*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
                                      /*30*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
-                                     /*35*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
-                                     /*40*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
-                                     /*45*/ unavailable,    unavailable,    unavailable,    unavailable                     }},
+                                     /*35*/ unavailable,    unavailable,    unavailable,    btnUnmapped,    btnUnmapped,
+                                     /*40*/ btnUnmapped,    btnUnmapped,    btnUnmapped,    unavailable,    unavailable,
+                                     /*45*/ btnUnmapped,    unavailable,    unavailable,    unavailable                     }},
         //=====================================================================================================================
         /* more ESP boards should be added here */
     };
@@ -763,14 +763,14 @@ public:
         // Board Type: ESP32-S3
         {"waveshare-esp32-s3-zero", {/*00*/   posNothing,   4  | posLeft,  5  | posLeft,   6  | posLeft,   7  | posLeft,
                                      /*05*/ 8  | posLeft,   9  | posLeft,  9  | posRight,  8  | posRight,  7  | posRight,
-                                     /*10*/ 6  | posRight,  5  | posRight, 4  | posRight,  3  | posRight,     posNothing,
-                                     /*15*/   posNothing,     posNothing,     posNothing,     posNothing,     posNothing,
+                                     /*10*/ 6  | posRight,  5  | posRight, 4  | posRight,  3  | posRight,  14 | posRight,
+                                     /*15*/ 13 | posRight,  12 | posRight, 18 | posLeft,   17 | posLeft,      posNothing,
                                      /*20*/   posNothing,     posNothing,     posNothing,     posNothing,     posNothing,
                                      /*25*/   posNothing,     posNothing,     posNothing,     posNothing,     posNothing,
                                      /*30*/   posNothing,     posNothing,     posNothing,     posNothing,     posNothing,
-                                     /*35*/   posNothing,     posNothing,     posNothing,     posNothing,     posNothing,
-                                     /*40*/   posNothing,     posNothing,     posNothing,     posNothing,     posNothing,
-                                     /*45*/   posNothing,     posNothing,     posNothing,     posNothing                    }},
+                                     /*35*/   posNothing,     posNothing,     posNothing,  16 | posLeft,   15 | posLeft,
+                                     /*40*/ 14 | posLeft,   13 | posLeft,  12 | posLeft,      posNothing,     posNothing,
+                                     /*45*/ 11 | posLeft,     posNothing,     posNothing,     posNothing                    }},
         //=====================================================================================================================
 
         // Insert new ESP layouts below this one!
