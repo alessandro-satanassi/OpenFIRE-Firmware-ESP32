@@ -33,7 +33,7 @@
 #if defined(ARDUINO_ARCH_ESP32)
   #include <WiFi.h> // serve per leggere max addres
   #include <esp_now.h>
-  //#include <WiFi.h> // serve per leggere max addres
+  // #include <WiFi.h> // serve per leggere max addres
   #include <esp_mac.h>  // For the MAC2STR and MACSTR macros
   #include "MacAddress.h"
   #include "esp_wifi.h"

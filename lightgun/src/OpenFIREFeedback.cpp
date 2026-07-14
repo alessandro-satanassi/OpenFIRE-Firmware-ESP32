@@ -19,7 +19,8 @@
 
 #include "OpenFIREFeedback.h"
 
-// ============ [ESP32_PORT] ========== redifinizione di Serial per gestire le connessione wireless seriali ========
+// ============ [ESP32_PORT] ============
+// Definition of Serial for managing wireless serial connections / redifinizione di Serial per gestire le connessione wireless seriali
 #ifdef OPENFIRE_WIRELESS_ENABLE
     extern Stream* Serial_OpenFIRE_Stream;
     #ifdef Serial
@@ -28,7 +29,8 @@
     #endif
     #define Serial (*Serial_OpenFIRE_Stream)
 #endif // OPENFIRE_WIRELESS_ENABLE
-// ============ [ESP32_PORT] ===== fine redifinizione di Serial per gestire le connessione wireless seriali ========
+// ============ [ESP32_PORT] ============
+// End definition of Serial for managing wireless serial connections / fine redifinizione di Serial per gestire le connessione wireless seriali
 
 
 void OF_FFB::FFBOnScreen()
@@ -306,7 +308,8 @@ void OF_FFB::FFBShutdown()
     burstFireCount = 0;
 }
 
-// ============ [ESP32_PORT] ========== ripristino di Serial dopo definizione per connessione seriali ==============
+// ============ [ESP32_PORT] ============
+// Restore Serial after it was redefined for serial connections / ripristino di Serial dopo definizione per connessione seriali ==============
 #ifdef OPENFIRE_WIRELESS_ENABLE
     #undef Serial
     #ifdef AUX_SERIAL
@@ -314,4 +317,5 @@ void OF_FFB::FFBShutdown()
         #undef AuxSerial
     #endif
 #endif // OPENFIRE_WIRELESS_ENABLE
-// ============ [ESP32_PORT] ===== fine ripristino di Serial dopo definizione per connessione seriali ==============
+// ============ [ESP32_PORT]============
+// End restore Serial after it was redefined for serial connections / fine ripristino di Serial dopo definizione per connessione seriali ==============

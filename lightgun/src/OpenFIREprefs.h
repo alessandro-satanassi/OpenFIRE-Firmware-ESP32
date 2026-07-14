@@ -27,11 +27,16 @@
 
 #include <stdint.h>
 #include <unordered_map>
-//#include <FS.h> // [ESP32_PORT] //non serve, viene richiamata direttamente da littlefs
+// #include <FS.h> // [ESP32_PORT] // not needed, it is included directly by LittleFS / non serve, viene richiamata direttamente da littlefs
 
-// = [ESP32_PORT] = per la compilazione su esp32 - la libreria exfatlib che viene chiamata da Arduino TinyUSB
-// =========== definisce quelle costanti e ricevo un warning in quanto anche LittleFS le definisce  ===
-// =========== non uso la libreria 'adafruit exfatlib', quindi annullo le sue definizioni ==============
+// ===== [ESP32_PORT] ===== 
+// for compiling on ESP32 - the exfatlib library that is called by Arduino TinyUSB 
+// defines those constants and gives a warning because LittleFS also defines them
+// we dont use the 'adafruit exfatlib' library, so cancel it's definitions
+
+// per la compilazione su esp32 - la libreria exfatlib che viene chiamata da Arduino TinyUSB
+// definisce quelle costanti e ricevo un warning in quanto anche LittleFS le definisce
+// non uso la libreria 'adafruit exfatlib', quindi annullo le sue definizioni
 #ifdef ARDUINO_ARCH_ESP32
     #ifdef FILE_READ
         #undef FILE_READ
@@ -40,7 +45,7 @@
         #undef FILE_WRITE
     #endif
 #endif //ARDUINO_ARCH_ESP32
-// = [ESP32_PORT] ===========================================================================================
+// ===== [ESP32_PORT] =====
 
 #include <LittleFS.h>
 #include <OpenFIREBoard.h>

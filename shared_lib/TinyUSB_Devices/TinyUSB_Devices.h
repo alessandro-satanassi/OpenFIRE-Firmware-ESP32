@@ -161,7 +161,7 @@ uint8_t const desc_hid_report[] = {
 #ifndef _ABSMOUSE5_H_
 #define _ABSMOUSE5_H_
 
-//#include <stdint.h>
+// #include <stdint.h>
 
 // OpenFIRE define           TinyUSB define in hid.c     
 #define MOUSE_LEFT    hid_mouse_button_bm_t::MOUSE_BUTTON_LEFT     // 0x01    // [ESP32_PORT] definito in TinyUSB in hid.h

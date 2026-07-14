@@ -27,7 +27,7 @@
 // macro to scale an 8 bit colour value by an 8 bit value
 // as seen by the math, 255 means full value
 #define COLOR_BRI_ADJ_COLOR(brightness, color) ((((brightness) * ((color) & 0xFF)) / 255) & 0xFF)
-//#define COLOR_BRI_ADJ_COLOR(brightness, color) (color)
+// #define COLOR_BRI_ADJ_COLOR(brightness, color) (color)
 
 // macro to scale a 32-bit RGBW word with an 8 bit brightness value
 #define COLOR_BRI_ADJ_RGB(brightness, rgb) COLOR_BRI_ADJ_COLOR(brightness, rgb) \

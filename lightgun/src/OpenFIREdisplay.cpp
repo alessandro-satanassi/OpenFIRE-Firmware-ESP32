@@ -23,7 +23,7 @@
 #ifdef USE_LOVYAN_GFX
   // nulla 
 #else
-  //#include <Adafruit_GFX.h>
+  // #include <Adafruit_GFX.h>
 #endif
 
 #include <Wire.h>

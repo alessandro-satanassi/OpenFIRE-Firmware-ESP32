@@ -111,9 +111,9 @@ public:
     };
 
     #ifdef USE_LOVYAN_GFX
-        LGFX_SSD1306 *display = nullptr;   //aggiunto inline per condividerla
+        LGFX_SSD1306 *display = nullptr;   // added inline so it can be shared / aggiunto inline per condividerla
     #else
-        Adafruit_SSD1306 *display = nullptr; //aggiunto inline per condividerla
+        Adafruit_SSD1306 *display = nullptr; // added inline so it can be shared / aggiunto inline per condividerla
     #endif
 
     /// @brief Whether life updates are in lifebar or life glyphs form
