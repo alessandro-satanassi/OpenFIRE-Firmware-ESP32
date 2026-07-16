@@ -133,8 +133,12 @@ enum HID_RID_e{
 };
 
 // ===================================================================================
-// DESCRITTORE COMPOSITO
+// COMPOSITE DESCRIPTOR / DESCRITTORE COMPOSITO
 // ===================================================================================
+// This array acts as the "ID card" we send to Windows/Linux.
+// It combines the three devices. When the OS receives a packet, it checks the
+// first byte (Report ID) to determine which of the three devices the data should be assigned to.
+// /
 // Questo array è la "Carta d'Identità" che mandiamo a Windows/Linux. 
 // Combina le tre periferiche. Quando l'OS riceve un pacchetto, guarda il 
 // primo byte (Report ID) per capire a quale delle tre periferiche assegnare i dati.
@@ -153,6 +157,11 @@ uint8_t const desc_hid_report[] = {
 // ===================================================================================
 // MOUSE ASSOLUTO (ABSOLUTE MOUSE)
 // ===================================================================================
+// Why an absolute mouse? Standard mice communicate movement "deltas" (dx, dy).
+// A lightgun, on the other hand, obtains exact screen coordinates (e.g., x:1920, y:1080).
+// By telling the OS that this is an absolute mouse, the cursor "teleports"
+// instantly to the target without being affected by Windows hardware acceleration.
+// /
 // Perché un mouse assoluto? I mouse standard comunicano le "differenze" di movimento (dx, dy).
 // Una Lightgun invece ottiene coordinate esatte dello schermo (es. x:1920, y:1080).
 // Dicendo all'OS che questo è un mouse assoluto, il cursore si "teletrasporta" 
@@ -178,19 +187,19 @@ class AbsMouse5_
   hid_abs_mouse_report_t absmouse5Report = {0,0,0,0,0};
   
   public:
-  AbsMouse5_();  // si puo' togliere non serve a nulla
+  AbsMouse5_();  // It can be removed; it serves no purpose. / si puo' togliere non serve a nulla
 	void report(void);
   void move(int16_t x, int16_t y);
   
-  // Architettura estensibile: Mantenuta per future mod hardware (es. rotellina o scroll)
-  void move_wheel_pan(int8_t wheel, int8_t pan); // NON INDISPENSABILE AGGIUNTA DA ME
+  // Extensible architecture: Maintained for future hardware mods (e.g., a wheel or scroll mechanism) / Architettura estensibile: Mantenuta per future mod hardware (es. rotellina o scroll)
+  void move_wheel_pan(int8_t wheel, int8_t pan); // NOT ESSENTIAL ADDED BY ME / NON INDISPENSABILE AGGIUNTA DA ME
   
-  void press(uint8_t b = hid_mouse_button_bm_t::MOUSE_BUTTON_LEFT); // solo un bottone per volta
-	void release(uint8_t b = hid_mouse_button_bm_t::MOUSE_BUTTON_LEFT); // solo un bottone per volta
+  void press(uint8_t b = hid_mouse_button_bm_t::MOUSE_BUTTON_LEFT); // only one button at a time / solo un bottone per volta
+	void release(uint8_t b = hid_mouse_button_bm_t::MOUSE_BUTTON_LEFT); // only one button at a time / solo un bottone per volta
 	void releaseAll() { release(0x1f); }
-  void click(uint8_t b = hid_mouse_button_bm_t::MOUSE_BUTTON_LEFT); // clicca tutti i pulsanti come impostati e poi li rilascia subito - valutare se tenerlo // NON INDISPENSABILE AGGIUNTA DA ME
-  void buttons(uint8_t b); // imposta tutti i bottoni insieme senza farlo una per volta o li disabilita - valutare se tenerlo // NON INDISPENSABILE AGGIUNTA DA ME
-  bool isPressed(uint8_t b = hid_mouse_button_bm_t::MOUSE_BUTTON_LEFT);   // NON INDISPENSABILE AGGIUNTA DA ME
+  void click(uint8_t b = hid_mouse_button_bm_t::MOUSE_BUTTON_LEFT); // press all buttons as configured and then immediately releases them - consider whether to keep this / clicca tutti i pulsanti come impostati e poi li rilascia subito - valutare se tenerlo // NOT ESSENTIAL ADDED BY ME / NON INDISPENSABILE AGGIUNTA DA ME
+  void buttons(uint8_t b); // Set all buttons at once instead of one by one, or disable them – consider whether to keep this / imposta tutti i bottoni insieme senza farlo una per volta o li disabilita - valutare se tenerlo // NOT ESSENTIAL ADDED BY ME / NON INDISPENSABILE AGGIUNTA DA ME
+  bool isPressed(uint8_t b = hid_mouse_button_bm_t::MOUSE_BUTTON_LEFT);   // NOT ESSENTIAL ADDED BY ME / NON INDISPENSABILE AGGIUNTA DA ME
 };
 
 
@@ -225,7 +234,7 @@ extern AbsMouse5_ AbsMouse5;
   #define KEY_BACKSPACE   0xB2
   #define KEY_TAB         0xB3
   #define KEY_RETURN      0xB0
-  #define KEY_ESC         0xB1  // [ESP32_PORT] non corrisponde a HID_KEY_ESCAPE di TinyUSB, boh ???
+  #define KEY_ESC         0xB1  // [ESP32_PORT] It doesn't match TinyUSB's HID_KEY_ESCAPE—beats me??? / non corrisponde a HID_KEY_ESCAPE di TinyUSB, boh ???
   #define KEY_INSERT      0xD1
   #define KEY_DELETE      0xD4
   #define KEY_PAGE_UP     0xD3
@@ -263,6 +272,9 @@ extern AbsMouse5_ AbsMouse5;
   #define ISO_KEY 0x64
   #define ISO_REPLACEMENT 0x32
 
+  // Lookup table for Italian keyboards, essential to avoid sending
+  // incorrect characters when the Lightgun "types" for software-based configuration.
+  // /
   // Lookup table per tastiere Italiane, essenziale per non inviare
   // char errati quando la Lightgun "digita" per configurazioni via software.
   const uint8_t KeyboardLayout_it_IT[128] =
@@ -407,11 +419,11 @@ class Keyboard_ : public Print
   public:
     Keyboard_(void);
     void report(void);
-    size_t write(uint8_t k); // mai usata pa serve per print
-    size_t write(const uint8_t *buffer, size_t size); // mai usata ma serve per print
+    size_t write(uint8_t k); // never used but it is used for printing / mai usata pa serve per print
+    size_t write(const uint8_t *buffer, size_t size); // Never used, but it's for printing. / mai usata ma serve per print
     size_t press(uint8_t k);
-    size_t release(uint8_t k); // usata ma non ne vedo il senso
-    void releaseAll(void); // usata
+    size_t release(uint8_t k); // It's been used, but I don't see the point of it. / usata ma non ne vedo il senso
+    void releaseAll(void); // used / usata
 };
 
 extern Keyboard_ Keyboard;
@@ -425,8 +437,14 @@ extern Keyboard_ Keyboard;
 #define _GAMEPAD_H_
 
 // ===================================================================================
-// GAMEPAD 16-BIT (SOLUZIONE PER MULTIPLAYER / MAME)
+// 16-BIT GAMEPAD (MULTIPLAYER / MAME SOLUTION) / GAMEPAD 16-BIT (SOLUZIONE PER MULTIPLAYER / MAME)
 // ===================================================================================
+// Windows has a major design flaw: two mice struggle to coexist independently.
+// When two people play together, assigning Player 2 to a gamepad bypasses this issue.
+// However, a standard USB gamepad axis (8-bit) has a resolution of only 255 steps—unacceptable
+// for light gun aiming! We therefore force 16-bit reporting (-32767 to +32767), allowing
+// the emulator (MAME, TeknoParrot) to interpret Lightgun 2 with pinpoint precision.
+// /
 // Windows ha un grave problema di design: due mouse faticano a convivere indipendentemente.
 // Quando due persone giocano insieme, assegnare il P2 a un Gamepad aggira il problema.
 // Ma un asse Gamepad USB standard (8-bit) ha una risoluzione di soli 255 passi: inaccettabile 
@@ -449,8 +467,8 @@ extern Keyboard_ Keyboard;
 #define PAD_START  11   // GAMEPAD_BUTTON_START
 #define PAD_HOME   12   // GAMEPAD_BUTTON_MODE
 #define PAD_LS     13   // GAMEPAD_BUTTON_THUMBL
-#define PAD_RS     14   // GAMEPAD_BUTTON_THUMBR   // qui finiscono i 15 bottoni standard
-#define PAD_15     15   // GAMEPAD_BUTTON_15      // TUTTI QUELLI DA ORA IN SEGUITO SONO bottoni CUSTOM
+#define PAD_RS     14   // GAMEPAD_BUTTON_THUMBR   // The 15 standard buttons end here. / qui finiscono i 15 bottoni standard
+#define PAD_15     15   // GAMEPAD_BUTTON_15      // All the ones from this point on are custom buttons. / 
 #define PAD_16     16   // GAMEPAD_BUTTON_16
 #define PAD_17     17   // GAMEPAD_BUTTON_17
 #define PAD_18     18   // GAMEPAD_BUTTON_18
@@ -467,20 +485,22 @@ extern Keyboard_ Keyboard;
 #define PAD_29     29   // GAMEPAD_BUTTON_29
 #define PAD_30     30   // GAMEPAD_BUTTON_30
 #define PAD_31     31   // GAMEPAD_BUTTON_31
+// The key codes for the D-pad (hat) start at 32—that is, after the 32 codes (0–31) for the buttons.
+// /
 // I CODICI DEI TASTI PER IL DPAD (HAT) INZIAZIONO DA 32 OVVERO DOPO I 32 (0-31) CODICI PER I BOTTONI
-#define PAD_UP     32   // da qui iniziano i codici per il DPad/hat
+#define PAD_UP     32   // The codes for the DPad/hat start from here / da qui iniziano i codici per il DPad/hat
 #define PAD_DOWN   33   //       "                 "
 #define PAD_LEFT   34   //       "                 "
 #define PAD_RIGHT  35   //       "                 "
 
-#define START_DPAD_KEY PAD_UP  // utilizzato come riferimento per posizione per file lightgunButtons.cpp
+#define START_DPAD_KEY PAD_UP  // used as a positional reference for the lightgunButtons.cpp file / utilizzato come riferimento per posizione per file lightgunButtons.cpp
 
 class Gamepad16_ {
   //private:
   public:
     hid_gamepad16_report_t gamepad16Report = {0,0,0,0,0,0,0,0};
-    uint16_t _x = 2048; // A META' CONSIDERANDO IL RANGE DA 0 A 4095
-    uint16_t _y = 2048; // A META' CONSIDERANDO IL RANGE DA 0 A 4095
+    uint16_t _x = 2048; // At the midpoint, range from 0 to 4095. / A META' CONSIDERANDO IL RANGE DA 0 A 4095
+    uint16_t _y = 2048; // At the midpoint, range from 0 to 4095. / A META' CONSIDERANDO IL RANGE DA 0 A 4095
   public:
     Gamepad16_(void);
     void moveCam(uint16_t origX, uint16_t origY);
@@ -490,7 +510,10 @@ class Gamepad16_ {
     void padUpdate(uint8_t padMask);
     void report(void);
     void releaseAll(void);
-    
+    // Legacy Porting: Some setups (e.g., Cabela's Top Shot) require swapping
+    // the assignments between the Left stick (X/Y) and Right stick (Rx/Ry). 
+    // This flag enables dynamic swapping of the USB mapping.
+    // /
     // Legacy Porting: Alcuni setup (es. Cabela's Top Shot) richiedono l'inversione
     // dell'assegnazione tra stick Sinistro (X/Y) e stick Destro (Rx/Ry).
     // Questo flag permette lo swap dinamico della mappatura USB.

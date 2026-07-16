@@ -17,6 +17,11 @@
 // ===================================================================================
 // DATA STRUCTURE: PAYLOAD GAMEPAD 16-BIT
 // ===================================================================================
+// __attribute__((packed)) is mandatory: it tells the C++ compiler not to insert
+// padding bytes (empty space) between variables for memory alignment.
+// The absence of padding ensures that the struct matches exactly
+// the byte order required by the USB HID protocol for the 16-bit Gamepad.
+// /
 // __attribute__((packed)) è obbligatorio: dice al compilatore C++ di non inserire 
 // byte di padding (spazio vuoto) tra le variabili per allinearle in memoria. 
 // L'assenza di padding garantisce che la struct corrisponda millimetricamente 
