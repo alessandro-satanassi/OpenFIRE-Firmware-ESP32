@@ -1,7 +1,7 @@
 /*!
- * @file OpenFIRE-PEDAL-version.h
- * @brief OpenFIRE-PEDAL-version.h
- * @n CPP OpenFIRE-PEDAL-version.h
+ * @file OpenFIREversion.h
+ * @brief OpenFIREversion.h
+ * @n CPP OpenFIREversion.h
  *
  * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2026
  * @copyright GNU Lesser General Public License

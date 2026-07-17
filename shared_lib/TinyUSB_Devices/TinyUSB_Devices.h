@@ -468,7 +468,7 @@ extern Keyboard_ Keyboard;
 #define PAD_HOME   12   // GAMEPAD_BUTTON_MODE
 #define PAD_LS     13   // GAMEPAD_BUTTON_THUMBL
 #define PAD_RS     14   // GAMEPAD_BUTTON_THUMBR   // The 15 standard buttons end here. / qui finiscono i 15 bottoni standard
-#define PAD_15     15   // GAMEPAD_BUTTON_15      // All the ones from this point on are custom buttons. / 
+#define PAD_15     15   // GAMEPAD_BUTTON_15      // All the ones from this point on are custom buttons. / TUTTI QUELLI DA ORA IN SEGUITO SONO bottoni CUSTOM
 #define PAD_16     16   // GAMEPAD_BUTTON_16
 #define PAD_17     17   // GAMEPAD_BUTTON_17
 #define PAD_18     18   // GAMEPAD_BUTTON_18
