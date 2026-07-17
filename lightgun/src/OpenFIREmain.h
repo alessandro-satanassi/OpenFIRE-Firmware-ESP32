@@ -23,7 +23,13 @@
     #error Incompatible USB stack. Use Adafruit TinyUSB.
 #endif
 
-#include <DFRobotIRPositionEx.h>
+// = [ESP32_PORT] ===========================================================================================
+#ifdef PAJ7025_CAM
+    #include <DFRobotIRPositionEx_Wrapper.h>
+#else
+    #include <DFRobotIRPositionEx.h>
+#endif // PAJ7025_CAM
+// = [ESP32_PORT] ===========================================================================================
 
 #include <OpenFIREBoard.h>
 #include "OpenFIREDefines.h"

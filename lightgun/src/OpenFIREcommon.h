@@ -19,7 +19,14 @@
 #define _OPENFIRECOMMON_H_
 
 #include <stdint.h>
-#include <DFRobotIRPositionEx.h>
+
+// = [ESP32_PORT] ===========================================================================================
+#ifdef PAJ7025_CAM
+    #include <DFRobotIRPositionEx_Wrapper.h>
+#else
+    #include <DFRobotIRPositionEx.h>
+#endif // PAJ7025_CAM
+// = [ESP32_PORT] ===========================================================================================
 
 #ifdef USE_SQUARE_ADVANCED
     #include <OpenFIRE_Square_Advanced.h>

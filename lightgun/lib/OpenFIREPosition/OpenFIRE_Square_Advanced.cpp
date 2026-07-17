@@ -430,9 +430,9 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
                 const int ry = real_y[i];
 
                 if (positionXX[a] == rx && positionYY[a] == ry) current_point_seen_mask |= 0b1000;
-                if (positionXX[b] == rx && positionYY[b] == ry) current_point_seen_mask |= 0b0100;
-                if (positionXX[c] == rx && positionYY[c] == ry) current_point_seen_mask |= 0b0010;
-                if (positionXX[d] == rx && positionYY[d] == ry) current_point_seen_mask |= 0b0001;
+                else if (positionXX[b] == rx && positionYY[b] == ry) current_point_seen_mask |= 0b0100;
+                else if (positionXX[c] == rx && positionYY[c] == ry) current_point_seen_mask |= 0b0010;
+                else if (positionXX[d] == rx && positionYY[d] == ry) current_point_seen_mask |= 0b0001;
             }
         }
         /*

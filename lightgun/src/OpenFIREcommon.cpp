@@ -17,6 +17,13 @@
 
 #include <Arduino.h>
 #include <Wire.h>
+
+// = [ESP32_PORT] ===========================================================================================
+#ifdef PAJ7025_CAM
+    #include <SPI.h>
+#endif // PAJ7025_CAM
+// = [ESP32_PORT] ===========================================================================================
+
 #ifdef ARDUINO_ARCH_RP2040
   // for RP2040 Wii Clock Gen
   #include <pico/stdlib.h>
@@ -47,7 +54,6 @@
 #ifdef ARDUINO_ARCH_ESP32
     ESP32FIFO esp32_fifo(8);
 #endif // ARDUINO_ARCH_ESP32
-
 
 
 // button object instance (defined in OpenFIREcommon.h/OpenFIREprefs.h)
@@ -197,6 +203,43 @@ void FW_Common::PinsReset()
 
 void FW_Common::CameraSet()
 {
+
+    #ifdef PAJ7025_CAM
+    #ifdef ARDUINO_ARCH_ESP32
+    // usa OF_Prefs::pins[OF_Const::camSDA] per MISO
+    // usa OF_Prefs::pins[OF_Const::camSCL] per CLOCK
+    // il cable select lo impostiamo a -1 (default) poichè lo teniamo abilitato sempre
+    // il clock lo impostiamo a 14 Mhz o 8 Mhz fisso
+ 
+    #define SPI_SCK_PIN   OF_Prefs::pins[OF_Const::cam_PAJ7025_SCK]  // Ex SCL -> diventa il Clock SPI (SCK) (clock)
+    #define SPI_MISO_PIN  OF_Prefs::pins[OF_Const::cam_PAJ7025_MISO]  // Ex SDA -> diventa il pin di LETTURA dal sensore (RX lettura)
+    #define SPI_MOSI_PIN  OF_Prefs::pins[OF_Const::cam_PAJ7025_MOSI]  // Metto -1 se non lo collego/non lo uso (TX scrittura)
+    #define SPI_CS_PIN    OF_Prefs::pins[OF_Const::cam_PAJ7025_CS]  // Metto -1 se il CS del modulo è collegato fisicamente a GND (cable select)
+
+    SPIClass* SPIWire = nullptr;
+
+    SPIWire = new SPIClass(HSPI);
+    SPIWire->begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, SPI_CS_PIN);
+
+    dfrIRPos = new DFRobotIRPositionEx(SPIWire,SPI_CS_PIN);
+    #else // rp2040 
+
+    #define SPI_SCK_PIN   OF_Prefs::pins[OF_Const::cam_PAJ7025_SCK]  // Ex SCL -> diventa il Clock SPI (SCK) (clock)
+    #define SPI_MISO_PIN  OF_Prefs::pins[OF_Const::cam_PAJ7025_MISO]  // Ex SDA -> diventa il pin di LETTURA dal sensore (RX lettura)
+    #define SPI_MOSI_PIN  OF_Prefs::pins[OF_Const::cam_PAJ7025_MOSI]  // Metto -1 se non lo collego/non lo uso (TX scrittura)
+    #define SPI_CS_PIN    OF_Prefs::pins[OF_Const::cam_PAJ7025_CS]  // Metto -1 se il CS del modulo è collegato fisicamente a GND (cable select)
+
+    // SPI1 se si vuole lavorare sul secondo canale
+    SPI.setSCK(SPI_SCK_PIN);
+    SPI.setRX(SPI_MISO_PIN); 
+    SPI.setTX(SPI_MOSI_PIN); 
+
+    SPI.begin();
+
+    dfrIRPos = new DFRobotIRPositionEx(&SPI, -SPI_CS_PIN);
+
+    #endif // rp2040
+    #else
     #ifdef ARDUINO_ARCH_ESP32
         Wire.setPins(OF_Prefs::pins[OF_Const::camSDA], OF_Prefs::pins[OF_Const::camSCL]); // MODIFICATO [ESP32_PORT] per ESP32
         dfrIRPos = new DFRobotIRPositionEx(Wire);
@@ -220,7 +263,9 @@ void FW_Common::CameraSet()
             dfrIRPos = new DFRobotIRPositionEx(Wire);
         }
     }
-    #endif
+    #endif // rp2040
+    #endif // PAJ7025_CAM
+
 
     #ifdef ARDUINO_ARCH_RP2040
     if(OF_Prefs::pins[OF_Const::wiiClockGen] > -1) {

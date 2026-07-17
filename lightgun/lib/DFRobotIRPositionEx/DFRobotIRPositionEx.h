@@ -1,3 +1,5 @@
+#ifndef PAJ7025
+
 /*!
  * @file DFRobotIRPositionEx.h
  * @brief DFRobot's Positioning IR camera with extended functionality
@@ -358,3 +360,5 @@ public:
 };
 
 #endif // DFRobotIRPositionEx_h
+
+#endif //PAJ7025_CAM

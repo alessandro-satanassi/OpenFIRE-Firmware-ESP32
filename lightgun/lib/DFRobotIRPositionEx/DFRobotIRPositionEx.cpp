@@ -1,3 +1,5 @@
+#ifndef PAJ7025_CAM
+
 /*!
  * @file DFRobotIRPositionEx.cpp
  * @brief DFRobot's Positioning IR camera with extended functionality
@@ -345,3 +347,5 @@ int DFRobotIRPositionEx::extendedAtomic(DFRobotIRPositionEx::Retry_e retry)
 
     return Error_DataMismatch;
 }
+
+#endif //PAJ7025_CAM

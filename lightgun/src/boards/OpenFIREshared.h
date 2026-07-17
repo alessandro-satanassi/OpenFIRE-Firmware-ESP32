@@ -108,6 +108,10 @@ public:
         analogX,
         analogY,
         tempPin,
+        cam_PAJ7025_MISO,
+        cam_PAJ7025_MOSI,
+        cam_PAJ7025_SCK,
+        cam_PAJ7025_CS,
         // Add non-button inputs here
         boardInputsCount
     } boardInputs_e;
@@ -140,13 +144,17 @@ public:
         {"RGB LED Green",       ledG            },
         {"RGB LED Blue",        ledB            },
         {"Wii Cam Clock",       wiiClockGen     },
-        {"Camera SDA",          camSDA          },
-        {"Camera SCL",          camSCL          },
+        {"Camera Wii Cam SDA",  camSDA          },
+        {"Camera Wii Cam SCL",  camSCL          },
         {"Peripherals SDA",     periphSDA       },
         {"Peripherals SCL",     periphSCL       },
         {"Analog Stick X",      analogX         },
         {"Analog Stick Y",      analogY         },
         {"Temperature Sensor",  tempPin         },
+        {"Camera PAJ7025 MISO", cam_PAJ7025_MISO},
+        {"Camera PAJ7025 MOSI", cam_PAJ7025_MOSI},
+        {"Camera PAJ7025 SCK",  cam_PAJ7025_SCK },
+        {"Camera PAJ7025 CS",   cam_PAJ7025_CS  },
     };
 
     // For Apps to use for lists of pin functions

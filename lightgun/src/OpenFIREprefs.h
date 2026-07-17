@@ -44,7 +44,15 @@
 
 #include <LittleFS.h>
 #include <OpenFIREBoard.h>
-#include <DFRobotIRPositionEx.h>
+
+// = [ESP32_PORT] ===========================================================================================
+#ifdef PAJ7025_CAM
+    #include <DFRobotIRPositionEx_Wrapper.h>
+#else
+    #include <DFRobotIRPositionEx.h>
+#endif // PAJ7025_CAM
+// = [ESP32_PORT] ===========================================================================================
+
 #include <LightgunButtons.h>
 #include <TinyUSB_Devices.h>
 
