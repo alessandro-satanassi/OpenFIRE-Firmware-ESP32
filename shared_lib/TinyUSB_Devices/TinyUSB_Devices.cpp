@@ -72,8 +72,12 @@ uint8_t desc_bt_report[] = {
 #endif // ARDUINO_RASPBERRY_PI_PICO_W
 
 // ===================================================================================
-// INIZIALIZZAZIONE ENDPOINT E RE-ENUMERAZIONE
+// ENDPOINT INITIALIZATION AND RE-ENUMERATION / INIZIALIZZAZIONE ENDPOINT E RE-ENUMERAZIONE
 // ===================================================================================
+// Forcing a detach/attach is the only way to compel Windows to re-read
+// our composite descriptors on the fly (spoofing) in the event that TinyUSB
+// was already mounted before we completed our network configurations.
+// /
 // Forzare il detach/attach è l'unico modo per costringere Windows a ri-leggere 
 // i nostri descrittori compositi al volo (Spoofing) nel caso in cui TinyUSB 
 // fosse già montato prima che completassimo le nostre configurazioni di rete.
@@ -107,8 +111,13 @@ void TinyUSBDevices_::beginBT(const char *localName, const char *hidName) {
 #ifdef OPENFIRE_WIRELESS_DEVICE_ESPNOW
 
 // ===================================================================================
-// OTTIMIZZAZIONE ESP-NOW: COMPATTAZIONE DEI REPORT (UNIFIED PACKET)
+// ESP-NOW OPTIMIZATION: REPORT COMPACTION / OTTIMIZZAZIONE ESP-NOW: COMPATTAZIONE DEI REPORT (UNIFIED PACKET)
 // ===================================================================================
+// Airtime is expensive. Sending a WiFi packet involves preambles, headers, and acknowledgments.
+// Instead of sending Mouse, Keyboard, and Pad data in three separate packets—thereby clogging the network—
+// we aggressively compact all three structs into a single byte stream, surgically copied
+// into a static buffer (to eliminate stack allocation overhead).
+// /
 // L'etere è costoso. Inviare un pacchetto WiFi richiede preamble, header e conferme.
 // Invece di inviare Mouse, Tastiera e Pad in 3 pacchetti distinti intasando la rete, 
 // compattiamo brutalmente tutte e tre le struct in un solo treno di byte, copiato 
@@ -116,23 +125,23 @@ void TinyUSBDevices_::beginBT(const char *localName, const char *hidName) {
 #ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
 void report_all_MOUSE_KEY_PAD_TX_wifi_espnow(void)
 {
-  // 'static' crea l'array in RAM una sola volta all'avvio. Zero overhead ogni 5ms!
+  // 'static' creates the array in RAM just once at startup. Zero overhead every 5ms! / 'static' crea l'array in RAM una sola volta all'avvio. Zero overhead ogni 5ms!
   static uint8_t aux[sizeof(AbsMouse5.absmouse5Report) + sizeof(Keyboard._keyReport) + sizeof(Gamepad16.gamepad16Report)];
   
   uint8_t* ptr = aux; 
 
-  // Copia MOUSE
+  // Copy MOUSE / Copia MOUSE
   memcpy(ptr, &AbsMouse5.absmouse5Report, sizeof(AbsMouse5.absmouse5Report));
   ptr += sizeof(AbsMouse5.absmouse5Report);
 
-  // Copia TASTIERA
+  // Copy KEYBOARD / Copia TASTIERA
   memcpy(ptr, &Keyboard._keyReport, sizeof(Keyboard._keyReport));
   ptr += sizeof(Keyboard._keyReport);
 
-  // Copia GAMEPAD
+  // Copy GAMEPAD / Copia GAMEPAD
   memcpy(ptr, &Gamepad16.gamepad16Report, sizeof(Gamepad16.gamepad16Report));
 
-  // Spara via i dati
+  // Transmit the data / Spara via i dati
   SerialWireless.SendPacket(aux, sizeof(aux), PACKET_TX::MOUSE_KEY_PAD_TX);
 
 }
@@ -155,8 +164,12 @@ TinyUSBDevices_ TinyUSBDevices;
 AbsMouse5_::AbsMouse5_() {}
 
 // ===================================================================================
-// ROUTING DINAMICO DEL PAYLOAD (Wired vs Wireless)
+// DYNAMIC PAYLOAD ROUTING / ROUTING DINAMICO DEL PAYLOAD (Wired vs Wireless)
 // ===================================================================================
+// This is the core of the abstraction: the Lightgun code calls AbsMouse5.report().
+// If `onBattery` is false (USB connected), it sends the data to the physical USB endpoint.
+// If `onBattery` is true, it routes the payload via radio (BT/ESPNOW) to the dongle.
+// /
 // Questo è il fulcro dell'astrazione: il codice della Lightgun chiama AbsMouse5.report().
 // Se `onBattery` è false (USB connessa), spedisce i dati all'Endpoint USB fisico.
 // Se `onBattery` è true, instrada il payload via Radio (BT/ESPNOW) verso il Dongle.

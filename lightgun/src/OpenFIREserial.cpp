@@ -24,7 +24,8 @@
 #include "boards/OpenFIREshared.h"
 #include "OpenFIREcommon.h"
 
-// ============ [ESP32_PORT] ========== redifinizione di Serial per gestire le connessione wireless seriali ========
+// ============ [ESP32_PORT] ============
+// redefinition of Serial to handle wireless serial connections / redifinizione di Serial per gestire le connessione wireless seriali
 #ifdef OPENFIRE_WIRELESS_ENABLE
     extern Stream* Serial_OpenFIRE_Stream;
     #ifdef Serial
@@ -33,7 +34,8 @@
     #endif
     #define Serial (*Serial_OpenFIRE_Stream)
 #endif // OPENFIRE_WIRELESS_ENABLE
-// ============ [ESP32_PORT] ===== fine redifinizione di Serial per gestire le connessione wireless seriali ========
+// ============ [ESP32_PORT] ============
+// END redefinition of Serial to handle wireless serial connections / fine redifinizione di Serial per gestire le connessione wireless seriali ========
 
 #ifdef ARDUINO_ARCH_ESP32  // [ESP32_PORT]
     #define delay(ms) vTaskDelay(pdMS_TO_TICKS(ms))                    
@@ -1415,7 +1417,7 @@ void OF_Serial::PrintResults()
                 else Serial.println("False");
             #endif // USES_SOLENOID
 
-            //#ifdef ARDUINO_ARCH_RP2040 // [ESP32_PORT] per ESP32
+            // #ifdef ARDUINO_ARCH_RP2040 // [ESP32_PORT] per ESP32
             #ifdef DUAL_CORE
                 Serial.println("Running on dual cores.");
             #else
@@ -1475,7 +1477,8 @@ bool OF_Serial::Serial_available(uint8_t min)
     }
 }
 
-// ============ [ESP32_PORT] ========== ripristino di Serial dopo definizione per connessione seriali ==============
+// ============ [ESP32_PORT] ============
+// restore Serial after it was redefined for serial connections / ripristino di Serial dopo definizione per connessione seriali ==============
 #ifdef OPENFIRE_WIRELESS_ENABLE
     #undef Serial
     #ifdef AUX_SERIAL
@@ -1483,4 +1486,5 @@ bool OF_Serial::Serial_available(uint8_t min)
         #undef AuxSerial
     #endif
 #endif // OPENFIRE_WIRELESS_ENABLE
-// ============ [ESP32_PORT] ===== fine ripristino di Serial dopo definizione per connessione seriali ==============
+// ============ [ESP32_PORT] ============
+// restore Serial after it was redefined for serial connections / fine ripristino di Serial dopo definizione per connessione seriali ==============

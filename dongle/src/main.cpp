@@ -17,8 +17,14 @@
 #include "TinyUSB_Devices.h"
 
 // ===================================================================================
-// HARDWARE ABSTRACTION: GESTIONE GRAFICA OPZIONALE E COMPATIBILITA'
+// HARDWARE ABSTRACTION: OPTIONAL GRAPHICS MANAGEMENT AND COMPATIBILITY / GESTIONE GRAFICA OPZIONALE E COMPATIBILITA'
 // ===================================================================================
+// The dongle supports various hardware configurations (with or without a TFT display)
+// and is agnostic regarding the graphics library in use (LovyanGFX vs. Adafruit).
+// Extensive use of preprocessor directives (#ifdef) ensures that the final binary
+// includes only the code strictly necessary for the target board, reducing
+// Flash memory usage.
+// /
 // Il Dongle supporta diverse configurazioni hardware (con o senza display TFT) 
 // ed è agnostico rispetto alla libreria grafica in uso (LovyanGFX vs Adafruit). 
 // L'uso intensivo di direttive preprocessore (#ifdef) assicura che il binario finale 
@@ -76,7 +82,7 @@ bool display_init = false;
 // The main show!
 void setup() { 
 
-  // 1. INIZIALIZZAZIONE HARDWARE (Video Feedback)
+  // 1. HARDWARE INITIALIZATION / INIZIALIZZAZIONE HARDWARE (Video Feedback)
   #ifdef USES_DISPLAY
     #ifdef USE_LOVYAN_GFX
       display_init = tft.init();
@@ -85,11 +91,11 @@ void setup() {
       tft.setColorDepth(16);
       }
     #else
-      tft.initR(INITR_MINI160x80_PLUGIN); // non riporta alcun valore, quindi display_init va inizializzato da solo
+      tft.initR(INITR_MINI160x80_PLUGIN); // It does not return any value, so `display_init` must be initialized separately. / non riporta alcun valore, quindi display_init va inizializzato da solo
       display_init = true;
       if(display_init) {  // Init ST7735S mini display
       pinMode(TFT_PIN_BL, OUTPUT);
-      digitalWrite(TFT_PIN_BL, 0); // accende retroilluminazione del display
+      digitalWrite(TFT_PIN_BL, 0); // turns on the display backlight / accende retroilluminazione del display
       }
     #endif // USE_LOVYAN_GFX
     
@@ -117,8 +123,12 @@ void setup() {
   #endif //USES_DISPLAY
 
   // ===================================================================================
-  // GESTIONE CONNESSIONE WIRELESS E ASSOCIAZIONE DISPOSITIVO (Bloccante)
+  // Wireless Connection Management and Device Pairing (Blocking) / GESTIONE CONNESSIONE WIRELESS E ASSOCIAZIONE DISPOSITIVO (Bloccante)
   // ===================================================================================
+  // The dongle searches for the best channel to tune into and then waits
+  // to establish the ESP-NOW link with the Lightgun. Until it obtains
+  // the correct MAC address and identification parameters, it CANNOT proceed.
+  // /
   // Il Dongle cerca il canale migliore su cui sintonizzarsi  e poi attende 
   // di stabilire il link ESP-NOW con la Lightgun. Finché non ottiene
   // il MAC Address corretto e i parametri identificativi, NON può procedere.
@@ -138,7 +148,7 @@ void setup() {
   }
   #endif // USES_DISPLAY
 
-  // =========== attesa segnale del pedale da parte della lightgun
+  // =========== waiting for the pedal signal from the light gun / attesa segnale del pedale da parte della lightgun ===========
   const unsigned long start_millis = millis();
   const unsigned long timeout_ms = (MAX_SECONDI_CONNESSIONE_PEDAL + 2) * 1000;
   SerialWireless.is_pedal_wireless_comunication = false;
@@ -147,8 +157,12 @@ void setup() {
   }
 
   // ===================================================================================
-  // CONNESSIONE USB - imposta VID e PID come quello che gli passa la pistola
+  // USB CONNECTION – set the VID and PID to match those provided by the lightgun. / CONNESSIONE USB - imposta VID e PID come quello che gli passa la pistola
   // ===================================================================================
+  // To ensure full compatibility with front-ends (MAME, Batocera, Windows),
+  // the dongle dynamically adopts the identity (VID, PID, and Manufacturer) previously
+  // sent by the lightgun, acting as an invisible hardware proxy.
+  // /
   // Per garantire compatibilità totale con i front-end (MAME, Batocera, Windows),
   // il Dongle assume dinamicamente l'identità (VID, PID e Manufacturer) inviata 
   // precedentemente dalla Lightgun, comportandosi come un proxy hardware invisibile.
@@ -161,6 +175,9 @@ void setup() {
   TinyUSBDevice.setProductDescriptor(usb_data_wireless.deviceName);
   TinyUSBDevice.setID(usb_data_wireless.deviceVID, usb_data_wireless.devicePID);
   
+  // Adds the USB port description serial number so that the same COM port is always mapped for each lightgun.
+  // Formats the byte array into a hexadecimal string.
+  // /
   // Aggiunge il serial number della descrizione della porta USB in modo che venga mappata sempre la stessa COM per ogni lightgun
   // Formatta l'array di byte in una stringa esadecimale.
   static char serialNumber[13]; 
@@ -173,8 +190,10 @@ void setup() {
   Serial.setTimeout(0);
     
   // ===================================================================================
-  // VISUALIZZAZIONE DATI DELLA LIGHTGUN SUL DISPLAY
+  // DISPLAYING LIGHT GUN DATA ON THE SCREEN / VISUALIZZAZIONE DATI DELLA LIGHTGUN SUL DISPLAY
   // ===================================================================================
+  // Final visual feedback confirming the successful cloning of the identity.
+  // /
   // Feedback visivo finale che conferma l'avvenuta clonazione dell'identità.
  
    #ifdef USES_DISPLAY   
@@ -197,15 +216,19 @@ void setup() {
 }
 
 // ===================================================================================
-// PARAMETRI BUFFERIZZAZIONE SERIALE -> RADIO
+// SERIAL BUFFERING PARAMETERS -> RADIO / PARAMETRI BUFFERIZZAZIONE SERIALE -> RADIO
 // ===================================================================================
+// Setting FIFO_SIZE to 200 ensures the handling of rapid
+// data bursts from Mamehooker (e.g., multiple force feedback effects like Rumble + Solenoid)
+// without causing bottlenecks or COM port desynchronization.
+// /
 // FIFO_SIZE a 200 garantisce l'assorbimento di rapidi
 // treni di dati dal Mamehooker (es. force feedback multipli come Rumble + Solenoide) 
 // senza causare colli di bottiglia o desincronizzazione della porta COM
 
 #define FIFO_SIZE_READ_SER 200
 #define TIME_OUT_AVALAIBLE 2
-#define TIME_OUT_SERIAL_MICRO 1000 // 1000 microsecondi = 1 millisecondo
+#define TIME_OUT_SERIAL_MICRO 1000 // 1000 microseconds = 1 millisecond / 1000 microsecondi = 1 millisecondo
 
 int rx_avalaible = 0;
 unsigned long startTime = 0; // = millis();
@@ -214,8 +237,16 @@ uint64_t timer_serial_micro = 0;
 uint8_t buffer_aux[FIFO_SIZE_READ_SER];
 
 // ===================================================================================
-// MAIN LOOP: IL BRIDGE SERIALE-RADIO (MAMEHOOKER/FORCE FEEDBACK)
+// MAIN LOOP: THE SERIAL-RADIO BRIDGE (MAMEHOOKER/FORCE FEEDBACK) / IL BRIDGE SERIALE-RADIO (MAMEHOOKER/FORCE FEEDBACK)
 // ===================================================================================
+// IMPORTANT ARCHITECTURAL NOTE:
+// This loop handles ONLY the PC -> DONGLE -> LIGHTGUN direction.
+// Incoming data from the host (serial force feedback commands) is "fetched"
+// in blocks, placed into the radio Ring Buffer, and signaled to the asynchronous tasks
+// via the `SerialWireless` library.
+// Reverse radio reception (Lightgun -> Dongle -> USB HID PC) is handled
+// asynchronously—invisibly and independently of the delegated tasks.
+// /
 // NOTA ARCHITETTURALE IMPORTANTE:
 // Questo loop si occupa SOLTANTO della direzione PC -> DONGLE -> LIGHTGUN
 // I dati in ingresso dall'host (comandi force feedback via seriale) vengono "pescati" 
@@ -226,7 +257,7 @@ uint8_t buffer_aux[FIFO_SIZE_READ_SER];
 
 void loop()
 {
-  vTaskDelay(pdMS_TO_TICKS(1)); // diamo un po' di respiro al micro per non incorrere in reset dal Task Watchdog
+  vTaskDelay(pdMS_TO_TICKS(1)); // Let's give the microcontroller some breathing room to avoid resets triggered by the Task Watchdog. / diamo un po' di respiro al micro per non incorrere in reset dal Task Watchdog
   rx_avalaible = Serial.available();
   if (rx_avalaible > FIFO_SIZE_READ_SER) rx_avalaible = FIFO_SIZE_READ_SER;
   if (rx_avalaible)
@@ -234,7 +265,7 @@ void loop()
     Serial.readBytes(buffer_aux, rx_avalaible);
     SerialWireless.write(buffer_aux, rx_avalaible);
     
-    // Il flush sveglia il task radio asincrono per spedirli fisicamente in aria senza bloccare il loop.
+    // The flush wakes up the asynchronous radio task to physically transmit them over the air without blocking the loop. / Il flush sveglia il task radio asincrono per spedirli fisicamente in aria senza bloccare il loop.
     SerialWireless.flush(); 
   }
 }

@@ -33,8 +33,15 @@
 #pragma once
 
 // ===================================================================================
-// HID DESCRIPTOR OVERRIDE: INGEGNERIA DEI 16-BIT
+// HID DESCRIPTOR OVERRIDE: 16-BIT ENGINEERING / INGEGNERIA DEI 16-BIT
 // ===================================================================================
+// The standard Windows HID driver assigns 8 bits per axis to gamepads (values: -127/+127).
+// By injecting a custom USB descriptor, we force the LOGICAL resolution to -32767/+32767.
+// This is not intended for reading higher-precision ADC data, but rather to provide
+// the emulator (Mamehooker) with an ultra-high-definition targeting plane when the
+// lightgun operates in Gamepad mode (e.g., to avoid mouse conflicts with Player 1
+// in local multiplayer setups).
+// /
 // Il driver standard HID di Windows assegna ai gamepad 8-bit per asse (valori: -127/+127).
 // Iniettando un descrittore USB customizzato forziamo la risoluzione LOGICA a -32767/+32767.
 // Questo non serve per leggere ADC più precisi, ma per offrire all'emulatore (Mamehooker) 

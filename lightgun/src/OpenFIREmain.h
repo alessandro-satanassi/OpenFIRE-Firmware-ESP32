@@ -65,36 +65,37 @@ unsigned long lastUSBpoll = 0;
 
 uint32_t fifoData = 0;
 
-// ============ VARIABILI e COSTANTI AGGIUNTE  ========= [ESP32_PORT]
+// ============ VARIABLES AND CONSTANTS ADDED / VARIABILI e COSTANTI AGGIUNTE  ========= [ESP32_PORT]
 
-Stream* Serial_OpenFIRE_Stream; // SERVE PER GESTIRE LE SERIALE WIRELESS
+Stream* Serial_OpenFIRE_Stream; // USED TO HANDLE THE WIRELESS SERIAL / SERVE PER GESTIRE LE SERIALE WIRELESS
 
-// == per gestione Analog Stick ==
-#define ANALOG_STICK_MIN_X 0    // valore minimo X 
-#define ANALOG_STICK_MAX_X 4095 // valore massimo X
-#define ANALOG_STICK_MIN_Y 0    // valore minimo Y
-#define ANALOG_STICK_MAX_Y 4095 // valore massimo Y
-#define ANALOG_STICK_CENTER_X 2048 // centro - serve per inviare dati nel joystic simulato valore tra 0 a 4095
-#define ANALOG_STICK_CENTER_Y 2048 // centro - serve per inviare dati nel joystic simulato valore tra 0 a 4095
+// == analog stick handling / per gestione Analog Stick ==
+#define ANALOG_STICK_MIN_X 0    // minimum X value / valore minimo X 
+#define ANALOG_STICK_MAX_X 4095 // maximum X value / valore massimo X
+#define ANALOG_STICK_MIN_Y 0    // minimum Y value / valore minimo Y
+#define ANALOG_STICK_MAX_Y 4095 // maximum Y value / valore massimo Y
+#define ANALOG_STICK_CENTER_X 2048 // center - used to send data in the simulated joystick, value between 0 and 4095 / centro - serve per inviare dati nel joystic simulato valore tra 0 a 4095
+#define ANALOG_STICK_CENTER_Y 2048 // center - used to send data in the simulated joystick, value between 0 and 4095 / centro - serve per inviare dati nel joystic simulato valore tra 0 a 4095
 #if defined(ARDUINO_ARCH_RP2040)
-    uint16_t ANALOG_STICK_DEADZONE_X_MIN = 1900;  // impostati gli stessi valori originali di OpenFIRE 
-    uint16_t ANALOG_STICK_DEADZONE_X_MAX = 2200;  // impostati gli stessi valori originali di OpenFIRE 
-    uint16_t ANALOG_STICK_DEADZONE_Y_MIN = 1900;  // impostati gli stessi valori originali di OpenFIRE 
-    uint16_t ANALOG_STICK_DEADZONE_Y_MAX = 2200;  // impostati gli stessi valori originali di OpenFIRE
-    uint16_t ANALOG_STICK_DEADZONE_X_CENTER = ANALOG_STICK_CENTER_X;  // serve per inviare dati nel joystic simulato valore tra 0 a 4095
-    uint16_t ANALOG_STICK_DEADZONE_Y_CENTER = ANALOG_STICK_CENTER_Y;  // serve per inviare dati nel joystic simulato valore tra 0 a 4095
+    uint16_t ANALOG_STICK_DEADZONE_X_MIN = 1900;  // set to the same original OpenFIRE values / impostati gli stessi valori originali di OpenFIRE 
+    uint16_t ANALOG_STICK_DEADZONE_X_MAX = 2200;  // set to the same original OpenFIRE values / impostati gli stessi valori originali di OpenFIRE 
+    uint16_t ANALOG_STICK_DEADZONE_Y_MIN = 1900;  // set to the same original OpenFIRE values / impostati gli stessi valori originali di OpenFIRE 
+    uint16_t ANALOG_STICK_DEADZONE_Y_MAX = 2200;  // set to the same original OpenFIRE values / impostati gli stessi valori originali di OpenFIRE
+    uint16_t ANALOG_STICK_DEADZONE_X_CENTER = ANALOG_STICK_CENTER_X;  // used to send data in the simulated joystick, value between 0 and 4095 / serve per inviare dati nel joystic simulato valore tra 0 a 4095
+    uint16_t ANALOG_STICK_DEADZONE_Y_CENTER = ANALOG_STICK_CENTER_Y;  // used to send data in the simulated joystick, value between 0 and 4095 / serve per inviare dati nel joystic simulato valore tra 0 a 4095
 #elif defined(ARDUINO_ARCH_ESP32)
-    uint16_t ANALOG_STICK_DEADZONE_X_MIN = ANALOG_STICK_MAX_X;  // serve per leggere i valori del joystick collegato al micro (deadzone rispetto al centro, lo calcola in fate di setup)  
-    uint16_t ANALOG_STICK_DEADZONE_X_MAX = ANALOG_STICK_MIN_X;  // serve per leggere i valori del joystick collegato al micro (deadzone rispetto al centro, lo calcola in fate di setup)
-    uint16_t ANALOG_STICK_DEADZONE_Y_MIN = ANALOG_STICK_MAX_Y;  // serve per leggere i valori del joystick collegato al micro (deadzone rispetto al centro, lo calcola in fate di setup)
-    uint16_t ANALOG_STICK_DEADZONE_Y_MAX = ANALOG_STICK_MIN_Y;  // serve per leggere i valori del joystick collegato al micro (deadzone rispetto al centro, lo calcola in fate di setup)
-    uint16_t ANALOG_STICK_DEADZONE_X_CENTER = ANALOG_STICK_CENTER_X;  // serve per inviare dati nel joystic simulato valore tra 0 a 4095
-    uint16_t ANALOG_STICK_DEADZONE_Y_CENTER = ANALOG_STICK_CENTER_Y;  // serve per inviare dati nel joystic simulato valore tra 0 a 4095
+    uint16_t ANALOG_STICK_DEADZONE_X_MIN = ANALOG_STICK_MAX_X;  // used to read the values of the joystick connected to the MCU (deadzone relative to the center, calculated during setup) / serve per leggere i valori del joystick collegato al micro (deadzone rispetto al centro, lo calcola in fate di setup)  
+    uint16_t ANALOG_STICK_DEADZONE_X_MAX = ANALOG_STICK_MIN_X;  // used to read the values of the joystick connected to the MCU (deadzone relative to the center, calculated during setup) / serve per leggere i valori del joystick collegato al micro (deadzone rispetto al centro, lo calcola in fate di setup)
+    uint16_t ANALOG_STICK_DEADZONE_Y_MIN = ANALOG_STICK_MAX_Y;  // used to read the values of the joystick connected to the MCU (deadzone relative to the center, calculated during setup) / serve per leggere i valori del joystick collegato al micro (deadzone rispetto al centro, lo calcola in fate di setup)
+    uint16_t ANALOG_STICK_DEADZONE_Y_MAX = ANALOG_STICK_MIN_Y;  // used to read the values of the joystick connected to the MCU (deadzone relative to the center, calculated during setup) / serve per leggere i valori del joystick collegato al micro (deadzone rispetto al centro, lo calcola in fate di setup)
+    uint16_t ANALOG_STICK_DEADZONE_X_CENTER = ANALOG_STICK_CENTER_X;  // used to send data in the simulated joystick, value between 0 and 4095 / serve per inviare dati nel joystic simulato valore tra 0 a 4095
+    uint16_t ANALOG_STICK_DEADZONE_Y_CENTER = ANALOG_STICK_CENTER_Y;  // used to send data in the simulated joystick, value between 0 and 4095 / serve per inviare dati nel joystic simulato valore tra 0 a 4095
 #endif
-// == FINE per gestione Analog Stick ==
+// == END analog stick handling / FINE per gestione Analog Stick ==
 
 
-// ============ DEFINIZIONE DELLE FUNZIONI ================== [ESP32_PORT] per platformio - in arduino IDE si possono anche non definire prima
+// ============ FUNCTION DEFINITIONS / DEFINIZIONE DELLE FUNZIONI ================== [ESP32_PORT]
+// for PlatformIO - in Arduino IDE they don’t need to be defined beforehand / per platformio - in arduino IDE si possono anche non definire prima
 void startIrCamTimer(const int &frequencyHz);
 void ExecGunModeDocked();
 void TriggerFire();

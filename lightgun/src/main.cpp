@@ -36,8 +36,12 @@
 #include "OpenFIREconstant.h"
 
 // ===================================================================================
-// OS ABSTRACTION: RIDEFINIZIONE DEL DELAY (FREERTOS)
+// OS ABSTRACTION: DELAY REDEFINITION / RIDEFINIZIONE DEL DELAY (FREERTOS)
 // ===================================================================================
+// By replacing the native blocking function with vTaskDelay, we ensure that
+// the FreeRTOS scheduler can yield control to other tasks (e.g., radio or display)
+// during wait periods, preventing the entire operating system from stalling.
+// /
 // Sostituendo la funzione nativa bloccante con vTaskDelay, garantiamo che 
 // lo scheduler di FreeRTOS possa cedere il controllo ad altri task (es. radio o display) 
 // durante le attese, prevenendo lo stallo dell'intero sistema operativo.
@@ -46,12 +50,16 @@
 #endif //ARDUINO_ARCH_ESP32
 
 // ===================================================================================
-// CONDIVISIONE RISORSE DISPLAY
+// DISPLAY RESOURCE SHARING / CONDIVISIONE RISORSE DISPLAY
 // ===================================================================================
+// By exposing a reference pointer (*&), we allow the Wireless module—isolated
+// in other threads—to inject status animations (e.g., "Searching...")
+// directly onto the display, bypassing standard firmware encapsulation.
+// /
 // Esponendo un puntatore reference (*&), permettiamo al modulo Wireless, isolato 
 // in altri thread, di iniettare animazioni di stato (es. "Searching...") 
 // direttamente sul display, aggirando l'incapsulamento standard del firmware.
-// ========== serve per usare display da parte wireless =============
+// ========== enables wireless module to use the display / serve per usare display da parte wireless =============
 #ifdef USES_DISPLAY
     #ifdef USE_LOVYAN_GFX
         LGFX_SSD1306 *&display_OLED  = FW_Common::OLED.display;   //aggiunto inline per condividerla
@@ -59,18 +67,23 @@
         Adafruit_SSD1306 *&display_OLED  = FW_Common::OLED.display; //aggiunto inline per condividerla
     #endif
 #endif // USES_DISPLAY
-// ========== fine serve per usare display da parte wireless =============
+// ========== END enables wireless module to use the display / fine serve per usare display da parte wireless =============
 
 
 // ===================================================================================
-// MULTITHREADING (CORE 1) E WATCHDOG
+// MULTITHREADING (CORE 1) AND WATCHDOG / MULTITHREADING (CORE 1) E WATCHDOG
 // ===================================================================================
+// The dual-core setup frees up valuable cycles. However, vTaskDelay(1)
+// is architecturally essential: it forces the task to sleep for 1 ms, allowing
+// the hidden FreeRTOS Idle task to run. Without this breathing room, the core
+// would stall, and the hardware watchdog would reboot the board due to a panic.
+// /
 // Il setup del dual-core scarica cicli preziosi. Tuttavia, il vTaskDelay(1) 
 // è essenziale architettonicamente: costringe il task a dormire 1 ms permettendo 
 // al task Idle nascosto di FreeRTOS di girare. Senza questo respiro, il Core si 
 // bloccherebbe e l'Hardware Watchdog riavvierebbe la scheda in panic.
 
-// =======[ESP32_PORT]===== GESTIONE DUAL CORE PER ESP32 CHE USA FREERTOS ===  INIZIALIZZAZIONE ========
+// =======[ESP32_PORT]======= DUAL-CORE MANAGEMENT FOR ESP32 USING FREERTOS / GESTIONE DUAL CORE PER ESP32 CHE USA FREERTOS (INIZIALIZZAZIONE)
 #if defined(ARDUINO_ARCH_ESP32) && defined(DUAL_CORE)
     void setup1();
     void loop1();
@@ -86,7 +99,7 @@
         }
     }
 #endif
-// ======[ESP32_PORT]============= FINE GESTIONE DUAL CORE ESP32 ==== FINE INIZIALIZZAZIONE ============
+// ======[ESP32_PORT]====== DUAL-CORE MANAGEMENT FOR ESP32 USING FREERTOS / FINE GESTIONE DUAL CORE ESP32 (FINE INIZIALIZZAZIONE)
 
 
 // Sets up the environment
@@ -110,6 +123,10 @@ void setup() {
     // ===================================================================================
     // HARDWARE FAILSAFES (I2C & ADC)
     // ===================================================================================
+    // The physical stability of various hardware (Arduino clones, long wiring) is unpredictable. 
+    // I2C timeouts prevent infinite bus hangs. GPIO pins held high
+    // compensate for known quirks of specific boards (e.g., stabilizing the Pico's LDO).
+    // /
     // La stabilità fisica dell'hardware vario (cloni Arduino, cablaggi lunghi) è imprevedibile.
     // I timeout I2C prevengono blocchi infiniti del bus. I pin GPIO tenuti alti 
     // compensano quirk noti di board specifiche (es. stabilizzare l'LDO del Pico).
@@ -133,10 +150,13 @@ void setup() {
     #endif
 
     // ===================================================================================
-    // FORZATURA HARDWARE ADC (Previene futuri bug se cambiano i default di libreria)
+    // ADC HARDWARE OVERRIDE (Prevents future bugs if library defaults change) / FORZATURA HARDWARE ADC (Previene futuri bug se cambiano i default di libreria)
     // ===================================================================================
     #if defined(ARDUINO_ARCH_ESP32) && defined(USES_ANALOG)
         
+        // Sets the ADC to 12-bit (0-4095 scale). 
+        // Vital: all constants (e.g., center at 2048) and formulas depend on this. 
+        // /
         // Fissa l'ADC a 12-bit (scala 0-4095). 
         // Vitale: tutte le costanti (es. centro a 2048) e le formule dipendono da questo.
         analogReadResolution(12); 
@@ -150,8 +170,12 @@ void setup() {
 
 
     // ===================================================================================
-    // DATA INTEGRITY & PROFILAZIONE
+    // DATA INTEGRITY & PROFILING / DATA INTEGRITY & PROFILAZIONE
     // ===================================================================================
+    // A corrupted EEPROM (or file system) can load impossible offset values,
+    // breaking the IR tracking calculations. This block acts as a "sanitizer,"
+    // forcing a fallback to safe values ​​before causing the software to crash.
+    // /
     // Una EEPROM (o File System) corrotta può caricare valori di offset impossibili, 
     // distruggendo la matematica del tracking IR. Questo blocco agisce come "Sanitizer", 
     // forzando il fallback a valori sicuri prima che il software possa crashare.
@@ -160,7 +184,7 @@ void setup() {
     OF_Prefs::LoadPresets();
     
     if(OF_Prefs::InitFS() == OF_Prefs::Error_Success) {
-        //OF_Prefs::ResetPreferences(); // ============ FORMATTA IL FILE SYSTEM =================================
+        //OF_Prefs::ResetPreferences(); // ============ Format the file system / FORMATTA IL FILE SYSTEM =================================
         OF_Prefs::LoadProfiles();
     
         // Profile sanity checks
@@ -208,19 +232,23 @@ void setup() {
     
 
 // ===================================================================================
-// IDENTITA' DINAMICA USB (SPOOFING SHADOWING)
+// DYNAMIC USB IDENTITY (SPOOFING/SHADOWING) / IDENTITA' DINAMICA USB (SPOOFING SHADOWING)
 // ===================================================================================
+// We prepare the peripheral's identity. If in Wireless mode, this data
+// will be sent to the Dongle so it can impersonate this specific gun.
+// If using a cable, we will configure our local TinyUSB with these same parameters.
+// /
 // Prepariamo l'identità della periferica. Se siamo in modalità Wireless, questi 
 // dati verranno inviati al Dongle affinché possa fingersi questa specifica pistola. 
 // Se siamo via Cavo, configureremo il nostro TinyUSB locale con questi stessi parametri.
 
-    // ===== [ESP32_PORT] per trasmettere i dati wireless al dongle ========
+    // ===== [ESP32_PORT] transmit data wirelessly to the dongle / per trasmettere i dati wireless al dongle ========
     #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
         strncpy(usb_data_wireless.deviceManufacturer,MANUFACTURER_NAME,sizeof(usb_data_wireless.deviceManufacturer));
-        strncpy(usb_data_wireless.deviceName,DEVICE_NAME, sizeof(usb_data_wireless.deviceName)); // cambia
+        strncpy(usb_data_wireless.deviceName,DEVICE_NAME, sizeof(usb_data_wireless.deviceName)); // change / cambia
         usb_data_wireless.deviceVID = DEVICE_VID;
         #ifdef PLAYER_NUMBER
-            usb_data_wireless.devicePID = PLAYER_NUMBER; // cambia
+            usb_data_wireless.devicePID = PLAYER_NUMBER; // change / cambia
             usb_data_wireless.devicePlayer = PLAYER_NUMBER;
         #else
             usb_data_wireless.devicePID = 1; //PLAYER 1 DEFAULT
@@ -234,7 +262,7 @@ void setup() {
     // We're setting our custom USB identifiers, as defined in the configuration area!
     #ifdef USE_TINYUSB
         // Initializes TinyUSB identifier
-        if (!TinyUSBDevice.isInitialized()) { // [ESP32_PORT] aggiunto ..funzionava lo stesso, ma così è più sicuro .. sicuramente serve per Esp32 con libreria non integrfata nel core
+        if (!TinyUSBDevice.isInitialized()) { // [ESP32_PORT] Added... it worked anyway, but this way is safer... it's definitely needed for the ESP32 when using a library that isn't integrated into the core. / aggiunto ..funzionava lo stesso, ma così è più sicuro .. sicuramente serve per Esp32 con libreria non integrfata nel core
             TinyUSBDevice.begin(0);
         }
         // Values are pulled from EEPROM values that were loaded earlier in setup()
@@ -267,6 +295,9 @@ void setup() {
         
         #if defined(ARDUINO_ARCH_ESP32)
         {
+            // Adds the USB port description's serial number so that the same COM port is always mapped for each lightgun.
+            // Formats the byte array into a hexadecimal string.
+            // /
             // Aggiunge il serial number della descrizione della porta USB in modo che venga mappata sempre la stessa COM per ogni lightgun
             // Formatta l'array di byte in una stringa esadecimale.
             uint8_t mac_esp_interface[6];
@@ -281,7 +312,7 @@ void setup() {
 
 #endif //USE_TINYUSB
 
-// ====== [ESP32_PORT] ==== questo blocco per opportunità è spostato sopra prima della connessione =======
+// ====== [ESP32_PORT] ==== initialize camera before the connection / questo blocco per opportunità è spostato sopra prima della connessione =======
 
     // this is needed for both customs and builtins, as defaults are all uninitialized
     FW_Common::UpdateBindings(true);
@@ -296,23 +327,28 @@ void setup() {
     #ifdef LED_ENABLE
         OF_RGB::LedInit();
     #endif // LED_ENABLE
-// ====== [ESP32_PORT] ==== fine del blocco che per opportunità è spostato sopra prima della connessione =======
+// ====== [ESP32_PORT] ==== End initialize camera before the connection / fine del blocco che per opportunità è spostato sopra prima della connessione =======
 
 
 // ===================================================================================
-// CALIBRAZIONE EMPIRICA HARDWARE DEGLI STICK ANALOGICI
+// EMPIRICAL HARDWARE CALIBRATION OF ANALOG STICKS / CALIBRAZIONE EMPIRICA HARDWARE DEGLI STICK ANALOGICI
 // ===================================================================================
+// Instead of relying on hardcoded deadzone values ​​(which vary due to potentiometer
+// wear, mechanical spring issues, or manufacturing tolerances), we pause the system
+// for 2 seconds at startup. We physically record the background "noise" of the stick
+// at rest to dynamically establish a center point and custom safety limits.
+// /
 // Invece di affidarci a valori di deadzone hardcodati (che variano per usura 
 // dei potenziometri, molla meccanica o tolleranze di fabbrica), blocchiamo il sistema 
 // per 2 secondi all'avvio. Registriamo fisicamente il "rumore" di fondo dello stick 
 // a riposo per stabilire un centro e limiti di sicurezza personalizzati dinamicamente.
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // [ESP32_PORT] == CODICE PER CALIBRARE LEVETTA STICK IN POSIZIONE CENTRALE =============
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    #if defined(ARDUINO_ARCH_ESP32) && defined(USES_ANALOG)   // la facciamo solo per ESP32 e lasciamo RP2040 come gestione originale
+    // ===================================================================================
+    // [ESP32_PORT] == CODE TO CALIBRATE STICK TO CENTER POSITION / CODICE PER CALIBRARE LEVETTA STICK IN POSIZIONE CENTRALE =============
+    // ===================================================================================
+    #if defined(ARDUINO_ARCH_ESP32) && defined(USES_ANALOG)   // perform only for ESP32; leave RP2040 using original handling / la facciamo solo per ESP32 e lasciamo RP2040 come gestione originale
 
-    // ======== fai la calibrazione solo se lo stick analogico è configurato nei gpio
+    // ======== perform calibration only if the analog stick is configured on GPIOs / fai la calibrazione solo se lo stick analogico è configurato nei gpio
     if(OF_Prefs::pins[OF_Const::analogX] >= 0 && OF_Prefs::pins[OF_Const::analogY] >= 0 &&
            OF_Prefs::pins[OF_Const::analogX] != OF_Prefs::pins[OF_Const::analogY]) {
 
@@ -374,13 +410,19 @@ void setup() {
     #endif //USES_DISPLAY
 
     // ===================================================================================
-    // CALCOLO DEL CENTRO MECCANICO PURO
+    // CALCULATE MECHANICAL CENTER / CALCOLO DEL CENTRO MECCANICO PURO
     // ===================================================================================
+    // The center must be calculated NOW, based solely on raw spring noise.
+    // /
     // Il centro va calcolato ORA, basandosi solo sul rumore grezzo della molla.
 
     ANALOG_STICK_DEADZONE_X_CENTER = (ANALOG_STICK_DEADZONE_X_MIN + ANALOG_STICK_DEADZONE_X_MAX) / 2; 
     ANALOG_STICK_DEADZONE_Y_CENTER = (ANALOG_STICK_DEADZONE_Y_MIN + ANALOG_STICK_DEADZONE_Y_MAX) / 2; 
     
+    // Tolerance expansion (deadzone buffer) to absorb minor mechanical bounce
+    // Tolerance expansion with PROTECTION (Clamping)
+    // Subtract/Add 400 but force the result to stay within the 0-4095 range
+    // /
     // Espansione di tolleranza (buffer zona morta) per assorbire piccoli rimbalzi meccanici   
     // Espansione di tolleranza con PROTEZIONE (Clamping)
     // Sottraiamo/Aggiungiamo 400 ma forziamo il risultato a rimanere nel recinto 0-4095
@@ -393,15 +435,20 @@ void setup() {
     }
 
     #endif
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // ===================================================================================
     // [ESP32_PORT] == FINE CODICE CALIBRAZIONE STICK ========================================
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // ===================================================================================
 
 // ===================================================================================================================
 
 // ===================================================================================
 // CONNECTION ROUTING: WIRED (USB) VS WIRELESS (ESP-NOW)
 // ===================================================================================
+// Upon boot, the system waits ~1000ms to determine if it is connected to a PC via cable.
+// If the USB host mounts the device, the Lightgun selects the physical serial port.
+// Otherwise, it interprets the absence of a host as "Battery Mode,"
+// disabling the local USB driver and activating the ESP-NOW radio to connect to the dongle.
+// /
 // Al boot, il sistema attende ~1000ms per capire se è connesso via Cavo a un PC.
 // Se l'Host USB monta il dispositivo, la Lightgun sceglierà la porta Seriale fisica. 
 // In caso contrario, interpreterà l'assenza di host come "Modalità Batteria", 
@@ -410,45 +457,45 @@ void setup() {
 #ifdef USE_TINYUSB
     #if defined(ARDUINO_RASPBERRY_PI_PICO_W) && defined(ENABLE_CLASSIC)
         // is VBUS (USB voltage) detected?
-        if(digitalRead(34) || true) { // [ESP32_PORT] digitalRead(34) non funziona bene ed a mio parere non è un metodo corretto
+        if(digitalRead(34) || true) { // [ESP32_PORT] digitalRead(34) doesn't work well and in my opinion it's not a correct method. / digitalRead(34) non funziona bene ed a mio parere non è un metodo corretto
             // If so, we're connected via USB, so initializing the USB devices chunk.
-            TinyUSBDevices.begin(POLL_RATE); // [ESP32_PORT] inserito questo al posto di quello sotto
-            // TUSBDeviceSetup.begin(1); // [ESP32_PORT] tolto ancora non fatta completa transizione
+            TinyUSBDevices.begin(POLL_RATE); // [ESP32_PORT] inserted this in place of the one below. / inserito questo al posto di quello sotto
+            // TUSBDeviceSetup.begin(1); // [ESP32_PORT] removed, not yet complete transition. / tolto ancora non fatta completa transizione
             // wait until device mounted
             while(!USBDevice.mounted()) { yield(); }
             Serial.begin(9600);
             Serial.setTimeout(0);
-            Serial_OpenFIRE_Stream = &Serial; // [ESP32_PORT] inserito da me
+            Serial_OpenFIRE_Stream = &Serial; // [ESP32_PORT] added by Alessandro / inserito da me
         } else {
             // Else, we're on batt, so init the Bluetooth chunks.
             if(OF_Prefs::usb.deviceName[0] == '\0')
                 TinyUSBDevices.beginBT(DEVICE_NAME, DEVICE_NAME);
             else TinyUSBDevices.beginBT(OF_Prefs::usb.deviceName, OF_Prefs::usb.deviceName);
         }   
-    #elif defined(ARDUINO_ARCH_RP2040) // [ESP32_PORT] inserito per mantenere vecchio codice
+    #elif defined(ARDUINO_ARCH_RP2040) // [ESP32_PORT] inserted to maintain legacy code / inserito per mantenere vecchio codice
         // Initializing the USB devices chunk.
         TinyUSBDevices.begin(POLL_RATE);
         // wait until device mounted
         while(!USBDevice.mounted()) { yield(); }
         Serial.begin(9600);   // 9600 = 1ms data transfer rates, default for MAMEHOOKER COM devices.
         Serial.setTimeout(0);
-        Serial_OpenFIRE_Stream = &Serial; // [ESP32_PORT] inserito da me
-    #else // [ESP32_PORT] inserito da me // ARDUINO_ARCH_ESP32
+        Serial_OpenFIRE_Stream = &Serial; // [ESP32_PORT] added by Alessandro / inserito da me
+    #else // [ESP32_PORT] added by Alessandro / inserito da me // ARDUINO_ARCH_ESP32
     
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // === [ESP32_PORT] === NUOVA GESTIONE INIZIALIZZAIZONE USB O CONNESSIONE WIRELESS ==================== //
+    // === [ESP32_PORT] === New USB initialization or wireless connection management / NUOVA GESTIONE INIZIALIZZAIZONE USB O CONNESSIONE WIRELESS ==================== //
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     TinyUSBDevices.begin(POLL_RATE);
-    #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)   // SE WIRELESS
-        #define MILLIS_TIMEOUT  1000 //1 secondi
+    #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)   // IF WIRELESS / SE WIRELESS
+        #define MILLIS_TIMEOUT  1000 //1 second / 1 secondi
         unsigned long lastMillis = millis ();
         while ((millis () - lastMillis <= MILLIS_TIMEOUT) && (!TinyUSBDevice.mounted())) { yield(); }
         if (!TinyUSBDevice.mounted()) {
             SerialWireless.init_wireless();
             SerialWireless.begin();
             if (lastDongleSave) {
-                // PROVA A CONNETTERTI AL PRECEDENTE DONGLE INVIANDO IL PACCHETTO CHECK_CONNECTION
+                // Try connecting to the previous dongle by sending the CHECK_CONNECTION packet. / PROVA A CONNETTERTI AL PRECEDENTE DONGLE INVIANDO IL PACCHETTO CHECK_CONNECTION
                 if (SerialWireless.connection_gun_at_last_dongle()) {
                 } else {
                     SerialWireless.connection_gun();
@@ -463,7 +510,7 @@ void setup() {
     while(!TinyUSBDevice.mounted() && !TinyUSBDevices.onBattery) { yield();}
 
 
-    // arriva qui solo se e' stato connesso l'usb o e' stata negoziata e stabilita una connessione wireless
+    // Execution reaches this point only if the USB has been connected or a wireless connection has been negotiated and established. / arriva qui solo se e' stato connesso l'usb o e' stata negoziata e stabilita una connessione wireless
     #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
         #ifdef USES_DISPLAY
             FW_Common::OLED.TopPanelUpdate("  !! LINK READY !! "); 
@@ -475,7 +522,7 @@ void setup() {
         Serial.begin(9600);
         Serial.setTimeout(0);
         #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
-            if (TinyUSBDevices.onBattery) {  // nel caso incredibile che l'USB sia montato nel momnto esatto in cui è stata stabilita connessione wireless
+            if (TinyUSBDevices.onBattery) {  // in the unlikely event that the USB is mounted at the exact moment the wireless connection is established / nel caso incredibile che l'USB sia montato nel momnto esatto in cui è stata stabilita connessione wireless
                 TinyUSBDevices.onBattery = false;
             }
             if (TinyUSBDevices.wireless_mode != WIRELESS_MODE::NONE_WIRELESS) SerialWireless.end();
@@ -488,7 +535,9 @@ void setup() {
         if (!lastDongleSave || 
             (lastDongleSave && (!(memcmp(lastDongleAddress, peerAddress,6) == 0) || !(lastDongleChannel == espnow_wifi_channel)))) OF_Prefs::SaveLastDongleWireless(peerAddress, &espnow_wifi_channel);
         
-        
+        // Close any USB-related items if they need to be closed
+        // Preserves memory and prevents USB core errors when not physically connected.
+        // /
         // CHIUDI TUTTO CIO' CHE E' USB SE E' DA CHIUDERE
         // Salvaguarda la memoria e previene errori del core USB quando non è connesso fisicamente.
         TinyUSBDevice.clearConfiguration();
@@ -496,33 +545,33 @@ void setup() {
         
         Serial_OpenFIRE_Stream = &SerialWireless;
 
-        // GESTIONE DEL PEDALE WIRELESS
+        // ===== WIRELESS PEDAL MANAGEMENT / GESTIONE DEL PEDALE WIRELESS =====
         if((OF_Prefs::pins[OF_Const::btnPedal] == -1) && (OF_Prefs::pins[OF_Const::btnPedal2] == -1)) {
             if (lastPedalSave && (lastPedalChannel == espnow_wifi_channel)) {
                 if (!SerialWireless.connection_gun_at_last_pedal()) SerialWireless.connection_gun_at_pedal();
             } else SerialWireless.connection_gun_at_pedal();
         }
         else {
-            // invia segnale al dongle che la procedura del PEDAL è completa
+            // sends a signal to the dongle indicating that the PEDAL procedure is complete / invia segnale al dongle che la procedura del PEDAL è completa
               SerialWireless.tx_gun_at_dongle_pedal_ready();
         }
         
-        // salva l'ultimo pedale connesso
+        // Saves the last connected pedal. / salva l'ultimo pedale connesso
         if (TinyUSBDevices.is_pedal_wireless && (!lastPedalSave || 
             (lastPedalSave && (!(memcmp(lastPedalAddress, peerAddress_pedal,6) == 0) || !(lastPedalChannel == espnow_wifi_channel))))) OF_Prefs::SaveLastPedalWireless(peerAddress_pedal, &espnow_wifi_channel);
   
-        // ===== FINE GESTIONE DEL PEDALE ================
+        // ===== END WIRELESS PEDAL MANAGEMENT / FINE GESTIONE DEL PEDALE =====
 
     }
     #endif
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // === [ESP32_PORT] === FINE NUOVA GESTIONE INIZIALIZZAIZONE USB O CONNESSIONE WIRELESS =============== //
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+    // ===================================================================================
+    // === [ESP32_PORT] === END USB initialization or wireless connection setup / FINE NUOVA GESTIONE INIZIALIZZAIZONE USB O CONNESSIONE WIRELESS
+    // ===================================================================================
     #endif
 #endif //USE_TINYUSB
 
-    // ripristina la parte superiore del diplay come in originale
+    // Restores the top part of the display to its original state. / ripristina la parte superiore del diplay come in originale
     #ifdef ARDUINO_ARCH_ESP32
     #ifdef USES_DISPLAY
         FW_Common::OLED.ScreenModeChange(ExtDisplay::ScreenMode_e::Screen_None);
@@ -530,17 +579,23 @@ void setup() {
     #endif //ARDUINO_ARCH_ESP32
 
 // ===================================================================================
-// POLYMORPHIC I/O: IL TRUCCO DELLA SERIALE VIRTUALE
+// POLYMORPHIC I/O: THE VIRTUAL SERIAL PORT TRICK / IL TRUCCO DELLA SERIALE VIRTUALE
 // ===================================================================================
+// Architecture for backward compatibility. By redefining the `Serial` macro
+// to point to our dereferenced stream (*Serial_OpenFIRE_Stream), the entire
+// legacy codebase (originally designed for wired USB) can use `Serial.print`
+// and `Serial.write` as usual. Data will be routed via cable or network
+// (ESP-NOW) depending on the outcome of the prior negotiation.
+// /
 // Architettura per retrocompatibilità. Ridefinendo la macro `Serial` per 
 // puntare al nostro stream dereferenziato (*Serial_OpenFIRE_Stream), l'intera codebase 
 // legacy (nata per USB wired) può usare `Serial.print` e `Serial.write` come sempre. 
 // I dati verranno instradati via Cavo o via Rete (ESP-NOW) a seconda 
 // dell'esito della negoziazione precedente.
 
-    //////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////// [ESP32_PORT] ////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////
+    // ===================================================================================
+    // === [ESP32_PORT] ===
+    // ===================================================================================
     
     #ifdef OPENFIRE_WIRELESS_ENABLE
         #ifdef Serial
@@ -549,20 +604,26 @@ void setup() {
         #define Serial (*Serial_OpenFIRE_Stream)
     #endif // OPENFIRE_WIRELESS_ENABLE
     
-    //////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////// [ESP32_PORT] ////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////
+    // ===================================================================================
+    // === [ESP32_PORT] ===
+    // ===================================================================================
 
 
-    // AbsMouse5.init(true); // [ESP32_PORT] rimosso per il mio nuovo OpenFire_TinyDevice
+    // AbsMouse5.init(true); // [ESP32_PORT] removed for the new OpenFire_TinyDevice / rimosso per il mio nuovo OpenFire_TinyDevice
 
     // IR camera maxes out motion detection at ~300Hz, and millis() isn't good enough
+
+    // Wireless operation introduces overhead. Reducing the IR camera tick rate
+    // when on battery (from 5ms to ~15ms) frees up CPU for ESP-NOW, limiting potential system lag; however,
+    // I found it works well even at the same frequency used for the wired connection,
+    // so I set it to the same value—209Hz, corresponding to approximately 5ms.
+    // /
     // L'esecuzione wireless introduce overhead. Ridurre il tick rate della telecamera IR 
     // su batteria (da 5ms a ~15ms) offre più CPU all'ESP-NOW limitando possibili lag di sistema, ma
     // ho riscontrato che funziona comunque bene alla stessa frequenza usata con connessione via cavo,
     // quindi l'ho impostata uguale ovvero 209Hz che corrisponde a circa 5ms
-    if (TinyUSBDevices.onBattery) startIrCamTimer(209);  // impostato a 5ms anche per wireless ... es. 100->10ms 66 -> 15ms per connessione wireless
-      else startIrCamTimer(209); // 5ms per connessione via cavo
+    if (TinyUSBDevices.onBattery) startIrCamTimer(209);  // set to 5ms for wireless too... e.g., 100->10ms, 66->15ms for wireless connection / impostato a 5ms anche per wireless ... es. 100->10ms 66 -> 15ms per connessione wireless
+      else startIrCamTimer(209); // 5ms for wired connection / 5ms per connessione via cavo
     
     FW_Common::OpenFIREper.source(OF_Prefs::profiles[OF_Prefs::currentProfile].adjX,
                                   OF_Prefs::profiles[OF_Prefs::currentProfile].adjY);
@@ -790,6 +851,10 @@ void loop1()
         }
         #ifndef COMMENTO
         #if defined(ARDUINO_ARCH_ESP32) && defined(DUAL_CORE)
+        // Block this task for 1 millisecond (or 1 tick). 
+        // This allows the Idle Task (priority 0) to run,
+        // reset the Watchdog, and clean up the system.
+        // /
         // Blocca questo task per 1 millisecondo (o 1 tick).
         // Questo permette all'Idle Task (priorità 0) di girare, 
         // nutrire il Watchdog e pulire il sistema.
@@ -800,7 +865,7 @@ void loop1()
     }
 }
 #endif // DUAL_CORE
-// #endif // ARDUINO_ARCH_RP2040 // [ESP32_PORT] tolto messo sopra
+// #endif // ARDUINO_ARCH_RP2040 // [ESP32_PORT] removed and placed on top / tolto messo sopra
 
 // Main core events hub
 // splits off into subsequent ExecModes depending on circumstances
@@ -1509,16 +1574,18 @@ void TriggerNotFire()
 
 
 #ifdef ARDUINO_ARCH_ESP32 
-// =================== [ESP32_PORT] ========== funzione ottimizzata con calibrazione
+// =================== [ESP32_PORT] ========== optimized function with calibration / funzione ottimizzata con calibrazione
 void AnalogStickPoll()
 {
-    // 1. LETTURA HARDWARE
+    // 1. READ HARDWARE / LETTURA HARDWARE
     uint16_t rawX = (uint16_t)analogRead(OF_Prefs::pins[OF_Const::analogX]);
     uint16_t rawY = (uint16_t)analogRead(OF_Prefs::pins[OF_Const::analogY]);
     
     uint16_t analogValueX, analogValueY;
 
-    // 2. NORMALIZZAZIONE PROPORZIONALE
+    // 2. PROPORTIONAL NORMALIZATION / NORMALIZZAZIONE PROPORZIONALE
+    // The "filter" that corrects physical defects and creates a perfect 0-2048-4095 axis.
+    // /
     // Il "filtro" che cura i difetti fisici e crea un asse 0-2048-4095 perfetto
     if (rawX < ANALOG_STICK_DEADZONE_X_MIN) {
         analogValueX = (uint16_t)map(rawX, 0, ANALOG_STICK_DEADZONE_X_MIN, 0, ANALOG_STICK_CENTER_X);
@@ -1536,13 +1603,16 @@ void AnalogStickPoll()
         analogValueY = ANALOG_STICK_CENTER_Y;
     }
 
-    // 3. GESTIONE OUTPUT
+    // 3. OUTPUT MANAGEMENT / GESTIONE OUTPUT
     if(OF_Prefs::settings[OF_Const::analogMode] == OF_Const::analogModeStick) {
         Gamepad16.moveStick(analogValueX, analogValueY);
     } 
     else {
         uint32_t newPos = 0;
-        
+        // Digital Mode (D-Pad / Keyboard)
+        // Using analogValueX/Y, the thresholds are fixed, safe, and symmetrical. 
+        // No casting, no underflow, no stuck keys.
+        // /
         // Modalità Digitale (D-Pad / Tastiera)
         // Usando analogValueX/Y le soglie sono fisse, sicure e simmetriche.
         // Niente cast, niente underflow, nessun tasto bloccato.
@@ -1580,7 +1650,7 @@ void AnalogStickPoll()
         FW_Common::aStickADCLastPos = newPos;
     }
 }
-// =========== [ESP32_PORT] fine funzione ottimizzata con calibrazione =======================
+// =========== [ESP32_PORT] END optimized function with calibration / fine funzione ottimizzata con calibrazione =======================
 #else // rp2040
 void AnalogStickPoll()
 {
