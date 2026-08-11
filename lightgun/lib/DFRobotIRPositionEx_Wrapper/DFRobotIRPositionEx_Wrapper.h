@@ -81,7 +81,7 @@ public:
     /*!
     * @brief Inizializza il sensore PAJ7025. Imposta la risoluzione massima a 4095x4095.
     */
-    bool begin(uint32_t clock = 400000, DataFormat_e format = DataFormat_Basic, Sensitivity_e sensitivity = Sensitivity_Default);
+    bool begin(uint32_t clock = PAJ7025_SPI_CLOCK_2MHZ, DataFormat_e format = DataFormat_Basic, Sensitivity_e sensitivity = Sensitivity_Default);
 
     void dataFormat(DataFormat_e format);
 

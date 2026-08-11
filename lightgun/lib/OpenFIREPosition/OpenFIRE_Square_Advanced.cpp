@@ -435,26 +435,6 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
                 else if (positionXX[d] == rx && positionYY[d] == ry) current_point_seen_mask |= 0b0001;
             }
         }
-        /*
-        current_point_seen_mask = 0;
-        
-        // Lambda in-place (Il Setaccio Universale): confronta i punti ordinati finali
-        // con il backup "real_x/y". Segnala alla logica quali di questi 
-        // sono veri punti fisici e quali sono il risultato delle predizioni matematiche 
-        // calcolate sopra. Essenziale per pilotare la molla cinematica.
-        auto is_real_point = [&](int px, int py) {
-            for(uint8_t i=0; i<num_points_seen; i++) {
-                if (px == real_x[i] && py == real_y[i]) return true;
-            }
-            return false;
-        };
-
-        if (is_real_point(positionXX[a], positionYY[a])) current_point_seen_mask |= 0b1000;
-        if (is_real_point(positionXX[b], positionYY[b])) current_point_seen_mask |= 0b0100;
-        if (is_real_point(positionXX[c], positionYY[c])) current_point_seen_mask |= 0b0010;
-        if (is_real_point(positionXX[d], positionYY[d])) current_point_seen_mask |= 0b0001;
-        */
-
 
         // OTTIMIZZAZIONE: Unrolling Booleano puro per l'emulatore Shift-Register.
         // Mantiene intatta l'interfaccia verso le API originali Samco che si aspettavano 

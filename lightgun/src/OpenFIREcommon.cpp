@@ -210,17 +210,22 @@ void FW_Common::CameraSet()
     #ifdef ARDUINO_ARCH_ESP32
     // usa OF_Prefs::pins[OF_Const::camSDA] per MISO
     // usa OF_Prefs::pins[OF_Const::camSCL] per CLOCK
-    // il cable select lo impostiamo a -1 (default) poichè lo teniamo abilitato sempre
-    // il clock lo impostiamo a 14 Mhz o 8 Mhz fisso
+    // il clock lo impostiamo a 2 Mhz per stabilita' - max a 14 Mhz o 8 Mhz fisso
  
-    #define SPI_SCK_PIN   OF_Prefs::pins[OF_Const::cam_PAJ7025_SCK]  // Ex SCL -> diventa il Clock SPI (SCK) (clock)
+    // forzo impostazioni provvisoriamente
+    OF_Prefs::pins[OF_Const::cam_PAJ7025_SCK] =  12;   // GPIO 12  Clock SPI (SCK) (clock)
+    OF_Prefs::pins[OF_Const::cam_PAJ7025_MISO] = 13;   // GPIO 13 -  pin di LETTURA dal sensore (RX lettura)
+    OF_Prefs::pins[OF_Const::cam_PAJ7025_MOSI] = 11;   // GPIO 11 - pin di SCRITTURA dal sensore (TX scrittura)
+    OF_Prefs::pins[OF_Const::cam_PAJ7025_CS] =   10;   // GPIO 10 -  CS/SS del modulo
+    
+    #define SPI_SCK_PIN   OF_Prefs::pins[OF_Const::cam_PAJ7025_SCK]   // Ex SCL -> diventa il Clock SPI (SCK) (clock)
     #define SPI_MISO_PIN  OF_Prefs::pins[OF_Const::cam_PAJ7025_MISO]  // Ex SDA -> diventa il pin di LETTURA dal sensore (RX lettura)
     #define SPI_MOSI_PIN  OF_Prefs::pins[OF_Const::cam_PAJ7025_MOSI]  // Metto -1 se non lo collego/non lo uso (TX scrittura)
-    #define SPI_CS_PIN    OF_Prefs::pins[OF_Const::cam_PAJ7025_CS]  // Metto -1 se il CS del modulo è collegato fisicamente a GND (cable select)
+    #define SPI_CS_PIN    OF_Prefs::pins[OF_Const::cam_PAJ7025_CS]    //  CS/SS del modulo
 
     SPIClass* SPIWire = nullptr;
 
-    SPIWire = new SPIClass(HSPI);
+    SPIWire = new SPIClass(FSPI); // FSPI = SPI2 bus -- HSPI = SPI3 bus (SPI0 && SPI1 reserved for flash/psram)
     SPIWire->begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, SPI_CS_PIN);
 
     dfrIRPos = new DFRobotIRPositionEx(SPIWire,SPI_CS_PIN);
@@ -233,12 +238,13 @@ void FW_Common::CameraSet()
 
     // SPI1 se si vuole lavorare sul secondo canale
     SPI.setSCK(SPI_SCK_PIN);
-    SPI.setRX(SPI_MISO_PIN); 
-    SPI.setTX(SPI_MOSI_PIN); 
+    SPI.setMISO(SPI_MISO_PIN); 
+    SPI.setMOSI(SPI_MOSI_PIN);
+    SPI.setCS(SPI_CS_PIN);
 
     SPI.begin();
 
-    dfrIRPos = new DFRobotIRPositionEx(&SPI, -SPI_CS_PIN);
+    dfrIRPos = new DFRobotIRPositionEx(&SPI, SPI_CS_PIN);
 
     #endif // rp2040
     #else

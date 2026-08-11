@@ -22,17 +22,29 @@
 #ifndef _OPENFIRECONST_H_
 #define _OPENFIRECONST_H_
 
-// DFRobot IR positioning camera resolution
-constexpr int CamResX = 1024;
-constexpr int CamResY = 768;
+#ifdef PAJ7025_CAM
+    // PixArt PAH7025R2 IR positioning camera resolution
+    constexpr int CamResX = 1024; //4096;
+    constexpr int CamResY = 768;  //4096;
+#else // DF ROBOT
+    // DFRobot IR positioning camera resolution
+    constexpr int CamResX = 1024;
+    constexpr int CamResY = 768;
+#endif // PAJ7025_CAM
 
 // DFRobot IR positioning camera maximum X and Y
 constexpr int CamMaxX = CamResX - 1;
 constexpr int CamMaxY = CamResY - 1;
 
-// shift amount for extra precision for the maths
-// since the median is an average of 4 values, use 2 more bits
-constexpr int CamToMouseShift = 2;
+#ifdef PAJ7025_CAM
+    // shift amount for extra precision for the maths
+    // since the median is an average of 4 values, use 2 more bits
+    constexpr int CamToMouseShift = 2; // 0;
+#else  // DF ROBOT
+    // shift amount for extra precision for the maths
+    // since the median is an average of 4 values, use 2 more bits
+    constexpr int CamToMouseShift = 2;
+#endif // PAJ7025_CAM
 
 // multiplier to convert IR camera position to mouse position
 constexpr int CamToMouseMult = 1 << CamToMouseShift;
