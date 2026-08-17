@@ -31,8 +31,14 @@ class OpenFIRE_Diamond {
     int positionXX[4];   ///< position x.
     int positionYY[4];   ///< position y.
 
+    /*
     int positionX[4] = {512 * CamToMouseMult, 1023 * CamToMouseMult, 512 * CamToMouseMult, 0 * CamToMouseMult};
     int positionY[4] = {0 * CamToMouseMult, 384 * CamToMouseMult, 728 * CamToMouseMult, 384 * CamToMouseMult};
+    */
+    int positionX[4] = { IR_LED_DIAMOND_TC_X * CamToMouseMult, IR_LED_DIAMOND_RC_X * CamToMouseMult, IR_LED_DIAMOND_BC_X * CamToMouseMult, IR_LED_DIAMOND_LC_X * CamToMouseMult };
+    int positionY[4] = { IR_LED_DIAMOND_TC_Y * CamToMouseMult, IR_LED_DIAMOND_RC_Y * CamToMouseMult, IR_LED_DIAMOND_BC_Y * CamToMouseMult, IR_LED_DIAMOND_LC_Y * CamToMouseMult };
+
+
 
     unsigned int see[4];
 
@@ -44,8 +50,12 @@ class OpenFIRE_Diamond {
     int medianY = MouseMaxY / 2;
     int medianX = MouseMaxX / 2;
 
+    /*
     int FinalX[4] = {512 * CamToMouseMult, 1023 * CamToMouseMult, 512 * CamToMouseMult, 0 * CamToMouseMult};
     int FinalY[4] = {0 * CamToMouseMult, 384 * CamToMouseMult, 728 * CamToMouseMult, 384 * CamToMouseMult};
+    */
+    int FinalX[4] = { IR_LED_DIAMOND_TC_X * CamToMouseMult, IR_LED_DIAMOND_RC_X * CamToMouseMult, IR_LED_DIAMOND_BC_X * CamToMouseMult, IR_LED_DIAMOND_LC_X * CamToMouseMult };
+    int FinalY[4] = { IR_LED_DIAMOND_TC_Y * CamToMouseMult, IR_LED_DIAMOND_RC_Y * CamToMouseMult, IR_LED_DIAMOND_BC_Y * CamToMouseMult, IR_LED_DIAMOND_LC_Y * CamToMouseMult };
 
     int DistTL;
     int DistTR;

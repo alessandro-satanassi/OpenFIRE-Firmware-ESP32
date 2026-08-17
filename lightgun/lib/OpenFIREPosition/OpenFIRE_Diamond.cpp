@@ -23,7 +23,13 @@
 #include <Arduino.h>
 #include "OpenFIRE_Diamond.h"
 
+/*
 constexpr int buff = 50 * CamToMouseMult;
+*/
+// Percentuale storica testata sulla DFRobot (50 pixel su una larghezza di 1024)
+constexpr float BUFF_PERCENT = 50.0f / 1024.0f;
+// Calcoliamo il buffer dinamico sulla larghezza della CAM e lo portiamo nello spazio unificato
+constexpr int buff = (int)((float)CamResX * BUFF_PERCENT * (float)CamToMouseMult);
 
 // floating point PI
 constexpr float fHPI = (float)HALF_PI;

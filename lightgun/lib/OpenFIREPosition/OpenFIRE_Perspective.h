@@ -50,8 +50,18 @@ private:
   float dx3; 
   float dy3;
 
+  /*
   float srcX = 512.0f;
   float srcY = 384.0f;
+  */
+  // Centro dinamico della telecamera fisica (FOV Center)
+  float srcX = (float)CamResX * 0.5f;
+  float srcY = (float)CamResY * 0.5f;
+  /*
+  // Centro dinamico basato sullo spazio virtuale unificato (già normalizzato)
+  float srcX = (float)MouseResX * 0.5f;
+  float srcY = (float)MouseResY * 0.5f;
+  */
 
   int dstX;
   int dstY;

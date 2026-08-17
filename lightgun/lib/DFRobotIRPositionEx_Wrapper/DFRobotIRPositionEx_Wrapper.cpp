@@ -24,7 +24,7 @@ DFRobotIRPositionEx::~DFRobotIRPositionEx() {
 
 bool DFRobotIRPositionEx::begin(uint32_t clock, DataFormat_e format, Sensitivity_e sensitivity) {
     // Inizializza la PAJ7025
-    if (!cam.begin(_spi, (uint8_t)_csPin), PAJ7025_SPI_CLOCK_2MHZ) {
+    if (!cam.begin(_spi, (uint8_t)_csPin, PAJ7025_SPI_CLOCK_2MHZ)) {
         return false;
     }
     
@@ -33,7 +33,7 @@ bool DFRobotIRPositionEx::begin(uint32_t clock, DataFormat_e format, Sensitivity
     // =========================================================== 
     
     // imposta frame rate
-    cam.setFrameRate(200); // 200 fps
+    cam.setFrameRate(209/*200*/); // 200 fps  default, non so quando ci si posa spingere
 
     // imposta velocità otturatore  (provvisoriamente per led 940nm provare 1000 - la CAM lavora bene con led 850nm)
     cam.setExposure(300); // ideale tra 200 e 400 -- più è basso meglio è per evitare effetto scia o accecamento, ma se troppo basso si rischia di oscurare i led

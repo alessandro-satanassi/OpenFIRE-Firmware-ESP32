@@ -40,8 +40,12 @@ class OpenFIRE_Square {
     int medianY = MouseMaxY / 2;
     int medianX = MouseMaxX / 2;
 
+    /*
     int FinalX[4] = {400 * CamToMouseMult, 623 * CamToMouseMult, 400 * CamToMouseMult, 623 * CamToMouseMult};
     int FinalY[4] = {200 * CamToMouseMult, 200 * CamToMouseMult, 568 * CamToMouseMult, 568 * CamToMouseMult};
+    */
+    int FinalX[4] = { IR_LED_SQUARE_TL_X * CamToMouseMult, IR_LED_SQUARE_TR_X * CamToMouseMult, IR_LED_SQUARE_BL_X * CamToMouseMult, IR_LED_SQUARE_BR_X * CamToMouseMult };
+    int FinalY[4] = { IR_LED_SQUARE_TL_Y * CamToMouseMult, IR_LED_SQUARE_TR_Y * CamToMouseMult, IR_LED_SQUARE_BL_Y * CamToMouseMult, IR_LED_SQUARE_BR_Y * CamToMouseMult };
 
     float xDistTop;
     float xDistBottom;

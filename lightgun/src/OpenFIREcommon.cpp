@@ -226,8 +226,16 @@ void FW_Common::CameraSet()
     SPIClass* SPIWire = nullptr;
 
     SPIWire = new SPIClass(FSPI); // FSPI = SPI2 bus -- HSPI = SPI3 bus (SPI0 && SPI1 reserved for flash/psram)
-    SPIWire->begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, SPI_CS_PIN);
-
+    bool spi_begin = SPIWire->begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, SPI_CS_PIN);
+    /*
+    #ifdef USES_DISPLAY
+        if (spi_begin)
+            FW_Common::OLED.TopPanelUpdate(" SPI OK ");
+        else 
+            FW_Common::OLED.TopPanelUpdate(" SPI ERROR ");
+        delay(1000);
+    #endif //USES_DISPLAY
+    */
     dfrIRPos = new DFRobotIRPositionEx(SPIWire,SPI_CS_PIN);
     #else // rp2040 
 
@@ -274,7 +282,7 @@ void FW_Common::CameraSet()
     #endif // rp2040
     #endif // PAJ7025_CAM
 
-
+    #ifndef PAJ7025_CAM
     #ifdef ARDUINO_ARCH_RP2040
     if(OF_Prefs::pins[OF_Const::wiiClockGen] > -1) {
         set_sys_clock_khz(125000, true);
@@ -293,6 +301,7 @@ void FW_Common::CameraSet()
         gpio_set_dir(OF_Prefs::pins[OF_Const::wiiClockGen], GPIO_IN);
     }
     #endif // ARDUINO_ARCH_RP2040
+    
     
     #ifdef ARDUINO_ARCH_ESP32
         // --- CLOCK WII CAMERA: 24 MHz @ 50% DC ---
@@ -322,14 +331,30 @@ void FW_Common::CameraSet()
             }
         #endif // CLOCK_CAM_WII
     #endif // ARDUINO_ARCH_ESP32
+    #endif // #ifndef PAJ7025_CAM
 
     // Start IR Camera with basic data format
     if(dfrIRPos != nullptr) {
         if(!dfrIRPos->begin(DFROBOT_IR_IIC_CLOCK, DFRobotIRPositionEx::DataFormat_Basic, (DFRobotIRPositionEx::Sensitivity_e)OF_Prefs::profiles[OF_Prefs::currentProfile].irSens)) {
+            /*
+            #ifdef USES_DISPLAY    
+                FW_Common::OLED.TopPanelUpdate(" CAM ERROR ");
+                delay(1000);
+            #endif //USES_DISPLAY
+            */
             delete dfrIRPos;
             dfrIRPos = nullptr;
             PrintIrError();
-        } else camNotAvailable = false;
+        } else 
+        {
+            camNotAvailable = false;
+            /*
+            #ifdef USES_DISPLAY    
+                FW_Common::OLED.TopPanelUpdate(" CAM OK ");
+                delay(1000);
+            #endif //USES_DISPLAY
+            */
+        }
     } else PrintIrError();
 }
 

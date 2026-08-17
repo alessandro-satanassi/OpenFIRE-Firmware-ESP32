@@ -384,7 +384,14 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         dx = positionXX[orderY[3]] - positionXX[orderX[0]]; dy = positionYY[orderY[3]] - positionYY[orderX[0]];
         int32_t dist_sq2 = (dx * dx) + (dy * dy);
         
+        /*
         const int CRITICAL_ZONE = (30 * CamToMouseMult); // 30 è un valore provato in tante situazioni e pare andare bene
+        */
+
+        // Percentuale storica testata sulla DFRobot (30 pixel su una altezza di 768)
+        constexpr float CRITICAL_ZONE_PERCENT = 30.0f / (float)768;
+        // Calcoliamo il valore dinamico sulla risoluzione della CAM e lo portiamo nello spazio unificato
+        const int CRITICAL_ZONE = (int)((float)CamResY * CRITICAL_ZONE_PERCENT * (float)CamToMouseMult);
 
         // Se l'arma è inclinata severamente (oltre ~45 gradi, superando la CRITICAL_ZONE), 
         // l'ordinamento ingenuo Y non basta. Valutiamo le distanze relative per mantenere coerenti

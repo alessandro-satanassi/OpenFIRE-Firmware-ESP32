@@ -56,9 +56,13 @@ private:
     // Le coordinate finali sono conservate in interi perché rappresentano i pixel virtuali
     // del mouse. Vengono traslate usando il bit-shift (CamToMouseShift) per garantire
     // la massima velocità della ALU rispetto all'uso dei float.
+    /*
     int  FinalX[4] = {400 * CamToMouseMult, 623 * CamToMouseMult, 400 * CamToMouseMult, 623 * CamToMouseMult};
     int  FinalY[4] = {200 * CamToMouseMult, 200 * CamToMouseMult, 568 * CamToMouseMult, 568 * CamToMouseMult};
-    
+    */
+    int FinalX[4] = { IR_LED_SQUARE_TL_X * CamToMouseMult, IR_LED_SQUARE_TR_X * CamToMouseMult, IR_LED_SQUARE_BL_X * CamToMouseMult, IR_LED_SQUARE_BR_X * CamToMouseMult };
+    int FinalY[4] = { IR_LED_SQUARE_TL_Y * CamToMouseMult, IR_LED_SQUARE_TR_Y * CamToMouseMult, IR_LED_SQUARE_BL_Y * CamToMouseMult, IR_LED_SQUARE_BR_Y * CamToMouseMult };
+   
     int  medianX = MouseMaxX / 2;
     int  medianY = MouseMaxY / 2;
     
@@ -67,8 +71,13 @@ private:
     // che si aspettano di leggere uno storico di stabilità a 5 frame per singolo sensore.
     unsigned int see[4];
     
+    /*
     float height = (568 * CamToMouseMult) - (200 * CamToMouseMult);
     float width = (623 * CamToMouseMult) - (400 * CamToMouseMult);
+    */
+    float height = (float)(FinalY[2] - FinalY[0]);
+    float width  = (float)(FinalX[1] - FinalX[0]);  
+     
     float angle = 0;
 
     unsigned int start = 0;
@@ -82,7 +91,10 @@ private:
     // ideal_aspect_ratio conserva l'ultima proporzione reale nota del rettangolo IR.
     // È vitale per la gestione a 2 punti, dove dobbiamo decidere se stiamo guardando
     // il lato lungo o corto del sensore senza avere tutti i riferimenti ottici.
+    /*
     float ideal_aspect_ratio = 16.0f / 9.0f; 
+    */
+    float ideal_aspect_ratio = (float)res_x / (float)res_y;
     
     uint8_t prev_num_points_seen = 0; 
     
@@ -102,10 +114,17 @@ private:
     int prev2_medianX;
     int prev2_medianY;
  
+    /*
     float height_left = (568 * CamToMouseMult) - (200 * CamToMouseMult);
     float height_right = (568 * CamToMouseMult) - (200 * CamToMouseMult);
     float width_top = (623 * CamToMouseMult) - (400 * CamToMouseMult);
     float width_bottom = (623 * CamToMouseMult) - (400 * CamToMouseMult);
+    */
+    float height_left  = height;
+    float height_right = height;
+    float width_top    = width;
+    float width_bottom = width;
+
 
     /////////////////////////////////////////////////////////////////////
 

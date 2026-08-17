@@ -317,6 +317,7 @@ void setup() {
     // this is needed for both customs and builtins, as defaults are all uninitialized
     FW_Common::UpdateBindings(true);
 
+    /*FW_Common::FeedbackSet();*/
     // Initialize DFRobot Camera Wires & Object
     FW_Common::CameraSet();
 
