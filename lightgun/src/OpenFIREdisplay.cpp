@@ -297,9 +297,11 @@ void ExtDisplay::DrawVisibleIR(int *pointX, int *pointY)
     if(display != nullptr) {
         display->fillRect(0, 16, 128, 48, BLACK);
         for(int i = 0; i < 4; ++i) {
+          if(pointX[i] < 0 || pointX[i] > 1920 || pointY[i] < 0 || pointY[i] > 1080)
+            continue;
           pointX[i] = map(pointX[i], 0, 1920, 0, 128);
           pointY[i] = map(pointY[i], 0, 1080, 16, 64);
-          pointY[i] = constrain(pointY[i], 16, 64);
+          //pointY[i] = constrain(pointY[i], 16, 64);
           display->fillCircle(pointX[i], pointY[i], 1, WHITE);
         }
         display->display();

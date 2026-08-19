@@ -451,7 +451,6 @@ void FW_Common::SetRunMode(const FW_Const::RunMode_e &newMode)
     }
 }
 
-// Dedicated calibration method
 void FW_Common::ExecCalMode(const bool &fromDesktop)
 {
     buttons.ReportDisable();
@@ -459,6 +458,12 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
     uint8_t calStage = 0;
     char buf[6];
     buf[0] = OF_Const::sCaliInfoUpd;
+
+    // Queste sostituiscono i vecchi valori hardcoded (512 e 384) e 
+    // garantiscono una calibrazione perfetta sia per la DFRobot (4:3) che per la PixArt (1:1).
+    // Center of the unified Mouse coordinate space.
+    constexpr int CENTER_X = MouseResX / 2;
+    constexpr int CENTER_Y = MouseResY / 2;
 
     // hold values in a buffer till calibration is complete
     int topOffset;
@@ -482,7 +487,7 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
     OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset = 0;
     OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset = 0;
 
-    // Force center mouse to center
+    // Force center mouse to center (Absolute HID range 0-32767)
     AbsMouse5.move(32768/2, 32768/2);
     AbsMouse5.report();
 
@@ -576,17 +581,17 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                     leftOffset = 0;
                     rightOffset = 0;
 
-                    // Set Cam center offsets
+                    // Set Cam center offsets using dynamic CENTER_X and CENTER_Y
                     if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout) {
-                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = (OpenFIREdiamond.testMedianX() - (512 << 2)) * cos(OpenFIREdiamond.Ang()) -
-                                                                     (OpenFIREdiamond.testMedianY() - (384 << 2)) * sin(OpenFIREdiamond.Ang()) + (512 << 2);
-                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = (OpenFIREdiamond.testMedianX() - (512 << 2)) * sin(OpenFIREdiamond.Ang()) +
-                                                                     (OpenFIREdiamond.testMedianY() - (384 << 2)) * cos(OpenFIREdiamond.Ang()) + (384 << 2);
+                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = (OpenFIREdiamond.testMedianX() - CENTER_X) * cos(OpenFIREdiamond.Ang()) -
+                                                                             (OpenFIREdiamond.testMedianY() - CENTER_Y) * sin(OpenFIREdiamond.Ang()) + CENTER_X;
+                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = (OpenFIREdiamond.testMedianX() - CENTER_X) * sin(OpenFIREdiamond.Ang()) +
+                                                                             (OpenFIREdiamond.testMedianY() - CENTER_Y) * cos(OpenFIREdiamond.Ang()) + CENTER_Y;
                     } else {
-                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = (OpenFIREsquare.testMedianX() - (512 << 2)) * cos(OpenFIREsquare.Ang()) -
-                                                                     (OpenFIREsquare.testMedianY() - (384 << 2)) * sin(OpenFIREsquare.Ang()) + (512 << 2);
-                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = (OpenFIREsquare.testMedianX() - (512 << 2)) * sin(OpenFIREsquare.Ang()) +
-                                                                     (OpenFIREsquare.testMedianY() - (384 << 2)) * cos(OpenFIREsquare.Ang()) + (384 << 2);
+                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = (OpenFIREsquare.testMedianX() - CENTER_X) * cos(OpenFIREsquare.Ang()) -
+                                                                             (OpenFIREsquare.testMedianY() - CENTER_Y) * sin(OpenFIREsquare.Ang()) + CENTER_X;
+                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = (OpenFIREsquare.testMedianX() - CENTER_X) * sin(OpenFIREsquare.Ang()) +
+                                                                             (OpenFIREsquare.testMedianY() - CENTER_Y) * cos(OpenFIREsquare.Ang()) + CENTER_Y;
                         // Work out LED locations by assuming height is 100%
                         OF_Prefs::profiles[OF_Prefs::currentProfile].TLled = (res_x / 2) - ((OpenFIREsquare.W() * (res_y  / OpenFIREsquare.H())) / 2);
                         OF_Prefs::profiles[OF_Prefs::currentProfile].TRled = (res_x / 2) + ((OpenFIREsquare.W() * (res_y  / OpenFIREsquare.H())) / 2);
@@ -674,17 +679,17 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                     }
                     break;
                 case FW_Const::Cali_Verify:
-                    // Apply new Cam center offsets with Offsets applied
+                    // Apply new Cam center offsets with Offsets applied using dynamic CENTER_X and CENTER_Y
                     if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout) {
-                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = (OpenFIREdiamond.testMedianX() - (512 << 2)) * cos(OpenFIREdiamond.Ang()) -
-                                                                     (OpenFIREdiamond.testMedianY() - (384 << 2)) * sin(OpenFIREdiamond.Ang()) + (512 << 2);
-                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = (OpenFIREdiamond.testMedianX() - (512 << 2)) * sin(OpenFIREdiamond.Ang()) +
-                                                                     (OpenFIREdiamond.testMedianY() - (384 << 2)) * cos(OpenFIREdiamond.Ang()) + (384 << 2);
+                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = (OpenFIREdiamond.testMedianX() - CENTER_X) * cos(OpenFIREdiamond.Ang()) -
+                                                                             (OpenFIREdiamond.testMedianY() - CENTER_Y) * sin(OpenFIREdiamond.Ang()) + CENTER_X;
+                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = (OpenFIREdiamond.testMedianX() - CENTER_X) * sin(OpenFIREdiamond.Ang()) +
+                                                                             (OpenFIREdiamond.testMedianY() - CENTER_Y) * cos(OpenFIREdiamond.Ang()) + CENTER_Y;
                     } else {
-                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = (OpenFIREsquare.testMedianX() - (512 << 2)) * cos(OpenFIREsquare.Ang()) -
-                                                                     (OpenFIREsquare.testMedianY() - (384 << 2)) * sin(OpenFIREsquare.Ang()) + (512 << 2);
-                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = (OpenFIREsquare.testMedianX() - (512 << 2)) * sin(OpenFIREsquare.Ang()) +
-                                                                     (OpenFIREsquare.testMedianY() - (384 << 2)) * cos(OpenFIREsquare.Ang()) + (384 << 2);
+                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = (OpenFIREsquare.testMedianX() - CENTER_X) * cos(OpenFIREsquare.Ang()) -
+                                                                             (OpenFIREsquare.testMedianY() - CENTER_Y) * sin(OpenFIREsquare.Ang()) + CENTER_X;
+                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = (OpenFIREsquare.testMedianX() - CENTER_X) * sin(OpenFIREsquare.Ang()) +
+                                                                             (OpenFIREsquare.testMedianY() - CENTER_Y) * cos(OpenFIREsquare.Ang()) + CENTER_Y;
                     }
 
                     buf[1] = 5;
@@ -727,8 +732,11 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                             OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset = 0;
                             OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset = 0;
                             OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset = 0;
-                            OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = 512 << 2;
-                            OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = 384 << 2;
+                            
+                            // RESET DEL CENTRO OTTICO USANDO I VALORI DINAMICI
+                            OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = CENTER_X;
+                            OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = CENTER_Y;
+                            
                             SetMode(FW_Const::GunMode_Calibration);
                             AbsMouse5.move(32768/2, 32768/2);
                             AbsMouse5.report();
@@ -801,6 +809,41 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
 
 void FW_Common::GetPosition()
 {
+    // Dynamic camera coordinate resolution in the internal Mouse precision space.
+    constexpr int CAM_COORD_RES_X = MouseResX;
+    constexpr int CAM_COORD_RES_Y = MouseResY;
+
+    // Perspective code uses 2 extra precision bits (res_x/res_y are << 2).
+    constexpr int PERSPECTIVE_SCALE = 1 << 2;
+    constexpr int SCREEN_RES_X = res_x / PERSPECTIVE_SCALE;
+    constexpr int SCREEN_RES_Y = res_y / PERSPECTIVE_SCALE;
+
+    // Preserve the camera aspect ratio when displaying RAW camera coordinates
+    // inside the 1920x1080 Processing/test canvas.
+    constexpr bool CAM_TEST_WIDTH_LIMITED =
+        (CAM_COORD_RES_X * SCREEN_RES_Y) >
+        (CAM_COORD_RES_Y * SCREEN_RES_X);
+
+    constexpr int CAM_TEST_WIDTH =
+    CAM_TEST_WIDTH_LIMITED
+        ? SCREEN_RES_X
+        : (CAM_COORD_RES_X * SCREEN_RES_Y) / CAM_COORD_RES_Y;
+
+    constexpr int CAM_TEST_HEIGHT =
+    CAM_TEST_WIDTH_LIMITED
+        ? (CAM_COORD_RES_Y * SCREEN_RES_X) / CAM_COORD_RES_X
+        : SCREEN_RES_Y;
+
+    constexpr int CAM_TEST_OFFSET_X =
+        (SCREEN_RES_X - CAM_TEST_WIDTH) / 2;
+
+    constexpr int CAM_TEST_OFFSET_Y =
+        (SCREEN_RES_Y - CAM_TEST_HEIGHT) / 2;
+
+    // Target aspect ratio used by Serial AR correction: 4:3 content.
+    constexpr int AR_CORRECTION_W = 4;
+    constexpr int AR_CORRECTION_H = 3;
+
     if(dfrIRPos != nullptr) {
         int error = dfrIRPos->basicAtomic(DFRobotIRPositionEx::Retry_2);
         if(error == DFRobotIRPositionEx::Error_Success) {
@@ -810,16 +853,16 @@ void FW_Common::GetPosition()
                 OpenFIREdiamond.begin(dfrIRPos->xPositions(), dfrIRPos->yPositions(), dfrIRPos->seen());
 
                 OpenFIREper.warp(OpenFIREdiamond.X(0), OpenFIREdiamond.Y(0),
-                                OpenFIREdiamond.X(1), OpenFIREdiamond.Y(1),
-                                OpenFIREdiamond.X(2), OpenFIREdiamond.Y(2),
-                                OpenFIREdiamond.X(3), OpenFIREdiamond.Y(3),
-                                res_x / 2, 0, 0,
-                                res_y / 2, res_x / 2,
-                                res_y, res_x, res_y / 2);
+                                 OpenFIREdiamond.X(1), OpenFIREdiamond.Y(1),
+                                 OpenFIREdiamond.X(2), OpenFIREdiamond.Y(2),
+                                 OpenFIREdiamond.X(3), OpenFIREdiamond.Y(3),
+                                 res_x / 2, 0, 0,
+                                 res_y / 2, res_x / 2,
+                                 res_y, res_x, res_y / 2);
             } else { // layoutSquare = 0
-                OpenFIREsquare.begin(dfrIRPos->xPositions(), dfrIRPos->yPositions(), dfrIRPos->seen());              
+                OpenFIREsquare.begin(dfrIRPos->xPositions(), dfrIRPos->yPositions(), dfrIRPos->seen());               
                
-                #ifdef USE_MULTI_ONE_EURO_FILTER 
+                #ifdef USE_MULTI_ONE_EURO_FILTER
                     X_in[0] = OpenFIREsquare.X(0);
                     Y_in[0] = OpenFIREsquare.Y(0);
                     X_in[1] = OpenFIREsquare.X(1);
@@ -832,24 +875,24 @@ void FW_Common::GetPosition()
                     oef_multi.process(X_in, Y_in, X_out, Y_out);
 
                     OpenFIREper.warp(X_out[0], Y_out[0],
-                                X_out[1], Y_out[1],
-                                X_out[2], Y_out[2],
-                                X_out[3], Y_out[3],
-                                OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, 0,
-                                OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, 0,
-                                OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, res_y,
-                                OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, res_y);
+                                 X_out[1], Y_out[1],
+                                 X_out[2], Y_out[2],
+                                 X_out[3], Y_out[3],
+                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, 0,
+                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, 0,
+                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, res_y,
+                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, res_y);
    
                 #else
                     OpenFIREper.warp(OpenFIREsquare.X(0), OpenFIREsquare.Y(0),
-                                OpenFIREsquare.X(1), OpenFIREsquare.Y(1),
-                                OpenFIREsquare.X(2), OpenFIREsquare.Y(2),
-                                OpenFIREsquare.X(3), OpenFIREsquare.Y(3),
-                                OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, 0,
-                                OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, 0,
-                                OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, res_y,
-                                OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, res_y);
-                #endif // USE_MULTI_ONE_EURO_FILTER 
+                                 OpenFIREsquare.X(1), OpenFIREsquare.Y(1),
+                                 OpenFIREsquare.X(2), OpenFIREsquare.Y(2),
+                                 OpenFIREsquare.X(3), OpenFIREsquare.Y(3),
+                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, 0,
+                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, 0,
+                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, res_y,
+                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, res_y);
+                #endif // USE_MULTI_ONE_EURO_FILTER
 
             }
 
@@ -866,6 +909,7 @@ void FW_Common::GetPosition()
                     mouseX = (moveXAxisArr[0] + moveXAxisArr[1]) / 2;
                     mouseY = (moveYAxisArr[0] + moveYAxisArr[1]) / 2;
                     break;
+
                 case FW_Const::RunMode_Average2:
                     // weighted average of current position and previous 2
                     if(moveIndex < 2)
@@ -877,9 +921,10 @@ void FW_Common::GetPosition()
                     mouseX = (mouseX + moveXAxisArr[0] + moveXAxisArr[1] + moveXAxisArr[2]) / 4;
                     mouseY = (mouseY + moveYAxisArr[0] + moveYAxisArr[1] + moveYAxisArr[2]) / 4;
                     break;
+
                 default:
                     break;
-                }
+            }
 
             // Constrain that bisch so negatives don't cause underflow
             int32_t conMoveX = constrain(mouseX, 0, res_x);
@@ -889,26 +934,67 @@ void FW_Common::GetPosition()
                 UpdateLastSeen();
 
                 if(OF_Serial::serialARcorrection) switch(OF_Prefs::profiles[OF_Prefs::currentProfile].aspectRatio) {
-                    case OF_Const::ar16_9:
-                        conMoveX = map(conMoveX, 966, 6720, 0, 32767);
+                    case OF_Const::ar16_9: {
+                        // Fit centered 4:3 content inside a 16:9 display.
+                        constexpr int correctedWidth =
+                            (res_x * AR_CORRECTION_W * 9) /
+                            (AR_CORRECTION_H * 16);
+
+                        constexpr int correctionX =
+                            (res_x - correctedWidth) / 2;
+
+                        conMoveX = map(conMoveX, correctionX, res_x - correctionX, 0, 32767);
                         conMoveX = constrain(conMoveX, 0, 32767);
                         conMoveY = map(conMoveY, 0, res_y, 0, 32767);
                         break;
-                    case OF_Const::ar16_10:
-                        conMoveX = map(conMoveX, 655, 7048, 0, 32767);
+                    }
+
+                    case OF_Const::ar16_10: {
+                        // Fit centered 4:3 content inside a 16:10 display.
+                        constexpr int correctedWidth =
+                            (res_x * AR_CORRECTION_W * 10) /
+                            (AR_CORRECTION_H * 16);
+
+                        constexpr int correctionX =
+                            (res_x - correctedWidth) / 2;
+
+                        conMoveX = map(conMoveX, correctionX, res_x - correctionX, 0, 32767);
                         conMoveX = constrain(conMoveX, 0, 32767);
                         conMoveY = map(conMoveY, 0, res_y, 0, 32767);
                         break;
-                    case OF_Const::ar3_2:
-                        conMoveX = map(conMoveX, 438, 7264, 0, 32767);
+                    }
+
+                    case OF_Const::ar3_2: {
+                        // Fit centered 4:3 content inside a 3:2 display.
+                        constexpr int correctedWidth =
+                            (res_x * AR_CORRECTION_W * 2) /
+                            (AR_CORRECTION_H * 3);
+
+                        constexpr int correctionX =
+                            (res_x - correctedWidth) / 2;
+
+                        conMoveX = map(conMoveX, correctionX, res_x - correctionX, 0, 32767);
                         conMoveX = constrain(conMoveX, 0, 32767);
                         conMoveY = map(conMoveY, 0, res_y, 0, 32767);
                         break;
-                    case OF_Const::ar5_4:
+                    }
+
+                    case OF_Const::ar5_4: {
+                        // A 5:4 display is narrower than 4:3, so the correction
+                        // is applied vertically instead of horizontally.
+                        constexpr int correctedHeight =
+                            (res_y * AR_CORRECTION_H * 5) /
+                            (AR_CORRECTION_W * 4);
+
+                        constexpr int correctionY =
+                            (res_y - correctedHeight) / 2;
+
                         conMoveX = map(conMoveX, 0, res_x, 0, 32767);
-                        conMoveY = map(conMoveY, 148, 4182, 0, 32767);
+                        conMoveY = map(conMoveY, correctionY, res_y - correctionY, 0, 32767);
                         conMoveY = constrain(conMoveY, 0, 32767);
                         break;
+                    }
+
                     case OF_Const::ar4_3:
                     default:
                         // Output mapped to Mouse resolution
@@ -926,7 +1012,7 @@ void FW_Common::GetPosition()
 
                 if(conMoveX == 0 || conMoveX == 32767)
                     offXAxis = true;
-                
+               
                 if(conMoveY == 0 || conMoveY == 32767)
                     offYAxis = true;
 
@@ -937,6 +1023,7 @@ void FW_Common::GetPosition()
                 if(buttons.analogOutput)
                      Gamepad16.moveCam(conMoveX, conMoveY);
                 else AbsMouse5.move(conMoveX, conMoveY);
+
             } else {
                 if(gunMode == FW_Const::GunMode_Verification) {
                     // Output mapped to Mouse resolution
@@ -946,38 +1033,67 @@ void FW_Common::GetPosition()
                     AbsMouse5.move(conMoveX, conMoveY);
                     AbsMouse5.report();
                 }
+
                 if(millis() - testLastStamp > 50) {
                     testLastStamp = millis();
                     // RAW Camera Output mapped to screen res (1920x1080)
+                    // Screen resolution is now dynamically derived from res_x/res_y.
                     int rawX[4];
                     int rawY[4];
+                    bool outsideFov[4];
+
                     // RAW Output for viewing in processing sketch mapped to 1920x1080 screen resolution
                     for (int i = 0; i < 4; ++i) {
+                        int pointX;
+                        int pointY;
+
                         if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout) {
-                            rawX[i] = map(OpenFIREdiamond.X(i), 0, 1023 << 2, 1920, 0);
-                            rawY[i] = map(OpenFIREdiamond.Y(i), 0, 768 << 2, 0, 1080);
+                            pointX = OpenFIREdiamond.X(i);
+                            pointY = OpenFIREdiamond.Y(i);
+
+                            rawX[i] = map(pointX, 0, CAM_COORD_RES_X,
+                                          CAM_TEST_OFFSET_X + CAM_TEST_WIDTH, CAM_TEST_OFFSET_X);
+                            rawY[i] = map(pointY, 0, CAM_COORD_RES_Y,
+                                          CAM_TEST_OFFSET_Y, CAM_TEST_OFFSET_Y + CAM_TEST_HEIGHT);
                         } else {
-                            rawX[i] = map(OpenFIREsquare.X(i), 0, 1023 << 2, 0, 1920);
-                            rawY[i] = map(OpenFIREsquare.Y(i), 0, 768 << 2, 0, 1080);
+                            pointX = OpenFIREsquare.X(i);
+                            pointY = OpenFIREsquare.Y(i);
+
+                            rawX[i] = map(pointX, 0, CAM_COORD_RES_X,
+                                          CAM_TEST_OFFSET_X, CAM_TEST_OFFSET_X + CAM_TEST_WIDTH);
+                            rawY[i] = map(pointY, 0, CAM_COORD_RES_Y,
+                                          CAM_TEST_OFFSET_Y, CAM_TEST_OFFSET_Y + CAM_TEST_HEIGHT);
                         }
+
+                        outsideFov[i] =
+                            pointX < 0 || pointX > MouseMaxX ||
+                            pointY < 0 || pointY > MouseMaxY;
                     }
 
                     if(runMode == FW_Const::RunMode_Processing) {
-                        int mouseXscaled = mouseX / 4;
-                        int mouseYscaled = mouseY / 4;
+                        int mouseXscaled = mouseX / PERSPECTIVE_SCALE;
+                        int mouseYscaled = mouseY / PERSPECTIVE_SCALE;
+
+                        // Encode outside-FOV state in bit 0 of each transmitted X coordinate.
+                        // Even X = inside FOV, odd X = outside FOV. rawX/rawY stay unchanged.
+                        int serialX[4];
+                        for(int i = 0; i < 4; ++i)
+                            serialX[i] = rawX[i] * 2 + (outsideFov[i] ? 1 : 0);
 
                         if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout) {
-                            int testMedianX = map(OpenFIREdiamond.testMedianX(), 0, 1023 << 2, 1920, 0);
-                            int testMedianY = map(OpenFIREdiamond.testMedianY(), 0, 768 << 2, 0, 1080);
+                            int testMedianX = map(OpenFIREdiamond.testMedianX(), 0, CAM_COORD_RES_X,
+                                                  CAM_TEST_OFFSET_X + CAM_TEST_WIDTH, CAM_TEST_OFFSET_X);
+                            int testMedianY = map(OpenFIREdiamond.testMedianY(), 0, CAM_COORD_RES_Y,
+                                                  CAM_TEST_OFFSET_Y, CAM_TEST_OFFSET_Y + CAM_TEST_HEIGHT);
                             char buf[49];
                             buf[0] = OF_Const::sTestCoords;
-                            memcpy(&buf[1],  &rawX[0],      sizeof(int));
+                            memcpy(&buf[1],  &serialX[0],      sizeof(int));
                             memcpy(&buf[5],  &rawY[0],      sizeof(int));
-                            memcpy(&buf[9],  &rawX[1],      sizeof(int));
+                            memcpy(&buf[9],  &serialX[1],      sizeof(int));
                             memcpy(&buf[13], &rawY[1],      sizeof(int));
-                            memcpy(&buf[17], &rawX[2],      sizeof(int));
+                            memcpy(&buf[17], &serialX[2],      sizeof(int));
                             memcpy(&buf[21], &rawY[2],      sizeof(int));
-                            memcpy(&buf[25], &rawX[3],      sizeof(int));
+                            memcpy(&buf[25], &serialX[3],      sizeof(int));
                             memcpy(&buf[29], &rawY[3],      sizeof(int));
                             memcpy(&buf[33], &mouseXscaled, sizeof(int));
                             memcpy(&buf[37], &mouseYscaled, sizeof(int));
@@ -985,17 +1101,19 @@ void FW_Common::GetPosition()
                             memcpy(&buf[45], &testMedianY,  sizeof(int));
                             Serial.write(buf, sizeof(buf));
                         } else {
-                            int testMedianX = map(OpenFIREsquare.testMedianX(), 0, 1023 << 2, 0, 1920);
-                            int testMedianY = map(OpenFIREsquare.testMedianY(), 0, 768 << 2, 0, 1080);
+                            int testMedianX = map(OpenFIREsquare.testMedianX(), 0, CAM_COORD_RES_X,
+                                                  CAM_TEST_OFFSET_X, CAM_TEST_OFFSET_X + CAM_TEST_WIDTH);
+                            int testMedianY = map(OpenFIREsquare.testMedianY(), 0, CAM_COORD_RES_Y,
+                                                  CAM_TEST_OFFSET_Y, CAM_TEST_OFFSET_Y + CAM_TEST_HEIGHT);
                             char buf[49];
                             buf[0] = OF_Const::sTestCoords;
-                            memcpy(&buf[1],  &rawX[0],      sizeof(int));
+                            memcpy(&buf[1],  &serialX[0],      sizeof(int));
                             memcpy(&buf[5],  &rawY[0],      sizeof(int));
-                            memcpy(&buf[9],  &rawX[1],      sizeof(int));
+                            memcpy(&buf[9],  &serialX[1],      sizeof(int));
                             memcpy(&buf[13], &rawY[1],      sizeof(int));
-                            memcpy(&buf[17], &rawX[2],      sizeof(int));
+                            memcpy(&buf[17], &serialX[2],      sizeof(int));
                             memcpy(&buf[21], &rawY[2],      sizeof(int));
-                            memcpy(&buf[25], &rawX[3],      sizeof(int));
+                            memcpy(&buf[25], &serialX[3],      sizeof(int));
                             memcpy(&buf[29], &rawY[3],      sizeof(int));
                             memcpy(&buf[33], &mouseXscaled, sizeof(int));
                             memcpy(&buf[37], &mouseYscaled, sizeof(int));
@@ -1006,13 +1124,26 @@ void FW_Common::GetPosition()
                     }
 
                     #ifdef USES_DISPLAY
+                        /*
+                        for(int i = 0; i < 4; ++i) {
+                            rawX[i] = map(rawX[i],
+                                CAM_TEST_OFFSET_X,
+                                CAM_TEST_OFFSET_X + CAM_TEST_WIDTH,
+                                0, SCREEN_RES_X);
+
+                            rawY[i] = map(rawY[i],
+                                CAM_TEST_OFFSET_Y,
+                                CAM_TEST_OFFSET_Y + CAM_TEST_HEIGHT,
+                                0, SCREEN_RES_Y);
+                        }
+                        */
                         OLED.DrawVisibleIR(rawX, rawY);
                     #endif // USES_DISPLAY
                 }
             }
         } else if(error != DFRobotIRPositionEx::Error_DataMismatch)
             PrintIrError();
-    } else  PrintIrError();
+    } else PrintIrError();
 }
 
 void FW_Common::PrintIrError()
