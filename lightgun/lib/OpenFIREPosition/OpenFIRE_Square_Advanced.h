@@ -69,7 +69,7 @@ private:
     // Registro a scorrimento (shift register) ereditato dalle API originali di Samco.
     // Viene mantenuto per non rompere la retrocompatibilità con funzioni esterne
     // che si aspettano di leggere uno storico di stabilità a 5 frame per singolo sensore.
-    unsigned int see[4];
+    unsigned int see[4] = {0, 0, 0, 0};
     
     /*
     float height = (568 * CamToMouseMult) - (200 * CamToMouseMult);
@@ -94,7 +94,7 @@ private:
     /*
     float ideal_aspect_ratio = 16.0f / 9.0f; 
     */
-    float ideal_aspect_ratio = (float)res_x / (float)res_y;
+    float ideal_aspect_ratio = IR_SQUARE_BASE_HEIGHT_RATIO;
     
     uint8_t prev_num_points_seen = 0; 
     
@@ -138,6 +138,8 @@ private:
     // Definisce la reattività del filtro anti-glitch. Un valore di 0.25 significa che
     // ogni errore ottico istantaneo viene assorbito al 25% per frame, distribuendo 
     // l'anomalia su ~4 frame. Mantiene il feeling "snappy" ma uccide il tremolio.
+    static_assert(CamFPS > 0, "CamFPS must be greater than zero");
+    static constexpr float FPS_NORMALIZATION = 209.0f / (float)CamFPS;
     float COSTANTE_MOLLA = 0.25f; 
     
     // Questo è un muro matematico. Quando mancano dei punti ottici, l'algoritmo valuta 6 combinazioni.

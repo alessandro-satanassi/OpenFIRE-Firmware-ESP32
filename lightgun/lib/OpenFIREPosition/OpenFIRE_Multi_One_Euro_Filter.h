@@ -33,57 +33,80 @@ private:
     unsigned long lastMicros;
     bool initialized = false;
 
-    // Variabili per il centro dello schermo (calcolate una sola volta al boot)
-    // Conserviamo i reciproci (1/x) per commutare le pesanti divisioni geometriche 
-    // in moltiplicazioni veloci durante il runtime.
-    float inv_center_x;
-    float inv_center_y;
-    
     // ==========================================
     // --- PARAMETRI DI TUNING E-SPORTS (BILANCIAMENTO DEFINITIVO) ---
 
+    static_assert(CamSensorResX > 0 && CamSensorResY > 0,
+                  "CamSensorResX/CamSensorResY must be greater than zero");
+    static_assert(CamNoiseFactor > 0.0f,
+                  "CamNoiseFactor must be greater than zero");
+    static_assert(MouseMaxX > 0 && MouseMaxY > 0,
+                  "MouseMaxX/MouseMaxY must be greater than zero");
+    static_assert(CamFPS > 0, "CamFPS must be greater than zero");
+
     // min_cutoff: La "lentezza" del mirino quando ti muovi pochissimo o sei fermo.
-    // Impostato a 0.1f: il punto di equilibrio perfetto. 0.2f era leggermente 
+    // Impostato a 0.1f: il punto di equilibrio perfetto. 0.2f era leggermente
     // scivoloso, 0.05f era troppo rigido. 0.1f garantisce mira da cecchino solida.
-    const float min_cutoff = 0.1f; 
-    
+    static constexpr float min_cutoff = 0.1f;
+
     // --- GESTIONE ASIMMETRICA DELLA VELOCITÀ ---
     // d_cutoff_base: Reattività per i movimenti di precisione.
-    // IMPOSTATO a 1.0f. A 200Hz, un salto di 1 singolo pixel raw della telecamera
-    // equivale a 800 pixel/sec! Serve un cutoff basso (1.0f) per spalmare questi salti 
-    // quantizzati (0, 800, 0, 800) in una velocità costante e fluida (es. 400).
-    const float d_cutoff_base = 1.0f; 
-    
+    // Il tuning temporale resta invariato e viene gestito tramite il dt reale.
+    static constexpr float d_cutoff_base = 1.0f;
+
     // d_cutoff_snap: Reattività per scatti violenti e frenate brusche.
-    const float d_cutoff_snap = 25.0f; 
-    
-    // snap_base: Il "Punto di Rottura" al CENTRO dello schermo (in pixel/sec).
-    // IMPOSTATO a 1000.0f. Questo è FONDAMENTALE. Essendo il rumore di quantizzazione
-    // pari a ~800 px/s, se abbassiamo la soglia a 400 il filtro "scatta" ad ogni singolo
-    // aggiornamento dei pixel della telecamera, causando micro-vibrazioni continue.
-    // 1000.0f ignora i salti di 1 pixel (800) ma interviene sui flick-shot.
-    const float snap_base = 1000.0f;
+    static constexpr float d_cutoff_snap = 25.0f;
 
-    // snap_edge_multiplier: Quanta "resistenza" aggiungere quando si mira ai BORDI.
-    const float snap_edge_multiplier = 2000.0f;
+    // Unita di rumore fisico espressa nello spazio Mouse.
+    // MouseRes/CamSensorRes converte un pixel fisico del sensore nelle coordinate
+    // usate realmente dal filtro. CamNoiseFactor permette una successiva taratura
+    // empirica: > 1.0f = CAM piu rumorosa, < 1.0f = CAM piu pulita.
+    static constexpr float sensor_noise_unit_x =
+        ((float)MouseResX / (float)CamSensorResX) * CamNoiseFactor;
+    static constexpr float sensor_noise_unit_y =
+        ((float)MouseResY / (float)CamSensorResY) * CamNoiseFactor;
 
-    // max_cutoff: Il limite di banda passante superiore. 
-    const float max_cutoff = 30.0f; 
-    
-    // beta_multiplier: Moltiplicatore di reattività spaziale.
-    // Portato a 2.8f (dal 2.5f originale). Un boost chirurgico: apre il filtro un 
-    // pelo più velocemente per abbattere la latenza, senza i tremori visti a 3.5f.
-    const float beta_multiplier = 2.8f; 
-    const float beta_base = ((0.011f * (float)CamResX) / (float)MouseResX) * beta_multiplier;
+    // Coefficienti di tuning normalizzati sul pixel fisico del sensore.
+    // Sono ricavati dal comportamento DFRobot originale, ma non contengono
+    // risoluzioni o dimensioni hardcoded di una specifica CAM.
+    // Con DFRobot: sensor_noise_unit X/Y = 32, quindi si ottengono
+    // esattamente snap=1000, edge=2000 e beta=0.0077 come prima.
+    static constexpr float snap_sensor_gain = 31.25f;
+    static constexpr float snap_edge_sensor_gain = 62.5f;
+    static constexpr float beta_sensor_gain = 0.2464f;
+
+    // Soglie di snap adattate alla granularita fisica/rumore della CAM.
+    static constexpr float snap_base_x = snap_sensor_gain * sensor_noise_unit_x;
+    static constexpr float snap_base_y = snap_sensor_gain * sensor_noise_unit_y;
+
+    static constexpr float snap_edge_multiplier_x = snap_edge_sensor_gain * sensor_noise_unit_x;
+    static constexpr float snap_edge_multiplier_y = snap_edge_sensor_gain * sensor_noise_unit_y;
+
+    // max_cutoff: Il limite di banda passante superiore.
+    static constexpr float max_cutoff = 30.0f;
+
+    // Beta adattivo normalizzato sulla granularita fisica del sensore.
+    // Una CAM con pixel fisici relativamente piu grossi (o CamNoiseFactor > 1)
+    // parte piu conservativa; una CAM piu pulita puo essere resa piu reattiva
+    // diminuendo CamNoiseFactor.
+    static constexpr float beta_base_x = beta_sensor_gain / sensor_noise_unit_x;
+    static constexpr float beta_base_y = beta_sensor_gain / sensor_noise_unit_y;
+
+    // MICRO-SNAP: resta volutamente invariato. Non e una soglia di rumore ottico:
+    // elimina soltanto la coda frazionaria quando l'input intero e gia fermo.
+    static constexpr float micro_snap_threshold = 0.5f;
 
     // ==========================================
 
 
-    const float OEF_TWO_PI = 6.28318530718f;
+    static constexpr float inv_center_x = 1.0f / ((float)MouseMaxX * 0.5f);
+    static constexpr float inv_center_y = 1.0f / ((float)MouseMaxY * 0.5f);
+
+    static constexpr float OEF_TWO_PI = 6.28318530718f;
 
     // Sostituisce l'implementazione classica dell'Exponential Moving Average.
     // Espande la formula matematica per evitare chiamate di funzione ricorsive.
-    inline float fast_alpha(float cutoff, float dt_two_pi) {
+    static inline float fast_alpha(float cutoff, float dt_two_pi) {
         float te = cutoff * dt_two_pi;
         return te / (te + 1.0f);
     }

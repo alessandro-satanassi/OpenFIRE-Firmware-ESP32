@@ -1293,6 +1293,9 @@ void FW_Common::SetIrLayout(const int &layout)
 
     if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout != layout) {
         OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout = layout;
+
+        OpenFIREper.deinit(0);
+
         stateFlags |= FW_Const::StateFlag_SavePreferencesEn;
     }
 }

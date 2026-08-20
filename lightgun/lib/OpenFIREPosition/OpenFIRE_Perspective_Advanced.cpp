@@ -35,7 +35,7 @@
 
 // Calcola la matrice di trasformazione prospettica proiettando un quadrato ideale
 // (la calibrazione TV) sul quadrilatero irregolare letto dalla telecamera IR.
-inline void computeSquareToQuad(float* mat, float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3) {
+inline bool computeSquareToQuad(float* mat, float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3) {
   float dx1 = x1 - x2; float dy1 = y1 - y2;
   float dx2 = x3 - x2; float dy2 = y3 - y2;
   float sx = x0 - x1 + x2 - x3; float sy = y0 - y1 + y2 - y3;
@@ -43,9 +43,10 @@ inline void computeSquareToQuad(float* mat, float x0, float y0, float x1, float 
   float det = (dx1 * dy2 - dx2 * dy1);
   float g = 0.0f, h = 0.0f;
   
-  // Limite di degenerazione matematica (1e-8 è perfetto per la scala normalizzata a 1.0).
-  // Previene divisioni per zero catastrofiche nel caso in cui i LED formino 
-  // una singola linea retta o un punto (es. telecamera che guarda parallelamente allo schermo).
+  // Limite di degenerazione matematica (1e-8 è adatto alla scala normalizzata).
+  // Un quadrilatero realmente degenere non deve produrre una matrice parziale.
+  if (fabsf(det) <= 1e-8f && (sx != 0.0f || sy != 0.0f)) return false;
+
   if (fabsf(det) > 1e-8f) {
     float invDet = 1.0f / det;
     g = (sx * dy2 - dx2 * sy) * invDet;
@@ -55,18 +56,23 @@ inline void computeSquareToQuad(float* mat, float x0, float y0, float x1, float 
   mat[0] = x1 - x0 + g * x1; mat[1] = y1 - y0 + g * y1; mat[2] = g;
   mat[3] = x3 - x0 + h * x3; mat[4] = y3 - y0 + h * y3; mat[5] = h;
   mat[6] = x0;               mat[7] = y0;               mat[8] = 1.0f;
+  return true;
 }
 
 // Inversa della funzione precedente. Genera la matrice dei co-fattori.
 // Indispensabile per mappare il singolo pixel letto sul sensore (il "proiettile")
 // sulla superficie fisica e non distorta dello schermo della TV.
-inline void computeQuadToSquare(float* mat, float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3) {
+inline bool computeQuadToSquare(float* mat, float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3) {
   float dx1 = x1 - x2; float dy1 = y1 - y2;
   float dx2 = x3 - x2; float dy2 = y3 - y2;
   float sx = x0 - x1 + x2 - x3; float sy = y0 - y1 + y2 - y3;
 
   float det = (dx1 * dy2 - dx2 * dy1);
   float g = 0.0f, h = 0.0f;
+
+  // Se il termine prospettico è singolare ma il quadrilatero non è affine,
+  // non è possibile ricavare una trasformazione valida.
+  if (fabsf(det) <= 1e-8f && (sx != 0.0f || sy != 0.0f)) return false;
   
   if (fabsf(det) > 1e-8f) {
     float invDet = 1.0f / det;
@@ -83,15 +89,15 @@ inline void computeQuadToSquare(float* mat, float x0, float y0, float x1, float 
   
   float invDetQuad = (a * A + b * D + c * G);
   
-  // Se la fotocamera restituisce punti anomali/allineati (determinante nullo), questa 
-  // condizione fallisce e la matrice NON viene scritta. Il mirino si congela sull'ultimo 
-  // frame valido invece di impazzire restituendo NaN o Inf.
-  if (fabsf(invDetQuad) > 1e-8f) {
-    float idet = 1.0f / invDetQuad;
-    mat[0] = A * idet; mat[1] = D * idet; mat[2] = G * idet;
-    mat[3] = B * idet; mat[4] = E * idet; mat[5] = H * idet;
-    mat[6] = C * idet; mat[7] = F * idet; mat[8] = I * idet;
-  }
+  // Se la camera restituisce punti anomali/allineati (determinante nullo),
+  // segnaliamo esplicitamente il fallimento. warp() manterrà l'ultimo output valido.
+  if (fabsf(invDetQuad) <= 1e-8f) return false;
+
+  float idet = 1.0f / invDetQuad;
+  mat[0] = A * idet; mat[1] = D * idet; mat[2] = G * idet;
+  mat[3] = B * idet; mat[4] = E * idet; mat[5] = H * idet;
+  mat[6] = C * idet; mat[7] = F * idet; mat[8] = I * idet;
+  return true;
 }
 
 // Unrolling manuale del calcolo della matrice. Non usare cicli FOR qui:
@@ -116,7 +122,7 @@ inline void multMats(const float* a, const float* b, float* res) {
 // Necessario perché ai bordi estremi del campo visivo della telecamera IR
 // i LED "spanciano" a causa della lente sferica, falsando il calcolo prospettico.
 inline void OpenFIRE_Perspective::applyLensCorrection(float &x, float &y) {
-  if (k1 == 0.0f) return; 
+  if (k1 == 0.0f && k2 == 0.0f) return;
   
   float dx = x - CX; 
   float dy = y - CY;
@@ -126,9 +132,13 @@ inline void OpenFIRE_Perspective::applyLensCorrection(float &x, float &y) {
   
   float r2 = (nx * nx) + (ny * ny);
   float distortion = 1.0f + (k1 * r2);
+
+  // Secondo termine radiale: con k2 = 0.0f il percorso DFRobot resta
+  // matematicamente identico alla versione precedente.
+  if (k2 != 0.0f) distortion += k2 * r2 * r2;
   
   // Limiti di sicurezza intrinseci per evitare deformazioni distruttive del quadrilatero
-  // nel caso in cui i parametri di input k1 sfuggano al controllo dell'utente.
+  // nel caso in cui i parametri di distorsione sfuggano al controllo dell'utente.
   if (distortion > 1.2f) distortion = 1.2f;
   if (distortion < 0.8f) distortion = 0.8f;
   
@@ -157,6 +167,13 @@ void OpenFIRE_Perspective::warp(float x0, float y0, float x1, float y1, float x2
   float pt_BR_x = x3,  pt_BR_y = y3; 
   float pt_BL_x = x2,  pt_BL_y = y2; 
 
+  // Prima della correzione ottica verifichiamo che i quattro punti descrivano
+  // ancora una superficie 2D significativa. Una linea o un punto non possono
+  // definire un'omografia; la correzione radiale non deve trasformarli
+  // artificialmente in un quadrilatero apparentemente valido.
+  float rawArea = calculateQuadArea(pt_TL_x, pt_TL_y, pt_TR_x, pt_TR_y, pt_BR_x, pt_BR_y, pt_BL_x, pt_BL_y);
+  if (rawArea <= MIN_QUAD_AREA) return;
+
   applyLensCorrection(pt_TL_x, pt_TL_y);
   applyLensCorrection(pt_TR_x, pt_TR_y);
   applyLensCorrection(pt_BR_x, pt_BR_y);
@@ -168,12 +185,14 @@ void OpenFIRE_Perspective::warp(float x0, float y0, float x1, float y1, float x2
   // Fissa il "punto zero" della distanza e della rotazione. Tutto il gioco
   // viene calcolato come differenza proporzionale da questo esatto fotogramma.
   if (!init) {
-    if (currentArea > 10.0f) {
+    if (currentArea > MIN_QUAD_AREA) {
       // Inizializzazione della base dello schermo con lo stesso ordine ciclico (TL, TR, BR, BL)
-      computeSquareToQuad(dstmatrix, dx0 * INV_NORM_SCALE, dy0 * INV_NORM_SCALE, 
-                                     dx1 * INV_NORM_SCALE, dy1 * INV_NORM_SCALE, 
-                                     dx3 * INV_NORM_SCALE, dy3 * INV_NORM_SCALE, 
-                                     dx2 * INV_NORM_SCALE, dy2 * INV_NORM_SCALE);
+      if (!computeSquareToQuad(dstmatrix, dx0 * INV_NORM_SCALE, dy0 * INV_NORM_SCALE,
+                                      dx1 * INV_NORM_SCALE, dy1 * INV_NORM_SCALE,
+                                      dx3 * INV_NORM_SCALE, dy3 * INV_NORM_SCALE,
+                                      dx2 * INV_NORM_SCALE, dy2 * INV_NORM_SCALE)) {
+        return;
+      }
       baseArea = currentArea;
       smoothedArea = currentArea;
       init = true;
@@ -183,7 +202,7 @@ void OpenFIRE_Perspective::warp(float x0, float y0, float x1, float y1, float x2
 
   // Freeze di sicurezza: se la telecamera viene coperta accidentalmente (area vicina a 0), 
   // impediamo al calcolo di assorbire l'errore, salvando la stabilità della z-depth.
-  if (currentArea > 10.0f) {
+  if (currentArea > MIN_QUAD_AREA) {
     smoothedArea = (0.1f * currentArea) + (0.9f * smoothedArea);
   }
 
@@ -192,7 +211,7 @@ void OpenFIRE_Perspective::warp(float x0, float y0, float x1, float y1, float x2
   // Applicazione Parallasse: se la distanza del giocatore diminuisce (area sale rispetto alla base),
   // il centro ottico (dynamicSrcY) viene spinto verso l'alto/basso per compensare 
   // fisicamente l'altezza della canna rispetto al sensore montato.
-  if (parallaxFactor != 0.0f && baseArea > 10.0f && smoothedArea > 10.0f) {
+  if (parallaxFactor != 0.0f && baseArea > MIN_QUAD_AREA && smoothedArea > MIN_QUAD_AREA) {
     float distanceRatio = sqrtf(baseArea / smoothedArea);
     dynamicSrcY += parallaxFactor * (distanceRatio - 1.0f);
   }
@@ -202,7 +221,9 @@ void OpenFIRE_Perspective::warp(float x0, float y0, float x1, float y1, float x2
   pt_BR_x *= INV_NORM_SCALE; pt_BR_y *= INV_NORM_SCALE;
   pt_BL_x *= INV_NORM_SCALE; pt_BL_y *= INV_NORM_SCALE;
 
-  computeQuadToSquare(srcmatrix, pt_TL_x, pt_TL_y, pt_TR_x, pt_TR_y, pt_BR_x, pt_BR_y, pt_BL_x, pt_BL_y);
+  if (!computeQuadToSquare(srcmatrix, pt_TL_x, pt_TL_y, pt_TR_x, pt_TR_y, pt_BR_x, pt_BR_y, pt_BL_x, pt_BL_y)) {
+    return;
+  }
   multMats(srcmatrix, dstmatrix, warpmatrix);
   
   float normSrcX = srcX * INV_NORM_SCALE;
@@ -233,6 +254,7 @@ void OpenFIRE_Perspective::warp(float x0, float y0, float x1, float y1, float x2
 }
 
 void OpenFIRE_Perspective::setLensCorrection(float coefficientK1) { k1 = coefficientK1; }
+void OpenFIRE_Perspective::setLensCorrection(float coefficientK1, float coefficientK2) { k1 = coefficientK1; k2 = coefficientK2; }
 void OpenFIRE_Perspective::setDynamicParallax(float hardwareOffset) { parallaxFactor = hardwareOffset; }
 void OpenFIRE_Perspective::source(float adjustedX, float adjustedY) { srcX = adjustedX; srcY = adjustedY; }
 void OpenFIRE_Perspective::deinit(bool set) { init = set; }

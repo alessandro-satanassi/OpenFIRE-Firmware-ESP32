@@ -154,7 +154,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
 
                 // Meccanismo anti-teletrasporto: se la distanza del punto trovato dal frame 
                 // precedente è fisicamente irrealistica, invalidiamo il tracking.
-                const int max_jump_distance = ((int)width * 3) / 4; 
+                const int max_jump_distance = (int)((((int)width * 3) / 4) * FPS_NORMALIZATION); 
                 const int32_t MAX_ALLOWED_DISTANCE_SQ = (int32_t)max_jump_distance * max_jump_distance;
 
                 if (min_dist_sq > MAX_ALLOWED_DISTANCE_SQ) {
@@ -389,9 +389,8 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         */
 
         // Percentuale storica testata sulla DFRobot (30 pixel su una altezza di 768)
-        constexpr float CRITICAL_ZONE_PERCENT = 30.0f / (float)768;
         // Calcoliamo il valore dinamico sulla risoluzione della CAM e lo portiamo nello spazio unificato
-        const int CRITICAL_ZONE = (int)((float)CamResY * CRITICAL_ZONE_PERCENT * (float)CamToMouseMult);
+        const int CRITICAL_ZONE = (MouseResY * 5) / 128;
 
         // Se l'arma è inclinata severamente (oltre ~45 gradi, superando la CRITICAL_ZONE), 
         // l'ordinamento ingenuo Y non basta. Valutiamo le distanze relative per mantenere coerenti
@@ -451,6 +450,52 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         see[2] = (see[2] << 1) | ((current_point_seen_mask >> 1) & 1);
         see[3] = (see[3] << 1) | (current_point_seen_mask & 1);
 
+        
+        // MIGLIORAMENTO DELL POSIZIONE DEL QUARTO PUNTO QUANTO SI VEDONO SOLO 3 PUNTI
+        // =========================================================================//
+        // === (3 PUNTI): INIEZIONE PROSPETTICA STORICA (Zero-Cost Math) ====//
+        // =========================================================================//
+        if (num_points_seen == 3 && prev_num_points_seen >= 3) {
+            uint8_t missing_mask = (~current_point_seen_mask) & 0x0F;
+
+            // Manca D (BR). I punti certi sono A, B, C.
+            if (missing_mask == 0b0001) { 
+                int affine_dx = positionXX[b] + positionXX[c] - positionXX[a];
+                int affine_dy = positionYY[b] + positionYY[c] - positionYY[a];
+                int prev_affine_dx = prev_GeomX[B] + prev_GeomX[C] - prev_GeomX[A];
+                int prev_affine_dy = prev_GeomY[B] + prev_GeomY[C] - prev_GeomY[A];
+                positionXX[d] = affine_dx + (prev_GeomX[D] - prev_affine_dx);
+                positionYY[d] = affine_dy + (prev_GeomY[D] - prev_affine_dy);
+            }
+            // Manca C (BL). I punti certi sono A, B, D.
+            else if (missing_mask == 0b0010) {
+                int affine_cx = positionXX[a] + positionXX[d] - positionXX[b];
+                int affine_cy = positionYY[a] + positionYY[d] - positionYY[b];
+                int prev_affine_cx = prev_GeomX[A] + prev_GeomX[D] - prev_GeomX[B];
+                int prev_affine_cy = prev_GeomY[A] + prev_GeomY[D] - prev_GeomY[B];
+                positionXX[c] = affine_cx + (prev_GeomX[C] - prev_affine_cx);
+                positionYY[c] = affine_cy + (prev_GeomY[C] - prev_affine_cy);
+            }
+            // Manca B (TR). I punti certi sono A, C, D.
+            else if (missing_mask == 0b0100) {
+                int affine_bx = positionXX[a] + positionXX[d] - positionXX[c];
+                int affine_by = positionYY[a] + positionYY[d] - positionYY[c]; 
+                int prev_affine_bx = prev_GeomX[A] + prev_GeomX[D] - prev_GeomX[C];
+                int prev_affine_by = prev_GeomY[A] + prev_GeomY[D] - prev_GeomY[C];
+                positionXX[b] = affine_bx + (prev_GeomX[B] - prev_affine_bx);
+                positionYY[b] = affine_by + (prev_GeomY[B] - prev_affine_by);
+            }
+            // Manca A (TL). I punti certi sono B, C, D.
+            else if (missing_mask == 0b1000) {
+                int affine_ax = positionXX[b] + positionXX[c] - positionXX[d];
+                int affine_ay = positionYY[b] + positionYY[c] - positionYY[d];
+                int prev_affine_ax = prev_GeomX[B] + prev_GeomX[C] - prev_GeomX[D];
+                int prev_affine_ay = prev_GeomY[B] + prev_GeomY[C] - prev_GeomY[D];
+                positionXX[a] = affine_ax + (prev_GeomX[A] - prev_affine_ax);
+                positionYY[a] = affine_ay + (prev_GeomY[A] - prev_affine_ay);
+            }
+        }
+        
         // =========================================================================//
         // ======== MOTORE UNIVERSALE DELLA MOLLA KINEMATICA =======================//
         // =========================================================================//
@@ -500,7 +545,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
             int spostamento = abs(avg_move_x) + abs(avg_move_y);
             // FORZIAMO UN DEBITO MINIMO DI 1.0f per evitare il congelamento dell'offset
             //float consumo = (float)spostamento * COSTANTE_MOLLA; 
-            float consumo = fmaxf(1.0f, (float)spostamento * COSTANTE_MOLLA);
+            float consumo = fmaxf(FPS_NORMALIZATION, (float)spostamento * COSTANTE_MOLLA);
             
             // OTTIMIZZAZIONE: Branchless Math per la Molla. 
             // Usa le istruzioni hardware min/max per non far spezzare la pipeline della CPU 
