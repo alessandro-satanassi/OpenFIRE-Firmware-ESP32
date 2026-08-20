@@ -154,7 +154,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
 
                 // Meccanismo anti-teletrasporto: se la distanza del punto trovato dal frame 
                 // precedente è fisicamente irrealistica, invalidiamo il tracking.
-                const int max_jump_distance = (int)((((int)width * 3) / 4) * FPS_NORMALIZATION); 
+                const int max_jump_distance = (int)((((int)(wideLayout ? height : width) * 3) / 4) * FPS_NORMALIZATION); 
                 const int32_t MAX_ALLOWED_DISTANCE_SQ = (int32_t)max_jump_distance * max_jump_distance;
 
                 if (min_dist_sq > MAX_ALLOWED_DISTANCE_SQ) {
@@ -377,47 +377,144 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
             if (positionYY[orderY[1]] > positionYY[orderY[2]]) { tmp = orderY[1]; orderY[1] = orderY[2]; orderY[2] = tmp; }
         }
 
-        // Assegnazione dei vertici A,B,C,D tramite euristiche
-        dx = positionXX[orderY[0]] - positionXX[orderX[0]]; dy = positionYY[orderY[0]] - positionYY[orderX[0]];
-        int32_t dist_sq1 = (dx * dx) + (dy * dy);
+        // ===========================================================================================
+        // ===========================================================================================
+        // ===========================================================================================
 
-        dx = positionXX[orderY[3]] - positionXX[orderX[0]]; dy = positionYY[orderY[3]] - positionYY[orderX[0]];
-        int32_t dist_sq2 = (dx * dx) + (dy * dy);
-        
-        /*
-        const int CRITICAL_ZONE = (30 * CamToMouseMult); // 30 è un valore provato in tante situazioni e pare andare bene
-        */
+        // =========================================================================//
+        // ============================ CALIBRAZIONE ===============================//
+        // =========================================================================//
 
-        // Percentuale storica testata sulla DFRobot (30 pixel su una altezza di 768)
-        // Calcoliamo il valore dinamico sulla risoluzione della CAM e lo portiamo nello spazio unificato
-        const int CRITICAL_ZONE = (MouseResY * 5) / 128;
-
-        // Se l'arma è inclinata severamente (oltre ~45 gradi, superando la CRITICAL_ZONE), 
-        // l'ordinamento ingenuo Y non basta. Valutiamo le distanze relative per mantenere coerenti
-        // le etichette A, B, C, D e impedire l'incrocio letale degli assi.
-        if ((positionYY[orderY[1]] - positionYY[orderY[0]]) > CRITICAL_ZONE) {
-            // Caso Normale
-            if (dist_sq1 < dist_sq2) {
-                a = orderX[0]; d = orderX[3];
-                if (orderX[1] == orderY[3]) { c = orderX[1]; b = orderX[2]; } else { b = orderX[1]; c = orderX[2]; }
-            } else {
-                c = orderX[0]; b = orderX[3];
-                if (orderX[1] == orderY[3]) { d = orderX[1]; a = orderX[2]; } else { a = orderX[1]; d = orderX[2]; }
-            }
-        } else { 
-            // Caso Zona Critica (rettangolo quasi verticale)
-            a = orderY[0]; b = orderY[1]; c = orderY[2]; d = orderY[3]; 
+        if (calibrationMode) {
+            // In calibrazione la lightgun è frontale e con rotazione prossima a zero.
+            a = orderY[0]; b = orderY[1]; c = orderY[2]; d = orderY[3];
         }
 
+        // =========================================================================//
+        // ============================ LAYOUT WIDE ================================//
+        // =========================================================================//
+
+        else if (wideLayout) {
+            const int CRITICAL_ZONE_WIDE = (MouseResX * 5) / 128;
+
+            // distanza del punto più alto dall'estremo destro
+            dx = positionXX[orderX[3]] - positionXX[orderY[0]];
+            dy = positionYY[orderX[3]] - positionYY[orderY[0]];
+            int32_t dist_sq1_wide = (dx * dx) + (dy * dy);
+
+            // distanza del punto più alto dall'estremo sinistro
+            dx = positionXX[orderX[0]] - positionXX[orderY[0]];
+            dy = positionYY[orderX[0]] - positionYY[orderY[0]];
+            int32_t dist_sq2_wide = (dx * dx) + (dy * dy);
+
+            if ((positionXX[orderX[3]] - positionXX[orderX[2]]) > CRITICAL_ZONE_WIDE) {
+
+                if (dist_sq1_wide < dist_sq2_wide) {
+                    b = orderY[0];
+                    c = orderY[3];
+
+                    if (orderY[1] == orderX[0]) {
+                        a = orderY[1];
+                        d = orderY[2];
+                    } else {
+                        d = orderY[1];
+                        a = orderY[2];
+                    }
+
+                } else {
+                    a = orderY[0];
+                    d = orderY[3];
+
+                    if (orderY[1] == orderX[0]) {
+                        c = orderY[1];
+                        b = orderY[2];
+                    } else {
+                        b = orderY[1];
+                        c = orderY[2];
+                    }
+                }
+
+            } else {
+                // Caso Zona Critica
+                a = orderX[1];
+                b = orderX[3];
+                c = orderX[0];
+                d = orderX[2];
+            }
+        }
+
+        // =========================================================================//
+        // ============================ LAYOUT NORMALE =============================//
+        // =========================================================================//
+
+        else {
+
+            // Assegnazione dei vertici A,B,C,D tramite euristiche
+            dx = positionXX[orderY[0]] - positionXX[orderX[0]];
+            dy = positionYY[orderY[0]] - positionYY[orderX[0]];
+            int32_t dist_sq1 = (dx * dx) + (dy * dy);
+
+            dx = positionXX[orderY[3]] - positionXX[orderX[0]];
+            dy = positionYY[orderY[3]] - positionYY[orderX[0]];
+            int32_t dist_sq2 = (dx * dx) + (dy * dy);
+
+            /*
+            const int CRITICAL_ZONE = (30 * CamToMouseMult); // 30 è un valore provato in tante situazioni e pare andare bene
+            */
+
+            // Percentuale storica testata sulla DFRobot (30 pixel su una altezza di 768)
+            // Calcoliamo il valore dinamico sulla risoluzione della CAM e lo portiamo nello spazio unificato
+            const int CRITICAL_ZONE = (MouseResY * 5) / 128;
+
+            if ((positionYY[orderY[1]] - positionYY[orderY[0]]) > CRITICAL_ZONE) {
+
+                if (dist_sq1 < dist_sq2) {
+                    a = orderX[0];
+                    d = orderX[3];
+
+                    if (orderX[1] == orderY[3]) {
+                        c = orderX[1];
+                        b = orderX[2];
+                    } else {
+                        b = orderX[1];
+                        c = orderX[2];
+                    }
+
+                } else {
+                    c = orderX[0];
+                    b = orderX[3];
+
+                    if (orderX[1] == orderY[3]) {
+                        d = orderX[1];
+                        a = orderX[2];
+                    } else {
+                        a = orderX[1];
+                        d = orderX[2];
+                    }
+                }
+
+            } else {
+                // Caso Zona Critica (rettangolo quasi verticale)
+                a = orderY[0];
+                b = orderY[1];
+                c = orderY[2];
+                d = orderY[3];
+            }
+        }
+
+        // ===========================================================================================
+        // ===========================================================================================
+        // ===========================================================================================
+
         // sarebbe sufficiente per la zona critica questo ulteriore controllo, ma poichè ha
-        // un piccolo peso computazionale, lo facciamo sempre per casi limiti e come maggiore robustezza 
-        // Correzione finale per garantire la convenzione (A=TL, B=TR, C=BL, D=BR)        
+        // un piccolo peso computazionale, lo facciamo sempre per casi limiti e come maggiore robustezza
+        // Correzione finale per garantire la convenzione (A=TL, B=TR, C=BL, D=BR)
         { uint8_t aux_swap;
             if (positionYY[a] > positionYY[c]) { aux_swap = a; a = c; c = aux_swap; }
             if (positionYY[b] > positionYY[d]) { aux_swap = b; b = d; d = aux_swap; }
             if (positionXX[a] > positionXX[b]) { aux_swap = a; a = b; b = aux_swap; }
             if (positionXX[c] > positionXX[d]) { aux_swap = c; c = d; d = aux_swap; }
-        }
+        }     
 
         // =========================================================================//
         // ======== COSTRUZIONE MASCHERA: QUALI PUNTI ORDINATI SONO VERI? ==========//

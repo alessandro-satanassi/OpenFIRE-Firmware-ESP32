@@ -1134,12 +1134,16 @@ void OF_Serial::SerialProcessingDocked()
                         #endif // LED_ENABLE
                         // unlikely, but attempt to reload settings if save failed
                         // though this might just load corrupt data instead. :shrug:
-                        } else OF_Prefs::Load();
+                        } else {
+                            OF_Prefs::LoadProfiles();
+                            OF_Prefs::Load();
+                        }
                         FW_Common::buttons.Begin();
                         exit = true;
                         break;
                     case OF_Const::serialTerminator:
                         // Assumed failed/aborting save, so roll back to what's in flash.
+                        OF_Prefs::LoadProfiles();
                         OF_Prefs::Load();
                         FW_Common::buttons.Begin();
                         exit = true;

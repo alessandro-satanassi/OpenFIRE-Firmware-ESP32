@@ -48,6 +48,27 @@ public:
     float Ang() const { return angle; }
     unsigned int seen() const { return seenFlags; }
 
+    void setCalibrationMode(bool enabled) { calibrationMode = enabled; }
+    //void setWideLayout(bool enabled) { wideLayout = enabled; }
+
+    void setWideLayout(bool enabled) {
+        if (wideLayout != enabled) {
+            wideLayout = enabled;
+
+            start = 0;
+            is_tracking_stable = false;
+            prev_num_points_seen = 0;
+            prev_point_seen_mask = 0;
+            current_point_seen_mask = 0;
+
+            for (uint8_t i = 0; i < 4; i++) {
+                offset_X[i] = 0.0f;
+                offset_Y[i] = 0.0f;
+            }
+        }
+    }
+
+
 private:
     //================================================================
     // STATO DEL TRACKER
@@ -151,6 +172,9 @@ private:
     int prev_GeomY[4] = {0, 0, 0, 0};
 
     /////////////////////////////////////////////////////////////////////
+
+    bool calibrationMode = false;    // true = è in corso la calibrazione
+    bool wideLayout = false;         // true = configurazione con base maggiore di altezza ad esempio per sensori sugli angoli del monitor
 
 };
 

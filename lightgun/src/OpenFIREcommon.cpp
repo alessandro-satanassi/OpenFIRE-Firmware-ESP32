@@ -360,6 +360,13 @@ void FW_Common::CameraSet()
 
 void FW_Common::SetMode(const FW_Const::GunMode_e &newMode)
 {
+    #ifdef USE_SQUARE_ADVANCED
+        OpenFIREsquare.setCalibrationMode(newMode == FW_Const::GunMode_Calibration);
+
+        if(newMode != FW_Const::GunMode_Calibration && OF_Prefs::currentProfile < PROFILE_COUNT && !OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout)
+            OpenFIREsquare.setWideLayout((OF_Prefs::profiles[OF_Prefs::currentProfile].TRled - OF_Prefs::profiles[OF_Prefs::currentProfile].TLled) > res_y);
+    #endif
+
     if(gunMode == newMode)
         return;
     
@@ -1206,6 +1213,8 @@ bool FW_Common::SelectCalProfile(const int &profile)
         OF_Prefs::currentProfile = profile;
     }
 
+    SetMode(gunMode);
+
     OpenFIREper.source(OF_Prefs::profiles[profile].adjX, OF_Prefs::profiles[profile].adjY);                                                          
     OpenFIREper.deinit(0);
 
@@ -1294,6 +1303,8 @@ void FW_Common::SetIrLayout(const int &layout)
     if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout != layout) {
         OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout = layout;
 
+        SetMode(gunMode);
+
         OpenFIREper.deinit(0);
 
         stateFlags |= FW_Const::StateFlag_SavePreferencesEn;
@@ -1345,6 +1356,8 @@ int FW_Common::SavePreferences()
         #ifdef USES_DISPLAY
             RedrawDisplay();
         #endif // USES_DISPLAY
+
+        SetMode(gunMode);
 
         return OF_Prefs::Error_Success;
     } else {
