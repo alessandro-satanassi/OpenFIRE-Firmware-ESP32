@@ -108,10 +108,10 @@ public:
         analogX,
         analogY,
         tempPin,
-        cam_PAJ7025_MISO,
-        cam_PAJ7025_MOSI,
-        cam_PAJ7025_SCK,
-        cam_PAJ7025_CS,
+        cam_SPI_MISO,
+        cam_SPI_MOSI,
+        cam_SPI_SCK,
+        cam_SPI_CS,
         // Add non-button inputs here
         boardInputsCount
     } boardInputs_e;
@@ -151,10 +151,10 @@ public:
         {"Analog Stick X",      analogX         },
         {"Analog Stick Y",      analogY         },
         {"Temperature Sensor",  tempPin         },
-        {"Camera PAJ7025 MISO", cam_PAJ7025_MISO},
-        {"Camera PAJ7025 MOSI", cam_PAJ7025_MOSI},
-        {"Camera PAJ7025 SCK",  cam_PAJ7025_SCK },
-        {"Camera PAJ7025 CS",   cam_PAJ7025_CS  },
+        {"Camera SPI MISO",     cam_SPI_MISO    },
+        {"Camera SPI MOSI",     cam_SPI_MOSI    },
+        {"Camera SPI SCK",      cam_SPI_SCK     },
+        {"Camera SPI CS",       cam_SPI_CS      },
     };
 
     // For Apps to use for lists of pin functions

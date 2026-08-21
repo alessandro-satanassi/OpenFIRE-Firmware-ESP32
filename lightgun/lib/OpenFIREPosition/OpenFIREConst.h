@@ -30,12 +30,20 @@
     constexpr int CamSensorResX = 98;
     constexpr int CamSensorResY = 98;
 
-    constexpr float CamNoiseFactor = 1.0f; // 0.765625f; // 1.0f; // 0.765625f;
+    //constexpr float CamNoiseFactor = 1.0f; // 0.765625f; // 1.0f; // 0.765625f;
     constexpr int CamFPS = 209;
 
-    constexpr float CamLensRadialK1 = 0.0f; // 0.006f;
-    constexpr float CamLensRadialK2 = 0.0f;
-#else // DF ROBOT
+    #ifdef CAMERA_PIXART_PAJ7025R2
+        constexpr float CamNoiseFactor = 1.0f; // 0.765625f; // 1.0f; // 0.765625f;
+        constexpr float CamLensRadialK1 = 0.0f; // 0.006f;
+        constexpr float CamLensRadialK2 = 0.0f;
+    #else // CAMERA_PIXART_PAJ7025R3
+        constexpr float CamNoiseFactor = 1.0f; // 0.765625f; // 1.0f; // 0.765625f;
+        constexpr float CamLensRadialK1 = 0.0f; // 0.006f;
+        constexpr float CamLensRadialK2 = 0.0f;
+    #endif // CAMERA_PIXART_PAJ7025R2/R3
+
+#else // DF ROBOT / WII_CAM
     // DFRobot IR positioning camera resolution
     constexpr int CamResX = 1024;
     constexpr int CamResY = 768;
@@ -48,7 +56,7 @@
 
     constexpr float CamLensRadialK1 = 0.006f;
     constexpr float CamLensRadialK2 = 0.0f;
-#endif // PAJ7025_CAM
+#endif // PAJ7025_CAM // DF ROBOT / WII_CAM
 
 // DFRobot IR positioning camera maximum X and Y
 constexpr int CamMaxX = CamResX - 1;
