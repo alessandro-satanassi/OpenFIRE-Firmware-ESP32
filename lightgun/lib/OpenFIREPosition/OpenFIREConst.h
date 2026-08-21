@@ -22,8 +22,33 @@
 #ifndef _OPENFIRECONST_H_
 #define _OPENFIRECONST_H_
 
+// ============================================================================
+// CAMERA SELECTION VALIDATION
+// ============================================================================
+
+// Exactly one physical camera model must be selected.
+#if (defined(CAMERA_DFROBOT_SEN0158) + \
+     defined(CAMERA_PIXART_PAJ7025R2) + \
+     defined(CAMERA_PIXART_PAJ7025R3)) != 1
+    #error "Select exactly one camera model"
+#endif
+
+// PAJ7025_CAM identifies the whole PAJ7025 family.
+// A PAJ7025 build must also identify the specific R2/R3 model.
+#if defined(PAJ7025_CAM) && \
+    !defined(CAMERA_PIXART_PAJ7025R2) && \
+    !defined(CAMERA_PIXART_PAJ7025R3)
+    #error "PAJ7025_CAM requires a PAJ7025 camera model"
+#endif
+
+// Conversely, a PAJ7025 model must always belong to the PAJ7025_CAM family.
+#if (defined(CAMERA_PIXART_PAJ7025R2) || defined(CAMERA_PIXART_PAJ7025R3)) && \
+    !defined(PAJ7025_CAM)
+    #error "PAJ7025 camera models require PAJ7025_CAM"
+#endif
+
 #ifdef PAJ7025_CAM
-    // PixArt PAH7025R2 IR positioning camera resolution
+    // PixArt PAJ7025 IR positioning camera resolution
     constexpr int CamResX = 4096; //1024; // 2940; //1024; //4096;
     constexpr int CamResY = 4096; //768; // 2940; // 768;  //4096;
 
@@ -33,15 +58,15 @@
     //constexpr float CamNoiseFactor = 1.0f; // 0.765625f; // 1.0f; // 0.765625f;
     constexpr int CamFPS = 209;
 
-    #ifdef CAMERA_PIXART_PAJ7025R2
+    #if defined(CAMERA_PIXART_PAJ7025R2)
         constexpr float CamNoiseFactor = 1.0f; // 0.765625f; // 1.0f; // 0.765625f;
         constexpr float CamLensRadialK1 = 0.0f; // 0.006f;
         constexpr float CamLensRadialK2 = 0.0f;
-    #else // CAMERA_PIXART_PAJ7025R3
+    #elif defined(CAMERA_PIXART_PAJ7025R3)
         constexpr float CamNoiseFactor = 1.0f; // 0.765625f; // 1.0f; // 0.765625f;
         constexpr float CamLensRadialK1 = 0.0f; // 0.006f;
         constexpr float CamLensRadialK2 = 0.0f;
-    #endif // CAMERA_PIXART_PAJ7025R2/R3
+    #endif // CAMERA_PIXART_PAJ7025R2 / CAMERA_PIXART_PAJ7025R3
 
 #else // DF ROBOT / WII_CAM
     // DFRobot IR positioning camera resolution
@@ -58,7 +83,7 @@
     constexpr float CamLensRadialK2 = 0.0f;
 #endif // PAJ7025_CAM // DF ROBOT / WII_CAM
 
-// DFRobot IR positioning camera maximum X and Y
+// IR positioning camera maximum X and Y
 constexpr int CamMaxX = CamResX - 1;
 constexpr int CamMaxY = CamResY - 1;
 

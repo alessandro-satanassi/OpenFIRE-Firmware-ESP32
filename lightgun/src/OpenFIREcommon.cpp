@@ -1,4 +1,4 @@
- /*!
+/*!
  * @file OpenFIREcommon.h
  * @brief Shared methods used throughout the OpenFIRE project.
  *
@@ -56,6 +56,10 @@
 #ifdef ARDUINO_ARCH_ESP32
     ESP32FIFO esp32_fifo(8);
 #endif // ARDUINO_ARCH_ESP32
+
+#if defined(PAJ7025_CAM) && defined(ARDUINO_ARCH_ESP32)
+    static SPIClass SPIWire(FSPI);
+#endif
 
 
 // button object instance (defined in OpenFIREcommon.h/OpenFIREprefs.h)
@@ -152,6 +156,10 @@ void FW_Common::PinsReset()
         dfrIRPos = nullptr;
     }
 
+    #if defined(PAJ7025_CAM) && defined(ARDUINO_ARCH_ESP32)
+        SPIWire.end();
+    #endif
+
     #ifdef USES_RUMBLE
         if(OF_Prefs::pins[OF_Const::rumblePin] >= 0)
             pinMode(OF_Prefs::pins[OF_Const::rumblePin], INPUT);
@@ -208,51 +216,54 @@ void FW_Common::CameraSet()
 
     #ifdef PAJ7025_CAM
     #ifdef ARDUINO_ARCH_ESP32
-    // usa OF_Prefs::pins[OF_Const::camSDA] per MISO
-    // usa OF_Prefs::pins[OF_Const::camSCL] per CLOCK
     // il clock lo impostiamo a 2 Mhz per stabilita' - max a 14 Mhz o 8 Mhz fisso
- 
+
     // forzo impostazioni provvisoriamente
-    // OF_Prefs::pins[OF_Const::cam_SPI_SCK] =  12;   // GPIO 12  Clock SPI (SCK) (clock)
     // OF_Prefs::pins[OF_Const::cam_SPI_MISO] = 13;   // GPIO 13 -  pin di LETTURA dal sensore (RX lettura)
+    // OF_Prefs::pins[OF_Const::cam_SPI_SCK] =  12;   // GPIO 12  Clock SPI (SCK) (clock)
     // OF_Prefs::pins[OF_Const::cam_SPI_MOSI] = 11;   // GPIO 11 - pin di SCRITTURA dal sensore (TX scrittura)
     // OF_Prefs::pins[OF_Const::cam_SPI_CS] =   10;   // GPIO 10 -  CS/SS del modulo
-    
-    #define SPI_SCK_PIN   OF_Prefs::pins[OF_Const::cam_SPI_SCK]   // Ex SCL -> diventa il Clock SPI (SCK) (clock)
-    #define SPI_MISO_PIN  OF_Prefs::pins[OF_Const::cam_SPI_MISO]  // Ex SDA -> diventa il pin di LETTURA dal sensore (RX lettura)
-    #define SPI_MOSI_PIN  OF_Prefs::pins[OF_Const::cam_SPI_MOSI]  // Metto -1 se non lo collego/non lo uso (TX scrittura)
-    #define SPI_CS_PIN    OF_Prefs::pins[OF_Const::cam_SPI_CS]    //  CS/SS del modulo
 
-    SPIClass* SPIWire = nullptr;
+    if(OF_Prefs::pins[OF_Const::cam_SPI_SCK]  >= 0 &&
+       OF_Prefs::pins[OF_Const::cam_SPI_MISO] >= 0 &&
+       OF_Prefs::pins[OF_Const::cam_SPI_MOSI] >= 0 &&
+       OF_Prefs::pins[OF_Const::cam_SPI_CS]   >= 0) {
 
-    SPIWire = new SPIClass(FSPI); // FSPI = SPI2 bus -- HSPI = SPI3 bus (SPI0 && SPI1 reserved for flash/psram)
-    bool spi_begin = SPIWire->begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, SPI_CS_PIN);
-    /*
-    #ifdef USES_DISPLAY
-        if (spi_begin)
-            FW_Common::OLED.TopPanelUpdate(" SPI OK ");
-        else 
-            FW_Common::OLED.TopPanelUpdate(" SPI ERROR ");
-        delay(1000);
-    #endif //USES_DISPLAY
-    */
-    dfrIRPos = new DFRobotIRPositionEx(SPIWire,SPI_CS_PIN);
-    #else // rp2040 
+        bool spi_begin = SPIWire.begin(OF_Prefs::pins[OF_Const::cam_SPI_SCK],
+                                       OF_Prefs::pins[OF_Const::cam_SPI_MISO],
+                                       OF_Prefs::pins[OF_Const::cam_SPI_MOSI],
+                                       OF_Prefs::pins[OF_Const::cam_SPI_CS]);
+        /*
+        #ifdef USES_DISPLAY
+            if (spi_begin)
+                FW_Common::OLED.TopPanelUpdate(" SPI OK ");
+            else 
+                FW_Common::OLED.TopPanelUpdate(" SPI ERROR ");
+            delay(1000);
+        #endif //USES_DISPLAY
+        */
+        if(spi_begin)
+            dfrIRPos = new DFRobotIRPositionEx(&SPIWire, OF_Prefs::pins[OF_Const::cam_SPI_CS]);
+        else
+            SPIWire.end();
+    }
+    #else // rp2040
 
-    #define SPI_SCK_PIN   OF_Prefs::pins[OF_Const::cam_SPI_SCK]  // Ex SCL -> diventa il Clock SPI (SCK) (clock)
-    #define SPI_MISO_PIN  OF_Prefs::pins[OF_Const::cam_SPI_MISO]  // Ex SDA -> diventa il pin di LETTURA dal sensore (RX lettura)
-    #define SPI_MOSI_PIN  OF_Prefs::pins[OF_Const::cam_SPI_MOSI]  // Metto -1 se non lo collego/non lo uso (TX scrittura)
-    #define SPI_CS_PIN    OF_Prefs::pins[OF_Const::cam_SPI_CS]  // Metto -1 se il CS del modulo è collegato fisicamente a GND (cable select)
+    if(OF_Prefs::pins[OF_Const::cam_SPI_SCK]  >= 0 &&
+       OF_Prefs::pins[OF_Const::cam_SPI_MISO] >= 0 &&
+       OF_Prefs::pins[OF_Const::cam_SPI_MOSI] >= 0 &&
+       OF_Prefs::pins[OF_Const::cam_SPI_CS]   >= 0) {
 
-    // SPI1 se si vuole lavorare sul secondo canale
-    SPI.setSCK(SPI_SCK_PIN);
-    SPI.setMISO(SPI_MISO_PIN); 
-    SPI.setMOSI(SPI_MOSI_PIN);
-    SPI.setCS(SPI_CS_PIN);
+        // SPI1 se si vuole lavorare sul secondo canale
+        SPI.setSCK(OF_Prefs::pins[OF_Const::cam_SPI_SCK]);
+        SPI.setMISO(OF_Prefs::pins[OF_Const::cam_SPI_MISO]);
+        SPI.setMOSI(OF_Prefs::pins[OF_Const::cam_SPI_MOSI]);
+        SPI.setCS(OF_Prefs::pins[OF_Const::cam_SPI_CS]);
 
-    SPI.begin();
+        SPI.begin();
 
-    dfrIRPos = new DFRobotIRPositionEx(&SPI, SPI_CS_PIN);
+        dfrIRPos = new DFRobotIRPositionEx(&SPI, OF_Prefs::pins[OF_Const::cam_SPI_CS]);
+    }
 
     #endif // rp2040
     #else
