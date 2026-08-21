@@ -86,18 +86,44 @@ This option is for those who wish to flash the firmware manually using the offic
 #### ***Lightgun:***
 
 - **1. Base Version (NoFS):** Updates only the application part. **Does not overwrite** existing calibrations or configurations. If the filesystem is missing, it will still be created on first boot.
-  - [OpenFIRE-LIGHTGUN-NoFS-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
-  - [OpenFIRE-LIGHTGUN-NoFS-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)
-  - [OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_PICO.bin)
-  - [OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_ZERO_N8R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_ZERO_N8R8.bin)
-  - [OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
+  - **DFRobot SEN0158 / WiiCam:**
+    - [OpenFIRE-LIGHTGUN-NoFS-DFROBOT_SEN0158-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-DFROBOT_SEN0158-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-DFROBOT_SEN0158-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-DFROBOT_SEN0158-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_PICO.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_ZERO_N8R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_ZERO_N8R8.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
+  - **PixArt PAJ7025R2:**
+    - [OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R2-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R2-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R2-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R2-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_PICO.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_ZERO_N8R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_ZERO_N8R8.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
+  - **PixArt PAJ7025R3:**
+    - [OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R3-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R3-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R3-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R3-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_PICO.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_ZERO_N8R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_ZERO_N8R8.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
 
 - **2. Full Version (Full):** Installs both firmware and factory filesystem. **Warning:** this procedure formats the microcontroller and deletes all previous data or settings.
-  - [OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
-  - [OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)  
-  - [OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_PICO.bin)
-  - [OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N8R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N8R8.bin)
-  - [OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
+  - **DFRobot SEN0158 / WiiCam:**
+    - [OpenFIRE-LIGHTGUN-DFROBOT_SEN0158-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-DFROBOT_SEN0158-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
+    - [OpenFIRE-LIGHTGUN-DFROBOT_SEN0158-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-DFROBOT_SEN0158-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)
+    - [OpenFIRE-LIGHTGUN-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_PICO.bin)
+    - [OpenFIRE-LIGHTGUN-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_ZERO_N8R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_ZERO_N8R8.bin)
+    - [OpenFIRE-LIGHTGUN-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
+  - **PixArt PAJ7025R2:**
+    - [OpenFIRE-LIGHTGUN-PIXART_PAJ7025R2-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-PIXART_PAJ7025R2-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
+    - [OpenFIRE-LIGHTGUN-PIXART_PAJ7025R2-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-PIXART_PAJ7025R2-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)
+    - [OpenFIRE-LIGHTGUN-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_PICO.bin)
+    - [OpenFIRE-LIGHTGUN-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_ZERO_N8R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_ZERO_N8R8.bin)
+    - [OpenFIRE-LIGHTGUN-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
+  - **PixArt PAJ7025R3:**
+    - [OpenFIRE-LIGHTGUN-PIXART_PAJ7025R3-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-PIXART_PAJ7025R3-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
+    - [OpenFIRE-LIGHTGUN-PIXART_PAJ7025R3-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-PIXART_PAJ7025R3-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)
+    - [OpenFIRE-LIGHTGUN-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_PICO.bin)
+    - [OpenFIRE-LIGHTGUN-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_ZERO_N8R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_ZERO_N8R8.bin)
+    - [OpenFIRE-LIGHTGUN-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
 
 #### ***Dongle:***
 
@@ -125,7 +151,7 @@ Extract the entire contents of the ZIP into a folder on your PC. Then, run the *
 *Note for Windows users: the esptool.exe file might trigger an antivirus false positive; the file is safe and is extracted from official Espressif sources.*
 
 #### ***Lightgun:***
-The script will guide you through the installation, allowing you to choose between Base or Full versions, and will automatically search for the serial port.
+The script will guide you through the installation, allowing you to select the installed IR camera and choose between Base or Full versions, and will automatically search for the serial port.
 * **Windows (64bit)**
   - [Download for ESP32_S3_WROOM1_DevKitC_1_N16R8](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8-windows-64bit.zip)
   - [Download for ESP32_S3_WROOM1_DevKitC_1_N8R2](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N8R2-windows-64bit.zip)
@@ -296,18 +322,44 @@ Questa opzione è dedicata a chi vuole caricare il firmware manualmente utilizza
 #### ***Lightgun:***
 
 - **1. Versione Base (NoFS):** Aggiorna solo la parte applicativa. **Non sovrascrive** calibrazioni o configurazioni esistenti. Se il filesystem è assente, verrà comunque creato al primo avvio.
-  - [OpenFIRE-LIGHTGUN-NoFS-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
-  - [OpenFIRE-LIGHTGUN-NoFS-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)
-  - [OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_PICO.bin)
-  - [OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_ZERO_N8R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_ZERO_N8R8.bin)
-  - [OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
+  - **DFRobot SEN0158 / WiiCam:**
+    - [OpenFIRE-LIGHTGUN-NoFS-DFROBOT_SEN0158-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-DFROBOT_SEN0158-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-DFROBOT_SEN0158-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-DFROBOT_SEN0158-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_PICO.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_ZERO_N8R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_ZERO_N8R8.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
+  - **PixArt PAJ7025R2:**
+    - [OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R2-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R2-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R2-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R2-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_PICO.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_ZERO_N8R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_ZERO_N8R8.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
+  - **PixArt PAJ7025R3:**
+    - [OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R3-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R3-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R3-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R3-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_PICO.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_ZERO_N8R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_ZERO_N8R8.bin)
+    - [OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
 
 - **2. Versione Completa (Full):** Installa firmware e filesystem di fabbrica. **Attenzione:** questa procedura formatta il microcontrollore e cancella ogni dato o impostazione precedente.
-  - [OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
-  - [OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)  
-  - [OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_PICO.bin)
-  - [OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N8R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N8R8.bin)
-  - [OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
+  - **DFRobot SEN0158 / WiiCam:**
+    - [OpenFIRE-LIGHTGUN-DFROBOT_SEN0158-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-DFROBOT_SEN0158-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
+    - [OpenFIRE-LIGHTGUN-DFROBOT_SEN0158-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-DFROBOT_SEN0158-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)
+    - [OpenFIRE-LIGHTGUN-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_PICO.bin)
+    - [OpenFIRE-LIGHTGUN-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_ZERO_N8R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_ZERO_N8R8.bin)
+    - [OpenFIRE-LIGHTGUN-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-DFROBOT_SEN0158-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
+  - **PixArt PAJ7025R2:**
+    - [OpenFIRE-LIGHTGUN-PIXART_PAJ7025R2-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-PIXART_PAJ7025R2-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
+    - [OpenFIRE-LIGHTGUN-PIXART_PAJ7025R2-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-PIXART_PAJ7025R2-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)
+    - [OpenFIRE-LIGHTGUN-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_PICO.bin)
+    - [OpenFIRE-LIGHTGUN-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_ZERO_N8R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_ZERO_N8R8.bin)
+    - [OpenFIRE-LIGHTGUN-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-PIXART_PAJ7025R2-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
+  - **PixArt PAJ7025R3:**
+    - [OpenFIRE-LIGHTGUN-PIXART_PAJ7025R3-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-PIXART_PAJ7025R3-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
+    - [OpenFIRE-LIGHTGUN-PIXART_PAJ7025R3-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-PIXART_PAJ7025R3-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)
+    - [OpenFIRE-LIGHTGUN-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_PICO.bin)
+    - [OpenFIRE-LIGHTGUN-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_ZERO_N8R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_ZERO_N8R8.bin)
+    - [OpenFIRE-LIGHTGUN-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-PIXART_PAJ7025R3-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
 
 #### ***Dongle:***
 
@@ -335,7 +387,7 @@ Estrai l'intero contenuto dello ZIP in una cartella sul tuo PC. Successivamente,
 *Nota per utenti Windows: il file esptool.exe potrebbe generare un falso positivo dell'antivirus; il file è sicuro ed è estratto dai sorgenti originali Espressif.*
 
 #### ***Lightgun:***
-Lo script ti guiderà nell'installazione permettendoti di scegliere tra versione Base o Full e cercherà automaticamente la porta seriale.
+Lo script ti guiderà nell'installazione permettendoti di selezionare la camera IR installata e di scegliere tra versione Base o Full, quindi cercherà automaticamente la porta seriale.
 * **Windows (64bit)**
   - [Download per ESP32_S3_WROOM1_DevKitC_1_N16R8](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8-windows-64bit.zip)
   - [Download per ESP32_S3_WROOM1_DevKitC_1_N8R2](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N8R2-windows-64bit.zip)

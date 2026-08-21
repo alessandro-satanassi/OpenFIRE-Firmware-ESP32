@@ -54,45 +54,61 @@ jobs:
   build_lightgun:
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    name: Build LIGHTGUN
+    name: Build LIGHTGUN - ${{ matrix.boards }} - ${{ matrix.camera }}
     strategy:
       matrix:
+        boards:
+          - 'ESP32_S3_WROOM1_DevKitC_1_N16R8'
+          - 'ESP32_S3_WROOM1_DevKitC_1_N8R2'
+          - 'WAVESHARE_ESP32_S3_PICO'
+          - 'WAVESHARE_ESP32_S3_ZERO_N8R8'
+          - 'WAVESHARE_ESP32_S3_ZERO_N4R2'
+        camera:
+          - 'DFROBOT_SEN0158'
+          - 'PIXART_PAJ7025R2'
+          - 'PIXART_PAJ7025R3'
         include:
-          - name: 'ESP32_S3_WROOM1_DevKitC_1_N16R8' 
-            boards: 'ESP32_S3_WROOM1_DevKitC_1_N16R8'
+          - boards: 'ESP32_S3_WROOM1_DevKitC_1_N16R8'
+            name: 'ESP32_S3_WROOM1_DevKitC_1_N16R8'
             chip: 'esp32s3'
             flash_size: '16MB'
             flash_mode: 'dio'
             flash_freq: '80m'
             address_littleFS: '0xc90000'
-          - name: 'ESP32_S3_WROOM1_DevKitC_1_N8R2' 
-            boards: 'ESP32_S3_WROOM1_DevKitC_1_N8R2'
+          - boards: 'ESP32_S3_WROOM1_DevKitC_1_N8R2'
+            name: 'ESP32_S3_WROOM1_DevKitC_1_N8R2'
             chip: 'esp32s3'
             flash_size: '8MB'
             flash_mode: 'dio'
             flash_freq: '80m'
             address_littleFS: '0x670000'
-          - name: 'WAVESHARE_ESP32_S3_PICO' 
-            boards: 'WAVESHARE_ESP32_S3_PICO'
+          - boards: 'WAVESHARE_ESP32_S3_PICO'
+            name: 'WAVESHARE_ESP32_S3_PICO'
             chip: 'esp32s3'
             flash_size: '16MB'
             flash_mode: 'dio'
-            flash_freq: '80m'       
+            flash_freq: '80m'
             address_littleFS: '0xc90000'
-          - name: 'WAVESHARE_ESP32_S3_ZERO_N8R8' 
-            boards: 'WAVESHARE_ESP32_S3_ZERO_N8R8'
+          - boards: 'WAVESHARE_ESP32_S3_ZERO_N8R8'
+            name: 'WAVESHARE_ESP32_S3_ZERO_N8R8'
             chip: 'esp32s3'
             flash_size: '8MB'
             flash_mode: 'dio'
             flash_freq: '80m'
-            address_littleFS: '0x670000'       
-          - name: 'WAVESHARE_ESP32_S3_ZERO_N4R2' 
-            boards: 'WAVESHARE_ESP32_S3_ZERO_N4R2'
+            address_littleFS: '0x670000'
+          - boards: 'WAVESHARE_ESP32_S3_ZERO_N4R2'
+            name: 'WAVESHARE_ESP32_S3_ZERO_N4R2'
             chip: 'esp32s3'
             flash_size: '4MB'
             flash_mode: 'dio'
             flash_freq: '80m'
-            address_littleFS: '0x290000'                                 
+            address_littleFS: '0x290000'
+          - camera: 'DFROBOT_SEN0158'
+            camera_section: 'camera_dfrobot_SEN0158'
+          - camera: 'PIXART_PAJ7025R2'
+            camera_section: 'camera_pixart_PAJ7025R2'
+          - camera: 'PIXART_PAJ7025R3'
+            camera_section: 'camera_pixart_PAJ7025R3'
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -105,31 +121,64 @@ jobs:
         with:
           path: ~/.platformio
           key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
+      - name: Select LIGHTGUN camera profile
+        shell: bash
+        run: |
+          cd lightgun
+          python3 - <<'PY'
+          from pathlib import Path
+
+          camera_section = "${{ matrix.camera_section }}"
+          path = Path("platformio.ini")
+          text = path.read_text()
+          lines = text.splitlines()
+
+          in_camera_section = False
+          changed = 0
+
+          for i, line in enumerate(lines):
+              stripped = line.strip()
+
+              if stripped.startswith("[") and stripped.endswith("]"):
+                  in_camera_section = (stripped == "[camera]")
+                  continue
+
+              if in_camera_section and stripped.startswith("build_flags =") and not stripped.startswith(";"):
+                  indent = line[:len(line) - len(line.lstrip())]
+                  lines[i] = f"{indent}build_flags = $" + "{" + camera_section + ".build_flags}"
+                  changed += 1
+
+          if changed != 1:
+              raise SystemExit(f"Expected exactly one active build_flags entry in [camera], found {changed}")
+
+          path.write_text("\n".join(lines) + "\n")
+          print(f"Selected camera profile: {camera_section}")
+          PY
       - if: (matrix.chip == 'esp32s3')
         run: |
           cd lightgun
           pio run -e ${{ matrix.boards }}
           pio run -e ${{ matrix.boards }} -t buildfs
-          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip ${{ matrix.chip }} merge_bin -o OpenFIRE-LIGHTGUN-${{ matrix.boards }}.bin --flash_mode ${{ matrix.flash_mode }} --flash_size ${{ matrix.flash_size }} \
+          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip ${{ matrix.chip }} merge_bin -o OpenFIRE-LIGHTGUN-${{ matrix.camera }}-${{ matrix.boards }}.bin --flash_mode ${{ matrix.flash_mode }} --flash_size ${{ matrix.flash_size }} \
             0x0000 .pio/build/${{ matrix.boards }}/bootloader.bin \
             0x8000 .pio/build/${{ matrix.boards }}/partitions.bin \
             0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
             0x10000 .pio/build/${{ matrix.boards }}/firmware.bin \
             ${{ matrix.address_littleFS }} .pio/build/${{ matrix.boards }}/littlefs.bin
-          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip ${{ matrix.chip }} merge_bin -o OpenFIRE-LIGHTGUN-NoFS-${{ matrix.boards }}.bin --flash_mode ${{ matrix.flash_mode }} --flash_size ${{ matrix.flash_size }} \
+          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip ${{ matrix.chip }} merge_bin -o OpenFIRE-LIGHTGUN-NoFS-${{ matrix.camera }}-${{ matrix.boards }}.bin --flash_mode ${{ matrix.flash_mode }} --flash_size ${{ matrix.flash_size }} \
             0x0000 .pio/build/${{ matrix.boards }}/bootloader.bin \
             0x8000 .pio/build/${{ matrix.boards }}/partitions.bin \
             0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
             0x10000 .pio/build/${{ matrix.boards }}/firmware.bin
       - uses: actions/upload-artifact@v7
         with:
-          name: OpenFIRE-LIGHTGUN-${{ matrix.boards }}
-          path: lightgun/OpenFIRE-LIGHTGUN-${{ matrix.boards }}.bin
+          name: OpenFIRE-LIGHTGUN-${{ matrix.camera }}-${{ matrix.boards }}
+          path: lightgun/OpenFIRE-LIGHTGUN-${{ matrix.camera }}-${{ matrix.boards }}.bin
           if-no-files-found: error
       - uses: actions/upload-artifact@v7
         with:
-          name: OpenFIRE-LIGHTGUN-NoFS-${{ matrix.boards }}
-          path: lightgun/OpenFIRE-LIGHTGUN-NoFS-${{ matrix.boards }}.bin
+          name: OpenFIRE-LIGHTGUN-NoFS-${{ matrix.camera }}-${{ matrix.boards }}
+          path: lightgun/OpenFIRE-LIGHTGUN-NoFS-${{ matrix.camera }}-${{ matrix.boards }}.bin
           if-no-files-found: error
 
   build_dongle:
@@ -294,17 +343,16 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8
         with:
-          name: OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}
+          pattern: OpenFIRE-LIGHTGUN-*-${{ matrix.boards.name }}
           path: ./downloaded_firmware
-      - uses: actions/download-artifact@v8
-        with:
-          name: OpenFIRE-LIGHTGUN-NoFS-${{ matrix.boards.name }}
-          path: ./downloaded_firmware
+          merge-multiple: true
       - shell: bash
         run: |
           mkdir staging_dir
-          mv ./downloaded_firmware/OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}.bin ./staging_dir/firmware.bin
-          mv ./downloaded_firmware/OpenFIRE-LIGHTGUN-NoFS-${{ matrix.boards.name }}.bin ./staging_dir/firmware-NoFS.bin
+          for CAMERA in DFROBOT_SEN0158 PIXART_PAJ7025R2 PIXART_PAJ7025R3; do
+            mv "./downloaded_firmware/OpenFIRE-LIGHTGUN-${CAMERA}-${{ matrix.boards.name }}.bin" "./staging_dir/firmware-${CAMERA}.bin"
+            mv "./downloaded_firmware/OpenFIRE-LIGHTGUN-NoFS-${CAMERA}-${{ matrix.boards.name }}.bin" "./staging_dir/firmware-NoFS-${CAMERA}.bin"
+          done
       - shell: bash 
         run: |
           if [[ "${{ matrix.os_config.esptool_tipo_file }}" == "zip" ]]; then curl -L -o esptool_archive.zip "${{ matrix.os_config.esptool_url }}"; unzip -j esptool_archive.zip "${{ matrix.os_config.esptool_path_in_zip }}${{ matrix.os_config.esptool_filename_in_zip }}" -d staging_dir; fi
@@ -314,23 +362,53 @@ jobs:
         run: |
           SCRIPT_PATH="staging_dir/${{ matrix.os_config.script_name }}"
           if [[ "${{ matrix.os_config.name }}" == "windows-64bit" ]]; then
-          cat <<EOF > "$SCRIPT_PATH"
+          cat <<'EOF' > "$SCRIPT_PATH"
           @echo off
           echo Flashing OpenFIRE LIGHTGUN Firmware for board: ${{ matrix.boards.name }}
-          set FIRMWARE_FILE=firmware-NoFS.bin
+          :select_camera
+          echo.
+          echo Select the IR camera installed in your Lightgun:
+          echo   1 - DFRobot SEN0158 / WiiCam
+          echo   2 - PixArt PAJ7025R2
+          echo   3 - PixArt PAJ7025R3
+          set "CAMERA="
+          set /p CAMERA_CHOICE="Camera [1-3]: "
+          if "%CAMERA_CHOICE%"=="1" set "CAMERA=DFROBOT_SEN0158"
+          if "%CAMERA_CHOICE%"=="2" set "CAMERA=PIXART_PAJ7025R2"
+          if "%CAMERA_CHOICE%"=="3" set "CAMERA=PIXART_PAJ7025R3"
+          if not defined CAMERA (
+            echo Invalid camera selection.
+            goto select_camera
+          )
+          set "FIRMWARE_FILE=firmware-NoFS-%CAMERA%.bin"
           set /p FIRMWARE_CHOICE="If you want to flash the firmware with the entire filesystem type '1': "
-          if "%FIRMWARE_CHOICE%"=="1" set FIRMWARE_FILE=firmware.bin
+          if "%FIRMWARE_CHOICE%"=="1" set "FIRMWARE_FILE=firmware-%CAMERA%.bin"
           ${{ matrix.os_config.esptool_filename_in_zip }} --chip ${{ matrix.boards.chip }} --baud 460800 write-flash -z --flash-mode ${{ matrix.boards.flash_mode }} --flash-freq ${{ matrix.boards.flash_freq }} 0x0000 %FIRMWARE_FILE%
           pause
           EOF
           else
-          cat <<EOF > "$SCRIPT_PATH"
+          cat <<'EOF' > "$SCRIPT_PATH"
           #!/bin/bash
           echo "Flashing OpenFIRE LIGHTGUN Firmware for board: ${{ matrix.boards.name }}"
-          FIRMWARE_FILE="firmware-NoFS.bin"
+          CAMERA=""
+          while [[ -z "$CAMERA" ]]; do
+            echo
+            echo "Select the IR camera installed in your Lightgun:"
+            echo "  1 - DFRobot SEN0158 / WiiCam"
+            echo "  2 - PixArt PAJ7025R2"
+            echo "  3 - PixArt PAJ7025R3"
+            read -r -p "Camera [1-3]: " CAMERA_CHOICE
+            case "$CAMERA_CHOICE" in
+              1) CAMERA="DFROBOT_SEN0158" ;;
+              2) CAMERA="PIXART_PAJ7025R2" ;;
+              3) CAMERA="PIXART_PAJ7025R3" ;;
+              *) echo "Invalid camera selection." ;;
+            esac
+          done
+          FIRMWARE_FILE="firmware-NoFS-${CAMERA}.bin"
           read -r -p "If you want to flash the firmware with the entire filesystem type '1': " FIRMWARE_CHOICE
-          if [[ \$FIRMWARE_CHOICE == "1" ]]; then FIRMWARE_FILE="firmware.bin"; fi
-          ./${{ matrix.os_config.esptool_filename_in_zip }} --chip ${{ matrix.boards.chip }} --baud 460800 write-flash -z --flash-mode ${{ matrix.boards.flash_mode }} --flash-freq ${{ matrix.boards.flash_freq }} 0x0000 \$FIRMWARE_FILE
+          if [[ $FIRMWARE_CHOICE == "1" ]]; then FIRMWARE_FILE="firmware-${CAMERA}.bin"; fi
+          ./${{ matrix.os_config.esptool_filename_in_zip }} --chip ${{ matrix.boards.chip }} --baud 460800 write-flash -z --flash-mode ${{ matrix.boards.flash_mode }} --flash-freq ${{ matrix.boards.flash_freq }} 0x0000 "$FIRMWARE_FILE"
           EOF
           chmod +x "$SCRIPT_PATH"
           fi
@@ -528,6 +606,12 @@ jobs:
           
           files = sorted([f for f in os.listdir(target_dir) if f.endswith('.bin')])
           
+          known_cameras = {
+              'DFROBOT_SEN0158',
+              'PIXART_PAJ7025R2',
+              'PIXART_PAJ7025R3'
+          }
+          
           manifest = {
               'version': tag_name,
               'files': files,
@@ -535,6 +619,9 @@ jobs:
                   'LIGHTGUN': [],
                   'DONGLE': [],
                   'PEDAL': []
+              },
+              'supported_cameras': {
+                  'LIGHTGUN': []
               }
           }
           
@@ -544,15 +631,27 @@ jobs:
               
               if len(parts) >= 3:
                   device = parts[1] # Estrae LIGHTGUN, DONGLE o PEDAL
+                  board = ''
                   
-                  # Gestisce l'eccezione del file NoFS per le Lightgun
-                  if device == 'LIGHTGUN' and parts[2] == 'NoFS':
-                      board = '-'.join(parts[3:])
+                  if device == 'LIGHTGUN':
+                      index = 2
+                      if parts[index] == 'NoFS':
+                          index += 1
+                      
+                      # Nuove release: OpenFIRE-LIGHTGUN[-NoFS]-CAMERA-BOARD.bin
+                      if index < len(parts) and parts[index] in known_cameras:
+                          camera = parts[index]
+                          board = '-'.join(parts[index + 1:])
+                          if camera not in manifest['supported_cameras']['LIGHTGUN']:
+                              manifest['supported_cameras']['LIGHTGUN'].append(camera)
+                      else:
+                          # Compatibilita' con eventuali file Lightgun legacy senza CAMERA nel nome.
+                          board = '-'.join(parts[index:])
                   else:
                       board = '-'.join(parts[2:])
                   
                   # Aggiunge la board alla lista se non è già presente
-                  if device in manifest['supported_boards'] and board not in manifest['supported_boards'][device]:
+                  if device in manifest['supported_boards'] and board and board not in manifest['supported_boards'][device]:
                       manifest['supported_boards'][device].append(board)
                       
           with open(os.path.join(target_dir, 'manifest.json'), 'w') as out:
