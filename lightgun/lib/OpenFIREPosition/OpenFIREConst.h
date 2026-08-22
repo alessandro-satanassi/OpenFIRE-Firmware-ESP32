@@ -22,6 +22,8 @@
 #ifndef _OPENFIRECONST_H_
 #define _OPENFIRECONST_H_
 
+#include <stdint.h>
+
 // ============================================================================
 // CAMERA SELECTION VALIDATION
 // ============================================================================
@@ -48,15 +50,27 @@
 #endif
 
 #ifdef PAJ7025_CAM
+    // Configurazione hardware SPI // clock max 14 Mhz
+    #define PAJ7025_SPI_CLOCK_2MHZ   2000000
+    #define PAJ7025_SPI_CLOCK_4MHZ   4000000
+    #define PAJ7025_SPI_CLOCK_8MHZ   8000000
+    #define PAJ7025_SPI_CLOCK_14MHZ 14000000  // MAX
+
     // PixArt PAJ7025 IR positioning camera resolution
     constexpr int CamResX = 4096; //1024; // 2940; //1024; //4096;
     constexpr int CamResY = 4096; //768; // 2940; // 768;  //4096;
+
+    // shift amount for extra precision for the maths
+    // since the median is an average of 4 values, use 2 more bits
+    constexpr int CamToMouseShift = 0; //2; // 0; // l'uscita è già abbastanza alta non serve aumentarla
 
     constexpr int CamSensorResX = 98;
     constexpr int CamSensorResY = 98;
 
     //constexpr float CamNoiseFactor = 1.0f; // 0.765625f; // 1.0f; // 0.765625f;
     constexpr int CamFPS = 209;
+
+    constexpr uint32_t IR_CAMERA_BUS_CLOCK = PAJ7025_SPI_CLOCK_2MHZ;
 
     #if defined(CAMERA_PIXART_PAJ7025R2)
         constexpr float CamNoiseFactor = 1.0f; // 0.765625f; // 1.0f; // 0.765625f;
@@ -69,9 +83,17 @@
     #endif // CAMERA_PIXART_PAJ7025R2 / CAMERA_PIXART_PAJ7025R3
 
 #else // DF ROBOT / WII_CAM
+    // DFRobot IR camera IIC clock
+    // even with cheap clips and the full length IR cam cable 1MHz is fine
+    #define DFROBOT_IR_IIC_CLOCK 1000000
+
     // DFRobot IR positioning camera resolution
     constexpr int CamResX = 1024;
     constexpr int CamResY = 768;
+
+    // shift amount for extra precision for the maths
+    // since the median is an average of 4 values, use 2 more bits
+    constexpr int CamToMouseShift = 2;
 
     constexpr int CamSensorResX = 128;
     constexpr int CamSensorResY = 96;
@@ -79,23 +101,16 @@
     constexpr float CamNoiseFactor = 1.0f;
     constexpr int CamFPS = 209;
 
+    constexpr uint32_t IR_CAMERA_BUS_CLOCK = DFROBOT_IR_IIC_CLOCK;
+
     constexpr float CamLensRadialK1 = 0.006f;
     constexpr float CamLensRadialK2 = 0.0f;
+
 #endif // PAJ7025_CAM // DF ROBOT / WII_CAM
 
 // IR positioning camera maximum X and Y
 constexpr int CamMaxX = CamResX - 1;
 constexpr int CamMaxY = CamResY - 1;
-
-#ifdef PAJ7025_CAM
-    // shift amount for extra precision for the maths
-    // since the median is an average of 4 values, use 2 more bits
-    constexpr int CamToMouseShift = 0; //2; // 0;
-#else  // DF ROBOT
-    // shift amount for extra precision for the maths
-    // since the median is an average of 4 values, use 2 more bits
-    constexpr int CamToMouseShift = 2;
-#endif // PAJ7025_CAM
 
 // multiplier to convert IR camera position to mouse position
 constexpr int CamToMouseMult = 1 << CamToMouseShift;

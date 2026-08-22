@@ -346,7 +346,7 @@ void FW_Common::CameraSet()
 
     // Start IR Camera with basic data format
     if(dfrIRPos != nullptr) {
-        if(!dfrIRPos->begin(DFROBOT_IR_IIC_CLOCK, DFRobotIRPositionEx::DataFormat_Basic, (DFRobotIRPositionEx::Sensitivity_e)OF_Prefs::profiles[OF_Prefs::currentProfile].irSens)) {
+        if(!dfrIRPos->begin(IR_CAMERA_BUS_CLOCK, DFRobotIRPositionEx::DataFormat_Basic, (DFRobotIRPositionEx::Sensitivity_e)OF_Prefs::profiles[OF_Prefs::currentProfile].irSens)) {
             /*
             #ifdef USES_DISPLAY    
                 FW_Common::OLED.TopPanelUpdate(" CAM ERROR ");

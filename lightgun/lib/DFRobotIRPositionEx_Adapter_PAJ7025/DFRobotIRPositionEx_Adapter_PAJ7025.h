@@ -4,11 +4,11 @@
  * @file DFRobotIRPositionEx_Wrapper.h
  * @brief Wrapper PAJ7025 -> DFRobotIRPositionEx
  * @details Questa libreria offre la stessa interfaccia della vecchia libreria DFRobot
- * ma usa internamente il potente sensore PAJ7025 su bus SPI (max 16 punti, 4095x4095).
+ * ma usa internamente il sensore PAJ7025 su bus SPI (4 punti configurati, 4095x4095).
  */
 
-#ifndef DFRobotIRPositionEx_Wrapper_h
-#define DFRobotIRPositionEx_Wrapper_h
+#ifndef DFRobotIRPositionEx_Adapter_PAJ7025_h
+#define DFRobotIRPositionEx_Adapter_PAJ7025_h
 
 #include <stdint.h>
 #include <SPI.h>
@@ -72,16 +72,17 @@ public:
     /*!
     * @brief Costruttore SPI (Sostituisce il vecchio TwoWire&)
     * @param spiPort Porta SPI (&SPI, &SPI1)
-    * @param csPin Pin Chip Select. Lascia -1 se è ponticellato fisso a massa.
+    * @param csPin Pin Chip Select. Deve essere sempre specificato.
     */
-    DFRobotIRPositionEx(SPIClass* spiPort, int8_t csPin = -1);
+    DFRobotIRPositionEx(SPIClass* spiPort, int8_t csPin);
   
     ~DFRobotIRPositionEx();
   
     /*!
     * @brief Inizializza il sensore PAJ7025. Imposta la risoluzione massima a 4095x4095.
+    * @param clock Mantenuto per compatibilità con DFRobotIRPositionEx; il PAJ7025 usa SPI a 2 MHz.
     */
-    bool begin(uint32_t clock = PAJ7025_SPI_CLOCK_2MHZ, DataFormat_e format = DataFormat_Basic, Sensitivity_e sensitivity = Sensitivity_Default);
+    bool begin(uint32_t clock = 2000000 /*2Mhz*/, DataFormat_e format = DataFormat_Basic, Sensitivity_e sensitivity = Sensitivity_Default);
 
     void dataFormat(DataFormat_e format);
 
@@ -109,6 +110,6 @@ public:
     unsigned int seen() const { return seenFlags; }
 };
 
-#endif // DFRobotIRPositionEx_Wrapper_h
+#endif // DFRobotIRPositionEx_Adapter_PAJ7025_h
 
 #endif //PAJ7025_CAM

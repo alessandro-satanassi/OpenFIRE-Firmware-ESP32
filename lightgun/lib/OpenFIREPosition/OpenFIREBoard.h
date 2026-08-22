@@ -24,9 +24,11 @@
 
 //// COMPATIBILIY FLAGS
 #if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
+    /* =========== spostato in OpenFIREConst.h =====================
     // DFRobot IR camera IIC clock
     // even with cheap clips and the full length IR cam cable 1MHz is fine
-    #define DFROBOT_IR_IIC_CLOCK 1000000
+    // #define DFROBOT_IR_IIC_CLOCK 1000000      // spostato in OpenFIREConst.h 
+    ============================================================= */
 
     // software button anti-glitch
     #define BTN_AG_MASK 0xFFFFFFFF
@@ -35,7 +37,10 @@
     // unknown board
     // this will use millis() for camera update timing instead of a hardware timer
     #define SAMCO_NO_HW_TIMER 1
-    #define DFROBOT_IR_IIC_CLOCK 400000
+    
+    /* =========== spostato in OpenFIREConst.h =====================
+    // #define DFROBOT_IR_IIC_CLOCK 400000    // spostato in OpenFIREConst.h 
+    ============================================================= */
 
     // software button anti-glitch mask
     #define BTN_AG_MASK1 0xF

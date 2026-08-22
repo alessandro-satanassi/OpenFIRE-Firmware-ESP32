@@ -1,7 +1,7 @@
 #ifdef PAJ7025_CAM
 
 
-#include "DFRobotIRPositionEx_Wrapper.h"
+#include "DFRobotIRPositionEx_Adapter_PAJ7025.h"
 #include "OpenFIREConst.h"
 
 #ifdef ARDUINO_ARCH_ESP32  // [ESP32_PORT]
@@ -23,8 +23,16 @@ DFRobotIRPositionEx::~DFRobotIRPositionEx() {
 }
 
 bool DFRobotIRPositionEx::begin(uint32_t clock, DataFormat_e format, Sensitivity_e sensitivity) {
+    // Parametro mantenuto per compatibilità API con DFRobotIRPositionEx (I2C).
+    // Il PAJ7025 usa intenzionalmente SPI a 2 MHz per stabilità.
+    (void)clock;
+
+    if (_spi == nullptr || _csPin < 0) {
+        return false;
+    }
+
     // Inizializza la PAJ7025
-    if (!cam.begin(_spi, (uint8_t)_csPin, PAJ7025_SPI_CLOCK_2MHZ)) {
+    if (!cam.begin(_spi, (uint8_t)_csPin, clock)) {
         return false;
     }
     
@@ -74,7 +82,10 @@ void DFRobotIRPositionEx::dataFormat(DataFormat_e format) {
 void DFRobotIRPositionEx::sensitivityLevel(Sensitivity_e sensitivity) {
     // Configura dinamicamente il guadagno (Gain) e i filtri di elaborazione interna (DSP)
     // del sensore PAJ7025 in base al livello di sensibilità selezionato dall'utente.
-    // L'ordine degli 'if' garantisce la priorità dei profili specifici rispetto ai fallback.
+    // Mantiene lo stesso comportamento della libreria DFRobot per valori oltre il massimo.
+    if (sensitivity > Sensitivity_Max) {
+        sensitivity = Sensitivity_Max;
+    }
 
     if (sensitivity == Sensitivity_Min) {
         // Guadagno minimo di fabbrica (2X) - Segnale pulito, zero rumore termico.
@@ -107,13 +118,9 @@ void DFRobotIRPositionEx::sensitivityLevel(Sensitivity_e sensitivity) {
         // - noise_th (60): Compensa la forte dispersione ottica generata dall'alta amplificazione.
         cam.setDSP(1, 150, 300, 60); 
     }
-    else if (sensitivity == Sensitivity_Default) {
-        // Profilo standard di sicurezza (uguale a Min)
-        cam.setGain(0x10, 0x00); 
-        cam.setDSP(2, 130, 150, 40);       
-    }
     else {
-        // Fallback di sicurezza per valori numerici fuori dall'enum
+        // Sensitivity_Default coincide numericamente con Sensitivity_Min (0).
+        // Fallback di sicurezza per eventuali valori negativi/non validi.
         cam.setGain(0x10, 0x00); 
         cam.setDSP(2, 130, 150, 40);
     }
@@ -126,13 +133,13 @@ void DFRobotIRPositionEx::readAndUnpack(bool updateSeen) {
     // Mappa DataFormat_Extended a PAJ7025_FORMAT_1_256_BYTE per avere le size (area)
     uint8_t paj_format = (current_format == DataFormat_Extended) ? PAJ7025_FORMAT_1_256_BYTE : PAJ7025_FORMAT_2_96_BYTE;
     
-    int valid = cam.readData(objs, paj_format);  // legge 4 record
+    cam.readData(objs, paj_format);  // legge 4 record
     
     unsigned int tempSeenFlags = 0;
     
     int validCount = 0;
     
-    // Scandagliamo l'intero array da 16 oggetti della PAJ7025 per cercare i blob validi sparsi - ho impostato solo 4 per ottimizzare
+    // Scandagliamo i 4 slot configurati della PAJ7025 e compattiamo i blob validi
     for(int i = 0; i < 4 && validCount < 4; i++) {
         if(objs[i].is_valid) {
             positionX[validCount] = objs[i].cx;
@@ -189,12 +196,16 @@ bool DFRobotIRPositionEx::availableBasicNoSeen() {
 }
 
 int DFRobotIRPositionEx::basicAtomic(DFRobotIRPositionEx::Retry_e retry) {
+    // Parametro mantenuto per compatibilità API; su SPI non servono retry per l'atomicità I2C.
+    (void)retry;
     // SPI non soffre di corruzione asincrona del buffer I2C. La lettura è sempre atomica.
     readAndUnpack(true);
     return Error_Success;
 }
 
 int DFRobotIRPositionEx::extendedAtomic(DFRobotIRPositionEx::Retry_e retries) {
+    // Parametro mantenuto per compatibilità API; su SPI non servono retry per l'atomicità I2C.
+    (void)retries;
     readAndUnpack(true);
     return Error_Success;
 }

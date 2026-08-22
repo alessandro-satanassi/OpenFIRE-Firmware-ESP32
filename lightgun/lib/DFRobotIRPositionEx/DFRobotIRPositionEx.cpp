@@ -1,4 +1,4 @@
-#ifndef PAJ7025_CAM
+#ifdef CAMERA_DFROBOT_SEN0158
 
 /*!
  * @file DFRobotIRPositionEx.cpp
@@ -348,4 +348,4 @@ int DFRobotIRPositionEx::extendedAtomic(DFRobotIRPositionEx::Retry_e retry)
     return Error_DataMismatch;
 }
 
-#endif //PAJ7025_CAM
+#endif //CAMERA_DFROBOT_SEN0158

@@ -1,4 +1,4 @@
-#ifndef PAJ7025
+#ifdef CAMERA_DFROBOT_SEN0158
 
 /*!
  * @file DFRobotIRPositionEx.h
@@ -361,4 +361,4 @@ public:
 
 #endif // DFRobotIRPositionEx_h
 
-#endif //PAJ7025_CAM
+#endif //CAMERA_DFROBOT_SEN0158
