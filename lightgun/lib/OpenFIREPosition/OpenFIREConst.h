@@ -82,7 +82,7 @@
         constexpr float CamLensRadialK2 = 0.0f;
     #endif // CAMERA_PIXART_PAJ7025R2 / CAMERA_PIXART_PAJ7025R3
 
-#else // DF ROBOT / WII_CAM
+#elif CAMERA_DFROBOT_SEN0158 // DF ROBOT / WII_CAM
     // DFRobot IR camera IIC clock
     // even with cheap clips and the full length IR cam cable 1MHz is fine
     #define DFROBOT_IR_IIC_CLOCK 1000000

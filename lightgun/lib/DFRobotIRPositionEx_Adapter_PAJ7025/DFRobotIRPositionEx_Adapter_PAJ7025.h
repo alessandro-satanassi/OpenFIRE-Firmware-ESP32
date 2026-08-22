@@ -12,7 +12,7 @@
 
 #include <stdint.h>
 #include <SPI.h>
-#include <PAJ7025.h> // Richiede l'installazione della nuova libreria PAJ7025
+#include <PixArt_PAJ7025.h> // Richiede l'installazione della nuova libreria PAJ7025
 
 class DFRobotIRPositionEx {
 private:

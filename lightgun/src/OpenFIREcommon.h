@@ -23,7 +23,7 @@
 // = [ESP32_PORT] ===========================================================================================
 #ifdef PAJ7025_CAM
     #include <DFRobotIRPositionEx_Adapter_PAJ7025.h>
-#else
+#elif CAMERA_DFROBOT_SEN0158
     #include <DFRobotIRPositionEx.h>
 #endif // PAJ7025_CAM
 // = [ESP32_PORT] ===========================================================================================
