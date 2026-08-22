@@ -65,6 +65,8 @@
 #include "OpenFIREDefines.h"
 #include "OpenFIREconstant.h"
 
+#include "OpenFIREConst.h"
+
 /// @brief Static instance of preferences to save in non-volatile memory
 class OF_Prefs
 {
@@ -100,6 +102,38 @@ public:
 
     /// @brief Instance of profile data 
     
+        // Default profile geometry.
+    // TLled/TRled are Perspective-space anchors based on the ideal
+    // Square LED base/height ratio.
+    static constexpr float DEFAULT_PROFILE_TLLED =
+        ((float)res_x - ((float)res_y * IR_SQUARE_BASE_HEIGHT_RATIO)) * 0.5f;
+
+    static constexpr float DEFAULT_PROFILE_TRLED =
+        ((float)res_x + ((float)res_y * IR_SQUARE_BASE_HEIGHT_RATIO)) * 0.5f;
+
+    // Default Perspective source point = center of the camera tracking space.
+    static constexpr float DEFAULT_PROFILE_ADJ_X = (float)MouseResX * 0.5f;
+    static constexpr float DEFAULT_PROFILE_ADJ_Y = (float)MouseResY * 0.5f;
+
+
+    #ifdef USE_MULTI_ONE_EURO_FILTER
+    static inline ProfileData_t profiles[PROFILE_COUNT] = {
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, DEFAULT_PROFILE_ADJ_X, DEFAULT_PROFILE_ADJ_Y, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF0000, "Profile A"},
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, DEFAULT_PROFILE_ADJ_X, DEFAULT_PROFILE_ADJ_Y, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0x00FF00, "Profile B"},
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, DEFAULT_PROFILE_ADJ_X, DEFAULT_PROFILE_ADJ_Y, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0x0000FF, "Profile Start"},
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, DEFAULT_PROFILE_ADJ_X, DEFAULT_PROFILE_ADJ_Y, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF00FF, "Profile Select"}
+    };
+    #else
+    static inline ProfileData_t profiles[PROFILE_COUNT] = {
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, DEFAULT_PROFILE_ADJ_X, DEFAULT_PROFILE_ADJ_Y, DFRobotIRPositionEx::Sensitivity_Default, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF0000, "Profile A"},
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, DEFAULT_PROFILE_ADJ_X, DEFAULT_PROFILE_ADJ_Y, DFRobotIRPositionEx::Sensitivity_Default, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0x00FF00, "Profile B"},
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, DEFAULT_PROFILE_ADJ_X, DEFAULT_PROFILE_ADJ_Y, DFRobotIRPositionEx::Sensitivity_Default, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0x0000FF, "Profile Start"},
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, DEFAULT_PROFILE_ADJ_X, DEFAULT_PROFILE_ADJ_Y, DFRobotIRPositionEx::Sensitivity_Default, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF00FF, "Profile Select"}
+    };
+    #endif // USE_MULTI_ONE_EURO_FILTER
+
+
+    /*
     #ifdef USE_MULTI_ONE_EURO_FILTER
     static inline ProfileData_t profiles[PROFILE_COUNT] = {
         {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF0000, "Profile A"},
@@ -115,6 +149,9 @@ public:
         {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF00FF, "Profile Select"}
     };
     #endif // USE_MULTI_ONE_EURO_FILTER
+    */
+
+    
 
 
     static inline uint currentProfile = 0;
