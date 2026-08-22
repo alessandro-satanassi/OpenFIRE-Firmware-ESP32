@@ -23,9 +23,7 @@ DFRobotIRPositionEx::~DFRobotIRPositionEx() {
 }
 
 bool DFRobotIRPositionEx::begin(uint32_t clock, DataFormat_e format, Sensitivity_e sensitivity) {
-    // Parametro mantenuto per compatibilità API con DFRobotIRPositionEx (I2C).
-    // Il PAJ7025 usa intenzionalmente SPI a 2 MHz per stabilità.
-    (void)clock;
+    // Frequenza del bus SPI; default 2 MHz per PAJ7025.
 
     if (_spi == nullptr || _csPin < 0) {
         return false;

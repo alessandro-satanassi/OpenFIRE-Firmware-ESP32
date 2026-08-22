@@ -1,8 +1,8 @@
 #ifdef PAJ7025_CAM
 
 /*!
- * @file DFRobotIRPositionEx_Wrapper.h
- * @brief Wrapper PAJ7025 -> DFRobotIRPositionEx
+ * @file DFRobotIRPositionEx_Adapter_PAJ7025.h
+ * @brief Adapter PAJ7025 -> DFRobotIRPositionEx
  * @details Questa libreria offre la stessa interfaccia della vecchia libreria DFRobot
  * ma usa internamente il sensore PAJ7025 su bus SPI (4 punti configurati, 4095x4095).
  */
@@ -80,7 +80,7 @@ public:
   
     /*!
     * @brief Inizializza il sensore PAJ7025. Imposta la risoluzione massima a 4095x4095.
-    * @param clock Mantenuto per compatibilità con DFRobotIRPositionEx; il PAJ7025 usa SPI a 2 MHz.
+    * @param clock Frequenza del bus SPI. Default 2 MHz.
     */
     bool begin(uint32_t clock = 2000000 /*2Mhz*/, DataFormat_e format = DataFormat_Basic, Sensitivity_e sensitivity = Sensitivity_Default);
 
