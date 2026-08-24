@@ -89,8 +89,8 @@ void DFRobotIRPositionEx::readAndUnpack(bool updateSeen) {
     }
 
     for(int i = validCount; i < 4; i++) {
-        positionX[i] = 1023;
-        positionY[i] = 1023;
+        positionX[i] = CamResX / 2;
+        positionY[i] = CamResY / 2;
         unpackedSizes[i] = 15;
     }
 
