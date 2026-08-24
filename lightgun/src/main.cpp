@@ -623,8 +623,8 @@ void setup() {
     // su batteria (da 5ms a ~15ms) offre più CPU all'ESP-NOW limitando possibili lag di sistema, ma
     // ho riscontrato che funziona comunque bene alla stessa frequenza usata con connessione via cavo,
     // quindi l'ho impostata uguale ovvero 209Hz che corrisponde a circa 5ms
-    if (TinyUSBDevices.onBattery) startIrCamTimer(209);  // set to 5ms for wireless too... e.g., 100->10ms, 66->15ms for wireless connection / impostato a 5ms anche per wireless ... es. 100->10ms 66 -> 15ms per connessione wireless
-      else startIrCamTimer(209); // 5ms for wired connection / 5ms per connessione via cavo
+    if (TinyUSBDevices.onBattery) startIrCamTimer(CamFPS/*209*/);  // set to 5ms for wireless too... e.g., 100->10ms, 66->15ms for wireless connection / impostato a 5ms anche per wireless ... es. 100->10ms 66 -> 15ms per connessione wireless
+      else startIrCamTimer(CamFPS/*209*/); // 5ms for wired connection / 5ms per connessione via cavo
     
     FW_Common::OpenFIREper.source(OF_Prefs::profiles[OF_Prefs::currentProfile].adjX,
                                   OF_Prefs::profiles[OF_Prefs::currentProfile].adjY);
@@ -1899,7 +1899,7 @@ void SelectCalProfileFromBtnMask(const uint32_t &mask)
 void IncreaseIrSensitivity(const uint32_t &sens)
 {
     if(sens < DFRobotIRPositionEx::Sensitivity_Max)
-        FW_Common::SetIrSensitivity(sens-1);
+        FW_Common::SetIrSensitivity(sens+1);
 }
 
 void DecreaseIrSensitivity(const uint32_t &sens)
