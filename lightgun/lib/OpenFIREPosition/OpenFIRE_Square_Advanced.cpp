@@ -62,6 +62,33 @@ inline int fast_roundf(float val) {
 #define D 3
 
 
+void OpenFIRE_Square::configure(const CameraProfile& profile) {
+    camMaxX = profile.camMaxX;
+    camToMouseShift = profile.camToMouseShift;
+    camToMouseMult = profile.camToMouseMult;
+    mouseResX = profile.mouseResX;
+    mouseResY = profile.mouseResY;
+    FPS_NORMALIZATION = 209.0f / (float)profile.fps;
+
+    FinalX[0] = profile.squareTLX * camToMouseMult;
+    FinalX[1] = profile.squareTRX * camToMouseMult;
+    FinalX[2] = profile.squareBLX * camToMouseMult;
+    FinalX[3] = profile.squareBRX * camToMouseMult;
+    FinalY[0] = profile.squareTLY * camToMouseMult;
+    FinalY[1] = profile.squareTRY * camToMouseMult;
+    FinalY[2] = profile.squareBLY * camToMouseMult;
+    FinalY[3] = profile.squareBRY * camToMouseMult;
+
+    medianX = profile.mouseMaxX / 2;
+    medianY = profile.mouseMaxY / 2;
+    height = (float)(FinalY[2] - FinalY[0]);
+    width = (float)(FinalX[1] - FinalX[0]);
+    height_left = height;
+    height_right = height;
+    width_top = width;
+    width_bottom = width;
+}
+
 void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
 
     // =========================================================================//
@@ -99,8 +126,8 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
     // Estrae i punti visibili, li mette negli array di lavoro e applica la trasformazione.
     for (uint8_t i = 0; i < 4; ++i) {
         if ((seenFlags >> i) & 0x01) {
-            int calc_x = (CamMaxX - px[i]) << CamToMouseShift;
-            int calc_y = py[i] << CamToMouseShift;
+            int calc_x = (camMaxX - px[i]) << camToMouseShift;
+            int calc_y = py[i] << camToMouseShift;
             
             positionXX[num_points_seen] = calc_x;
             positionYY[num_points_seen] = calc_y;
@@ -395,7 +422,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         // =========================================================================//
 
         else if (wideLayout) {
-            const int CRITICAL_ZONE_WIDE = (MouseResX * 5) / 128;
+            const int CRITICAL_ZONE_WIDE = (mouseResX * 5) / 128;
 
             // distanza del punto più alto dall'estremo destro
             dx = positionXX[orderX[3]] - positionXX[orderY[0]];
@@ -459,12 +486,12 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
             int32_t dist_sq2 = (dx * dx) + (dy * dy);
 
             /*
-            const int CRITICAL_ZONE = (30 * CamToMouseMult); // 30 è un valore provato in tante situazioni e pare andare bene
+            const int CRITICAL_ZONE = (30 * camToMouseMult); // 30 è un valore provato in tante situazioni e pare andare bene
             */
 
             // Percentuale storica testata sulla DFRobot (30 pixel su una altezza di 768)
             // Calcoliamo il valore dinamico sulla risoluzione della CAM e lo portiamo nello spazio unificato
-            const int CRITICAL_ZONE = (MouseResY * 5) / 128;
+            const int CRITICAL_ZONE = (mouseResY * 5) / 128;
 
             if ((positionYY[orderY[1]] - positionYY[orderY[0]]) > CRITICAL_ZONE) {
 

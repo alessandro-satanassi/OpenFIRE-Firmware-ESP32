@@ -25,6 +25,7 @@
 
 #include <stdint.h>
 #include "OpenFIREConst.h"
+#include <OpenFIRECameraProfile.h>
 
 class OpenFIRE_Diamond {
   
@@ -35,8 +36,8 @@ class OpenFIRE_Diamond {
     int positionX[4] = {512 * CamToMouseMult, 1023 * CamToMouseMult, 512 * CamToMouseMult, 0 * CamToMouseMult};
     int positionY[4] = {0 * CamToMouseMult, 384 * CamToMouseMult, 728 * CamToMouseMult, 384 * CamToMouseMult};
     */
-    int positionX[4] = { IR_LED_DIAMOND_TC_X * CamToMouseMult, IR_LED_DIAMOND_RC_X * CamToMouseMult, IR_LED_DIAMOND_BC_X * CamToMouseMult, IR_LED_DIAMOND_LC_X * CamToMouseMult };
-    int positionY[4] = { IR_LED_DIAMOND_TC_Y * CamToMouseMult, IR_LED_DIAMOND_RC_Y * CamToMouseMult, IR_LED_DIAMOND_BC_Y * CamToMouseMult, IR_LED_DIAMOND_LC_Y * CamToMouseMult };
+    int positionX[4] = {0, 0, 0, 0};
+    int positionY[4] = {0, 0, 0, 0};
 
 
 
@@ -47,15 +48,15 @@ class OpenFIRE_Diamond {
     int xMin;
     int xMax;
 
-    int medianY = MouseMaxY / 2;
-    int medianX = MouseMaxX / 2;
+    int medianY = 0;
+    int medianX = 0;
 
     /*
     int FinalX[4] = {512 * CamToMouseMult, 1023 * CamToMouseMult, 512 * CamToMouseMult, 0 * CamToMouseMult};
     int FinalY[4] = {0 * CamToMouseMult, 384 * CamToMouseMult, 728 * CamToMouseMult, 384 * CamToMouseMult};
     */
-    int FinalX[4] = { IR_LED_DIAMOND_TC_X * CamToMouseMult, IR_LED_DIAMOND_RC_X * CamToMouseMult, IR_LED_DIAMOND_BC_X * CamToMouseMult, IR_LED_DIAMOND_LC_X * CamToMouseMult };
-    int FinalY[4] = { IR_LED_DIAMOND_TC_Y * CamToMouseMult, IR_LED_DIAMOND_RC_Y * CamToMouseMult, IR_LED_DIAMOND_BC_Y * CamToMouseMult, IR_LED_DIAMOND_LC_Y * CamToMouseMult };
+    int FinalX[4] = {0, 0, 0, 0};
+    int FinalY[4] = {0, 0, 0, 0};
 
     int DistTL;
     int DistTR;
@@ -85,7 +86,13 @@ class OpenFIRE_Diamond {
 
     unsigned int seenFlags = 0;
 
+    uint8_t camToMouseShift = 0;
+    int camToMouseMult = 1;
+    int buff = 0;
+
 public:
+
+    void configure(const CameraProfile& profile);
 
     /// @brief Main function to calculate X, Y, and H
     void begin(const int* px, const int* py, unsigned int seen);

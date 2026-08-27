@@ -17,6 +17,7 @@
 
 #include <Arduino.h>
 #include "OpenFIREConst.h"
+#include <OpenFIRECameraProfile.h>
 
 class OpenFIRE_One_Euro_Multi {
 private:
@@ -36,14 +37,6 @@ private:
     // ==========================================
     // --- PARAMETRI DI TUNING E-SPORTS (BILANCIAMENTO DEFINITIVO) ---
 
-    static_assert(CamSensorResX > 0 && CamSensorResY > 0,
-                  "CamSensorResX/CamSensorResY must be greater than zero");
-    static_assert(CamNoiseFactor > 0.0f,
-                  "CamNoiseFactor must be greater than zero");
-    static_assert(MouseMaxX > 0 && MouseMaxY > 0,
-                  "MouseMaxX/MouseMaxY must be greater than zero");
-    static_assert(CamFPS > 0, "CamFPS must be greater than zero");
-
     // min_cutoff: La "lentezza" del mirino quando ti muovi pochissimo o sei fermo.
     // Impostato a 0.1f: il punto di equilibrio perfetto. 0.2f era leggermente
     // scivoloso, 0.05f era troppo rigido. 0.1f garantisce mira da cecchino solida.
@@ -57,14 +50,8 @@ private:
     // d_cutoff_snap: Reattività per scatti violenti e frenate brusche.
     static constexpr float d_cutoff_snap = 25.0f;
 
-    // Unita di rumore fisico espressa nello spazio Mouse.
-    // MouseRes/CamSensorRes converte un pixel fisico del sensore nelle coordinate
-    // usate realmente dal filtro. CamNoiseFactor permette una successiva taratura
-    // empirica: > 1.0f = CAM piu rumorosa, < 1.0f = CAM piu pulita.
-    static constexpr float sensor_noise_unit_x =
-        ((float)MouseResX / (float)CamSensorResX) * CamNoiseFactor;
-    static constexpr float sensor_noise_unit_y =
-        ((float)MouseResY / (float)CamSensorResY) * CamNoiseFactor;
+    float sensor_noise_unit_x = 1.0f;
+    float sensor_noise_unit_y = 1.0f;
 
     // Coefficienti di tuning normalizzati sul pixel fisico del sensore.
     // Sono ricavati dal comportamento DFRobot originale, ma non contengono
@@ -76,11 +63,11 @@ private:
     static constexpr float beta_sensor_gain = 0.2464f;
 
     // Soglie di snap adattate alla granularita fisica/rumore della CAM.
-    static constexpr float snap_base_x = snap_sensor_gain * sensor_noise_unit_x;
-    static constexpr float snap_base_y = snap_sensor_gain * sensor_noise_unit_y;
+    float snap_base_x = 0.0f;
+    float snap_base_y = 0.0f;
 
-    static constexpr float snap_edge_multiplier_x = snap_edge_sensor_gain * sensor_noise_unit_x;
-    static constexpr float snap_edge_multiplier_y = snap_edge_sensor_gain * sensor_noise_unit_y;
+    float snap_edge_multiplier_x = 0.0f;
+    float snap_edge_multiplier_y = 0.0f;
 
     // max_cutoff: Il limite di banda passante superiore.
     static constexpr float max_cutoff = 30.0f;
@@ -89,8 +76,8 @@ private:
     // Una CAM con pixel fisici relativamente piu grossi (o CamNoiseFactor > 1)
     // parte piu conservativa; una CAM piu pulita puo essere resa piu reattiva
     // diminuendo CamNoiseFactor.
-    static constexpr float beta_base_x = beta_sensor_gain / sensor_noise_unit_x;
-    static constexpr float beta_base_y = beta_sensor_gain / sensor_noise_unit_y;
+    float beta_base_x = 0.0f;
+    float beta_base_y = 0.0f;
 
     // MICRO-SNAP: resta volutamente invariato. Non e una soglia di rumore ottico:
     // elimina soltanto la coda frazionaria quando l'input intero e gia fermo.
@@ -99,8 +86,11 @@ private:
     // ==========================================
 
 
-    static constexpr float inv_center_x = 1.0f / ((float)MouseMaxX * 0.5f);
-    static constexpr float inv_center_y = 1.0f / ((float)MouseMaxY * 0.5f);
+    float inv_center_x = 0.0f;
+    float inv_center_y = 0.0f;
+    int mouseMaxX = 0;
+    int mouseMaxY = 0;
+    float fallbackDt = 1.0f / 209.0f;
 
     static constexpr float OEF_TWO_PI = 6.28318530718f;
 
@@ -113,6 +103,7 @@ private:
 
 public:
     OpenFIRE_One_Euro_Multi();
+    void configure(const CameraProfile& profile);
     
     // Il passaggio tramite puntatori permette di leggere i raw (int) e restituire le coordinate
     // sub-pixel perfette (float) senza copie di array.

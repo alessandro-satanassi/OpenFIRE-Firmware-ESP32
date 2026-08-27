@@ -105,6 +105,15 @@
 // Sets up the environment
 void setup() {
 
+    // Temporary source for the saved camera setting. Replace only the RHS with
+    // the value loaded by the App/configuration layer. A camera change always reboots.
+    /*
+    const CameraModel selectedCamera = CameraModel::PixArt_PAJ7025R2;
+    FW_Common::CameraSelect(selectedCamera);
+    */
+    const CameraModel selectedCamera = CAMERA_DEFAULT; //OF_Const::PixArt_PAJ7025R2;
+    FW_Common::CameraSelect(selectedCamera);
+
     // ======== [ESP32_PORT] =========== X AVVIO DUAL CORE ESP32 =================================== 
     #if defined(ARDUINO_ARCH_ESP32) && defined(DUAL_CORE)
         #define STACK_SIZE_SECOND_CORE 4096 // stack size
@@ -200,8 +209,8 @@ void setup() {
                 OF_Prefs::profiles[i].rightOffset = 0;
             }
         
-            if(OF_Prefs::profiles[i].irSens > DFRobotIRPositionEx::Sensitivity_Max)
-                OF_Prefs::profiles[i].irSens = DFRobotIRPositionEx::Sensitivity_Default;
+            if(OF_Prefs::profiles[i].irSens > OpenFIRECamera::Sensitivity_Max)
+                OF_Prefs::profiles[i].irSens = OpenFIRECamera::Sensitivity_Default;
 
             if(OF_Prefs::profiles[i].runMode >= FW_Const::RunMode_Count)
                 OF_Prefs::profiles[i].runMode = FW_Const::RunMode_Normal;
@@ -623,8 +632,8 @@ void setup() {
     // su batteria (da 5ms a ~15ms) offre più CPU all'ESP-NOW limitando possibili lag di sistema, ma
     // ho riscontrato che funziona comunque bene alla stessa frequenza usata con connessione via cavo,
     // quindi l'ho impostata uguale ovvero 209Hz che corrisponde a circa 5ms
-    if (TinyUSBDevices.onBattery) startIrCamTimer(CamFPS/*209*/);  // set to 5ms for wireless too... e.g., 100->10ms, 66->15ms for wireless connection / impostato a 5ms anche per wireless ... es. 100->10ms 66 -> 15ms per connessione wireless
-      else startIrCamTimer(CamFPS/*209*/); // 5ms for wired connection / 5ms per connessione via cavo
+    if (TinyUSBDevices.onBattery) startIrCamTimer(OpenFIRECamera::Profile().fps);  // set to 5ms for wireless too... e.g., 100->10ms, 66->15ms for wireless connection / impostato a 5ms anche per wireless ... es. 100->10ms 66 -> 15ms per connessione wireless
+      else startIrCamTimer(OpenFIRECamera::Profile().fps); // 5ms for wired connection / 5ms per connessione via cavo
     
     FW_Common::OpenFIREper.source(OF_Prefs::profiles[OF_Prefs::currentProfile].adjX,
                                   OF_Prefs::profiles[OF_Prefs::currentProfile].adjY);
@@ -1207,7 +1216,7 @@ void ExecRunMode()
                     #ifdef MAMEHOOKER
                     if(!OF_Serial::serialMode) {
                     #endif // MAMEHOOKER
-                        if(!OF_Prefs::toggles[OF_Const::solenoid] && digitalRead(OF_Prefs::pins[OF_Const::solenoidPin])) {
+                        if(!OF_Prefs::toggles[OF_Const::solenoid] && OF_FFB::GetSolenoid()) {
                             OF_FFB::FFBShutdown();
                         }
                     #ifdef MAMEHOOKER
@@ -1898,13 +1907,13 @@ void SelectCalProfileFromBtnMask(const uint32_t &mask)
 
 void IncreaseIrSensitivity(const uint32_t &sens)
 {
-    if(sens < DFRobotIRPositionEx::Sensitivity_Max)
+    if(sens < OpenFIRECamera::Sensitivity_Max)
         FW_Common::SetIrSensitivity(sens+1);
 }
 
 void DecreaseIrSensitivity(const uint32_t &sens)
 {
-    if(sens > DFRobotIRPositionEx::Sensitivity_Min)
+    if(sens > OpenFIRECamera::Sensitivity_Min)
         FW_Common::SetIrSensitivity(sens-1);
 }
 
@@ -2051,9 +2060,9 @@ void SolenoidToggle()
             OF_RGB::SetLedPackedColor(WikiColor::Yellow);                 // Set a color,
         #endif // LED_ENABLE
 
-        digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], HIGH);                          // Engage the solenoid on to notify the user,
+        OF_FFB::SetSolenoid(HIGH);                          // Engage the solenoid on to notify the user,
         delay(300);                                               // Hold it that way for a bit,
-        digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);                           // Release it,
+        OF_FFB::SetSolenoid(LOW);                           // Release it,
 
         #ifdef LED_ENABLE
             OF_RGB::SetLedPackedColor(OF_Prefs::profiles[OF_Prefs::currentProfile].color);    // And reset the LED back to pause mode color

@@ -121,14 +121,26 @@ inline void multMats(const float* a, const float* b, float* res) {
 // Algoritmo di de-warping spaziale di Brown-Conrady semplificato.
 // Necessario perché ai bordi estremi del campo visivo della telecamera IR
 // i LED "spanciano" a causa della lente sferica, falsando il calcolo prospettico.
+void OpenFIRE_Perspective::configure(const CameraProfile& profile) {
+  cx = (float)profile.mouseResX * 0.5f;
+  cy = (float)profile.mouseResY * 0.5f;
+  invCx = 1.0f / cx;
+  invCy = 1.0f / cy;
+  minQuadArea = (float)profile.mouseResX * (float)profile.mouseResY * MIN_QUAD_AREA_RATIO;
+  srcX = cx;
+  srcY = cy;
+  k1 = profile.lensRadialK1;
+  k2 = profile.lensRadialK2;
+}
+
 inline void OpenFIRE_Perspective::applyLensCorrection(float &x, float &y) {
   if (k1 == 0.0f && k2 == 0.0f) return;
   
-  float dx = x - CX; 
-  float dy = y - CY;
+  float dx = x - cx; 
+  float dy = y - cy;
   
-  float nx = dx * INV_CX;
-  float ny = dy * INV_CY;
+  float nx = dx * invCx;
+  float ny = dy * invCy;
   
   float r2 = (nx * nx) + (ny * ny);
   float distortion = 1.0f + (k1 * r2);
@@ -142,8 +154,8 @@ inline void OpenFIRE_Perspective::applyLensCorrection(float &x, float &y) {
   if (distortion > 1.2f) distortion = 1.2f;
   if (distortion < 0.8f) distortion = 0.8f;
   
-  x = CX + (dx * distortion); 
-  y = CY + (dy * distortion);
+  x = cx + (dx * distortion); 
+  y = cy + (dy * distortion);
 }
 
 // Calcolo dell'area del poligono tramite prodotto vettoriale incrociato (Shoelace Formula).
@@ -172,7 +184,7 @@ void OpenFIRE_Perspective::warp(float x0, float y0, float x1, float y1, float x2
   // definire un'omografia; la correzione radiale non deve trasformarli
   // artificialmente in un quadrilatero apparentemente valido.
   float rawArea = calculateQuadArea(pt_TL_x, pt_TL_y, pt_TR_x, pt_TR_y, pt_BR_x, pt_BR_y, pt_BL_x, pt_BL_y);
-  if (rawArea <= MIN_QUAD_AREA) return;
+  if (rawArea <= minQuadArea) return;
 
   applyLensCorrection(pt_TL_x, pt_TL_y);
   applyLensCorrection(pt_TR_x, pt_TR_y);
@@ -185,7 +197,7 @@ void OpenFIRE_Perspective::warp(float x0, float y0, float x1, float y1, float x2
   // Fissa il "punto zero" della distanza e della rotazione. Tutto il gioco
   // viene calcolato come differenza proporzionale da questo esatto fotogramma.
   if (!init) {
-    if (currentArea > MIN_QUAD_AREA) {
+    if (currentArea > minQuadArea) {
       // Inizializzazione della base dello schermo con lo stesso ordine ciclico (TL, TR, BR, BL)
       if (!computeSquareToQuad(dstmatrix, dx0 * INV_NORM_SCALE, dy0 * INV_NORM_SCALE,
                                       dx1 * INV_NORM_SCALE, dy1 * INV_NORM_SCALE,
@@ -202,7 +214,7 @@ void OpenFIRE_Perspective::warp(float x0, float y0, float x1, float y1, float x2
 
   // Freeze di sicurezza: se la telecamera viene coperta accidentalmente (area vicina a 0), 
   // impediamo al calcolo di assorbire l'errore, salvando la stabilità della z-depth.
-  if (currentArea > MIN_QUAD_AREA) {
+  if (currentArea > minQuadArea) {
     smoothedArea = (0.1f * currentArea) + (0.9f * smoothedArea);
   }
 
@@ -211,7 +223,7 @@ void OpenFIRE_Perspective::warp(float x0, float y0, float x1, float y1, float x2
   // Applicazione Parallasse: se la distanza del giocatore diminuisce (area sale rispetto alla base),
   // il centro ottico (dynamicSrcY) viene spinto verso l'alto/basso per compensare 
   // fisicamente l'altezza della canna rispetto al sensore montato.
-  if (parallaxFactor != 0.0f && baseArea > MIN_QUAD_AREA && smoothedArea > MIN_QUAD_AREA) {
+  if (parallaxFactor != 0.0f && baseArea > minQuadArea && smoothedArea > minQuadArea) {
     float distanceRatio = sqrtf(baseArea / smoothedArea);
     dynamicSrcY += parallaxFactor * (distanceRatio - 1.0f);
   }

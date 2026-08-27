@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include "OpenFIREConst.h"
+#include <OpenFIRECameraProfile.h>
 
 
 class OpenFIRE_Square {
@@ -33,6 +34,8 @@ public:
     //================================================================
     // ENUM PUBBLICO E API
     //================================================================
+
+    void configure(const CameraProfile& profile);
 
     // Metodo principale di elaborazione
     void begin(const int* px, const int* py, unsigned int seen);
@@ -81,11 +84,11 @@ private:
     int  FinalX[4] = {400 * CamToMouseMult, 623 * CamToMouseMult, 400 * CamToMouseMult, 623 * CamToMouseMult};
     int  FinalY[4] = {200 * CamToMouseMult, 200 * CamToMouseMult, 568 * CamToMouseMult, 568 * CamToMouseMult};
     */
-    int FinalX[4] = { IR_LED_SQUARE_TL_X * CamToMouseMult, IR_LED_SQUARE_TR_X * CamToMouseMult, IR_LED_SQUARE_BL_X * CamToMouseMult, IR_LED_SQUARE_BR_X * CamToMouseMult };
-    int FinalY[4] = { IR_LED_SQUARE_TL_Y * CamToMouseMult, IR_LED_SQUARE_TR_Y * CamToMouseMult, IR_LED_SQUARE_BL_Y * CamToMouseMult, IR_LED_SQUARE_BR_Y * CamToMouseMult };
+    int FinalX[4] = {0, 0, 0, 0};
+    int FinalY[4] = {0, 0, 0, 0};
    
-    int  medianX = MouseMaxX / 2;
-    int  medianY = MouseMaxY / 2;
+    int  medianX = 0;
+    int  medianY = 0;
     
     // Registro a scorrimento (shift register) ereditato dalle API originali di Samco.
     // Viene mantenuto per non rompere la retrocompatibilità con funzioni esterne
@@ -159,8 +162,7 @@ private:
     // Definisce la reattività del filtro anti-glitch. Un valore di 0.25 significa che
     // ogni errore ottico istantaneo viene assorbito al 25% per frame, distribuendo 
     // l'anomalia su ~4 frame. Mantiene il feeling "snappy" ma uccide il tremolio.
-    static_assert(CamFPS > 0, "CamFPS must be greater than zero");
-    static constexpr float FPS_NORMALIZATION = 209.0f / (float)CamFPS;
+    float FPS_NORMALIZATION = 1.0f;
     float COSTANTE_MOLLA = 0.25f; 
     
     // Questo è un muro matematico. Quando mancano dei punti ottici, l'algoritmo valuta 6 combinazioni.
@@ -172,6 +174,12 @@ private:
     int prev_GeomY[4] = {0, 0, 0, 0};
 
     /////////////////////////////////////////////////////////////////////
+
+    int camMaxX = 0;
+    uint8_t camToMouseShift = 0;
+    int camToMouseMult = 1;
+    int mouseResX = 0;
+    int mouseResY = 0;
 
     bool calibrationMode = false;    // true = è in corso la calibrazione
     bool wideLayout = false;         // true = configurazione con base maggiore di altezza ad esempio per sensori sugli angoli del monitor

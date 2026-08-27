@@ -217,6 +217,7 @@ public:
         tempWarning,
         tempShutdown,
         analogMode,
+        cameraModel, // inserita per CAM
         // Add here
         settingsTypesCount
     } settingsTypes_e;
@@ -236,6 +237,7 @@ public:
         {"TempWarning",         tempWarning         },
         {"TempDanger",          tempShutdown        },
         {"AnalogMode",          analogMode          },
+        {"CameraModel",         cameraModel         },  // inserira per CAM
     };
 
     enum {
@@ -302,6 +304,15 @@ public:
         ar4_3,
         aspectRatiosCount
     } aspectRatios_e;
+    
+    // Camera model compatible // inserira per CAM
+    enum {
+        DFRobot_SEN0158 = 0,
+        PixArt_PAJ7025R2,
+        PixArt_PAJ7025R3,
+        // Add here
+        cameraModelCount
+    } cameraModel_e;
 
     /* ////
      * Shared serial control/signal codes for both boards and app.

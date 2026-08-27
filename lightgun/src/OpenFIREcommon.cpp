@@ -18,20 +18,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-/*
-// = [ESP32_PORT] ===========================================================================================
-#ifdef PAJ7025_CAM
-    #include <SPI.h>
-#endif // PAJ7025_CAM
-// = [ESP32_PORT] ===========================================================================================
-*/
 
-#ifdef ARDUINO_ARCH_RP2040
-  // for RP2040 Wii Clock Gen
-  #include <pico/stdlib.h>
-  #include <hardware/clocks.h>
-  #include <hardware/pwm.h>
-#endif // ARDUINO_ARCH_RP2040
 
 #include "OpenFIREcommon.h"
 #include "OpenFIREFeedback.h"
@@ -59,13 +46,26 @@
     ESP32FIFO esp32_fifo(8);
 #endif // ARDUINO_ARCH_ESP32
 
-#if defined(PAJ7025_CAM) && defined(ARDUINO_ARCH_ESP32)
-    static SPIClass SPIWire(FSPI);
-#endif
 
 
 // button object instance (defined in OpenFIREcommon.h/OpenFIREprefs.h)
 LightgunButtons FW_Common::buttons(lgbData, ButtonCount);
+
+bool FW_Common::CameraSelect(CameraModel model)
+{
+    if (!OpenFIRECamera::Select(model))
+        return false;
+
+    const CameraProfile& profile = OpenFIRECamera::Profile();
+    OF_Prefs::InitProfileDefaults(profile);
+    OpenFIREsquare.configure(profile);
+    OpenFIREdiamond.configure(profile);
+    OpenFIREper.configure(profile);
+    #ifdef USE_MULTI_ONE_EURO_FILTER
+        oef_multi.configure(profile);
+    #endif
+    return true;
+}
 
 void FW_Common::FeedbackSet()
 {
@@ -153,14 +153,7 @@ void FW_Common::FeedbackSet()
 
 void FW_Common::PinsReset()
 {
-    if(dfrIRPos != nullptr) {
-        delete dfrIRPos;
-        dfrIRPos = nullptr;
-    }
-
-    #if defined(PAJ7025_CAM) && defined(ARDUINO_ARCH_ESP32)
-        SPIWire.end();
-    #endif
+    OpenFIRECamera::End();
 
     #ifdef USES_RUMBLE
         if(OF_Prefs::pins[OF_Const::rumblePin] >= 0)
@@ -215,160 +208,24 @@ void FW_Common::PinsReset()
 
 void FW_Common::CameraSet()
 {
+    const OpenFIRECameraPins cameraPins = {
+        OF_Prefs::pins[OF_Const::camSDA],
+        OF_Prefs::pins[OF_Const::camSCL],
+        OF_Prefs::pins[OF_Const::wiiClockGen],
+        OF_Prefs::pins[OF_Const::cam_SPI_SCK],
+        OF_Prefs::pins[OF_Const::cam_SPI_MISO],
+        OF_Prefs::pins[OF_Const::cam_SPI_MOSI],
+        OF_Prefs::pins[OF_Const::cam_SPI_CS]
+    };
 
-    #ifdef PAJ7025_CAM
-    #ifdef ARDUINO_ARCH_ESP32
-    // il clock lo impostiamo a 2 Mhz per stabilita' - max a 14 Mhz o 8 Mhz fisso
-
-    // forzo impostazioni provvisoriamente
-    // OF_Prefs::pins[OF_Const::cam_SPI_MISO] = 13;   // GPIO 13 -  pin di LETTURA dal sensore (RX lettura)
-    // OF_Prefs::pins[OF_Const::cam_SPI_SCK] =  12;   // GPIO 12  Clock SPI (SCK) (clock)
-    // OF_Prefs::pins[OF_Const::cam_SPI_MOSI] = 11;   // GPIO 11 - pin di SCRITTURA dal sensore (TX scrittura)
-    // OF_Prefs::pins[OF_Const::cam_SPI_CS] =   10;   // GPIO 10 -  CS/SS del modulo
-
-    if(OF_Prefs::pins[OF_Const::cam_SPI_SCK]  >= 0 &&
-       OF_Prefs::pins[OF_Const::cam_SPI_MISO] >= 0 &&
-       OF_Prefs::pins[OF_Const::cam_SPI_MOSI] >= 0 &&
-       OF_Prefs::pins[OF_Const::cam_SPI_CS]   >= 0) {
-
-        bool spi_begin = SPIWire.begin(OF_Prefs::pins[OF_Const::cam_SPI_SCK],
-                                       OF_Prefs::pins[OF_Const::cam_SPI_MISO],
-                                       OF_Prefs::pins[OF_Const::cam_SPI_MOSI],
-                                       OF_Prefs::pins[OF_Const::cam_SPI_CS]);
-        /*
-        #ifdef USES_DISPLAY
-            if (spi_begin)
-                FW_Common::OLED.TopPanelUpdate(" SPI OK ");
-            else 
-                FW_Common::OLED.TopPanelUpdate(" SPI ERROR ");
-            delay(1000);
-        #endif //USES_DISPLAY
-        */
-        if(spi_begin)
-            dfrIRPos = new DFRobotIRPositionEx(&SPIWire, OF_Prefs::pins[OF_Const::cam_SPI_CS]);
-        else
-            SPIWire.end();
-    }
-    #else // rp2040
-
-    if(OF_Prefs::pins[OF_Const::cam_SPI_SCK]  >= 0 &&
-       OF_Prefs::pins[OF_Const::cam_SPI_MISO] >= 0 &&
-       OF_Prefs::pins[OF_Const::cam_SPI_MOSI] >= 0 &&
-       OF_Prefs::pins[OF_Const::cam_SPI_CS]   >= 0) {
-
-        // SPI1 se si vuole lavorare sul secondo canale
-        SPI.setSCK(OF_Prefs::pins[OF_Const::cam_SPI_SCK]);
-        SPI.setMISO(OF_Prefs::pins[OF_Const::cam_SPI_MISO]);
-        SPI.setMOSI(OF_Prefs::pins[OF_Const::cam_SPI_MOSI]);
-        SPI.setCS(OF_Prefs::pins[OF_Const::cam_SPI_CS]);
-
-        SPI.begin();
-
-        dfrIRPos = new DFRobotIRPositionEx(&SPI, OF_Prefs::pins[OF_Const::cam_SPI_CS]);
+    if (!OpenFIRECamera::Begin(cameraPins,
+                               (OpenFIRECamera::Sensitivity_e)OF_Prefs::profiles[OF_Prefs::currentProfile].irSens,
+                               OpenFIRECamera::DataFormat_Basic)) {
+        PrintIrError();
+        return;
     }
 
-    #endif // rp2040
-    #else
-    #ifdef ARDUINO_ARCH_ESP32
-        Wire.setPins(OF_Prefs::pins[OF_Const::camSDA], OF_Prefs::pins[OF_Const::camSCL]); // MODIFICATO [ESP32_PORT] per ESP32
-        dfrIRPos = new DFRobotIRPositionEx(Wire);
-    #else // rp2040   
-    // Sanity check: which channel do these pins correlate to?
-    if(bitRead(OF_Prefs::pins[OF_Const::camSCL], 1) && bitRead(OF_Prefs::pins[OF_Const::camSDA], 1)) {
-        // I2C1
-        if(bitRead(OF_Prefs::pins[OF_Const::camSCL], 0) && !bitRead(OF_Prefs::pins[OF_Const::camSDA], 0)) {
-            // SDA/SCL are indeed on verified correct pins
-            Wire1.setSDA(OF_Prefs::pins[OF_Const::camSDA]);
-            Wire1.setSCL(OF_Prefs::pins[OF_Const::camSCL]);
-            dfrIRPos = new DFRobotIRPositionEx(Wire1);
-        }
-        
-    } else if(!bitRead(OF_Prefs::pins[OF_Const::camSCL], 1) && !bitRead(OF_Prefs::pins[OF_Const::camSDA], 1)) {
-        // I2C0
-        if(bitRead(OF_Prefs::pins[OF_Const::camSCL], 0) && !bitRead(OF_Prefs::pins[OF_Const::camSDA], 0)) {
-            // SDA/SCL are indeed on verified correct pins
-            Wire.setSDA(OF_Prefs::pins[OF_Const::camSDA]);
-            Wire.setSCL(OF_Prefs::pins[OF_Const::camSCL]);
-            dfrIRPos = new DFRobotIRPositionEx(Wire);
-        }
-    }
-    #endif // rp2040
-    #endif // PAJ7025_CAM
-
-    #ifndef PAJ7025_CAM
-    #ifdef ARDUINO_ARCH_RP2040
-    if(OF_Prefs::pins[OF_Const::wiiClockGen] > -1) {
-        set_sys_clock_khz(125000, true);
-        gpio_set_function(OF_Prefs::pins[OF_Const::wiiClockGen], GPIO_FUNC_PWM);
-        uint slice_num = pwm_gpio_to_slice_num(OF_Prefs::pins[OF_Const::wiiClockGen]);
-        pwm_set_clkdiv(slice_num, 1.0f);  // for sys_clock = 125MHz
-        //pwm_set_clkdiv(slice_num, 3.0f); // for sys_clock = 150MHz
-        pwm_set_wrap(slice_num, 4);
-        pwm_set_chan_level(slice_num, pwm_gpio_to_channel(OF_Prefs::pins[OF_Const::wiiClockGen]), 2);
-        pwm_set_enabled(slice_num, true);
-    } else {
-        set_sys_clock_khz(133000, true);
-        pwm_set_enabled(pwm_gpio_to_slice_num(OF_Prefs::pins[OF_Const::wiiClockGen]), false);
-        gpio_set_function(OF_Prefs::pins[OF_Const::wiiClockGen], GPIO_FUNC_SIO);
-        gpio_put(OF_Prefs::pins[OF_Const::wiiClockGen], 0);
-        gpio_set_dir(OF_Prefs::pins[OF_Const::wiiClockGen], GPIO_IN);
-    }
-    #endif // ARDUINO_ARCH_RP2040
-    
-    
-    #ifdef ARDUINO_ARCH_ESP32
-        // --- CLOCK WII CAMERA: 24 MHz @ 50% DC ---
-        #ifdef CLOCK_CAM_WII
-            /*
-            #define WII_CLOCK_FREQUENCY_HZ 25000000  // 25 MHz target //la cam wii parla di 24Mhz ma OpenFire la imposta a 25Mhz
-            // il sistema riesce a produrre Hz 24975610    .... ma con jitter il clock non è mai stabile
-            */
-            #define WII_CLOCK_FREQUENCY_HZ 20000000  // 20 MHz target (integer division of 80MHz APB to prevent jitter) .. così il clock è stabile e la cam funziona bene tra 20 e 25Mhz
-            
-            #define WII_CLOCK_DUTY_CYCLE 1      // 50%
-
-            const int gpio_pin = OF_Prefs::pins[OF_Const::wiiClockGen];  // gpio 10 sia su Esp32 pico che su esp32 wroom, si imposta da board
-
-            if (gpio_pin > -1) {
-                if (!ledcSetClockSource(LEDC_AUTO_CLK/*LEDC_USE_APB_CLK*/)) log_e("ERRORE: ledcSetClockSource fallita!"); //LEDC_USE_XTAL_CLK     // LEDC_USE_APB_CLK     // LEDC_AUTO_CLK  //  RC_FAST_CLK
-                if (!ledcAttach(gpio_pin, WII_CLOCK_FREQUENCY_HZ, 1)) { // risoluzione ad 1 per sfruttare il clock più alto possibile          
-                    log_e("ERRORE: ledcAttach fallita!");
-                } else {
-                    if (!ledcWrite(gpio_pin, WII_CLOCK_DUTY_CYCLE)) {
-                        log_e("ERRORE: ledcWrite fallita!");
-                        ledcDetach(gpio_pin);
-                    } 
-                }
-            } else {
-                log_e("Clock non attivato (GPIO %d non valido: <= -1).\n", gpio_pin);
-            }
-        #endif // CLOCK_CAM_WII
-    #endif // ARDUINO_ARCH_ESP32
-    #endif // #ifndef PAJ7025_CAM
-
-    // Start IR Camera with basic data format
-    if(dfrIRPos != nullptr) {
-        if(!dfrIRPos->begin(IR_CAMERA_BUS_CLOCK, DFRobotIRPositionEx::DataFormat_Basic, (DFRobotIRPositionEx::Sensitivity_e)OF_Prefs::profiles[OF_Prefs::currentProfile].irSens)) {
-            /*
-            #ifdef USES_DISPLAY    
-                FW_Common::OLED.TopPanelUpdate(" CAM ERROR ");
-                delay(1000);
-            #endif //USES_DISPLAY
-            */
-            delete dfrIRPos;
-            dfrIRPos = nullptr;
-            PrintIrError();
-        } else 
-        {
-            camNotAvailable = false;
-            /*
-            #ifdef USES_DISPLAY    
-                FW_Common::OLED.TopPanelUpdate(" CAM OK ");
-                delay(1000);
-            #endif //USES_DISPLAY
-            */
-        }
-    } else PrintIrError();
+    camNotAvailable = false;
 }
 
 void FW_Common::SetMode(const FW_Const::GunMode_e &newMode)
@@ -482,8 +339,9 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
     // Queste sostituiscono i vecchi valori hardcoded (512 e 384) e 
     // garantiscono una calibrazione perfetta sia per la DFRobot (4:3) che per la PixArt (1:1).
     // Center of the unified Mouse coordinate space.
-    constexpr int CENTER_X = MouseResX / 2;
-    constexpr int CENTER_Y = MouseResY / 2;
+    const CameraProfile& cameraProfile = OpenFIRECamera::Profile();
+    const int CENTER_X = cameraProfile.mouseResX / 2;
+    const int CENTER_Y = cameraProfile.mouseResY / 2;
 
     // hold values in a buffer till calibration is complete
     int topOffset;
@@ -829,48 +687,30 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
 
 void FW_Common::GetPosition()
 {
-    // Dynamic camera coordinate resolution in the internal Mouse precision space.
-    constexpr int CAM_COORD_RES_X = MouseResX;
-    constexpr int CAM_COORD_RES_Y = MouseResY;
+    const CameraProfile& cameraProfile = OpenFIRECamera::Profile();
+    const int CAM_COORD_RES_X = cameraProfile.mouseResX;
+    const int CAM_COORD_RES_Y = cameraProfile.mouseResY;
 
     // Perspective code uses 2 extra precision bits (res_x/res_y are << 2).
     constexpr int PERSPECTIVE_SCALE = 1 << 2;
     constexpr int SCREEN_RES_X = res_x / PERSPECTIVE_SCALE;
     constexpr int SCREEN_RES_Y = res_y / PERSPECTIVE_SCALE;
-
-    // Preserve the camera aspect ratio when displaying RAW camera coordinates
-    // inside the 1920x1080 Processing/test canvas.
-    constexpr bool CAM_TEST_WIDTH_LIMITED =
-        (CAM_COORD_RES_X * SCREEN_RES_Y) >
-        (CAM_COORD_RES_Y * SCREEN_RES_X);
-
-    constexpr int CAM_TEST_WIDTH =
-    CAM_TEST_WIDTH_LIMITED
-        ? SCREEN_RES_X
-        : (CAM_COORD_RES_X * SCREEN_RES_Y) / CAM_COORD_RES_Y;
-
-    constexpr int CAM_TEST_HEIGHT =
-    CAM_TEST_WIDTH_LIMITED
-        ? (CAM_COORD_RES_Y * SCREEN_RES_X) / CAM_COORD_RES_X
-        : SCREEN_RES_Y;
-
-    constexpr int CAM_TEST_OFFSET_X =
-        (SCREEN_RES_X - CAM_TEST_WIDTH) / 2;
-
-    constexpr int CAM_TEST_OFFSET_Y =
-        (SCREEN_RES_Y - CAM_TEST_HEIGHT) / 2;
+    const int CAM_TEST_WIDTH = cameraProfile.testWidth;
+    const int CAM_TEST_HEIGHT = cameraProfile.testHeight;
+    const int CAM_TEST_OFFSET_X = cameraProfile.testOffsetX;
+    const int CAM_TEST_OFFSET_Y = cameraProfile.testOffsetY;
 
     // Target aspect ratio used by Serial AR correction: 4:3 content.
     constexpr int AR_CORRECTION_W = 4;
     constexpr int AR_CORRECTION_H = 3;
 
-    if(dfrIRPos != nullptr) {
-        int error = dfrIRPos->basicAtomic(DFRobotIRPositionEx::Retry_2);
-        if(error == DFRobotIRPositionEx::Error_Success) {
+    if(OpenFIRECamera::IsReady()) {
+        int error = OpenFIRECamera::Read();
+        if(error == OpenFIRECamera::Error_Success) {
            
             // if diamond layout, or square
             if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout) { // layoutDiamond = 1
-                OpenFIREdiamond.begin(dfrIRPos->xPositions(), dfrIRPos->yPositions(), dfrIRPos->seen());
+                OpenFIREdiamond.begin(OpenFIRECamera::XPositions(), OpenFIRECamera::YPositions(), OpenFIRECamera::Seen());
 
                 OpenFIREper.warp(OpenFIREdiamond.X(0), OpenFIREdiamond.Y(0),
                                  OpenFIREdiamond.X(1), OpenFIREdiamond.Y(1),
@@ -880,7 +720,7 @@ void FW_Common::GetPosition()
                                  res_y / 2, res_x / 2,
                                  res_y, res_x, res_y / 2);
             } else { // layoutSquare = 0
-                OpenFIREsquare.begin(dfrIRPos->xPositions(), dfrIRPos->yPositions(), dfrIRPos->seen());               
+                OpenFIREsquare.begin(OpenFIRECamera::XPositions(), OpenFIRECamera::YPositions(), OpenFIRECamera::Seen());               
                
                 #ifdef USE_MULTI_ONE_EURO_FILTER
                     X_in[0] = OpenFIREsquare.X(0);
@@ -1086,8 +926,8 @@ void FW_Common::GetPosition()
                         }
 
                         outsideFov[i] =
-                            pointX < 0 || pointX > MouseMaxX ||
-                            pointY < 0 || pointY > MouseMaxY;
+                            pointX < 0 || pointX > cameraProfile.mouseMaxX ||
+                            pointY < 0 || pointY > cameraProfile.mouseMaxY;
                     }
 
                     if(runMode == FW_Const::RunMode_Processing) {
@@ -1161,7 +1001,7 @@ void FW_Common::GetPosition()
                     #endif // USES_DISPLAY
                 }
             }
-        } else if(error != DFRobotIRPositionEx::Error_DataMismatch)
+        } else if(error != OpenFIRECamera::Error_DataMismatch)
             PrintIrError();
     } else PrintIrError();
 }
@@ -1232,8 +1072,8 @@ bool FW_Common::SelectCalProfile(const int &profile)
     OpenFIREper.deinit(0);
 
     // set IR sensitivity
-    if(OF_Prefs::profiles[profile].irSens <= DFRobotIRPositionEx::Sensitivity_Max)
-        SetIrSensitivity((DFRobotIRPositionEx::Sensitivity_e)OF_Prefs::profiles[profile].irSens);
+    if(OF_Prefs::profiles[profile].irSens <= OpenFIRECamera::Sensitivity_Max)
+        SetIrSensitivity((OpenFIRECamera::Sensitivity_e)OF_Prefs::profiles[profile].irSens);
 
     // set run mode
     if(OF_Prefs::profiles[profile].runMode < FW_Const::RunMode_Count)
@@ -1294,7 +1134,7 @@ void FW_Common::RedrawDisplay()
 
 void FW_Common::SetIrSensitivity(const int &sensitivity)
 {
-    if(sensitivity > DFRobotIRPositionEx::Sensitivity_Max)
+    if(sensitivity > OpenFIRECamera::Sensitivity_Max)
         return;
 
     if(OF_Prefs::profiles[OF_Prefs::currentProfile].irSens != sensitivity) {
@@ -1302,7 +1142,7 @@ void FW_Common::SetIrSensitivity(const int &sensitivity)
         stateFlags |= FW_Const::StateFlag_SavePreferencesEn;
     }
 
-    if(dfrIRPos != nullptr) dfrIRPos->sensitivityLevel((DFRobotIRPositionEx::Sensitivity_e)sensitivity);
+    OpenFIRECamera::SetSensitivity((OpenFIRECamera::Sensitivity_e)sensitivity);
     //if(!(stateFlags & FW_Const::StateFlag_PrintSelectedProfile))
         //PrintIrSensitivity();
 }

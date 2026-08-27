@@ -337,7 +337,7 @@ void OF_Serial::SerialProcessing()
                       serialRumbCustomPauseLength = 0;
                   #endif // USES_RUMBLE
                   #ifdef USES_SOLENOID
-                      digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);
+                      OF_FFB::SetSolenoid(LOW);
                       serialSolPulses = 0;
                       serialSolPulsesLast = 0;
                       serialSolCustomHoldLength = 0;
@@ -763,34 +763,34 @@ void OF_Serial::SerialHandling()
       if(OF_Prefs::toggles[OF_Const::solenoid]) {
           // Solenoid "on" command
           if(serialQueue[SerialQueue_Solenoid]) {
-              if(digitalRead(OF_Prefs::pins[OF_Const::solenoidPin])) {
+              if(OF_FFB::GetSolenoid()) {
                   if(millis() - serialSolTimestamp > SERIAL_SOLENOID_MAXSHUTOFF) {
-                      digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);
+                      OF_FFB::SetSolenoid(LOW);
                       serialQueue[SerialQueue_Solenoid] = false;
                   }
               } else {
-                  digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], HIGH);
+                  OF_FFB::SetSolenoid(HIGH);
                   serialSolTimestamp = millis();
               }
           // Solenoid "pulse" command
           } else if(serialQueue[SerialQueue_SolPulse]) {
               if(!serialSolPulsesLast) {                            // Have we started pulsing?
-                  digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], HIGH);  // Start pulsing it on!
+                  OF_FFB::SetSolenoid(HIGH);  // Start pulsing it on!
                   serialSolPulsesLast++;                                 // Start the sequence.
                   serialSolPulsesLastUpdate = millis();                  // timestamp
               } else if(serialSolPulsesLast <= serialSolPulses) {   // Have we met the pulses quota?
-                  if(digitalRead(OF_Prefs::pins[OF_Const::solenoidPin])) {
+                  if(OF_FFB::GetSolenoid()) {
                       // custom hold length
                       if(serialSolCustomHoldLength) {
                           if(millis() - serialSolPulsesLastUpdate >= serialSolCustomHoldLength) {
-                              digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);  // Start pulsing it off.
+                              OF_FFB::SetSolenoid(LOW);  // Start pulsing it off.
                               if(serialSolPulsesLast >= serialSolPulses)
                                   serialQueue[SerialQueue_SolPulse] = false;
                               else serialSolPulsesLast++, serialSolPulsesLastUpdate = millis();  // Timestamp our last pulse event.
                           }
                       // current settings hold length
                       } else if(millis() - serialSolPulsesLastUpdate >= OF_Prefs::settings[OF_Const::solenoidOnLength]) {
-                          digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);  // Start pulsing it off.
+                          OF_FFB::SetSolenoid(LOW);  // Start pulsing it off.
                           if(serialSolPulsesLast >= serialSolPulses)
                               serialQueue[SerialQueue_SolPulse] = false;
                           else serialSolPulsesLast++, serialSolPulsesLastUpdate = millis();  // Timestamp our last pulse event.
@@ -799,21 +799,21 @@ void OF_Serial::SerialHandling()
                       // custom pause length
                       if(serialSolCustomPauseLength) {
                           if(millis() - serialSolPulsesLastUpdate >= serialSolCustomPauseLength) {
-                              digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], HIGH); // Start pulsing it on.
+                              OF_FFB::SetSolenoid(HIGH); // Start pulsing it on.
                               serialSolPulsesLastUpdate = millis();          // Timestamp our last pulse event.
                           }
                       // current settings pause length
                       } else if(millis() - serialSolPulsesLastUpdate >=
                                 OF_Prefs::settings[OF_Const::solenoidOffLength] << OF_FFB::autofireDoubleLengthWait ? 1 : 0) {
-                          digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], HIGH); // Start pulsing it on.
+                          OF_FFB::SetSolenoid(HIGH); // Start pulsing it on.
                           serialSolPulsesLastUpdate = millis();          // Timestamp our last pulse event.
                       }
                   }
               }
           // Solenoid "off" command
-          } else digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);
+          } else OF_FFB::SetSolenoid(LOW);
       // solenoid toggle not allowed, just force it off.
-      } else digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);
+      } else OF_FFB::SetSolenoid(LOW);
   #endif // USES_SOLENOID
 
   #ifdef USES_RUMBLE
@@ -1068,9 +1068,9 @@ void OF_Serial::SerialProcessingDocked()
     case OF_Const::sTestSolenoid:
         Serial_available(1);
         if(Serial.read() == true) {
-            digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], HIGH);
+            OF_FFB::SetSolenoid(HIGH);
             delay(OF_Prefs::settings[OF_Const::solenoidOnLength]);
-            digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);
+            OF_FFB::SetSolenoid(LOW);
         }
         break;
     #endif // USES_SOLENOID

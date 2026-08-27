@@ -54,18 +54,18 @@ void OF_FFB::FFBOnScreen()
         // Else, these below are all if we've been holding the trigger.
         } else if(burstFiring) { BurstFire();
         } else if(OF_Prefs::toggles[OF_Const::autofire] && !burstFireActive) {
-            SolenoidActivation(digitalRead(OF_Prefs::pins[OF_Const::solenoidPin]) ? OF_Prefs::settings[OF_Const::solenoidOnLength] : OF_Prefs::settings[OF_Const::solenoidOffLength] << autofireDoubleLengthWait);
+            SolenoidActivation(OF_FFB::GetSolenoid() ? OF_Prefs::settings[OF_Const::solenoidOnLength] : OF_Prefs::settings[OF_Const::solenoidOffLength] << autofireDoubleLengthWait);
         } else if(solenoidFirstShot) {                  // If we aren't in autofire mode, are we waiting for the initial shot timer still?
-            if(digitalRead(OF_Prefs::pins[OF_Const::solenoidPin])) {              // If so, are we still engaged? We need to let it go normally, but maintain the single shot flag.
+            if(OF_FFB::GetSolenoid()) {              // If so, are we still engaged? We need to let it go normally, but maintain the single shot flag.
                 currentMillis = millis();
                 if(currentMillis - previousMillisSol >= OF_Prefs::settings[OF_Const::solenoidOnLength])
-                    digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);
+                    OF_FFB::SetSolenoid(LOW);
             } else if(millis() - previousMillisSol >= OF_Prefs::settings[OF_Const::solenoidHoldLength]) { // We're waiting on the extended wait before repeating in single shot mode.
                 SolenoidActivation(0); // Process it now.
                     solenoidFirstShot = false;          // We're gonna turn this off so we don't have to pass through this check anymore.
             }
         } else if(!burstFireActive) {                   // if we don't have the single shot wait flag on (holding the trigger w/out autofire)
-            SolenoidActivation(digitalRead(OF_Prefs::pins[OF_Const::solenoidPin]) ? OF_Prefs::settings[OF_Const::solenoidOnLength] : OF_Prefs::settings[OF_Const::solenoidOffLength]);
+            SolenoidActivation(OF_FFB::GetSolenoid() ? OF_Prefs::settings[OF_Const::solenoidOnLength] : OF_Prefs::settings[OF_Const::solenoidOffLength]);
         }
     // only activate rumbleFF as a fallback if Solenoid is explicitly disabled
     } else if(OF_Prefs::toggles[OF_Const::rumble] && OF_Prefs::toggles[OF_Const::rumbleFF] && !rumbleHappened && !triggerHeld)
@@ -87,7 +87,7 @@ void OF_FFB::FFBOffScreen()
     }
 
     if(burstFiring) BurstFire();
-    else if(digitalRead(OF_Prefs::pins[OF_Const::solenoidPin]) && !burstFireActive) { // If the solenoid is engaged, since we're not shooting the screen, shut off the solenoid a'la an idle cycle
+    else if(OF_FFB::GetSolenoid() && !burstFireActive) { // If the solenoid is engaged, since we're not shooting the screen, shut off the solenoid a'la an idle cycle
         SolenoidActivation(OF_Prefs::settings[OF_Const::solenoidOnLength]);
     }
 }
@@ -96,12 +96,12 @@ void OF_FFB::FFBRelease()
 {
     if(OF_Prefs::toggles[OF_Const::solenoid]) {
         if(burstFiring) BurstFire();
-        else if(!burstFireActive && digitalRead(OF_Prefs::pins[OF_Const::solenoidPin])) {
+        else if(!burstFireActive && OF_FFB::GetSolenoid()) {
             solenoidFirstShot = false;                      // Make sure this is unset to prevent "sticking" in single shot mode!
             currentMillis = millis();
             if(currentMillis - previousMillisSol >= OF_Prefs::settings[OF_Const::solenoidOnLength]) { // I guess if we're not firing, may as well use the fastest shutoff.
                 previousMillisSol = currentMillis;
-                digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);             // Make sure to turn it off.
+                OF_FFB::SetSolenoid(LOW);             // Make sure to turn it off.
             }
         }
     }
@@ -131,41 +131,41 @@ void OF_FFB::SolenoidActivation(const int &solenoidFinalInterval)
 {
     if(solenoidFirstShot) {                                       // If this is the first time we're shooting, it's probably safe to shoot regardless of temps.
         previousMillisSol = millis();                             // Calibrate the timer for future calcs.
-        digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], HIGH);     // Since we're shooting the first time, just turn it on aaaaand fire.
+        OF_FFB::SetSolenoid(HIGH);     // Since we're shooting the first time, just turn it on aaaaand fire.
     } else {
         if(OF_Prefs::pins[OF_Const::tempPin] >= 0) { // If a temp sensor is installed and enabled,
             TemperatureUpdate();
 
             if(tempStatus < Temp_Fatal) {
                 if(tempStatus == Temp_Warning) {
-                    if(digitalRead(OF_Prefs::pins[OF_Const::solenoidPin])) {    // Is the valve being pulled now?
+                    if(OF_FFB::GetSolenoid()) {    // Is the valve being pulled now?
                         if(currentMillis - previousMillisSol >= solenoidFinalInterval) {
                             previousMillisSol = currentMillis;
-                            digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], !digitalRead(OF_Prefs::pins[OF_Const::solenoidPin])); // Flip, flop.
+                            OF_FFB::SetSolenoid(!OF_FFB::GetSolenoid()); // Flip, flop.
                         }
                     } else { // The solenoid's probably off right now, so that means we should wait a bit longer to fire again.
                         if(currentMillis - previousMillisSol >= (OF_Prefs::settings[OF_Const::solenoidOffLength] << 1)) { // We're keeping it low for a bit longer, to keep temps stable. Try to give it a bit of time to cool down before we go again.
                             previousMillisSol = currentMillis;
-                            digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], !digitalRead(OF_Prefs::pins[OF_Const::solenoidPin]));
+                            OF_FFB::SetSolenoid(!OF_FFB::GetSolenoid());
                         }
                     }
                 } else {
                     if(currentMillis - previousMillisSol >= solenoidFinalInterval) {
                         previousMillisSol = currentMillis;
-                        digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], !digitalRead(OF_Prefs::pins[OF_Const::solenoidPin])); // run the solenoid into the state we've just inverted it to.
+                        OF_FFB::SetSolenoid(!OF_FFB::GetSolenoid()); // run the solenoid into the state we've just inverted it to.
                     }
                 }
             } else {
                 #ifdef PRINT_VERBOSE
                     Serial.println("Solenoid over safety threshold; not activating!");
                 #endif
-                digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);                       // Make sure it's off if we're this dangerously close to the sun.
+                OF_FFB::SetSolenoid(LOW);                       // Make sure it's off if we're this dangerously close to the sun.
             }
         } else { // No temp sensor, so just go ahead.
             currentMillis = millis();
             if(currentMillis - previousMillisSol >= solenoidFinalInterval) { // If we've waited long enough for this interval,
                 previousMillisSol = currentMillis;                    // Since we've waited long enough, calibrate the timer
-                digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], !digitalRead(OF_Prefs::pins[OF_Const::solenoidPin])); // run the solenoid into the state we've just inverted it to.
+                OF_FFB::SetSolenoid(!OF_FFB::GetSolenoid()); // run the solenoid into the state we've just inverted it to.
             }
         }
     }
@@ -273,11 +273,11 @@ void OF_FFB::BurstFire()
 {
     if(burstFireCount < 4) {  // Are we within the three shots alotted to a burst fire command?
         #ifdef USES_SOLENOID
-            if(!digitalRead(OF_Prefs::pins[OF_Const::solenoidPin]) &&  // Is the solenoid NOT on right now, and the counter hasn't matched?
+            if(!OF_FFB::GetSolenoid() &&  // Is the solenoid NOT on right now, and the counter hasn't matched?
             (burstFireCount == burstFireCountLast)) {
                 burstFireCount++;                                 // Increment the counter.
             }
-            if(!digitalRead(OF_Prefs::pins[OF_Const::solenoidPin])) {  // Now, is the solenoid NOT on right now?
+            if(!OF_FFB::GetSolenoid()) {  // Now, is the solenoid NOT on right now?
                 SolenoidActivation(OF_Prefs::settings[OF_Const::solenoidOffLength] << autofireDoubleLengthWait ? 1 : 0);     // Hold it off a bit longer,
             } else {                         // or if it IS on,
                 burstFireCountLast = burstFireCount;              // sync the counters since we completed one bullet cycle,
@@ -294,7 +294,7 @@ void OF_FFB::BurstFire()
 
 void OF_FFB::FFBShutdown()
 {
-    digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);
+    OF_FFB::SetSolenoid(LOW);
     #ifdef ARDUINO_ARCH_ESP32
         analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0); // [ESP32_PORT]
     #else // rp2040
@@ -307,6 +307,19 @@ void OF_FFB::FFBShutdown()
     burstFiring = false;
     burstFireCount = 0;
 }
+
+// ============ [ESP32_PORT] ============
+void OF_FFB::SetSolenoid(uint8_t state) {
+    if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0) {
+        digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], state);
+        solenoidState = state;
+    }
+}
+
+uint8_t OF_FFB::GetSolenoid() {
+    return solenoidState;
+}
+// ============ [ESP32_PORT]============
 
 // ============ [ESP32_PORT] ============
 // Restore Serial after it was redefined for serial connections / ripristino di Serial dopo definizione per connessione seriali ==============

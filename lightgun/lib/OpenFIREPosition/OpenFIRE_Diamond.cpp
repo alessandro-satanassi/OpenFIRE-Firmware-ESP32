@@ -23,30 +23,42 @@
 #include <Arduino.h>
 #include "OpenFIRE_Diamond.h"
 
-/*
-constexpr int buff = 50 * CamToMouseMult;
-*/
-// Percentuale storica testata sulla DFRobot (50 pixel su una larghezza di 1024)
-constexpr float BUFF_PERCENT = 50.0f / 1024.0f;
-// Calcoliamo il buffer dinamico sulla larghezza della CAM e lo portiamo nello spazio unificato
-constexpr int buff = (int)((float)CamResX * BUFF_PERCENT * (float)CamToMouseMult);
 
 // floating point PI
 constexpr float fHPI = (float)HALF_PI;
 //constexpr float fPI = (float)PI;
 
+void OpenFIRE_Diamond::configure(const CameraProfile& profile)
+{
+    camToMouseShift = profile.camToMouseShift;
+    camToMouseMult = profile.camToMouseMult;
+    buff = (int)((float)profile.camResX * (50.0f / 1024.0f) * (float)camToMouseMult);
+
+    positionX[0] = FinalX[0] = profile.diamondTCX * camToMouseMult;
+    positionX[1] = FinalX[1] = profile.diamondRCX * camToMouseMult;
+    positionX[2] = FinalX[2] = profile.diamondBCX * camToMouseMult;
+    positionX[3] = FinalX[3] = profile.diamondLCX * camToMouseMult;
+    positionY[0] = FinalY[0] = profile.diamondTCY * camToMouseMult;
+    positionY[1] = FinalY[1] = profile.diamondRCY * camToMouseMult;
+    positionY[2] = FinalY[2] = profile.diamondBCY * camToMouseMult;
+    positionY[3] = FinalY[3] = profile.diamondLCY * camToMouseMult;
+
+    medianX = profile.mouseMaxX / 2;
+    medianY = profile.mouseMaxY / 2;
+}
+
 void OpenFIRE_Diamond::begin(const int* px, const int* py, unsigned int seen)
 {
     // Remapping LED postions to use with library.
   
-    positionXX[0] = px[0] << CamToMouseShift;
-    positionYY[0] = py[0] << CamToMouseShift;
-    positionXX[1] = px[1] << CamToMouseShift;
-    positionYY[1] = py[1] << CamToMouseShift;
-    positionXX[2] = px[2] << CamToMouseShift;
-    positionYY[2] = py[2] << CamToMouseShift;
-    positionXX[3] = px[3] << CamToMouseShift;
-    positionYY[3] = py[3] << CamToMouseShift;
+    positionXX[0] = px[0] << camToMouseShift;
+    positionYY[0] = py[0] << camToMouseShift;
+    positionXX[1] = px[1] << camToMouseShift;
+    positionYY[1] = py[1] << camToMouseShift;
+    positionXX[2] = px[2] << camToMouseShift;
+    positionYY[2] = py[2] << camToMouseShift;
+    positionXX[3] = px[3] << camToMouseShift;
+    positionYY[3] = py[3] << camToMouseShift;
 
     seenFlags = seen;
 

@@ -57,6 +57,10 @@ public:
     // Current temperature as read from TMP36, in (approximate) Celsius
     static inline uint temperatureCurrent;
 
+    // NUOVI WRAPPER PER IL SOLENOIDE:
+    static void SetSolenoid(uint8_t state);
+    static uint8_t GetSolenoid(); 
+
     enum TempStatuses_e {
         Temp_Safe = 0,
         Temp_Warning,
@@ -70,6 +74,8 @@ public:
 private:
     // For solenoid:
     static inline bool solenoidFirstShot = false;            // default to off, but set this on the first time we shoot.
+
+    static inline uint8_t solenoidState = LOW; // AGGIUNTA PER GESTIONE SOLENOIDE (PER RISOLVERE PROBLEMA SU ESP32 DI LETTURA DI PIN IN USCITA)
 
     // For rumble:
     static inline bool rumbleHappened = false;               // If we're holding, this marks we sent a rumble command already; is cleared when trigger is released

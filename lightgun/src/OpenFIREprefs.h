@@ -51,14 +51,6 @@
 #include <OpenFIREBoard.h>
 
 
-// = [ESP32_PORT] ===========================================================================================
-#ifdef PAJ7025_CAM
-    #include <DFRobotIRPositionEx_Adapter_PAJ7025.h>
-#elif CAMERA_DFROBOT_SEN0158
-    #include <DFRobotIRPositionEx.h>
-#endif // PAJ7025_CAM
-// = [ESP32_PORT] ===========================================================================================
-
 
 #include <LightgunButtons.h>
 #include <TinyUSB_Devices.h>
@@ -68,6 +60,7 @@
 #include "OpenFIREconstant.h"
 
 #include "OpenFIREConst.h"
+#include <OpenFIRECameraProfile.h>
 
 /// @brief Static instance of preferences to save in non-volatile memory
 class OF_Prefs
@@ -113,24 +106,20 @@ public:
     static constexpr float DEFAULT_PROFILE_TRLED =
         ((float)res_x + ((float)res_y * IR_SQUARE_BASE_HEIGHT_RATIO)) * 0.5f;
 
-    // Default Perspective source point = center of the camera tracking space.
-    static constexpr float DEFAULT_PROFILE_ADJ_X = (float)MouseResX * 0.5f;
-    static constexpr float DEFAULT_PROFILE_ADJ_Y = (float)MouseResY * 0.5f;
-
 
     #ifdef USE_MULTI_ONE_EURO_FILTER
     static inline ProfileData_t profiles[PROFILE_COUNT] = {
-        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, DEFAULT_PROFILE_ADJ_X, DEFAULT_PROFILE_ADJ_Y, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF0000, "Profile A"},
-        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, DEFAULT_PROFILE_ADJ_X, DEFAULT_PROFILE_ADJ_Y, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0x00FF00, "Profile B"},
-        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, DEFAULT_PROFILE_ADJ_X, DEFAULT_PROFILE_ADJ_Y, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0x0000FF, "Profile Start"},
-        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, DEFAULT_PROFILE_ADJ_X, DEFAULT_PROFILE_ADJ_Y, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF00FF, "Profile Select"}
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, 0.0f, 0.0f, 0, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF0000, "Profile A"},
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, 0.0f, 0.0f, 0, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0x00FF00, "Profile B"},
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, 0.0f, 0.0f, 0, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0x0000FF, "Profile Start"},
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, 0.0f, 0.0f, 0, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF00FF, "Profile Select"}
     };
     #else
     static inline ProfileData_t profiles[PROFILE_COUNT] = {
-        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, DEFAULT_PROFILE_ADJ_X, DEFAULT_PROFILE_ADJ_Y, DFRobotIRPositionEx::Sensitivity_Default, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF0000, "Profile A"},
-        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, DEFAULT_PROFILE_ADJ_X, DEFAULT_PROFILE_ADJ_Y, DFRobotIRPositionEx::Sensitivity_Default, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0x00FF00, "Profile B"},
-        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, DEFAULT_PROFILE_ADJ_X, DEFAULT_PROFILE_ADJ_Y, DFRobotIRPositionEx::Sensitivity_Default, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0x0000FF, "Profile Start"},
-        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, DEFAULT_PROFILE_ADJ_X, DEFAULT_PROFILE_ADJ_Y, DFRobotIRPositionEx::Sensitivity_Default, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF00FF, "Profile Select"}
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, 0.0f, 0.0f, 0, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF0000, "Profile A"},
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, 0.0f, 0.0f, 0, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0x00FF00, "Profile B"},
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, 0.0f, 0.0f, 0, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0x0000FF, "Profile Start"},
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, 0.0f, 0.0f, 0, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF00FF, "Profile Select"}
     };
     #endif // USE_MULTI_ONE_EURO_FILTER
 
@@ -138,23 +127,25 @@ public:
     /*
     #ifdef USE_MULTI_ONE_EURO_FILTER
     static inline ProfileData_t profiles[PROFILE_COUNT] = {
-        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF0000, "Profile A"},
-        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0x00FF00, "Profile B"},
-        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0x0000FF, "Profile Start"},
-        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF00FF, "Profile Select"}
+        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, 0, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF0000, "Profile A"},
+        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, 0, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0x00FF00, "Profile B"},
+        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, 0, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0x0000FF, "Profile Start"},
+        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, 0, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF00FF, "Profile Select"}
     };
     #else
     static inline ProfileData_t profiles[PROFILE_COUNT] = {
-        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF0000, "Profile A"},
-        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0x00FF00, "Profile B"},
-        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0x0000FF, "Profile Start"},
-        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF00FF, "Profile Select"}
+        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, 0, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF0000, "Profile A"},
+        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, 0, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0x00FF00, "Profile B"},
+        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, 0, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0x0000FF, "Profile Start"},
+        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, 0, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF00FF, "Profile Select"}
     };
     #endif // USE_MULTI_ONE_EURO_FILTER
     */
 
     
 
+
+    static void InitProfileDefaults(const CameraProfile& profile);
 
     static inline uint currentProfile = 0;
 
@@ -181,6 +172,10 @@ public:
     /// @brief Pin functions array
     static inline int8_t pins[OF_Const::boardInputsCount] = { -1 };
 
+    #ifndef CAMERA_DEFAULT
+        #define CAMERA_DEFAULT OF_Const::PixArt_PAJ7025R2
+    #endif
+
     /// @brief System variables array
     static inline uint32_t settings[OF_Const::settingsTypesCount] = {
         255,                        // rumble strength
@@ -201,6 +196,7 @@ public:
         38,                         // temp warning
         45,                         // temp shutoff
         OF_Const::analogModeStick,  // analog stick mode
+        CAMERA_DEFAULT, // OF_Const::PixArt_PAJ7025R2, // camera model
     };
 
     typedef struct USBMap_s {

@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include "OpenFIREConst.h"
+#include <OpenFIRECameraProfile.h>
 
 class OpenFIRE_Square {
   
@@ -37,15 +38,15 @@ class OpenFIRE_Square {
 
     unsigned int see[4];
 
-    int medianY = MouseMaxY / 2;
-    int medianX = MouseMaxX / 2;
+    int medianY = 0;
+    int medianX = 0;
 
     /*
     int FinalX[4] = {400 * CamToMouseMult, 623 * CamToMouseMult, 400 * CamToMouseMult, 623 * CamToMouseMult};
     int FinalY[4] = {200 * CamToMouseMult, 200 * CamToMouseMult, 568 * CamToMouseMult, 568 * CamToMouseMult};
     */
-    int FinalX[4] = { IR_LED_SQUARE_TL_X * CamToMouseMult, IR_LED_SQUARE_TR_X * CamToMouseMult, IR_LED_SQUARE_BL_X * CamToMouseMult, IR_LED_SQUARE_BR_X * CamToMouseMult };
-    int FinalY[4] = { IR_LED_SQUARE_TL_Y * CamToMouseMult, IR_LED_SQUARE_TR_Y * CamToMouseMult, IR_LED_SQUARE_BL_Y * CamToMouseMult, IR_LED_SQUARE_BR_Y * CamToMouseMult };
+    int FinalX[4] = {0,0,0,0};
+    int FinalY[4] = {0,0,0,0};
 
     float xDistTop;
     float xDistBottom;
@@ -66,8 +67,15 @@ class OpenFIRE_Square {
     unsigned int start = 0;
 
     unsigned int seenFlags = 0;
+    uint8_t camToMouseShift = 0;
+    int camToMouseMult = 1;
+    int mouseMaxX = 0;
+    int mouseMaxY = 0;
+    int buff = 0;
 
 public:
+
+    void configure(const CameraProfile& profile);
 
     /// @brief Main function to calculate X, Y, and H
     void begin(const int* px, const int* py, unsigned int seen);

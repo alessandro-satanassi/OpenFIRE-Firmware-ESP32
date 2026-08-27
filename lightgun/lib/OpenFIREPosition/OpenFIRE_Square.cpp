@@ -24,29 +24,34 @@
 #include <Arduino.h>
 #include "OpenFIRE_Square.h"
 
-/*
-constexpr int buff = 50 * CamToMouseMult;
-*/
-// Percentuale storica testata sulla DFRobot (50 pixel su una larghezza di 1024)
-constexpr float BUFF_PERCENT = 50.0f / 1024.0f;
-// Calcoliamo il buffer dinamico sulla risoluzione della CAM e lo portiamo nello spazio unificato
-constexpr int buff = (int)((float)CamResX * BUFF_PERCENT * (float)CamToMouseMult);
 
 // floating point PI
 constexpr float fPI = (float)PI;
+
+void OpenFIRE_Square::configure(const CameraProfile& profile)
+{
+    camToMouseShift = profile.camToMouseShift;
+    camToMouseMult = profile.camToMouseMult;
+    mouseMaxX = profile.mouseMaxX;
+    mouseMaxY = profile.mouseMaxY;
+    buff = (int)((float)profile.camResX * (50.0f / 1024.0f) * (float)camToMouseMult);
+    FinalX[0]=profile.squareTLX*camToMouseMult; FinalX[1]=profile.squareTRX*camToMouseMult; FinalX[2]=profile.squareBLX*camToMouseMult; FinalX[3]=profile.squareBRX*camToMouseMult;
+    FinalY[0]=profile.squareTLY*camToMouseMult; FinalY[1]=profile.squareTRY*camToMouseMult; FinalY[2]=profile.squareBLY*camToMouseMult; FinalY[3]=profile.squareBRY*camToMouseMult;
+    medianX = mouseMaxX / 2; medianY = mouseMaxY / 2;
+}
 
 void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen)
 {
     // Remapping LED postions to use with library.
   
-    positionXX[0] = px[0] << CamToMouseShift;
-    positionYY[0] = py[0] << CamToMouseShift;
-    positionXX[1] = px[1] << CamToMouseShift;
-    positionYY[1] = py[1] << CamToMouseShift;
-    positionXX[2] = px[2] << CamToMouseShift;
-    positionYY[2] = py[2] << CamToMouseShift;
-    positionXX[3] = px[3] << CamToMouseShift;
-    positionYY[3] = py[3] << CamToMouseShift;
+    positionXX[0] = px[0] << camToMouseShift;
+    positionYY[0] = py[0] << camToMouseShift;
+    positionXX[1] = px[1] << camToMouseShift;
+    positionYY[1] = py[1] << camToMouseShift;
+    positionXX[2] = px[2] << camToMouseShift;
+    positionYY[2] = py[2] << camToMouseShift;
+    positionXX[3] = px[3] << camToMouseShift;
+    positionYY[3] = py[3] << camToMouseShift;
 
     seenFlags = seen;
 
@@ -112,7 +117,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen)
 
         } else {
             // If LEDS have been seen place in correct quadrant, apply buffer an set to seen.
-            int mapXX = map(positionXX[i], 0, MouseMaxX, MouseMaxX, 0);
+            int mapXX = map(positionXX[i], 0, mouseMaxX, mouseMaxX, 0);
             if (positionYY[i] < medianY) {
                 if (mapXX < medianX) {
                     positionX[i] = mapXX - buff;
@@ -166,7 +171,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen)
                     float f = angleBottom - (angleOffset[3] - fPI);
                     FinalX[1] = FinalX[3] + round(yDistRight * cos(f));
                     FinalY[1] = FinalY[3] + round(yDistRight * -sin(f));
-                } else if (positionX[i] > MouseMaxX) {
+                } else if (positionX[i] > mouseMaxX) {
                     float f = angleLeft + (angleOffset[0] - fPI);
                     FinalX[1] = FinalX[0] + round(xDistTop * cos(f));
                     FinalY[1] = FinalY[0] + round(xDistTop * -sin(f));
@@ -177,7 +182,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen)
                 if (see[2] & 0x02) {
                     FinalX[2] = positionX[i] + buff;
                     FinalY[2] = positionY[i] - buff;
-                } else if (positionY[i] > MouseMaxY) {
+                } else if (positionY[i] > mouseMaxY) {
                     float f = angleTop - angleOffset[0];
                     FinalX[2] = FinalX[0] + round(yDistLeft * cos(f));
                     FinalY[2] = FinalY[0] + round(yDistLeft * -sin(f));
@@ -190,11 +195,11 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen)
                 if ((see[3] & 0x02)) {
                     FinalX[3] = positionX[i] - buff;
                     FinalY[3] = positionY[i] - buff;
-                } else if (positionY[i] > MouseMaxY) {
+                } else if (positionY[i] > mouseMaxY) {
                     float f = angleTop + (angleOffset[1] - fPI);
                     FinalX[3] = FinalX[1] + round(yDistRight * cos(f));
                     FinalY[3] = FinalY[1] + round(yDistRight * -sin(f));
-                } else if (positionX[i] > MouseMaxX) {
+                } else if (positionX[i] > mouseMaxX) {
                     float f = angleLeft - (angleOffset[2] - fPI);
                     FinalX[3] = FinalX[2] + round(xDistBottom * -cos(f));
                     FinalY[3] = FinalY[2] + round(xDistBottom * sin(f));

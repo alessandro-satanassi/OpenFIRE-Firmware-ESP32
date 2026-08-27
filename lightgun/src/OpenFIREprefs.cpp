@@ -21,6 +21,17 @@
 
 #include "OpenFIREprefs.h"
 
+
+void OF_Prefs::InitProfileDefaults(const CameraProfile& profile)
+{
+    const float centerX = (float)profile.mouseResX * 0.5f;
+    const float centerY = (float)profile.mouseResY * 0.5f;
+    for (int i = 0; i < PROFILE_COUNT; ++i) {
+        profiles[i].adjX = centerX;
+        profiles[i].adjY = centerY;
+    }
+}
+
 int OF_Prefs::InitFS()
 {
     #ifdef ARDUINO_ARCH_ESP32  

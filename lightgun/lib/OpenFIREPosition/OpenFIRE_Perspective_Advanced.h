@@ -30,7 +30,8 @@
 #ifndef OpenFIRE_Perspective_Advanced_h
 #define OpenFIRE_Perspective_Advanced_h
 
-#include "OpenFIREConst.h" 
+#include "OpenFIREConst.h"
+#include <OpenFIRECameraProfile.h>
 
 // ==============================================================================
 // PARAMETRI MATEMATICI E FISICI
@@ -46,19 +47,8 @@ static constexpr float DEFAULT_PARALLAX_FACTOR = 0.0f;
 static constexpr float NORM_SCALE = 10000.0f;
 static constexpr float INV_NORM_SCALE = 1.0f / NORM_SCALE;
 
-// Centro geometrico del sensore nello spazio Mouse.
-static constexpr float CX = (float)MouseResX * 0.5f;
-static constexpr float CY = (float)MouseResY * 0.5f;
-static constexpr float INV_CX = 1.0f / CX;
-static constexpr float INV_CY = 1.0f / CY;
-
 // Soglia minima dell'area espressa come frazione dell'intero spazio Mouse.
-// Il coefficiente è scelto in modo che con la DFRobot storica (4096x3072 Mouse)
-// MIN_QUAD_AREA sia esattamente 10.0f, mantenendo il comportamento originale.
 static constexpr float MIN_QUAD_AREA_RATIO = 7.947286e-7f;
-static constexpr float MIN_QUAD_AREA = (float)MouseResX * (float)MouseResY * MIN_QUAD_AREA_RATIO;
-
-static_assert(MouseResX > 0 && MouseResY > 0, "MouseResX/MouseResY must be greater than zero");
 // ==============================================================================
 
 class OpenFIRE_Perspective {
@@ -73,12 +63,18 @@ private:
   float dstmatrix[9];
   float warpmatrix[9];
 
-  float srcX = CX;
-  float srcY = CY;
+  float srcX = 0.0f;
+  float srcY = 0.0f;
+
+  float cx = 0.0f;
+  float cy = 0.0f;
+  float invCx = 0.0f;
+  float invCy = 0.0f;
+  float minQuadArea = 0.0f;
 
   // Coefficienti di distorsione radiale definiti dalla camera in OpenFIREConst.h.
-  float k1 = CamLensRadialK1;
-  float k2 = CamLensRadialK2;
+  float k1 = 0.0f;
+  float k2 = 0.0f;
   float parallaxFactor = DEFAULT_PARALLAX_FACTOR;
   
   // Tracciamento dell'area per il parallasse. L'area calcolata viene usata come proxy 
@@ -94,6 +90,7 @@ private:
   inline float calculateQuadArea(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3);
 
 public:
+  void configure(const CameraProfile& profile);
   void warp(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3, float dx0, float dy0, float dx1, float dy1, float dx2, float dy2, float dx3, float dy3);
   void source(float adjustedX, float adjustedY);
   

@@ -19,14 +19,7 @@
 #define _OPENFIRECOMMON_H_
 
 #include <stdint.h>
-
-// = [ESP32_PORT] ===========================================================================================
-#ifdef PAJ7025_CAM
-    #include <DFRobotIRPositionEx_Adapter_PAJ7025.h>
-#elif CAMERA_DFROBOT_SEN0158
-    #include <DFRobotIRPositionEx.h>
-#endif // PAJ7025_CAM
-// = [ESP32_PORT] ===========================================================================================
+#include <OpenFIRECamera.h>
 
 #ifdef USE_SQUARE_ADVANCED
     #include <OpenFIRE_Square_Advanced.h>
@@ -74,6 +67,7 @@ public:
     /// @brief    (Re-)sets IR camera position object.
     /// @note     This is run at startup, and can also be run from Docked mode
     ///           when new camera pins are defined.
+    static bool CameraSelect(CameraModel model);
     static void CameraSet();
 
     /// @brief    Macro for functions to run when gun enters new gunmode
@@ -155,9 +149,6 @@ public:
     static inline uint32_t stateFlags = FW_Const::StateFlagsDtrReset;
 
     //// Camera
-    // IR positioning camera
-    static inline DFRobotIRPositionEx *dfrIRPos = nullptr;
-
     // flag to warn docked server if camera is not working currently
     static inline bool camNotAvailable = false;
 

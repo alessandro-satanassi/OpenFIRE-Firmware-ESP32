@@ -22,6 +22,27 @@ OpenFIRE_One_Euro_Multi::OpenFIRE_One_Euro_Multi() {
     }
 }
 
+void OpenFIRE_One_Euro_Multi::configure(const CameraProfile& profile) {
+    sensor_noise_unit_x = ((float)profile.mouseResX / (float)profile.sensorResX) * profile.noiseFactor;
+    sensor_noise_unit_y = ((float)profile.mouseResY / (float)profile.sensorResY) * profile.noiseFactor;
+
+    snap_base_x = snap_sensor_gain * sensor_noise_unit_x;
+    snap_base_y = snap_sensor_gain * sensor_noise_unit_y;
+    snap_edge_multiplier_x = snap_edge_sensor_gain * sensor_noise_unit_x;
+    snap_edge_multiplier_y = snap_edge_sensor_gain * sensor_noise_unit_y;
+    beta_base_x = beta_sensor_gain / sensor_noise_unit_x;
+    beta_base_y = beta_sensor_gain / sensor_noise_unit_y;
+
+    mouseMaxX = profile.mouseMaxX;
+    mouseMaxY = profile.mouseMaxY;
+    inv_center_x = 1.0f / ((float)mouseMaxX * 0.5f);
+    inv_center_y = 1.0f / ((float)mouseMaxY * 0.5f);
+    fallbackDt = 1.0f / (float)profile.fps;
+
+    initialized = false;
+    lastMicros = 0;
+}
+
 void OpenFIRE_One_Euro_Multi::process(int* x_in, int* y_in, float* x_out, float* y_out) {
     // Calcolo del Delta-Time (dt) tramite il micro-clock dell'ESP32.
     // L'aritmetica unsigned assorbe nativamente l'overflow del timer.
@@ -31,7 +52,7 @@ void OpenFIRE_One_Euro_Multi::process(int* x_in, int* y_in, float* x_out, float*
 
     // Protezione base per divisioni per zero o blocchi anomali
     // if (dt <= 0.0f) dt = 0.005f; 
-    if (dt <= 0.0f) dt = 1.0f / (float)CamFPS;
+    if (dt <= 0.0f) dt = fallbackDt;
 
     // Cold start dinamico: se passa troppo tempo (es. perdita del tracking),
     // forziamo il reset per evitare di calcolare velocità inerziali spaziali.
@@ -66,9 +87,9 @@ void OpenFIRE_One_Euro_Multi::process(int* x_in, int* y_in, float* x_out, float*
     for (int i = 0; i < 4; i++) {
         // Valutiamo la penalita ottica solo per coordinate interne al FOV.
         // Le coordinate stimate fuori limite non subiscono penalizzazione da bordo/lente.
-        if (x_in[i] >= 0 && x_in[i] <= MouseMaxX && y_in[i] >= 0 && y_in[i] <= MouseMaxY) {
-            float distH = fabsf((float)x_in[i] - ((float)MouseMaxX * 0.5f)) * inv_center_x;
-            float distV = fabsf((float)y_in[i] - ((float)MouseMaxY * 0.5f)) * inv_center_y;
+        if (x_in[i] >= 0 && x_in[i] <= mouseMaxX && y_in[i] >= 0 && y_in[i] <= mouseMaxY) {
+            float distH = fabsf((float)x_in[i] - ((float)mouseMaxX * 0.5f)) * inv_center_x;
+            float distV = fabsf((float)y_in[i] - ((float)mouseMaxY * 0.5f)) * inv_center_y;
             
             float maxDistSq = (distH * distH) + (distV * distV);
             float edge_attenuation = 1.0f - (maxDistSq * 0.8f); // 0.8f lascia un margine vitale agli angoli estremi
