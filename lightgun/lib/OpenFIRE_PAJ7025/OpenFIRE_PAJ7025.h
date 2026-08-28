@@ -32,19 +32,16 @@ private:
     int unpackedSizes[4];
     PAJ7025_Object extendedObjects[4];
     unsigned int seenFlags;
-
-    int readBasicAndUnpack();
-    int readExtendedAndUnpack();
-
+    
 public:
     OpenFIRE_PAJ7025(SPIClass* spiPort, int8_t csPin, const CameraProfile& profile);
 
     bool begin(uint32_t clock, uint8_t sensitivity);
     void sensitivityLevel(uint8_t sensitivity);
 
-    int basicAtomic();
-    int extendedAtomic();
-
+    int readBasic();
+    int readExtended();
+    
     int x(int index) const { return positionX[index]; }
     int y(int index) const { return positionY[index]; }
     int size(int index) const { return unpackedSizes[index]; }

@@ -1202,7 +1202,8 @@ void OF_Serial::SerialProcessingDocked()
                         // valutare se inviare codice di riavvio anche al dispositivo dongle
                     }
                 #endif
-                ESP.restart();
+                //ESP.restart();
+                esp_rom_software_reset_system();
             #else
             rp2040.reboot();
             #endif

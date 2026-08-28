@@ -345,13 +345,13 @@ bool OpenFIRECamera::BeginPAJ7025(const OpenFIRECameraPins& pins, uint8_t sensit
 }
 
 int OpenFIRECamera::ReadPAJ7025Basic() {
-    const int error = pajCamera->basicAtomic();
+    const int error = pajCamera->readBasic();
     activeSeen = pajCamera->seen();
     return error;
 }
 
 int OpenFIRECamera::ReadPAJ7025Extended() {
-    const int error = pajCamera->extendedAtomic();
+    const int error = pajCamera->readExtended();
     activeSeen = pajCamera->seen();
 
     if (error >= Error_Success) {

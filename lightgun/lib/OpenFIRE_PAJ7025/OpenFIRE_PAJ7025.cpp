@@ -54,7 +54,7 @@ void OpenFIRE_PAJ7025::sensitivityLevel(uint8_t sensitivity) {
     }
 }
 
-int OpenFIRE_PAJ7025::readBasicAndUnpack() {
+int OpenFIRE_PAJ7025::readBasic() {
     PAJ7025_Object rawObjects[4];
     cam.readData(rawObjects, PAJ7025_FORMAT_BASIC);
 
@@ -79,7 +79,7 @@ int OpenFIRE_PAJ7025::readBasicAndUnpack() {
     return 0;
 }
 
-int OpenFIRE_PAJ7025::readExtendedAndUnpack() {
+int OpenFIRE_PAJ7025::readExtended() {
     PAJ7025_Object rawObjects[4];
     cam.readData(rawObjects, PAJ7025_FORMAT_EXTENDED);
 
@@ -104,14 +104,6 @@ int OpenFIRE_PAJ7025::readExtendedAndUnpack() {
 
     seenFlags = (1U << validCount) - 1U;
     return 0;
-}
-
-int OpenFIRE_PAJ7025::basicAtomic() {
-    return readBasicAndUnpack();
-}
-
-int OpenFIRE_PAJ7025::extendedAtomic() {
-    return readExtendedAndUnpack();
 }
 
 #endif // PAJ7025_CAM
