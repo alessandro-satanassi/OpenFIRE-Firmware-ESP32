@@ -14,7 +14,7 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <DFRobotIRPositionEx.h>
-#include <OpenFIRE_PAJ7025.h>
+#include <PixArt_PAJ7025.h>
 #include "OpenFIRECamera.h"
 
 #include "OpenFIREprefs.h"
@@ -27,7 +27,9 @@
 
 namespace {
 DFRobotIRPositionEx* dfrCamera = nullptr;
-OpenFIRE_PAJ7025* pajCamera = nullptr;
+PAJ7025* pajCamera = nullptr;
+int pajX[4] = {0};
+int pajY[4] = {0};
 
 #ifdef ARDUINO_ARCH_ESP32
 SPIClass pajSPI(FSPI);
@@ -307,13 +309,13 @@ int OpenFIRECamera::ReadDFRobotExtended() {
         activeSeen = dfrCamera->seen();
 
         for (int i = 0; i < 4; i++) {
-            objectData[i] = {};
-
             if ((activeSeen & (1U << i)) != 0U) {
                 objectData[i].valid = true;
                 objectData[i].x = dfrCamera->x(i);
                 objectData[i].y = dfrCamera->y(i);
                 objectData[i].size = dfrCamera->size(i);
+            } else {
+                objectData[i].valid = false;
             }
         }
     }
@@ -340,12 +342,14 @@ void OpenFIRECamera::EndDFRobot() {
     }
 }
 
+// ============================================================================
+// [3] SEZIONE: PixArt PAJ7025 (Driver Nativo)
+// ============================================================================
 bool OpenFIRECamera::BeginPAJ7025(uint8_t sensitivity) {
     const int8_t pin_spiSck = OF_Prefs::pins[OF_Const::cam_SPI_SCK];
     const int8_t pin_spiMiso = OF_Prefs::pins[OF_Const::cam_SPI_MISO];
     const int8_t pin_spiMosi = OF_Prefs::pins[OF_Const::cam_SPI_MOSI];
     const int8_t pin_spiCs = OF_Prefs::pins[OF_Const::cam_SPI_CS];
-    
     
     if (pin_spiSck < 0 || pin_spiMiso < 0 || pin_spiMosi < 0 || pin_spiCs < 0) {
         return false;
@@ -356,66 +360,91 @@ bool OpenFIRECamera::BeginPAJ7025(uint8_t sensitivity) {
         pajSPI.end();
         return false;
     }
-    pajCamera = new OpenFIRE_PAJ7025(&pajSPI, pin_spiCs, *activeProfile);
+    if (pajCamera == nullptr) pajCamera = new PAJ7025();
+    if (!pajCamera->begin(&pajSPI, pin_spiCs, activeProfile->busClock)) {
+        delete pajCamera;
+        pajCamera = nullptr;
+        return false;
+    }
 #else
     SPI.setSCK(pin_spiSck);
     SPI.setMISO(pin_spiMiso);
     SPI.setMOSI(pin_spiMosi);
     SPI.setCS(pin_spiCs);
     SPI.begin();
-    pajCamera = new OpenFIRE_PAJ7025(&SPI, pin_spiCs, *activeProfile);
-#endif
-
-    if (!pajCamera->begin(activeProfile->busClock, sensitivity)) {
+    if (pajCamera == nullptr) pajCamera = new PAJ7025();
+    if (!pajCamera->begin(&SPI, pin_spiCs, activeProfile->busClock)) {
         delete pajCamera;
         pajCamera = nullptr;
         return false;
     }
+#endif
 
-    activeX = pajCamera->xPositions();
-    activeY = pajCamera->yPositions();
-    activeSeen = pajCamera->seen();
+    pajCamera->setFrameRate(activeProfile->fps);
+    pajCamera->setExposure(300);
+    SensitivityPAJ7025(sensitivity);
+    pajCamera->setResolution((uint16_t)activeProfile->camMaxX, (uint16_t)activeProfile->camMaxY);
+
+    activeX = pajX;
+    activeY = pajY;
+    activeSeen = 0;
     return true;
 }
 
 int OpenFIRECamera::ReadPAJ7025Basic() {
-    const int error = pajCamera->readBasic();
-    activeSeen = pajCamera->seen();
-    return error;
-}
+    PAJ7025_Object rawObjects[4];
+    pajCamera->readData(rawObjects, PAJ7025_FORMAT_BASIC);
 
-int OpenFIRECamera::ReadPAJ7025Extended() {
-    const int error = pajCamera->readExtended();
-    activeSeen = pajCamera->seen();
-
-    if (error >= Error_Success) {
-        const PAJ7025_Object* source = pajCamera->objects();
-
-        for (int i = 0; i < 4; i++) {
-            objectData[i] = {};
-
-            if ((activeSeen & (1U << i)) != 0U) {
-                objectData[i].valid = source[i].is_valid;
-                objectData[i].x = pajCamera->x(i);
-                objectData[i].y = pajCamera->y(i);
-                objectData[i].size = pajCamera->size(i);
-                objectData[i].area = source[i].area;
-                objectData[i].averageBrightness = source[i].average_brightness;
-                objectData[i].maxBrightness = source[i].max_brightness;
-                objectData[i].range = source[i].range;
-                objectData[i].radius = source[i].radius;
-                objectData[i].boundaryLeft = source[i].boundary_left;
-                objectData[i].boundaryRight = source[i].boundary_right;
-                objectData[i].boundaryUp = source[i].boundary_up;
-                objectData[i].boundaryDown = source[i].boundary_down;
-                objectData[i].aspectRatio = source[i].aspect_ratio;
-                objectData[i].vx = source[i].vx;
-                objectData[i].vy = source[i].vy;
-            }
+    activeSeen = 0;
+    for (int i = 0; i < 4; i++) {
+        if (rawObjects[i].is_valid) {
+            pajX[i] = rawObjects[i].cx;
+            pajY[i] = rawObjects[i].cy;
+            activeSeen |= (1U << i);
         }
     }
 
-    return error;
+    return Error_Success;
+}
+
+int OpenFIRECamera::ReadPAJ7025Extended() {
+    PAJ7025_Object rawObjects[4];
+    pajCamera->readData(rawObjects, PAJ7025_FORMAT_EXTENDED);
+
+    activeSeen = 0;
+    for (int i = 0; i < 4; i++) {
+        if (rawObjects[i].is_valid) {
+            // Array di X e Y di base per i ritorni costanti (activeX / activeY)
+            pajX[i] = rawObjects[i].cx;
+            pajY[i] = rawObjects[i].cy;
+
+            // Direct struct copy - evita del tutto i wrapper intermedi e non fa double copy!
+            objectData[i].valid = true;
+            objectData[i].x = rawObjects[i].cx;
+            objectData[i].y = rawObjects[i].cy;
+            objectData[i].size = (rawObjects[i].area > 15U) ? 15 : (int)rawObjects[i].area;
+            objectData[i].area = rawObjects[i].area;
+            objectData[i].averageBrightness = rawObjects[i].average_brightness;
+            objectData[i].maxBrightness = rawObjects[i].max_brightness;
+            objectData[i].range = rawObjects[i].range;
+            objectData[i].radius = rawObjects[i].radius;
+            objectData[i].boundaryLeft = rawObjects[i].boundary_left;
+            objectData[i].boundaryRight = rawObjects[i].boundary_right;
+            objectData[i].boundaryUp = rawObjects[i].boundary_up;
+            objectData[i].boundaryDown = rawObjects[i].boundary_down;
+            objectData[i].aspectRatio = rawObjects[i].aspect_ratio;
+            objectData[i].vx = rawObjects[i].vx;
+            objectData[i].vy = rawObjects[i].vy;
+            
+            activeSeen |= (1U << i);
+        } else {
+            // Ottimizzazione Hot-Path 1: invalidiamo il punto senza usare uno sprecone memset / {}
+            // Le coordinate X e Y sporche verranno semplicemente ignorate dal sistema di mira grazie a valid=false e a seenFlags.
+            objectData[i].valid = false;
+        }
+    }
+
+    return Error_Success;
 }
 
 void OpenFIRECamera::DataFormatPAJ7025(DataFormat_e format) {
@@ -424,7 +453,20 @@ void OpenFIRECamera::DataFormatPAJ7025(DataFormat_e format) {
 }
 
 void OpenFIRECamera::SensitivityPAJ7025(uint8_t sensitivity) {
-    pajCamera->sensitivityLevel(sensitivity);
+    if (pajCamera == nullptr) return;
+    
+    if (sensitivity == 0U) {
+        pajCamera->setGain(0x10, 0x00);
+        pajCamera->setDSP(2, 130, 150, 40);
+    }
+    else if (sensitivity == 1U) {
+        pajCamera->setGain(0x10, 0x02);
+        pajCamera->setDSP(2, 130, 200, 50);
+    }
+    else {
+        pajCamera->setGain(0x10, 0x03);
+        pajCamera->setDSP(1, 150, 300, 60);
+    }
 }
 
 void OpenFIRECamera::EndPAJ7025() {
