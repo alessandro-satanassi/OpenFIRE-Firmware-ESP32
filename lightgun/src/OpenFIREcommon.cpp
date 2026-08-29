@@ -51,6 +51,7 @@
 // button object instance (defined in OpenFIREcommon.h/OpenFIREprefs.h)
 LightgunButtons FW_Common::buttons(lgbData, ButtonCount);
 
+/*
 bool FW_Common::CameraSelect(CameraModel model)
 {
     if (!OpenFIRECamera::Select(model))
@@ -66,6 +67,7 @@ bool FW_Common::CameraSelect(CameraModel model)
     #endif
     return true;
 }
+*/
 
 void FW_Common::FeedbackSet()
 {
@@ -206,20 +208,11 @@ void FW_Common::PinsReset()
     #endif // USES_DISPLAY
 }
 
+/*
 void FW_Common::CameraSet()
 {
-    const OpenFIRECameraPins cameraPins = {
-        OF_Prefs::pins[OF_Const::camSDA],
-        OF_Prefs::pins[OF_Const::camSCL],
-        OF_Prefs::pins[OF_Const::wiiClockGen],
-        OF_Prefs::pins[OF_Const::cam_SPI_SCK],
-        OF_Prefs::pins[OF_Const::cam_SPI_MISO],
-        OF_Prefs::pins[OF_Const::cam_SPI_MOSI],
-        OF_Prefs::pins[OF_Const::cam_SPI_CS]
-    };
 
-    if (!OpenFIRECamera::Begin(cameraPins,
-                               (OpenFIRECamera::Sensitivity_e)OF_Prefs::profiles[OF_Prefs::currentProfile].irSens,
+    if (!OpenFIRECamera::Begin((OpenFIRECamera::Sensitivity_e)OF_Prefs::profiles[OF_Prefs::currentProfile].irSens,
                                OpenFIRECamera::DataFormat_Basic)) {
         PrintIrError();
         return;
@@ -227,6 +220,38 @@ void FW_Common::CameraSet()
 
     camNotAvailable = false;
 }
+*/
+
+void FW_Common::CameraSet()
+{
+    if (!OpenFIRECamera::Begin()) {
+        PrintIrError();
+        return;
+    }
+
+    const CameraProfile& profile = OpenFIRECamera::Profile();
+
+    OF_Prefs::InitProfileDefaults(profile);
+
+    OpenFIREsquare.configure(profile);
+    OpenFIREdiamond.configure(profile);
+    OpenFIREper.configure(profile);
+
+    #ifdef USE_MULTI_ONE_EURO_FILTER
+        oef_multi.configure(profile);
+    #endif
+
+    OpenFIREper.source(
+        OF_Prefs::profiles[OF_Prefs::currentProfile].adjX,
+        OF_Prefs::profiles[OF_Prefs::currentProfile].adjY);
+    OpenFIREper.deinit(0);
+
+    //SetRunMode((FW_Const::RunMode_e)OF_Prefs::profiles[OF_Prefs::currentProfile].runMode);
+
+    camNotAvailable = false;
+}
+
+
 
 void FW_Common::SetMode(const FW_Const::GunMode_e &newMode)
 {

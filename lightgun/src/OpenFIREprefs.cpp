@@ -21,7 +21,7 @@
 
 #include "OpenFIREprefs.h"
 
-
+/*
 void OF_Prefs::InitProfileDefaults(const CameraProfile& profile)
 {
     const float centerX = (float)profile.mouseResX * 0.5f;
@@ -29,6 +29,37 @@ void OF_Prefs::InitProfileDefaults(const CameraProfile& profile)
     for (int i = 0; i < PROFILE_COUNT; ++i) {
         profiles[i].adjX = centerX;
         profiles[i].adjY = centerY;
+    }
+}
+*/
+
+/*
+void OF_Prefs::EnsureProfileDefaults(const CameraProfile& profile)
+{
+    const float centerX = (float)profile.mouseResX * 0.5f;
+    const float centerY = (float)profile.mouseResY * 0.5f;
+
+    for (int i = 0; i < PROFILE_COUNT; ++i) {
+        if (profiles[i].adjX == 0.0f)
+            profiles[i].adjX = centerX;
+
+        if (profiles[i].adjY == 0.0f)
+            profiles[i].adjY = centerY;
+    }
+}
+*/
+
+void OF_Prefs::InitProfileDefaults(const CameraProfile& profile)
+{
+    const float centerX = (float)profile.mouseResX * 0.5f;
+    const float centerY = (float)profile.mouseResY * 0.5f;
+
+    for (int i = 0; i < PROFILE_COUNT; ++i) {
+        if (profiles[i].adjX == 0.0f &&
+            profiles[i].adjY == 0.0f) {
+            profiles[i].adjX = centerX;
+            profiles[i].adjY = centerY;
+        }
     }
 }
 

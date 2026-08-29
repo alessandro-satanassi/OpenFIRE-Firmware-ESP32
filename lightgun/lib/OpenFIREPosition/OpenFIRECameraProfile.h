@@ -316,6 +316,24 @@ static constexpr CameraProfile PixArt_PAJ7025R3 = MakeProfile(
     0.0f                          // Lens radial correction K2
 );
 
+/*
+constexpr const CameraProfile* Find(CameraModel model)
+{
+    switch (model) {
+        case OF_Const::DFRobot_SEN0158:
+            return &DFRobot_SEN0158;
+
+        case OF_Const::PixArt_PAJ7025R2:
+            return &PixArt_PAJ7025R2;
+
+        case OF_Const::PixArt_PAJ7025R3:
+            return &PixArt_PAJ7025R3;
+
+        default:
+            return nullptr;
+    }
+}
+*/
 } // namespace OpenFIRE_CameraProfiles
 
 #endif // OPENFIRE_CAMERA_PROFILE_H

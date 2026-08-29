@@ -1045,7 +1045,8 @@ void OF_Serial::SerialProcessingDocked()
                   // sensitivity/layout preset
                   Serial_available(1); 
                   if(Serial.peek() != -1) {
-                    FW_Common::SetIrSensitivity(Serial.peek() & 0b11110000);
+                    //FW_Common::SetIrSensitivity(Serial.peek() & 0b11110000); // bug
+                    FW_Common::SetIrSensitivity(Serial.peek() & 0x0F);
                     FW_Common::SetIrLayout(Serial.read() >> 4);
                   }
 
@@ -1209,6 +1210,18 @@ void OF_Serial::SerialProcessingDocked()
             #endif
         } else while(Serial.available()) Serial.read();
         break;
+    
+    case OF_Const::sRebootToBootloader:
+        if(Serial.available() == 1 && Serial.read() == OF_Const::sRebootToBootloader) {
+            #ifdef ARDUINO_ARCH_ESP32
+               //ESP.restart();
+                esp_rom_software_reset_system();
+            #else
+            rp2040.reboot();
+            #endif
+        } else while(Serial.available()) Serial.read();
+        break;  
+    
     }
 }
 

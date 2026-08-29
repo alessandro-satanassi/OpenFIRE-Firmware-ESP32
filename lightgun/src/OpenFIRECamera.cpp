@@ -17,6 +17,8 @@
 #include <OpenFIRE_PAJ7025.h>
 #include "OpenFIRECamera.h"
 
+#include "OpenFIREprefs.h"
+
 #ifdef ARDUINO_ARCH_RP2040
 #include <pico/stdlib.h>
 #include <hardware/clocks.h>
@@ -128,8 +130,26 @@ CameraModel OpenFIRECamera::Model() {
     return activeProfile->model;
 }
 
-bool OpenFIRECamera::Begin(const OpenFIRECameraPins& pins,
-                           Sensitivity_e sensitivity,
+bool OpenFIRECamera::Begin()
+{
+    if (ready)
+        return false;
+
+    const CameraModel model =
+        (CameraModel)OF_Prefs::settings[OF_Const::cameraModel];
+
+    if (!Select(model))
+        return false;
+
+    const uint8_t sensitivity = ClampSensitivity(
+        (uint8_t)OF_Prefs::profiles[OF_Prefs::currentProfile].irSens
+    );
+
+    ready = activeOps->begin(sensitivity);
+    return ready;
+}
+/*
+bool OpenFIRECamera::Begin(Sensitivity_e sensitivity,
                            DataFormat_e format) {
     if (activeOps == nullptr || activeProfile == nullptr) {
         return false;
@@ -143,9 +163,10 @@ bool OpenFIRECamera::Begin(const OpenFIRECameraPins& pins,
     activeRead = (format == DataFormat_Extended) ? activeOps->readExtended : activeOps->readBasic;
     ClearObjectData();
 
-    ready = activeOps->begin(pins, ClampSensitivity((uint8_t)sensitivity));
+    ready = activeOps->begin(ClampSensitivity((uint8_t)sensitivity));
     return ready;
 }
+*/
 
 void OpenFIRECamera::End() {
     if (activeOps != nullptr) {
@@ -185,59 +206,66 @@ void OpenFIRECamera::SetSensitivity(Sensitivity_e sensitivity) {
     }
 }
 
-bool OpenFIRECamera::BeginDFRobot(const OpenFIRECameraPins& pins, uint8_t sensitivity) {
-#ifdef ARDUINO_ARCH_ESP32
-    Wire.setPins(pins.sda, pins.scl);
+bool OpenFIRECamera::BeginDFRobot(uint8_t sensitivity) {
+    const int8_t pin_sda = OF_Prefs::pins[OF_Const::camSDA];
+    const int8_t pin_scl = OF_Prefs::pins[OF_Const::camSCL];
+    const int8_t pin_wiiClock = OF_Prefs::pins[OF_Const::wiiClockGen];
+
+    if (pin_sda < 0 || pin_scl < 0) {
+        return false;
+    }
+    
+    #ifdef ARDUINO_ARCH_ESP32
+    Wire.setPins(pin_sda, pin_scl);
     dfrCamera = new DFRobotIRPositionEx(Wire);
 
     #ifdef CLOCK_CAM_WII
     constexpr uint32_t WII_CLOCK_FREQUENCY_HZ = 20000000U;
     constexpr uint32_t WII_CLOCK_DUTY_CYCLE = 1U;
-    const int gpio_pin = pins.wiiClock;
 
-    if (gpio_pin > -1) {
+    if (pin_wiiClock > -1) {
         if (!ledcSetClockSource(LEDC_AUTO_CLK)) {
             log_e("ERRORE: ledcSetClockSource fallita!");
         }
-        if (!ledcAttach(gpio_pin, WII_CLOCK_FREQUENCY_HZ, 1)) {
+        if (!ledcAttach(pin_wiiClock, WII_CLOCK_FREQUENCY_HZ, 1)) {
             log_e("ERRORE: ledcAttach fallita!");
-        } else if (!ledcWrite(gpio_pin, WII_CLOCK_DUTY_CYCLE)) {
+        } else if (!ledcWrite(pin_wiiClock, WII_CLOCK_DUTY_CYCLE)) {
             log_e("ERRORE: ledcWrite fallita!");
-            ledcDetach(gpio_pin);
+            ledcDetach(pin_wiiClock);
         }
     } else {
-        log_e("Clock non attivato (GPIO %d non valido: <= -1).\n", gpio_pin);
+        log_e("Clock non attivato (GPIO %d non valido: <= -1).\n", pin_wiiClock);
     }
     #endif
-#else
-    if (bitRead(pins.scl, 1) && bitRead(pins.sda, 1)) {
-        if (bitRead(pins.scl, 0) && !bitRead(pins.sda, 0)) {
-            Wire1.setSDA(pins.sda);
-            Wire1.setSCL(pins.scl);
+#else  // rp2040
+    if (bitRead(pin_scl, 1) && bitRead(pin_sda, 1)) {
+        if (bitRead(pin_scl, 0) && !bitRead(pin_sda, 0)) {
+            Wire1.setSDA(pin_sda);
+            Wire1.setSCL(pin_scl);
             dfrCamera = new DFRobotIRPositionEx(Wire1);
         }
-    } else if (!bitRead(pins.scl, 1) && !bitRead(pins.sda, 1)) {
-        if (bitRead(pins.scl, 0) && !bitRead(pins.sda, 0)) {
-            Wire.setSDA(pins.sda);
-            Wire.setSCL(pins.scl);
+    } else if (!bitRead(pin_scl, 1) && !bitRead(pin_sda, 1)) {
+        if (bitRead(pin_scl, 0) && !bitRead(pin_sda, 0)) {
+            Wire.setSDA(pin_sda);
+            Wire.setSCL(pin_scl);
             dfrCamera = new DFRobotIRPositionEx(Wire);
         }
     }
 
-    if (pins.wiiClock > -1) {
+    if (pin_wiiClock > -1) {
         set_sys_clock_khz(125000, true);
-        gpio_set_function(pins.wiiClock, GPIO_FUNC_PWM);
-        const uint slice_num = pwm_gpio_to_slice_num(pins.wiiClock);
+        gpio_set_function(pin_wiiClock, GPIO_FUNC_PWM);
+        const uint slice_num = pwm_gpio_to_slice_num(pin_wiiClock);
         pwm_set_clkdiv(slice_num, 1.0f);
         pwm_set_wrap(slice_num, 4);
-        pwm_set_chan_level(slice_num, pwm_gpio_to_channel(pins.wiiClock), 2);
+        pwm_set_chan_level(slice_num, pwm_gpio_to_channel(pin_wiiClock), 2);
         pwm_set_enabled(slice_num, true);
     } else {
         set_sys_clock_khz(133000, true);
-        pwm_set_enabled(pwm_gpio_to_slice_num(pins.wiiClock), false);
-        gpio_set_function(pins.wiiClock, GPIO_FUNC_SIO);
-        gpio_put(pins.wiiClock, 0);
-        gpio_set_dir(pins.wiiClock, GPIO_IN);
+        //pwm_set_enabled(pwm_gpio_to_slice_num(pin_wiiClock), false);
+        //gpio_set_function(pin_wiiClock, GPIO_FUNC_SIO);
+        //gpio_put(pin_wiiClock, 0);
+        //gpio_set_dir(pin_wiiClock, GPIO_IN);
     }
 #endif
 
@@ -312,24 +340,30 @@ void OpenFIRECamera::EndDFRobot() {
     }
 }
 
-bool OpenFIRECamera::BeginPAJ7025(const OpenFIRECameraPins& pins, uint8_t sensitivity) {
-    if (pins.spiSck < 0 || pins.spiMiso < 0 || pins.spiMosi < 0 || pins.spiCs < 0) {
+bool OpenFIRECamera::BeginPAJ7025(uint8_t sensitivity) {
+    const int8_t pin_spiSck = OF_Prefs::pins[OF_Const::cam_SPI_SCK];
+    const int8_t pin_spiMiso = OF_Prefs::pins[OF_Const::cam_SPI_MISO];
+    const int8_t pin_spiMosi = OF_Prefs::pins[OF_Const::cam_SPI_MOSI];
+    const int8_t pin_spiCs = OF_Prefs::pins[OF_Const::cam_SPI_CS];
+    
+    
+    if (pin_spiSck < 0 || pin_spiMiso < 0 || pin_spiMosi < 0 || pin_spiCs < 0) {
         return false;
     }
 
 #ifdef ARDUINO_ARCH_ESP32
-    if (!pajSPI.begin(pins.spiSck, pins.spiMiso, pins.spiMosi, pins.spiCs)) {
+    if (!pajSPI.begin(pin_spiSck, pin_spiMiso, pin_spiMosi, pin_spiCs)) {
         pajSPI.end();
         return false;
     }
-    pajCamera = new OpenFIRE_PAJ7025(&pajSPI, pins.spiCs, *activeProfile);
+    pajCamera = new OpenFIRE_PAJ7025(&pajSPI, pin_spiCs, *activeProfile);
 #else
-    SPI.setSCK(pins.spiSck);
-    SPI.setMISO(pins.spiMiso);
-    SPI.setMOSI(pins.spiMosi);
-    SPI.setCS(pins.spiCs);
+    SPI.setSCK(pin_spiSck);
+    SPI.setMISO(pin_spiMiso);
+    SPI.setMOSI(pin_spiMosi);
+    SPI.setCS(pin_spiCs);
     SPI.begin();
-    pajCamera = new OpenFIRE_PAJ7025(&SPI, pins.spiCs, *activeProfile);
+    pajCamera = new OpenFIRE_PAJ7025(&SPI, pin_spiCs, *activeProfile);
 #endif
 
     if (!pajCamera->begin(activeProfile->busClock, sensitivity)) {

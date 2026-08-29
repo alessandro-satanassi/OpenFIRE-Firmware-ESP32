@@ -16,16 +16,6 @@
 #include <stdint.h>
 #include "OpenFIRECameraProfile.h"
 
-struct OpenFIRECameraPins {
-    int8_t sda;
-    int8_t scl;
-    int8_t wiiClock;
-    int8_t spiSck;
-    int8_t spiMiso;
-    int8_t spiMosi;
-    int8_t spiCs;
-};
-
 class OpenFIRECamera {
 public:
     // Common data format exposed to the OpenFIRE firmware.
@@ -42,13 +32,11 @@ public:
         Sensitivity_Max = 2
     };
 
-    // Common camera read results exposed to the OpenFIRE firmware.
     enum Errors_e : int8_t {
-        Error_SuccessMismatch = 1,
-        Error_Success = 0,
-        Error_Communication = -1,
-        Error_IICerror = Error_Communication, // Legacy-compatible alias.
-        Error_DataMismatch = -2,
+        Error_SuccessMismatch = 1, // Valid fallback frame after consistency mismatch
+        Error_Success = 0,         // Valid consistent frame
+        Error_Communication = -1,  // Camera communication failed
+        Error_DataMismatch = -2    // Inconsistent frame discarded
     };
 
     // Fields available through ObjectData when Extended format is active.
@@ -87,13 +75,11 @@ public:
         uint8_t vy;
     };
 
-    static bool Select(CameraModel model);
+    //static bool Select(CameraModel model);
     static const CameraProfile& Profile();
     static CameraModel Model();
 
-    static bool Begin(const OpenFIRECameraPins& pins,
-                      Sensitivity_e sensitivity,
-                      DataFormat_e format = DataFormat_Basic);
+    static bool Begin();
     static void End();
 
     // Hot path: activeRead is bound to the selected backend and data format.
@@ -119,7 +105,7 @@ public:
     }
 
 private:
-    using BeginFn = bool (*)(const OpenFIRECameraPins&, uint8_t);
+    using BeginFn = bool (*)(uint8_t);
     using ReadFn = int (*)();
     using DataFormatFn = void (*)(DataFormat_e);
     using SensitivityFn = void (*)(uint8_t);
@@ -135,6 +121,7 @@ private:
         uint16_t extendedCapabilities;
     };
 
+    static bool Select(CameraModel model);
     static const CameraProfile* activeProfile;
     static const CameraOps* activeOps;
     static ReadFn activeRead;
@@ -153,7 +140,7 @@ private:
 
 
     // DFRobot SEN0158 / WiiCam
-    static bool BeginDFRobot(const OpenFIRECameraPins& pins, uint8_t sensitivity);
+    static bool BeginDFRobot(uint8_t sensitivity);
     static int ReadDFRobotBasic();
     static int ReadDFRobotExtended();
     static void DataFormatDFRobot(DataFormat_e format);
@@ -161,7 +148,7 @@ private:
     static void EndDFRobot();
 
     // PixArt PAJ7025R2 / PixArt PAJ7025R3
-    static bool BeginPAJ7025(const OpenFIRECameraPins& pins, uint8_t sensitivity);
+    static bool BeginPAJ7025(uint8_t sensitivity);
     static int ReadPAJ7025Basic();
     static int ReadPAJ7025Extended();
     static void DataFormatPAJ7025(DataFormat_e format);

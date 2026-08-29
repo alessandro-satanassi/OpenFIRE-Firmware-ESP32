@@ -64,10 +64,8 @@ public:
     ///           when setting pins to any new values.
     static void PinsReset();
 
-    /// @brief    (Re-)sets IR camera position object.
-    /// @note     This is run at startup, and can also be run from Docked mode
-    ///           when new camera pins are defined.
-    static bool CameraSelect(CameraModel model);
+    /// @brief Selects and initializes the configured camera and positioning algorithms.
+    /// @note  Called at startup and after camera/pin reinitialization.
     static void CameraSet();
 
     /// @brief    Macro for functions to run when gun enters new gunmode

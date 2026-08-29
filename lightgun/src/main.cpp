@@ -111,8 +111,8 @@ void setup() {
     const CameraModel selectedCamera = CameraModel::PixArt_PAJ7025R2;
     FW_Common::CameraSelect(selectedCamera);
     */
-    const CameraModel selectedCamera = CAMERA_DEFAULT; //OF_Const::PixArt_PAJ7025R2;
-    FW_Common::CameraSelect(selectedCamera);
+    //const CameraModel selectedCamera = CAMERA_DEFAULT; //OF_Const::PixArt_PAJ7025R2;
+    //FW_Common::CameraSelect(selectedCamera);
 
     // ======== [ESP32_PORT] =========== X AVVIO DUAL CORE ESP32 =================================== 
     #if defined(ARDUINO_ARCH_ESP32) && defined(DUAL_CORE)
@@ -328,6 +328,8 @@ void setup() {
 
     /*FW_Common::FeedbackSet();*/
     // Initialize DFRobot Camera Wires & Object
+    //const CameraModel selectedCamera = CAMERA_DEFAULT; //OF_Const::PixArt_PAJ7025R2;
+    OF_Prefs::settings[OF_Const::cameraModel] = CAMERA_DEFAULT;
     FW_Common::CameraSet();
 
     // initialize buttons & feedback devices
@@ -635,9 +637,12 @@ void setup() {
     if (TinyUSBDevices.onBattery) startIrCamTimer(OpenFIRECamera::Profile().fps);  // set to 5ms for wireless too... e.g., 100->10ms, 66->15ms for wireless connection / impostato a 5ms anche per wireless ... es. 100->10ms 66 -> 15ms per connessione wireless
       else startIrCamTimer(OpenFIRECamera::Profile().fps); // 5ms for wired connection / 5ms per connessione via cavo
     
+    /*
     FW_Common::OpenFIREper.source(OF_Prefs::profiles[OF_Prefs::currentProfile].adjX,
                                   OF_Prefs::profiles[OF_Prefs::currentProfile].adjY);
     FW_Common::OpenFIREper.deinit(0);
+    */
+
 
     // First boot sanity checks; all zeroes are initial config
     if((OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset    == 0 &&
