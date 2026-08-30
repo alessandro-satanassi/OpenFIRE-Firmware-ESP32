@@ -329,7 +329,7 @@ void setup() {
     /*FW_Common::FeedbackSet();*/
     // Initialize DFRobot Camera Wires & Object
     //const CameraModel selectedCamera = CAMERA_DEFAULT; //OF_Const::PixArt_PAJ7025R2;
-    OF_Prefs::settings[OF_Const::cameraModel] = CAMERA_DEFAULT;
+    /////////////////////OF_Prefs::settings[OF_Const::cameraModel] = CAMERA_DEFAULT;
     FW_Common::CameraSet();
 
     // initialize buttons & feedback devices

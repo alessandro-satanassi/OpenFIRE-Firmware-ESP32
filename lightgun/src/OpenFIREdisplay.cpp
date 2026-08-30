@@ -547,6 +547,7 @@ void ExtDisplay::SaveScreen(const int &status)
     }
 }
 
+/*
 void ExtDisplay::RebootScreen()
 {
     if(display != nullptr) {
@@ -561,6 +562,7 @@ void ExtDisplay::RebootScreen()
         display->display();
     }
 }
+*/
 
 void ExtDisplay::PrintAmmo(const uint &ammo)
 {

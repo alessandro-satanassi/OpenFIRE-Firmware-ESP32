@@ -26,6 +26,8 @@
 #endif
 
 namespace {
+TwoWire* activeI2C = nullptr;
+SPIClass* activeSPI = nullptr;
 DFRobotIRPositionEx* dfrCamera = nullptr;
 PAJ7025* pajCamera = nullptr;
 int pajX[4] = {0};
@@ -243,12 +245,14 @@ bool OpenFIRECamera::BeginDFRobot(uint8_t sensitivity) {
         if (bitRead(pin_scl, 0) && !bitRead(pin_sda, 0)) {
             Wire1.setSDA(pin_sda);
             Wire1.setSCL(pin_scl);
+            activeI2C = &Wire1;
             dfrCamera = new DFRobotIRPositionEx(Wire1);
         }
     } else if (!bitRead(pin_scl, 1) && !bitRead(pin_sda, 1)) {
         if (bitRead(pin_scl, 0) && !bitRead(pin_sda, 0)) {
             Wire.setSDA(pin_sda);
             Wire.setSCL(pin_scl);
+            activeI2C = &Wire;
             dfrCamera = new DFRobotIRPositionEx(Wire);
         }
     }
@@ -339,6 +343,31 @@ void OpenFIRECamera::EndDFRobot() {
         delete dfrCamera;
         dfrCamera = nullptr;
     }
+
+#ifdef ARDUINO_ARCH_ESP32
+    Wire.end();
+    #ifdef CLOCK_CAM_WII
+    const int8_t pin_wiiClock = OF_Prefs::pins[OF_Const::wiiClockGen];
+    if (pin_wiiClock > -1) {
+        ledcDetach(pin_wiiClock);
+    }
+    #endif
+#elif defined(ARDUINO_ARCH_RP2040)
+    if (activeI2C) {
+        activeI2C->end();
+        activeI2C = nullptr;
+    }
+    #ifdef CLOCK_CAM_WII
+    const int8_t pin_wiiClock = OF_Prefs::pins[OF_Const::wiiClockGen];
+    if (pin_wiiClock > -1) {
+        set_sys_clock_khz(133000, true);
+        pwm_set_enabled(pwm_gpio_to_slice_num(pin_wiiClock), false);
+        gpio_set_function(pin_wiiClock, GPIO_FUNC_SIO);
+        gpio_put(pin_wiiClock, 0);
+        gpio_set_dir(pin_wiiClock, GPIO_IN);
+    }
+    #endif
+#endif
 }
 
 // ============================================================================
@@ -370,9 +399,10 @@ bool OpenFIRECamera::BeginPAJ7025(uint8_t sensitivity) {
     SPI.setMISO(pin_spiMiso);
     SPI.setMOSI(pin_spiMosi);
     SPI.setCS(pin_spiCs);
-    SPI.begin();
+    activeSPI = &SPI;
+    activeSPI->begin();
     if (pajCamera == nullptr) pajCamera = new PAJ7025();
-    if (!pajCamera->begin(&SPI, pin_spiCs, activeProfile->busClock)) {
+    if (!pajCamera->begin(activeSPI, pin_spiCs, activeProfile->busClock)) {
         delete pajCamera;
         pajCamera = nullptr;
         return false;
@@ -475,5 +505,10 @@ void OpenFIRECamera::EndPAJ7025() {
     }
 #ifdef ARDUINO_ARCH_ESP32
     pajSPI.end();
+#else
+    if (activeSPI) {
+        activeSPI->end();
+        activeSPI = nullptr;
+    }
 #endif
 }

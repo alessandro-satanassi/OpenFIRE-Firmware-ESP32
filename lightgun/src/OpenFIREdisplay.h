@@ -71,7 +71,7 @@ public:
 
     /// @brief Print save status message
     void SaveScreen(const int &status);
-    void RebootScreen();
+    //void RebootScreen();
 
     /// @brief Update main screen ammo glyphs
     void PrintAmmo(const uint &ammo);

@@ -1119,6 +1119,9 @@ void OF_Serial::SerialProcessingDocked()
                     //// Commands
                     case OF_Const::sSave:
                         if(FW_Common::SavePreferences() == OF_Prefs::Error_Success) {
+                            // Dynamic Camera swapping is supported automatically
+                            // by FW_Common::PinsReset() followed by CameraSet()
+                            /*
                             if (OF_Prefs::settings[OF_Const::cameraModel] != OpenFIRECamera::Model()) {
                                 #ifdef USES_DISPLAY
                                 FW_Common::OLED.RebootScreen();
@@ -1127,6 +1130,7 @@ void OF_Serial::SerialProcessingDocked()
                                     delay(100);
                                 }
                             }
+                            */
                             
                             // For updating pin data for buttons, cams and periphs
                             FW_Common::PinsReset();
