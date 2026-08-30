@@ -53,7 +53,7 @@ void OpenFIRECamera::ClearObjectData() {
     }
 }
 
-bool OpenFIRECamera::Select(CameraModel model) {
+bool OpenFIRECamera::Select() {
     static constexpr uint16_t DFRobotExtendedCapabilities =
         ExtendedData_Size;
 
@@ -98,6 +98,8 @@ bool OpenFIRECamera::Select(CameraModel model) {
     activeFormat = DataFormat_Basic;
     ClearObjectData();
 
+    const CameraModel model = (CameraModel)OF_Prefs::settings[OF_Const::cameraModel];
+
     switch (model) {
         case OF_Const::DFRobot_SEN0158:
             activeProfile = &OpenFIRE_CameraProfiles::DFRobot_SEN0158;
@@ -137,10 +139,7 @@ bool OpenFIRECamera::Begin()
     if (ready)
         return false;
 
-    const CameraModel model =
-        (CameraModel)OF_Prefs::settings[OF_Const::cameraModel];
-
-    if (!Select(model))
+    if (!Select())
         return false;
 
     const uint8_t sensitivity = ClampSensitivity(

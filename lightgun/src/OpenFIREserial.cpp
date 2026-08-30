@@ -1119,6 +1119,15 @@ void OF_Serial::SerialProcessingDocked()
                     //// Commands
                     case OF_Const::sSave:
                         if(FW_Common::SavePreferences() == OF_Prefs::Error_Success) {
+                            if (OF_Prefs::settings[OF_Const::cameraModel] != OpenFIRECamera::Model()) {
+                                #ifdef USES_DISPLAY
+                                FW_Common::OLED.RebootScreen();
+                                #endif
+                                while (true) {
+                                    delay(100);
+                                }
+                            }
+                            
                             // For updating pin data for buttons, cams and periphs
                             FW_Common::PinsReset();
                             FW_Common::CameraSet();

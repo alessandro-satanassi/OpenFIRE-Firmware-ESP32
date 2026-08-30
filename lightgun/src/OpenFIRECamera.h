@@ -121,7 +121,7 @@ private:
         uint16_t extendedCapabilities;
     };
 
-    static bool Select(CameraModel model);
+    static bool Select();
     static const CameraProfile* activeProfile;
     static const CameraOps* activeOps;
     static ReadFn activeRead;

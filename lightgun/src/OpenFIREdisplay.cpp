@@ -547,6 +547,21 @@ void ExtDisplay::SaveScreen(const int &status)
     }
 }
 
+void ExtDisplay::RebootScreen()
+{
+    if(display != nullptr) {
+        display->fillRect(0, 0, 128, 64, BLACK);
+        display->setTextColor(WHITE, BLACK);
+        display->setTextSize(1);
+        display->setCursor(0, 16);
+        display->println("Camera changed!");
+        display->println();
+        display->println("Please restart");
+        display->println("the microcontroller");
+        display->display();
+    }
+}
+
 void ExtDisplay::PrintAmmo(const uint &ammo)
 {
     if(display != nullptr) {
