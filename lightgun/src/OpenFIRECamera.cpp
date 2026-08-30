@@ -28,6 +28,7 @@
 namespace {
 TwoWire* activeI2C = nullptr;
 SPIClass* activeSPI = nullptr;
+int8_t activeWiiClockPin = -1;
 DFRobotIRPositionEx* dfrCamera = nullptr;
 PAJ7025* pajCamera = nullptr;
 int pajX[4] = {0};
@@ -235,6 +236,8 @@ bool OpenFIRECamera::BeginDFRobot(uint8_t sensitivity) {
         } else if (!ledcWrite(pin_wiiClock, WII_CLOCK_DUTY_CYCLE)) {
             log_e("ERRORE: ledcWrite fallita!");
             ledcDetach(pin_wiiClock);
+        } else {
+            activeWiiClockPin = pin_wiiClock;
         }
     } else {
         log_e("Clock non attivato (GPIO %d non valido: <= -1).\n", pin_wiiClock);
@@ -257,6 +260,7 @@ bool OpenFIRECamera::BeginDFRobot(uint8_t sensitivity) {
         }
     }
 
+    #ifdef CLOCK_CAM_WII
     if (pin_wiiClock > -1) {
         set_sys_clock_khz(125000, true);
         gpio_set_function(pin_wiiClock, GPIO_FUNC_PWM);
@@ -265,16 +269,27 @@ bool OpenFIRECamera::BeginDFRobot(uint8_t sensitivity) {
         pwm_set_wrap(slice_num, 4);
         pwm_set_chan_level(slice_num, pwm_gpio_to_channel(pin_wiiClock), 2);
         pwm_set_enabled(slice_num, true);
-    } else {
+        activeWiiClockPin = pin_wiiClock;
+    } 
+    /*
+    else {
         set_sys_clock_khz(133000, true);
         //pwm_set_enabled(pwm_gpio_to_slice_num(pin_wiiClock), false);
         //gpio_set_function(pin_wiiClock, GPIO_FUNC_SIO);
         //gpio_put(pin_wiiClock, 0);
         //gpio_set_dir(pin_wiiClock, GPIO_IN);
     }
+    */
+   #endif
 #endif
-
+    
+    /*
     if (dfrCamera == nullptr) {
+        return false;
+    }
+    */
+    if (dfrCamera == nullptr) {
+        EndDFRobot();
         return false;
     }
 
@@ -283,11 +298,20 @@ bool OpenFIRECamera::BeginDFRobot(uint8_t sensitivity) {
             ? DFRobotIRPositionEx::DataFormat_Extended
             : DFRobotIRPositionEx::DataFormat_Basic;
 
+    /*
     if (!dfrCamera->begin(activeProfile->busClock,
                           format,
                           (DFRobotIRPositionEx::Sensitivity_e)sensitivity)) {
         delete dfrCamera;
         dfrCamera = nullptr;
+        return false;
+    }
+    */
+
+    if (!dfrCamera->begin(activeProfile->busClock,
+                          format,
+                          (DFRobotIRPositionEx::Sensitivity_e)sensitivity)) {
+        EndDFRobot();
         return false;
     }
 
@@ -347,9 +371,9 @@ void OpenFIRECamera::EndDFRobot() {
 #ifdef ARDUINO_ARCH_ESP32
     Wire.end();
     #ifdef CLOCK_CAM_WII
-    const int8_t pin_wiiClock = OF_Prefs::pins[OF_Const::wiiClockGen];
-    if (pin_wiiClock > -1) {
-        ledcDetach(pin_wiiClock);
+    if (activeWiiClockPin > -1) {
+        ledcDetach(activeWiiClockPin);
+        activeWiiClockPin = -1;
     }
     #endif
 #elif defined(ARDUINO_ARCH_RP2040)
@@ -358,13 +382,15 @@ void OpenFIRECamera::EndDFRobot() {
         activeI2C = nullptr;
     }
     #ifdef CLOCK_CAM_WII
-    const int8_t pin_wiiClock = OF_Prefs::pins[OF_Const::wiiClockGen];
-    if (pin_wiiClock > -1) {
-        set_sys_clock_khz(133000, true);
-        pwm_set_enabled(pwm_gpio_to_slice_num(pin_wiiClock), false);
-        gpio_set_function(pin_wiiClock, GPIO_FUNC_SIO);
-        gpio_put(pin_wiiClock, 0);
-        gpio_set_dir(pin_wiiClock, GPIO_IN);
+    if (activeWiiClockPin > -1) {
+        // set_sys_clock_khz(133000, true);
+        pwm_set_enabled(pwm_gpio_to_slice_num(activeWiiClockPin), false);
+        gpio_set_function(activeWiiClockPin, GPIO_FUNC_SIO);
+        gpio_put(activeWiiClockPin, 0);
+        gpio_set_dir(activeWiiClockPin, GPIO_IN);
+        activeWiiClockPin = -1;
+        
+        set_sys_clock_khz((uint32_t)(F_CPU / 1000UL), true);  // ripristina il clock originale funzio sia su rp2040 cherp2350/pico 2
     }
     #endif
 #endif
