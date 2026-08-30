@@ -415,9 +415,14 @@ bool OpenFIRECamera::BeginPAJ7025(uint8_t sensitivity) {
         return false;
     }
     if (pajCamera == nullptr) pajCamera = new PAJ7025();
+    /*
     if (!pajCamera->begin(&pajSPI, pin_spiCs, activeProfile->busClock)) {
-        delete pajCamera;
-        pajCamera = nullptr;
+        EndPAJ7025();
+        return false;
+    }
+    */
+    if (pajCamera == nullptr || !pajCamera->begin(&pajSPI, pin_spiCs, activeProfile->busClock)) {
+        EndPAJ7025();
         return false;
     }
 #else
@@ -428,9 +433,14 @@ bool OpenFIRECamera::BeginPAJ7025(uint8_t sensitivity) {
     activeSPI = &SPI;
     activeSPI->begin();
     if (pajCamera == nullptr) pajCamera = new PAJ7025();
+    /*
     if (!pajCamera->begin(activeSPI, pin_spiCs, activeProfile->busClock)) {
-        delete pajCamera;
-        pajCamera = nullptr;
+        EndPAJ7025();
+        return false;
+    }
+    */
+    if (pajCamera == nullptr || !pajCamera->begin(activeSPI, pin_spiCs, activeProfile->busClock)) {
+        EndPAJ7025();
         return false;
     }
 #endif
