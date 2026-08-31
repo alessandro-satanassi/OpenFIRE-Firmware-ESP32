@@ -1009,11 +1009,15 @@ void OF_Serial::SerialProcessingDocked()
     //// State changes/direct control methods
     //
     case OF_Const::sIRTest:
+    {
+        // Estraiamo il byte di stato (true/false) in modo sicuro e col timeout
+        const int testCmd = Serial_available(1) ? Serial.read() : -1;
+        
         if(FW_Common::camNotAvailable) {
-            Serial.read(); // nomf
+            // Serial.read(); // nomf
             char message[2] = { OF_Const::sError, OF_Const::sErrCam };
             Serial.write(message, sizeof(message));
-        } else if(FW_Common::runMode == FW_Const::RunMode_Processing && Serial.read() == false) {
+        } else if(FW_Common::runMode == FW_Const::RunMode_Processing && testCmd == false) {
             switch(OF_Prefs::profiles[OF_Prefs::currentProfile].runMode) {
             case FW_Const::RunMode_Normal:
                 FW_Common::SetRunMode(FW_Const::RunMode_Normal);
@@ -1025,9 +1029,10 @@ void OF_Serial::SerialProcessingDocked()
                 FW_Common::SetRunMode(FW_Const::RunMode_Average2);
                 break;
             }
-        } else if(Serial.read() == true)
+        } else if(testCmd == true)
             FW_Common::SetRunMode(FW_Const::RunMode_Processing);
         break;
+    }
     case OF_Const::sCaliProfile:
     {
         Serial_available(1);
@@ -1036,6 +1041,7 @@ void OF_Serial::SerialProcessingDocked()
             char buf[2] = {OF_Const::sCurrentProf, (uint8_t)OF_Prefs::currentProfile};
             Serial.write(buf, sizeof(buf));
             Serial_available(1);
+            /*
             if(Serial.read() == OF_Const::sCaliStart) {
                 if(FW_Common::camNotAvailable) {
                     buf[0] = OF_Const::sError;
@@ -1054,7 +1060,38 @@ void OF_Serial::SerialProcessingDocked()
                   FW_Common::ExecCalMode(true);
                 }
             }
+            */
+            if(Serial.read() == OF_Const::sCaliStart) {
+                // This byte belongs to the calibration command and must always
+                // be consumed, even when the camera is unavailable.
+                const int caliSettings = Serial_available(1) ? Serial.read() : -1;
+
+                if(FW_Common::camNotAvailable) {
+                    buf[0] = OF_Const::sError;
+                    buf[1] = OF_Const::sErrCam;
+                    Serial.write(buf, sizeof(buf));
+                } else {
+                    if(caliSettings >= 0) {
+                        FW_Common::SetIrSensitivity(caliSettings & 0x0F);
+                        FW_Common::SetIrLayout(caliSettings >> 4);
+                    }
+
+                    FW_Common::SetMode(FW_Const::GunMode_Calibration);
+                    FW_Common::ExecCalMode(true);
+                }
+            }
         } else {
+            // Consume invalid profile number.
+            Serial_available(1);
+            Serial.read();
+
+            // Consume the remaining calibration command, when present.
+            Serial_available(1);
+            if(Serial.read() == OF_Const::sCaliStart) {
+                Serial_available(1);
+                Serial.read();
+            }
+            /*
             Serial_available(1);
             Serial.read();
             Serial_available(1);
@@ -1062,6 +1099,7 @@ void OF_Serial::SerialProcessingDocked()
                 Serial_available(1);
                 if(Serial.read() != -1) Serial.read();
             }
+            */
         }
         break;
     }
@@ -1106,7 +1144,7 @@ void OF_Serial::SerialProcessingDocked()
 
     case OF_Const::sCommitStart:
     {
-        if(Serial.available() == 1 && Serial.read() == true) {
+        if(Serial_available(1) && Serial.read() == true) {
             FW_Common::buttons.Unset();
             bool exit = false;
             size_t type, rxLen, datSize, profNum;
@@ -1166,21 +1204,30 @@ void OF_Serial::SerialProcessingDocked()
                     //// Saving ops
                     case OF_Const::sCommitID:
                         Serial_available(18);
-                        rxLen = Serial.readBytes(RXbuf, Serial.available());
-                        if(rxLen == 18) memcpy(&OF_Prefs::usb, RXbuf, rxLen);
+                        rxLen = Serial.readBytes(RXbuf, 18);
+                        if(rxLen == 18) memcpy(&OF_Prefs::usb, RXbuf, 18);
                         break;
                     default:
                         rxLen = Serial.readBytesUntil('\0', RXbuf, 32);
                         RXbuf[rxLen++] = '\0';
+                        Serial_available(1);
                         datSize = Serial.read();
                         RXbuf[rxLen++] = datSize;
                         if(type == OF_Const::sCommitProfile && (OF_Prefs::OFPresets.profSettingTypes_Strings.count(RXbuf) == 0 ||
                                                                (OF_Prefs::OFPresets.profSettingTypes_Strings.count(RXbuf) && OF_Prefs::OFPresets.profSettingTypes_Strings.at(RXbuf) != OF_Const::profCurrent)))
                         {
+                            Serial_available(1);
                             profNum = Serial.read();
                             RXbuf[rxLen++] = profNum;
                         }
+                        
+                        if (rxLen + datSize > sizeof(RXbuf)) {
+                            Serial.write(OF_Const::sError);
+                            break; 
+                        }
+
                         rxLen += Serial.readBytes(&RXbuf[rxLen], datSize);
+
                         switch(type) {
                             case OF_Const::sCommitToggles:  SerialBatchRecv(RXbuf, OF_Prefs::toggles,           OF_Prefs::OFPresets.boolTypes_Strings,     sizeof(OF_Prefs::toggles)          / OF_Const::boolTypesCount,     datSize, rxLen); break;
                             case OF_Const::sCommitPins:     SerialBatchRecv(RXbuf, OF_Prefs::pins,              OF_Prefs::OFPresets.boardInputs_Strings,   sizeof(OF_Prefs::pins)             / OF_Const::boardInputsCount,   datSize, rxLen); break;
@@ -1208,7 +1255,7 @@ void OF_Serial::SerialProcessingDocked()
     }
 
     case OF_Const::sClearFlash:
-        if(Serial.available() == 1 && Serial.read() == OF_Const::sClearFlash) {
+        if(Serial_available(1) && Serial.read() == OF_Const::sClearFlash) {
             OF_Prefs::ResetPreferences();
             #ifdef ARDUINO_ARCH_ESP32
                 #ifdef OPENFIRE_WIRELESS_ENABLE
@@ -1225,7 +1272,7 @@ void OF_Serial::SerialProcessingDocked()
         break;
     
     case OF_Const::sRebootToBootloader:
-        if(Serial.available() == 1 && Serial.read() == OF_Const::sRebootToBootloader) {
+        if(Serial_available(1) && Serial.read() == OF_Const::sRebootToBootloader) {
             #ifdef ARDUINO_ARCH_ESP32
                //ESP.restart();
                 esp_rom_software_reset_system();
@@ -1276,10 +1323,19 @@ void OF_Serial::SerialBatchSend(void *dataPtr, const std::unordered_map<std::str
             }
             
             for(int sendTry = 0; sendTry < 3; ++sendTry) {
+                // svuota il buffer da eventuali byte sporchi o vecchi echi
+                while(Serial.available()) Serial.read();
+                
                 Serial.write(TXbuf, pos);
                 Serial.flush();
-                while(Serial.available() < pos) yield();
-                Serial.readBytes(RXbuf, Serial.available());
+                // while(Serial.available() < pos) yield();
+                if(!Serial_available(pos)) {
+                    Serial.write(OF_Const::sError);
+                    Serial.flush();
+                    return;
+                }
+                // Serial.readBytes(RXbuf, Serial.available());
+                Serial.readBytes(RXbuf, pos);
 
                 if(!memcmp(RXbuf, TXbuf, pos)) break;
                 if(sendTry >= 2) {

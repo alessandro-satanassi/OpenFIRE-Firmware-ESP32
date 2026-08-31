@@ -425,7 +425,47 @@ bool OpenFIRECamera::BeginPAJ7025(uint8_t sensitivity) {
         EndPAJ7025();
         return false;
     }
-#else
+#else // rp2040
+    // RP2040/RP2350:
+    // bits 0-1 identify the SPI function:
+    // 0 = MISO/RX, 1 = CS, 2 = SCK, 3 = MOSI/TX
+    // bit 3 identifies the controller: 0 = SPI0, 1 = SPI1.
+    const uint8_t spiBus = bitRead(pin_spiSck, 3);
+
+    if ((uint8_t)pin_spiSck  >= (uint8_t)NUM_BANK0_GPIOS ||
+            (uint8_t)pin_spiMiso >= (uint8_t)NUM_BANK0_GPIOS ||
+            (uint8_t)pin_spiMosi >= (uint8_t)NUM_BANK0_GPIOS ||
+            (uint8_t)pin_spiCs   >= (uint8_t)NUM_BANK0_GPIOS ||
+            (pin_spiMiso & 0x03) != 0x00 ||
+            (pin_spiCs   & 0x03) != 0x01 ||
+            (pin_spiSck  & 0x03) != 0x02 ||
+            (pin_spiMosi & 0x03) != 0x03 ||
+            bitRead(pin_spiMiso, 3) != spiBus ||
+            bitRead(pin_spiMosi, 3) != spiBus ||
+            bitRead(pin_spiCs,   3) != spiBus) {
+        return false;
+    }
+
+    SPIClassRP2040* spiPort = spiBus ? &SPI1 : &SPI;
+
+    if (!spiPort->setSCK(pin_spiSck) ||
+            !spiPort->setMISO(pin_spiMiso) ||
+            !spiPort->setMOSI(pin_spiMosi) ||
+            !spiPort->setCS(pin_spiCs)) {
+        return false;
+    }
+
+    activeSPI = spiPort;
+    activeSPI->begin();
+
+    if (pajCamera == nullptr) pajCamera = new PAJ7025();
+
+    if (pajCamera == nullptr || !pajCamera->begin(activeSPI, pin_spiCs, activeProfile->busClock)) {
+        EndPAJ7025();
+        return false;
+    }
+
+    /*
     SPI.setSCK(pin_spiSck);
     SPI.setMISO(pin_spiMiso);
     SPI.setMOSI(pin_spiMosi);
@@ -433,17 +473,14 @@ bool OpenFIRECamera::BeginPAJ7025(uint8_t sensitivity) {
     activeSPI = &SPI;
     activeSPI->begin();
     if (pajCamera == nullptr) pajCamera = new PAJ7025();
-    /*
-    if (!pajCamera->begin(activeSPI, pin_spiCs, activeProfile->busClock)) {
-        EndPAJ7025();
-        return false;
-    }
-    */
     if (pajCamera == nullptr || !pajCamera->begin(activeSPI, pin_spiCs, activeProfile->busClock)) {
         EndPAJ7025();
         return false;
     }
+    */
 #endif
+
+
 
     pajCamera->setFrameRate(activeProfile->fps);
     pajCamera->setExposure(300);
