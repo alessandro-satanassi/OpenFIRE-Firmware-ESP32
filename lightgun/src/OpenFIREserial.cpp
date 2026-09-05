@@ -379,7 +379,8 @@ void OF_Serial::SerialProcessing()
           break;
         // Enter Docked Mode
         case OF_Const::sDock1:
-          if(Serial.read() == OF_Const::sDock2) {
+          if(Serial_available(1) && Serial.read() == OF_Const::sDock2) {
+            AppSerialSessionBegin();
             #if /*defined(ARDUINO_ARCH_RP2040) &&*/ defined(DUAL_CORE) // This may be being run from Core 1, so signal if running in main Run Mode.
             if(FW_Common::gunMode == FW_Const::GunMode_Run) {
                 #ifdef ARDUINO_ARCH_ESP32 
@@ -978,388 +979,1079 @@ void OF_Serial::SerialHandling()
 }
 #endif // MAMEHOOKER
 
-// Serial Buffer in Docked Mode should always be being read by the main core on multicore systems
+// ==================== FINE CODICE PER MAMEHOOKER =======================================
+
+// ===== Desktop App framed serial protocol ===================================
+
+// Pin map that was active before an App commit started. It is needed because
+// OF_Prefs::pins is overwritten by incoming records before PinsReset() runs.
+static int8_t appSerialPinsBeforeCommit[OF_Const::boardInputsCount] = {};
+static bool appSerialPinsBeforeCommitValid = false;
+
+uint8_t OF_Serial::AppSerialCRC8(const uint8_t *data, uint16_t length)
+{
+    uint8_t crc = 0;
+
+    while(length--) {
+        crc ^= *data++;
+        for(uint8_t bit = 0; bit < 8; ++bit)
+            crc = (crc & 0x80) ? (uint8_t)((crc << 1) ^ 0x9B) : (uint8_t)(crc << 1);
+    }
+
+    return crc;
+}
+
+uint8_t OF_Serial::AppSerialNextSequence()
+{
+    ++appSerialTxSequence;
+    if(appSerialTxSequence == 0)
+        appSerialTxSequence = 1;
+
+    return appSerialTxSequence;
+}
+
+void OF_Serial::AppSerialSessionBegin()
+{
+    appSerialSessionActive = true;
+    appSerialRxLength = 0;
+    appSerialRxTimestamp = 0;
+    appSerialTxSequence = 0;
+    appSerialRawDockState = 0;
+    appSerialLastRxValid = false;
+    appSerialCommitActive = false;
+    appSerialCommitFailed = false;
+    appSerialCalibrationCancel = false;
+    // A new serial session must not discard RAM awaiting a successful save.
+    FW_Common::dockedSaving = appSerialPinsBeforeCommitValid;
+
+    appSerialWaitingForAck = false;
+    appSerialDispatching = false;
+    appSerialProcessingDeferred = false;
+    appSerialDeferredValid = false;
+}
+
+void OF_Serial::AppSerialSessionEnd()
+{
+    appSerialSessionActive = false;
+    appSerialRxLength = 0;
+    appSerialRxTimestamp = 0;
+    appSerialRawDockState = 0;
+    appSerialLastRxValid = false;
+    appSerialCommitActive = false;
+    appSerialCommitFailed = false;
+    appSerialCalibrationCancel = false;
+    FW_Common::dockedSaving = appSerialPinsBeforeCommitValid;
+
+    appSerialWaitingForAck = false;
+    appSerialDeferredValid = false;
+}
+
+bool OF_Serial::AppSerialWriteFrame(uint8_t typeFlags, uint8_t command, uint8_t sequence, const void *payload, uint8_t length)
+{
+    if(length > APP_SERIAL_MAX_PAYLOAD || (length > 0 && payload == nullptr))
+        return false;
+
+    appSerialTxBuffer[0] = APP_SERIAL_START_1;
+    appSerialTxBuffer[1] = APP_SERIAL_START_2;
+    appSerialTxBuffer[2] = typeFlags;
+    appSerialTxBuffer[3] = command;
+    appSerialTxBuffer[4] = sequence;
+    appSerialTxBuffer[5] = length;
+
+    if(length > 0)
+        memcpy(&appSerialTxBuffer[6], payload, length);
+
+    appSerialTxBuffer[6 + length] = AppSerialCRC8(&appSerialTxBuffer[2], (uint16_t)(4 + length));
+    const uint16_t frameLength = (uint16_t)(APP_SERIAL_OVERHEAD + length);
+
+    const bool written = Serial.write(appSerialTxBuffer, frameLength) == frameLength;
+
+    // Reliable frames are followed immediately by a wait for the peer's ACK.
+    // Push them out now instead of relying on the USB/serial buffer latency.
+    // Best-effort real-time events deliberately remain non-blocking.
+    if(written && (typeFlags & APP_SERIAL_TYPE_MASK) != APP_SERIAL_TYPE_EVENT)
+        Serial.flush();
+
+    return written;
+}
+
+void OF_Serial::AppSerialSendAck(uint8_t command, uint8_t sequence)
+{
+    AppSerialWriteFrame(APP_SERIAL_TYPE_ACK, command, sequence, nullptr, 0);
+}
+
+bool OF_Serial::AppSerialReadFrame(AppSerialFrame_s &frame)
+{
+    if(appSerialRxLength > 0 && millis() - appSerialRxTimestamp > APP_SERIAL_FRAME_TIMEOUT)
+        appSerialRxLength = 0;
+
+    for(;;) {
+        while(appSerialRxLength >= 2) {
+            uint16_t start = 0;
+            while(start + 1 < appSerialRxLength &&
+                  (appSerialRxBuffer[start] != APP_SERIAL_START_1 || appSerialRxBuffer[start + 1] != APP_SERIAL_START_2))
+                ++start;
+
+            if(start + 1 >= appSerialRxLength) {
+                if(appSerialRxBuffer[appSerialRxLength - 1] == APP_SERIAL_START_1) {
+                    appSerialRxBuffer[0] = APP_SERIAL_START_1;
+                    appSerialRxLength = 1;
+                } else appSerialRxLength = 0;
+                break;
+            }
+
+            if(start > 0) {
+                memmove(appSerialRxBuffer, &appSerialRxBuffer[start], appSerialRxLength - start);
+                appSerialRxLength -= start;
+            }
+
+            if(appSerialRxLength < 6)
+                break;
+
+            const uint8_t typeFlags = appSerialRxBuffer[2];
+            const uint8_t type = typeFlags & APP_SERIAL_TYPE_MASK;
+            const uint8_t sequence = appSerialRxBuffer[4];
+            const uint8_t length = appSerialRxBuffer[5];
+            const bool invalidFlags = (typeFlags & (uint8_t)~(APP_SERIAL_TYPE_MASK | APP_SERIAL_FLAG_FINAL)) != 0;
+            const bool invalidFinal = (typeFlags & APP_SERIAL_FLAG_FINAL) &&
+                                      (type != APP_SERIAL_TYPE_RESPONSE || length != 0);
+            const bool invalidSequence = (type == APP_SERIAL_TYPE_EVENT) ? (sequence != 0) : (sequence == 0);
+            const bool invalidAck = type == APP_SERIAL_TYPE_ACK && length != 0;
+
+            if(invalidFlags || invalidFinal || invalidSequence || invalidAck || length > APP_SERIAL_MAX_PAYLOAD) {
+                memmove(appSerialRxBuffer, &appSerialRxBuffer[1], --appSerialRxLength);
+                continue;
+            }
+
+            const uint16_t frameLength = (uint16_t)(APP_SERIAL_OVERHEAD + length);
+            if(appSerialRxLength < frameLength)
+                break;
+
+            const uint8_t receivedCRC = appSerialRxBuffer[6 + length];
+            const uint8_t calculatedCRC = AppSerialCRC8(&appSerialRxBuffer[2], (uint16_t)(4 + length));
+            if(receivedCRC != calculatedCRC) {
+                memmove(appSerialRxBuffer, &appSerialRxBuffer[1], --appSerialRxLength);
+                continue;
+            }
+
+            frame.typeFlags = typeFlags;
+            frame.command = appSerialRxBuffer[3];
+            frame.sequence = sequence;
+            frame.length = length;
+            frame.crc = receivedCRC;
+            if(length > 0)
+                memcpy(frame.payload, &appSerialRxBuffer[6], length);
+
+            appSerialRxLength -= frameLength;
+            if(appSerialRxLength > 0)
+                memmove(appSerialRxBuffer, &appSerialRxBuffer[frameLength], appSerialRxLength);
+
+            return true;
+        }
+
+        if(!Serial.available())
+            return false;
+
+        const int incoming = Serial.read();
+        if(incoming < 0)
+            return false;
+
+        if(appSerialRxLength >= APP_SERIAL_MAX_FRAME) {
+            memmove(appSerialRxBuffer, &appSerialRxBuffer[1], APP_SERIAL_MAX_FRAME - 1);
+            appSerialRxLength = APP_SERIAL_MAX_FRAME - 1;
+        }
+
+        appSerialRxBuffer[appSerialRxLength++] = (uint8_t)incoming;
+        appSerialRxTimestamp = millis();
+    }
+}
+
+bool OF_Serial::AppSerialRequestMatchesLast(const AppSerialFrame_s &frame)
+{
+    return appSerialLastRxValid &&
+           appSerialLastRxCommand == frame.command &&
+           appSerialLastRxSequence == frame.sequence &&
+           appSerialLastRxLength == frame.length &&
+           appSerialLastRxCRC == frame.crc;
+}
+
+void OF_Serial::AppSerialProcessDeferredRequest()
+{
+    if(appSerialWaitingForAck ||
+       appSerialDispatching ||
+       appSerialProcessingDeferred)
+        return;
+
+    appSerialProcessingDeferred = true;
+
+    while(appSerialSessionActive &&
+          appSerialDeferredValid &&
+          !appSerialWaitingForAck) {
+        const AppSerialFrame_s frame = appSerialDeferredFrame;
+        appSerialDeferredValid = false;
+        AppSerialHandleFrame(frame);
+    }
+
+    appSerialProcessingDeferred = false;
+}
+
+void OF_Serial::AppSerialHandleFrame(const AppSerialFrame_s &frame)
+{
+    const uint8_t type = frame.typeFlags & APP_SERIAL_TYPE_MASK;
+
+    if(type != APP_SERIAL_TYPE_REQUEST)
+        return;
+
+    const bool duplicate = AppSerialRequestMatchesLast(frame);
+
+    if(!duplicate) {
+        appSerialLastRxValid = true;
+        appSerialLastRxCommand = frame.command;
+        appSerialLastRxSequence = frame.sequence;
+        appSerialLastRxLength = frame.length;
+        appSerialLastRxCRC = frame.crc;
+    }
+
+    // The complete request frame has been received and validated.
+    AppSerialSendAck(frame.command, frame.sequence);
+
+    if(!duplicate) {
+        const bool alreadyDispatching = appSerialDispatching;
+        appSerialDispatching = true;
+        AppSerialDispatchRequest(frame);
+        appSerialDispatching = alreadyDispatching;
+    }
+
+    AppSerialProcessDeferredRequest();
+}
+
+bool OF_Serial::AppSerialSendReliable(uint8_t typeFlags,
+                                      uint8_t command,
+                                      const void *payload,
+                                      uint8_t length,
+                                      uint8_t sequence)
+{
+    if(!appSerialSessionActive || length > APP_SERIAL_MAX_PAYLOAD)
+        return false;
+
+    // Single-result commit replies echo the request sequence. Other response
+    // streams retain their independent per-frame sequence, as before.
+    if(sequence == 0)
+        sequence = AppSerialNextSequence();
+
+    bool success = false;
+
+    appSerialWaitingForAck = true;
+
+    for(uint8_t attempt = 0;
+        attempt <= APP_SERIAL_MAX_RETRIES &&
+        appSerialSessionActive &&
+        !success;
+        ++attempt) {
+        if(!AppSerialWriteFrame(typeFlags,
+                                command,
+                                sequence,
+                                payload,
+                                length))
+            break;
+
+        const unsigned long started = millis();
+
+        while(appSerialSessionActive &&
+              millis() - started < APP_SERIAL_ACK_TIMEOUT &&
+              !success) {
+            AppSerialFrame_s frame;
+
+            while(AppSerialReadFrame(frame)) {
+                const uint8_t type =
+                    frame.typeFlags & APP_SERIAL_TYPE_MASK;
+
+                if(type == APP_SERIAL_TYPE_ACK) {
+                    if(frame.command == command &&
+                       frame.sequence == sequence) {
+                        success = true;
+                        break;
+                    }
+
+                    continue;
+                }
+
+                if(type == APP_SERIAL_TYPE_REQUEST) {
+                    if(AppSerialRequestMatchesLast(frame)) {
+                        // The App is retrying the request whose response is
+                        // currently waiting for confirmation.
+                        AppSerialSendAck(frame.command, frame.sequence);
+                    } else {
+                        // A following valid request proves that the stop-and-
+                        // wait peer has advanced beyond this response. Retain
+                        // the request, complete this send and dispatch it after
+                        // unwinding the current command.
+                        if(!appSerialDeferredValid) {
+                            appSerialDeferredFrame = frame;
+                            appSerialDeferredValid = true;
+                        }
+
+                        success = true;
+                        break;
+                    }
+                }
+            }
+
+            if(!success)
+                yield();
+        }
+    }
+
+    appSerialWaitingForAck = false;
+
+    if(!appSerialDispatching)
+        AppSerialProcessDeferredRequest();
+
+    return success;
+}
+
+bool OF_Serial::AppSerialSendResponse(uint8_t command,
+                                      const void *payload,
+                                      uint8_t length,
+                                      bool final)
+{
+    if(final && length != 0)
+        return false;
+
+    const uint8_t typeFlags =
+        APP_SERIAL_TYPE_RESPONSE |
+        (final ? APP_SERIAL_FLAG_FINAL : 0);
+
+    return AppSerialSendReliable(typeFlags, command, payload, length);
+}
+
+bool OF_Serial::AppSerialSendEvent(uint8_t command, const void *payload, uint8_t length)
+{
+    if(!appSerialSessionActive)
+        return false;
+
+    return AppSerialWriteFrame(APP_SERIAL_TYPE_EVENT, command, 0, payload, length);
+}
+
+void OF_Serial::AppSerialSendError(uint8_t error)
+{
+    if(error)
+        AppSerialSendResponse(OF_Const::sError, &error, 1);
+    else AppSerialSendResponse(OF_Const::sError);
+}
+
+void OF_Serial::AppSerialSendCommitError(const AppSerialFrame_s &frame)
+{
+    const uint8_t payload[] = {APP_SERIAL_ERR_COMMIT_RETRY, frame.command};
+    AppSerialSendReliable(APP_SERIAL_TYPE_RESPONSE,
+                          OF_Const::sError,
+                          payload,
+                          sizeof(payload),
+                          frame.sequence);
+}
+
+bool OF_Serial::AppSerialTakeCalibrationCancel()
+{
+    const bool requested = appSerialCalibrationCancel;
+    appSerialCalibrationCancel = false;
+    return requested;
+}
+
+// Serial Buffer in Docked Mode should always be read by the main core on multicore systems.
 void OF_Serial::SerialProcessingDocked()
 {
-    switch(Serial.read()) {
-    // Enter Docked Mode (in case running from first boot)
-    case OF_Const::sDock1:
-        Serial_available(1);
-        if(Serial.read() == OF_Const::sDock2) FW_Common::SetMode(FW_Const::GunMode_Docked);
-        break;
-    // Common terminator
+
+    // ExecCalMode() is still inside the dispatch of the calibration command.
+    // A request received while a calibration response is waiting for its ACK
+    // is deferred, so process it explicitly at the next calibration poll.
+    if(appSerialSessionActive &&
+       appSerialDeferredValid &&
+       !appSerialWaitingForAck &&
+       (FW_Common::gunMode == FW_Const::GunMode_Calibration ||
+        FW_Common::gunMode == FW_Const::GunMode_Verification)) {
+        const AppSerialFrame_s deferredFrame = appSerialDeferredFrame;
+
+        appSerialDeferredValid = false;
+        AppSerialHandleFrame(deferredFrame);
+
+        if(!appSerialSessionActive)
+            return;
+    }
+
+    // The two-byte docking handshake intentionally remains unframed. Once it
+    // succeeds, every App byte in both directions uses the framed protocol.
+    if(!appSerialSessionActive) {
+        if(appSerialRawDockState != 0 &&
+           millis() - appSerialRxTimestamp > APP_SERIAL_FRAME_TIMEOUT)
+            appSerialRawDockState = 0;
+
+        while(Serial.available()) {
+            const int incoming = Serial.read();
+            if(incoming < 0)
+                return;
+
+            if(appSerialRawDockState == 0) {
+                appSerialRawDockState = incoming == OF_Const::sDock1 ? 1 : 0;
+                if(appSerialRawDockState != 0)
+                    appSerialRxTimestamp = millis();
+            } else if(incoming == OF_Const::sDock2) {
+                AppSerialSessionBegin();
+                FW_Common::SetMode(FW_Const::GunMode_Docked);
+                break;
+            } else {
+                appSerialRawDockState = incoming == OF_Const::sDock1 ? 1 : 0;
+                if(appSerialRawDockState != 0)
+                    appSerialRxTimestamp = millis();
+            }
+        }
+    }
+
+    if(appSerialSessionActive) {
+        AppSerialFrame_s frame;
+        while(appSerialSessionActive && AppSerialReadFrame(frame))
+            AppSerialHandleFrame(frame);
+    }
+}
+
+bool OF_Serial::AppSerialDispatchCommit(const AppSerialFrame_s &frame,
+                                        bool fullDisconnect)
+{
+    // A new commit also restarts an interrupted attempt.
+    // Preserve the calibration data and the original hardware pin map
+    // until the complete configuration has been saved successfully.
+    if(frame.command == OF_Const::sCommitStart) {
+        if(!appSerialPinsBeforeCommitValid) {
+            memcpy(appSerialPinsBeforeCommit,
+                   OF_Prefs::pins,
+                   sizeof(appSerialPinsBeforeCommit));
+
+            appSerialPinsBeforeCommitValid = true;
+            FW_Common::buttons.Unset();
+        }
+
+        // Start the new transfer from the board defaults.
+        // The App subsequently overwrites the custom pins, when enabled,
+        // and always transmits the complete button mapping.
+        OF_Prefs::LoadPresets();
+
+        FW_Common::dockedSaving = true;
+        appSerialCommitActive = true;
+        appSerialCommitFailed = false;
+
+        if(!AppSerialSendReliable(APP_SERIAL_TYPE_RESPONSE,
+                                  frame.command,
+                                  nullptr,
+                                  0,
+                                  frame.sequence)) {
+            // Keep the received data and original hardware pin map so that
+            // the App can start another complete transfer.
+            appSerialCommitActive = false;
+        }
+
+        return true;
+    }
+
+    // Explicit reset commands remain available even if a transfer stopped.
+    if(!appSerialCommitActive ||
+       frame.command == OF_Const::sClearFlash ||
+       frame.command == OF_Const::sRebootToBootloader)
+        return false;
+
+    switch(frame.command) {
+        case OF_Const::sSave: {
+            const bool complete = !appSerialCommitFailed;
+
+            const bool saved =
+                complete &&
+                FW_Common::SavePreferences() == OF_Prefs::Error_Success;
+
+            if(saved) {
+                // Deinitialize the hardware using the pin map that was active
+                // before the configuration transfer.
+                FW_Common::PinsReset(appSerialPinsBeforeCommit);
+
+                // Apply all newly saved runtime settings.
+                FW_Common::CameraSet();
+                FW_Common::FeedbackSet();
+                FW_Common::UpdateBindings(true);
+
+                #ifdef LED_ENABLE
+                if(FW_Common::gunMode == FW_Const::GunMode_Docked) {
+                    OF_RGB::LedUpdate(127, 127, 255);
+                } else if(FW_Common::gunMode == FW_Const::GunMode_Pause) {
+                    OF_RGB::SetLedPackedColor(
+                        OF_Prefs::profiles[
+                            OF_Prefs::currentProfile
+                        ].color);
+                }
+                #endif // LED_ENABLE
+
+                FW_Common::buttons.Begin();
+
+                appSerialPinsBeforeCommitValid = false;
+                FW_Common::dockedSaving = false;
+            }
+
+            // On failure, retain the configuration in RAM, the original
+            // hardware pin map and the recovery guard for another attempt.
+            appSerialCommitActive = false;
+
+            static const char successText[] =
+                " (Successfully saved to LittleFS Storage)";
+            static const char failureText[] =
+                " (Failed to save to LittleFS Storage)";
+
+            const char *text = saved ? successText : failureText;
+            const uint8_t textLength = (uint8_t)strlen(text);
+
+            uint8_t payload[1 + sizeof(successText)];
+            payload[0] = saved;
+            memcpy(&payload[1], text, textLength);
+
+            AppSerialSendReliable(APP_SERIAL_TYPE_RESPONSE,
+                                  OF_Const::sSave,
+                                  payload,
+                                  (uint8_t)(1 + textLength),
+                                  frame.sequence);
+
+            #ifdef USES_DISPLAY
+            // SavePreferences() skips its visual effects during an App commit.
+            // Send the result before holding the OLED message so that the
+            // display delay does not extend the App response time.
+            if(FW_Common::OLED.display != nullptr) {
+                FW_Common::OLED.ScreenModeChange(
+                    saved ? ExtDisplay::Screen_SaveSuccess :
+                            ExtDisplay::Screen_SaveError);
+
+                // Same duration as the original save feedback patterns.
+                delay(saved ? 285 : 410);
+                FW_Common::RedrawDisplay();
+            }
+            #endif // USES_DISPLAY
+
+            break;
+        }
+
+        case OF_Const::serialTerminator: {
+            // End only this attempt: never reload flash over unsaved calibration.
+            appSerialCommitActive = false;
+            appSerialCommitFailed = false;
+
+            AppSerialSendResponse(OF_Const::serialTerminator, nullptr, 0, true);
+            if(fullDisconnect)
+                AppSerialSessionEnd(); // Stay Docked with pending RAM.
+            break;
+        }
+
+        case OF_Const::sCommitID:
+            if(frame.length == sizeof(OF_Prefs::USBMap_t))
+                memcpy(&OF_Prefs::usb, frame.payload, sizeof(OF_Prefs::USBMap_t));
+            else appSerialCommitFailed = true;
+            break;
+
+        case OF_Const::sCommitToggles:
+            if(!AppSerialReceiveRecord(frame.payload, frame.length,
+                                       OF_Prefs::toggles,
+                                       OF_Prefs::OFPresets.boolTypes_Strings,
+                                       sizeof(OF_Prefs::toggles) / OF_Const::boolTypesCount))
+                appSerialCommitFailed = true;
+            break;
+
+        case OF_Const::sCommitPins:
+            if(!AppSerialReceiveRecord(frame.payload, frame.length,
+                                       OF_Prefs::pins,
+                                       OF_Prefs::OFPresets.boardInputs_Strings,
+                                       sizeof(OF_Prefs::pins) / OF_Const::boardInputsCount))
+                appSerialCommitFailed = true;
+            break;
+
+        case OF_Const::sCommitSettings:
+            if(!AppSerialReceiveRecord(frame.payload, frame.length,
+                                       OF_Prefs::settings,
+                                       OF_Prefs::OFPresets.settingsTypes_Strings,
+                                       sizeof(OF_Prefs::settings) / OF_Const::settingsTypesCount))
+                appSerialCommitFailed = true;
+            break;
+
+        case OF_Const::sCommitBtns:
+            if(!AppSerialReceiveRecord(frame.payload, frame.length,
+                                       OF_Prefs::backupButtonDesc,
+                                       OF_Prefs::OFPresets.boardInputs_Strings,
+                                       sizeof(OF_Prefs::backupButtonDesc) / ButtonCount))
+                appSerialCommitFailed = true;
+            break;
+
+        case OF_Const::sCommitProfile:
+            if(!AppSerialReceiveRecord(frame.payload, frame.length,
+                                       OF_Prefs::profiles,
+                                       OF_Prefs::OFPresets.profSettingTypes_Strings,
+                                       sizeof(uint32_t),
+                                       true))
+                appSerialCommitFailed = true;
+            break;
+
+        default:
+            appSerialCommitFailed = true;
+            appSerialCommitActive = false;
+            AppSerialSendCommitError(frame);
+            break;
+    }
+
+    return true;
+}
+
+void OF_Serial::AppSerialRestoreRunState()
+{
+    if(!FW_Common::justBooted)
+        FW_Common::SetMode(FW_Const::GunMode_Run);
+    else
+        FW_Common::SetMode(FW_Const::GunMode_Init);
+
+    FW_Common::SetRunMode(
+        (FW_Const::RunMode_e)
+        OF_Prefs::profiles[OF_Prefs::currentProfile].runMode);
+}
+
+void OF_Serial::AppSerialDispatchRequest(const AppSerialFrame_s &frame)
+{
+    const bool fullDisconnect =
+        frame.command == OF_Const::serialTerminator &&
+        frame.length == 2 &&
+        frame.payload[0] == OF_Const::serialTerminator &&
+        frame.payload[1] == OF_Const::serialTerminator;
+
+    // Keep the profile stable until ExecCalMode() has restored or accepted it.
+    if((FW_Common::gunMode == FW_Const::GunMode_Calibration ||
+        FW_Common::gunMode == FW_Const::GunMode_Verification) &&
+       frame.command != OF_Const::serialTerminator) {
+        appSerialCalibrationCancel = true;
+        AppSerialSendError();
+        return;
+    }
+
+    if(AppSerialDispatchCommit(frame, fullDisconnect))
+        return;
+
+    // Do not use hardware with a partly updated configuration.
+    if(appSerialPinsBeforeCommitValid) {
+        switch(frame.command) {
+        case OF_Const::sGetToggles:
+        case OF_Const::sGetPins:
+        case OF_Const::sGetSettings:
+        case OF_Const::sGetBtns:
+        case OF_Const::sGetProfile:
+        case OF_Const::serialTerminator:
+        case OF_Const::sClearFlash:
+        case OF_Const::sRebootToBootloader:
+            break;
+
+        default:
+            AppSerialSendCommitError(frame);
+            return;
+        }
+    }
+
+    switch(frame.command) {  
+
     case OF_Const::serialTerminator:
-        if(!FW_Common::justBooted)
-            FW_Common::SetMode(FW_Const::GunMode_Run);
-        else FW_Common::SetMode(FW_Const::GunMode_Init);
-        FW_Common::SetRunMode((FW_Const::RunMode_e)OF_Prefs::profiles[OF_Prefs::currentProfile].runMode);
-        break;
-        
-    //// Prefs senders
-    //
-    case OF_Const::sGetToggles:  SerialBatchSend(OF_Prefs::toggles,          OF_Prefs::OFPresets.boolTypes_Strings,     sizeof(OF_Prefs::toggles)          / OF_Const::boolTypesCount    ); break;
-    case OF_Const::sGetPins:     SerialBatchSend(OF_Prefs::pins,             OF_Prefs::OFPresets.boardInputs_Strings,   sizeof(OF_Prefs::pins)             / OF_Const::boardInputsCount  ); break;
-    case OF_Const::sGetSettings: SerialBatchSend(OF_Prefs::settings,         OF_Prefs::OFPresets.settingsTypes_Strings, sizeof(OF_Prefs::settings)         / OF_Const::settingsTypesCount); break;
-    case OF_Const::sGetBtns:     SerialBatchSend(OF_Prefs::backupButtonDesc, OF_Prefs::OFPresets.boardInputs_Strings,   sizeof(OF_Prefs::backupButtonDesc) / ButtonCount);                  break;
-    case OF_Const::sGetProfile:
-        for(int prof = 0; prof < PROFILE_COUNT; ++prof)
-            SerialBatchSend(&OF_Prefs::profiles[prof], OF_Prefs::OFPresets.profSettingTypes_Strings, sizeof(uint32_t), prof);
+        if(FW_Common::gunMode == FW_Const::GunMode_Calibration ||
+           FW_Common::gunMode == FW_Const::GunMode_Verification) {
+            appSerialCalibrationCancel = true;
+
+            // ExecCalMode() must consume the cancellation flag before
+            // AppSerialSessionEnd() clears it.
+            if(fullDisconnect) {
+                AppSerialSendResponse(OF_Const::serialTerminator,
+                                      nullptr,
+                                      0,
+                                      true);
+
+                // Do not call AppSerialSessionEnd() here: it would clear
+                // appSerialCalibrationCancel before ExecCalMode() consumes it.
+                appSerialSessionActive = false;
+            }
+
+            break;
+        }
+
+        // A cancel can cross a calibration End already confirmed by trigger.
+        // Only the explicit FE FE FE request disconnects an idle session.
+        if(!fullDisconnect)
+            break;
+
+        AppSerialSendResponse(OF_Const::serialTerminator,
+                              nullptr,
+                              0,
+                              true);
+
+        AppSerialSessionEnd();
+
+        if(appSerialPinsBeforeCommitValid)
+            break; // Do not run with pending, partly updated configuration.
+
+        AppSerialRestoreRunState();
+
         break;
 
-    //// State changes/direct control methods
-    //
-    case OF_Const::sIRTest:
+    case OF_Const::sGetToggles:
+        AppSerialSendRecords(frame.command, OF_Prefs::toggles,
+                             OF_Prefs::OFPresets.boolTypes_Strings,
+                             sizeof(OF_Prefs::toggles) / OF_Const::boolTypesCount);
+        break;
+
+    case OF_Const::sGetPins:
+        AppSerialSendRecords(frame.command, OF_Prefs::pins,
+                             OF_Prefs::OFPresets.boardInputs_Strings,
+                             sizeof(OF_Prefs::pins) / OF_Const::boardInputsCount);
+        break;
+
+    case OF_Const::sGetSettings:
+        AppSerialSendRecords(frame.command, OF_Prefs::settings,
+                             OF_Prefs::OFPresets.settingsTypes_Strings,
+                             sizeof(OF_Prefs::settings) / OF_Const::settingsTypesCount);
+        break;
+
+    case OF_Const::sGetBtns:
+        AppSerialSendRecords(frame.command, OF_Prefs::backupButtonDesc,
+                             OF_Prefs::OFPresets.boardInputs_Strings,
+                             sizeof(OF_Prefs::backupButtonDesc) / ButtonCount);
+        break;
+
+    case OF_Const::sGetProfile:
     {
-        // Estraiamo il byte di stato (true/false) in modo sicuro e col timeout
-        const int testCmd = Serial_available(1) ? Serial.read() : -1;
-        
+        bool sent = true;
+        for(int prof = 0; prof < PROFILE_COUNT && sent; ++prof)
+            sent = AppSerialSendRecords(frame.command,
+                                        &OF_Prefs::profiles[prof],
+                                        OF_Prefs::OFPresets.profSettingTypes_Strings,
+                                        sizeof(uint32_t),
+                                        prof,
+                                        false);
+        if(sent && AppSerialSendResponse(frame.command, nullptr, 0, true) &&
+           appSerialPinsBeforeCommitValid)
+            AppSerialSendCommitError(frame); // A reconnected App must save again.
+        break;
+    }
+
+    case OF_Const::sIRTest:
         if(FW_Common::camNotAvailable) {
-            // Serial.read(); // nomf
-            char message[2] = { OF_Const::sError, OF_Const::sErrCam };
-            Serial.write(message, sizeof(message));
-        } else if(FW_Common::runMode == FW_Const::RunMode_Processing && testCmd == false) {
+            AppSerialSendError(OF_Const::sErrCam);
+        } else if(frame.payload[0]) {
+            FW_Common::SetRunMode(FW_Const::RunMode_Processing);
+        } else if(FW_Common::runMode == FW_Const::RunMode_Processing) {
             switch(OF_Prefs::profiles[OF_Prefs::currentProfile].runMode) {
             case FW_Const::RunMode_Normal:
                 FW_Common::SetRunMode(FW_Const::RunMode_Normal);
                 break;
+
             case FW_Const::RunMode_Average:
                 FW_Common::SetRunMode(FW_Const::RunMode_Average);
                 break;
+
             case FW_Const::RunMode_Average2:
                 FW_Common::SetRunMode(FW_Const::RunMode_Average2);
                 break;
             }
-        } else if(testCmd == true)
-            FW_Common::SetRunMode(FW_Const::RunMode_Processing);
+        }
         break;
-    }
-    case OF_Const::sCaliProfile:
-    {
-        Serial_available(1);
-        if(Serial.peek() < PROFILE_COUNT) {
-            FW_Common::SelectCalProfile(Serial.read());
-            char buf[2] = {OF_Const::sCurrentProf, (uint8_t)OF_Prefs::currentProfile};
-            Serial.write(buf, sizeof(buf));
-            Serial_available(1);
-            /*
-            if(Serial.read() == OF_Const::sCaliStart) {
-                if(FW_Common::camNotAvailable) {
-                    buf[0] = OF_Const::sError;
-                    buf[1] = OF_Const::sErrCam;
-                    Serial.write(buf, sizeof(buf));
-                } else {
-                  // sensitivity/layout preset
-                  Serial_available(1); 
-                  if(Serial.peek() != -1) {
-                    //FW_Common::SetIrSensitivity(Serial.peek() & 0b11110000); // bug
-                    FW_Common::SetIrSensitivity(Serial.peek() & 0x0F);
-                    FW_Common::SetIrLayout(Serial.read() >> 4);
-                  }
 
-                  FW_Common::SetMode(FW_Const::GunMode_Calibration);
-                  FW_Common::ExecCalMode(true);
+    case OF_Const::sCaliProfile: {
+        const uint8_t operation = frame.payload[0];
+        const uint8_t profile = frame.payload[1];
+
+        FW_Common::SelectCalProfile(profile);
+
+        const uint8_t currentProfile = OF_Prefs::currentProfile;
+
+        if(!AppSerialSendResponse(
+                OF_Const::sCurrentProf,
+                &currentProfile,
+                sizeof(currentProfile))) {
+            AppSerialSendError();
+            break;
+        }
+
+        switch(operation) {
+        case OF_Const::sCaliProfile:
+            // When used inside the payload, sCaliProfile means:
+            // select the requested profile without starting calibration.
+            break;
+
+        case OF_Const::sCaliStart:
+            if(FW_Common::camNotAvailable) {
+                AppSerialSendError(OF_Const::sErrCam);
+            } else {
+                const uint8_t caliSettings = frame.payload[2];
+
+                FW_Common::SetIrSensitivity(caliSettings & 0x0F);
+                FW_Common::SetIrLayout(caliSettings >> 4);
+                FW_Common::SetMode(FW_Const::GunMode_Calibration);
+                FW_Common::ExecCalMode(true);
+
+                // A full App disconnect received inside ExecCalMode()
+                // first cancels calibration so that the backed-up profile
+                // is restored, then completes the normal undock here.
+                if(!appSerialSessionActive) {
+                    AppSerialSessionEnd();
+                    AppSerialRestoreRunState();
                 }
             }
-            */
-            if(Serial.read() == OF_Const::sCaliStart) {
-                // This byte belongs to the calibration command and must always
-                // be consumed, even when the camera is unavailable.
-                const int caliSettings = Serial_available(1) ? Serial.read() : -1;
-
-                if(FW_Common::camNotAvailable) {
-                    buf[0] = OF_Const::sError;
-                    buf[1] = OF_Const::sErrCam;
-                    Serial.write(buf, sizeof(buf));
-                } else {
-                    if(caliSettings >= 0) {
-                        FW_Common::SetIrSensitivity(caliSettings & 0x0F);
-                        FW_Common::SetIrLayout(caliSettings >> 4);
-                    }
-
-                    FW_Common::SetMode(FW_Const::GunMode_Calibration);
-                    FW_Common::ExecCalMode(true);
-                }
-            }
-        } else {
-            // Consume invalid profile number.
-            Serial_available(1);
-            Serial.read();
-
-            // Consume the remaining calibration command, when present.
-            Serial_available(1);
-            if(Serial.read() == OF_Const::sCaliStart) {
-                Serial_available(1);
-                Serial.read();
-            }
-            /*
-            Serial_available(1);
-            Serial.read();
-            Serial_available(1);
-            if(Serial.read() == OF_Const::sCaliStart) {
-                Serial_available(1);
-                if(Serial.read() != -1) Serial.read();
-            }
-            */
+            break;
         }
         break;
     }
+
     #ifdef USES_SOLENOID
     case OF_Const::sTestSolenoid:
-        Serial_available(1);
-        if(Serial.read() == true) {
-            OF_FFB::SetSolenoid(HIGH);
-            delay(OF_Prefs::settings[OF_Const::solenoidOnLength]);
-            OF_FFB::SetSolenoid(LOW);
-        }
+        OF_FFB::SetSolenoid(HIGH);
+        delay(OF_Prefs::settings[OF_Const::solenoidOnLength]);
+        OF_FFB::SetSolenoid(LOW);
         break;
-    #endif // USES_SOLENOID
+    #endif
+
     #ifdef USES_RUMBLE
     case OF_Const::sTestRumble:
-        Serial_available(1);
-        if(Serial.read() == true) {
-            analogWrite(OF_Prefs::pins[OF_Const::rumblePin], OF_Prefs::settings[OF_Const::rumbleStrength]);
-            delay(OF_Prefs::settings[OF_Const::rumbleInterval]);
-            #ifdef ARDUINO_ARCH_ESP32
-            analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0); // [ESP32_PORT] per ESP32
-            #else // rp2040
-            digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
-            #endif
-        }
+        analogWrite(OF_Prefs::pins[OF_Const::rumblePin], OF_Prefs::settings[OF_Const::rumbleStrength]);
+        delay(OF_Prefs::settings[OF_Const::rumbleInterval]);
+        #ifdef ARDUINO_ARCH_ESP32
+        analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);
+        #else
+        digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
+        #endif
         break;
-    #endif // USES_RUMBLE
-    #ifdef LED_ENABLE // meant to be for 4pins, but will update all LED devices anyways.
+    #endif
+
+    #ifdef LED_ENABLE
     case OF_Const::sTestLEDR:
-        Serial_available(1);
-        if(Serial.read() == true) OF_RGB::LedUpdate(255, 0, 0);
+        OF_RGB::LedUpdate(255, 0, 0);
         break;
     case OF_Const::sTestLEDG:
-        Serial_available(1);
-        if(Serial.read() == true) OF_RGB::LedUpdate(0, 255, 0);
+        OF_RGB::LedUpdate(0, 255, 0);
         break;
     case OF_Const::sTestLEDB:
-        Serial_available(1);
-        if(Serial.read() == true) OF_RGB::LedUpdate(0, 0, 255);
+        OF_RGB::LedUpdate(0, 0, 255);
         break;
-    #endif // LED_ENABLE
-
-    case OF_Const::sCommitStart:
-    {
-        if(Serial_available(1) && Serial.read() == true) {
-            FW_Common::buttons.Unset();
-            bool exit = false;
-            size_t type, rxLen, datSize, profNum;
-            Serial.write(OF_Const::sCommitStart), Serial.flush();
-            while(!exit) {
-                if(Serial.available()) {
-                    rxLen = 0;
-                    type = Serial.read();
-                    switch(type) {
-                    //// Commands
-                    case OF_Const::sSave:
-                        if(FW_Common::SavePreferences() == OF_Prefs::Error_Success) {
-                            // Dynamic Camera swapping is supported automatically
-                            // by FW_Common::PinsReset() followed by CameraSet()
-                            /*
-                            if (OF_Prefs::settings[OF_Const::cameraModel] != OpenFIRECamera::Model()) {
-                                #ifdef USES_DISPLAY
-                                FW_Common::OLED.RebootScreen();
-                                #endif
-                                while (true) {
-                                    delay(100);
-                                }
-                            }
-                            */
-                            
-                            // For updating pin data for buttons, cams and periphs
-                            FW_Common::PinsReset();
-                            FW_Common::CameraSet();
-                            FW_Common::FeedbackSet();
-                            
-                            FW_Common::UpdateBindings(true);
-
-                        #ifdef LED_ENABLE
-                            // Save op above resets color, so re-set it back to docked idle color
-                            if(FW_Common::gunMode == FW_Const::GunMode_Docked)
-                                OF_RGB::LedUpdate(127, 127, 255);
-                            else if(FW_Common::gunMode == FW_Const::GunMode_Pause)
-                                OF_RGB::SetLedPackedColor(OF_Prefs::profiles[OF_Prefs::currentProfile].color);
-                        #endif // LED_ENABLE
-                        // unlikely, but attempt to reload settings if save failed
-                        // though this might just load corrupt data instead. :shrug:
-                        } else {
-                            OF_Prefs::LoadProfiles();
-                            OF_Prefs::Load();
-                        }
-                        FW_Common::buttons.Begin();
-                        exit = true;
-                        break;
-                    case OF_Const::serialTerminator:
-                        // Assumed failed/aborting save, so roll back to what's in flash.
-                        OF_Prefs::LoadProfiles();
-                        OF_Prefs::Load();
-                        FW_Common::buttons.Begin();
-                        exit = true;
-                        break;
-
-                    //// Saving ops
-                    case OF_Const::sCommitID:
-                        Serial_available(18);
-                        rxLen = Serial.readBytes(RXbuf, 18);
-                        if(rxLen == 18) memcpy(&OF_Prefs::usb, RXbuf, 18);
-                        break;
-                    default:
-                        rxLen = Serial.readBytesUntil('\0', RXbuf, 32);
-                        RXbuf[rxLen++] = '\0';
-                        Serial_available(1);
-                        datSize = Serial.read();
-                        RXbuf[rxLen++] = datSize;
-                        if(type == OF_Const::sCommitProfile && (OF_Prefs::OFPresets.profSettingTypes_Strings.count(RXbuf) == 0 ||
-                                                               (OF_Prefs::OFPresets.profSettingTypes_Strings.count(RXbuf) && OF_Prefs::OFPresets.profSettingTypes_Strings.at(RXbuf) != OF_Const::profCurrent)))
-                        {
-                            Serial_available(1);
-                            profNum = Serial.read();
-                            RXbuf[rxLen++] = profNum;
-                        }
-                        
-                        if (rxLen + datSize > sizeof(RXbuf)) {
-                            Serial.write(OF_Const::sError);
-                            break; 
-                        }
-
-                        rxLen += Serial.readBytes(&RXbuf[rxLen], datSize);
-
-                        switch(type) {
-                            case OF_Const::sCommitToggles:  SerialBatchRecv(RXbuf, OF_Prefs::toggles,           OF_Prefs::OFPresets.boolTypes_Strings,     sizeof(OF_Prefs::toggles)          / OF_Const::boolTypesCount,     datSize, rxLen); break;
-                            case OF_Const::sCommitPins:     SerialBatchRecv(RXbuf, OF_Prefs::pins,              OF_Prefs::OFPresets.boardInputs_Strings,   sizeof(OF_Prefs::pins)             / OF_Const::boardInputsCount,   datSize, rxLen); break;
-                            case OF_Const::sCommitSettings: SerialBatchRecv(RXbuf, OF_Prefs::settings,          OF_Prefs::OFPresets.settingsTypes_Strings, sizeof(OF_Prefs::settings)         / OF_Const::settingsTypesCount, datSize, rxLen); break;
-                            case OF_Const::sCommitBtns:     SerialBatchRecv(RXbuf, OF_Prefs::backupButtonDesc,  OF_Prefs::OFPresets.boardInputs_Strings,   sizeof(OF_Prefs::backupButtonDesc) / ButtonCount,                  datSize, rxLen); break;
-                            case OF_Const::sCommitProfile:
-                                if(profNum < PROFILE_COUNT) SerialBatchRecv(RXbuf,
-                                                                            &OF_Prefs::profiles[profNum],
-                                                                            OF_Prefs::OFPresets.profSettingTypes_Strings,
-                                                                            sizeof(uint32_t),
-                                                                            datSize,
-                                                                            rxLen);
-                                break;
-                            default:
-                                break;
-                        }
-                        break;
-                    }
-                    
-                    if(rxLen > 0) { Serial.write(RXbuf, rxLen); Serial.flush(); }
-                }
-            }
-        }
-        break;
-    }
+    #endif
 
     case OF_Const::sClearFlash:
-        if(Serial_available(1) && Serial.read() == OF_Const::sClearFlash) {
-            OF_Prefs::ResetPreferences();
-            #ifdef ARDUINO_ARCH_ESP32
-                #ifdef OPENFIRE_WIRELESS_ENABLE
-                    if (TinyUSBDevices.onBattery) {
-                        // valutare se inviare codice di riavvio anche al dispositivo dongle
-                    }
-                #endif
-                //ESP.restart();
-                esp_rom_software_reset_system();
-            #else
-            rp2040.reboot();
-            #endif
-        } else while(Serial.available()) Serial.read();
-        break;
-    
-    case OF_Const::sRebootToBootloader:
-        if(Serial_available(1) && Serial.read() == OF_Const::sRebootToBootloader) {
-            #ifdef ARDUINO_ARCH_ESP32
-               //ESP.restart();
-                esp_rom_software_reset_system();
-            #else
-            rp2040.reboot();
-            #endif
-        } else while(Serial.available()) Serial.read();
-        break;  
-    
-    }
-}
-
-void OF_Serial::SerialBatchSend(void *dataPtr, const std::unordered_map<std::string_view, int> &mapPtr, const size_t &dataSize, const int &profNum)
-{
-    size_t pos;
-    bool profNumSent = false;
-    for(auto &pair : mapPtr) {
-        if(pair.second >= 0) {
-            pos = 0;
-            strcpy(&TXbuf[pos], pair.first.data());
-            pos += pair.first.length()+1;
-            if(&mapPtr == &OF_Prefs::OFPresets.profSettingTypes_Strings) {
-                if(pair.second == OF_Const::profCurrent) {
-                    if(profNumSent) continue;
-                    else {
-                        TXbuf[pos++] = 1;
-                        TXbuf[pos++] = OF_Prefs::currentProfile;
-                        profNumSent = true;
-                    }
-                } else {
-                    if(pair.second == OF_Const::profName) {
-                        TXbuf[pos++] = sizeof(OF_Prefs::ProfileData_s::name);
-                        TXbuf[pos++] = profNum;
-                        memcpy(&TXbuf[pos], (uint8_t*)dataPtr + (dataSize * pair.second), sizeof(OF_Prefs::ProfileData_s::name));
-                        pos += sizeof(OF_Prefs::ProfileData_s::name);
-                    } else {
-                        TXbuf[pos++] = dataSize;
-                        TXbuf[pos++] = profNum;
-                        memcpy(&TXbuf[pos], (uint8_t*)dataPtr + (dataSize * pair.second), dataSize);
-                        pos += dataSize;
-                    }
-                }
-            } else {
-                if(dataPtr == OF_Prefs::backupButtonDesc && pair.second >= ButtonCount-1) continue;
-                TXbuf[pos++] = dataSize;
-                memcpy(&TXbuf[pos], (uint8_t*)dataPtr + (dataSize * pair.second), dataSize);
-                pos += dataSize;
-            }
-            
-            for(int sendTry = 0; sendTry < 3; ++sendTry) {
-                // svuota il buffer da eventuali byte sporchi o vecchi echi
-                while(Serial.available()) Serial.read();
-                
-                Serial.write(TXbuf, pos);
-                Serial.flush();
-                // while(Serial.available() < pos) yield();
-                if(!Serial_available(pos)) {
-                    Serial.write(OF_Const::sError);
-                    Serial.flush();
-                    return;
-                }
-                // Serial.readBytes(RXbuf, Serial.available());
-                Serial.readBytes(RXbuf, pos);
-
-                if(!memcmp(RXbuf, TXbuf, pos)) break;
-                if(sendTry >= 2) {
-                    Serial.write(OF_Const::sError);
-                    Serial.flush();
-                    return;
-                }
-            }
-        }
-    }
-
-    if(profNum == -1 || profNum >= PROFILE_COUNT-1) {
-        Serial.write(OF_Const::serialTerminator);
+        OF_Prefs::ResetPreferences();
         Serial.flush();
+        #ifdef ARDUINO_ARCH_ESP32
+            #ifdef OPENFIRE_WIRELESS_ENABLE
+            if(TinyUSBDevices.onBattery) {
+                // The dongle reset notification can be added separately.
+            }
+            #endif
+            //esp_restart();
+            esp_rom_software_reset_system();
+        #else
+            rp2040.reboot();
+        #endif
+        break;
+
+    case OF_Const::sRebootToBootloader:
+        Serial.flush();
+        FW_Common::RebootToBootloader();
+        break;
+
+    default:
+        break;
     }
 }
 
-void OF_Serial::SerialBatchRecv(const char *bufPtr, void *dataPtr, const std::unordered_map<std::string_view, int> &mapPtr, const size_t &dataSize, const size_t &rxDatSize, const size_t &rxBufSize)
+bool OF_Serial::AppSerialSendRecords(uint8_t command,
+                                     const void *data,
+                                     const std::unordered_map<std::string_view, int> &fields,
+                                     size_t dataSize,
+                                     int profile,
+                                     bool sendFinal)
 {
-    if(mapPtr.count(bufPtr)) {
-        if(&mapPtr == &OF_Prefs::OFPresets.profSettingTypes_Strings && mapPtr.at(bufPtr) == OF_Const::profCurrent) {
-            memcpy(&OF_Prefs::currentProfile, &bufPtr[rxBufSize-rxDatSize], rxDatSize);
-        } else memcpy((uint8_t*)dataPtr + (dataSize * mapPtr.at(bufPtr)), &bufPtr[rxBufSize-rxDatSize], rxDatSize);
+    uint8_t payload[APP_SERIAL_MAX_PAYLOAD];
+
+    const bool profileData = profile >= 0;
+    const bool buttonData = data == OF_Prefs::backupButtonDesc;
+
+    for(const auto &pair : fields) {
+        if(pair.second < 0)
+            continue;
+
+        // CurrentProf belongs to the complete profile set and must therefore
+        // be transmitted only once, together with the first profile.
+        if(profileData &&
+           pair.second == OF_Const::profCurrent &&
+           profile != 0)
+            continue;
+
+        const size_t nameLength = pair.first.length();
+        size_t pos = nameLength + 1;
+
+        // Space for the field name, its terminator and the record metadata.
+        if(pos + 2 > sizeof(payload)) {
+            AppSerialSendError();
+            return false;
+        }
+
+        memcpy(payload, pair.first.data(), nameLength);
+        payload[nameLength] = '\0';
+
+        if(profileData) {
+            if(pair.second == OF_Const::profCurrent) {
+                payload[pos++] = (uint8_t)sizeof(uint8_t);
+                payload[pos++] = (uint8_t)OF_Prefs::currentProfile;
+            } else {
+                const size_t valueSize =
+                    pair.second == OF_Const::profName ?
+                    sizeof(OF_Prefs::ProfileData_s::name) :
+                    dataSize;
+
+                if(pos + 2 + valueSize > sizeof(payload)) {
+                    AppSerialSendError();
+                    return false;
+                }
+
+                payload[pos++] = (uint8_t)valueSize;
+                payload[pos++] = (uint8_t)profile;
+
+                memcpy(&payload[pos],
+                       (const uint8_t*)data + (dataSize * pair.second),
+                       valueSize);
+
+                pos += valueSize;
+            }
+        } else {
+            // The last button entry is intentionally not managed by the App,
+            // preserving the behaviour of the original implementation.
+            if(buttonData &&
+               pair.second >= ButtonCount - 1)
+                continue;
+
+            if(pos + 1 + dataSize > sizeof(payload)) {
+                AppSerialSendError();
+                return false;
+            }
+
+            payload[pos++] = (uint8_t)dataSize;
+
+            memcpy(&payload[pos],
+                   (const uint8_t*)data + (dataSize * pair.second),
+                   dataSize);
+
+            pos += dataSize;
+        }
+
+        if(!AppSerialSendResponse(command,
+                                  payload,
+                                  (uint8_t)pos))
+            return false;
     }
+
+    if(!sendFinal)
+        return true;
+
+    return AppSerialSendResponse(command, nullptr, 0, true);
+}
+
+bool OF_Serial::AppSerialReceiveRecord(
+    const uint8_t *payload,
+    uint8_t length,
+    void *data,
+    const std::unordered_map<std::string_view, int> &fields,
+    size_t dataSize,
+    bool profileData)
+{
+    if(payload == nullptr || length < 2)
+        return false;
+
+    const bool buttonData = data == OF_Prefs::backupButtonDesc;
+
+    uint8_t nameLength = 0;
+
+    while(nameLength < length &&
+          payload[nameLength] != '\0')
+        ++nameLength;
+
+    // At least the string terminator and value-size byte must be present.
+    if(nameLength >= length ||
+       nameLength + 1 >= length)
+        return false;
+
+    const std::string_view fieldName(
+        (const char*)payload,
+        nameLength);
+
+    size_t pos = nameLength + 1;
+    const uint8_t valueSize = payload[pos++];
+
+    // One lookup is sufficient and avoids scanning the field name again.
+    const auto field = fields.find(fieldName);
+
+    // Every frame contains exactly one record, therefore an unknown field
+    // can be ignored safely for forward compatibility.
+    if(field == fields.end())
+        return true;
+
+    const int index = field->second;
+
+    if(index < 0)
+        return true;
+
+    if(profileData) {
+        if(index == OF_Const::profCurrent) {
+            // CurrentProf is transported as one byte even though the runtime
+            // variable uses the native unsigned-integer type.
+            if(valueSize != sizeof(uint8_t) ||
+               pos + valueSize != length)
+                return false;
+
+            const uint8_t currentProfile = payload[pos];
+
+            if(currentProfile >= PROFILE_COUNT)
+                return false;
+
+            OF_Prefs::currentProfile = currentProfile;
+            return true;
+        }
+
+        // Every ordinary profile record also contains the profile number.
+        if(pos >= length)
+            return false;
+
+        const uint8_t profNum = payload[pos++];
+
+        if(profNum >= PROFILE_COUNT)
+            return false;
+
+        const size_t expectedSize =
+            index == OF_Const::profName ?
+            sizeof(OF_Prefs::ProfileData_s::name) :
+            dataSize;
+
+        if(valueSize != expectedSize ||
+           pos + valueSize != length)
+            return false;
+
+        memcpy((uint8_t*)&OF_Prefs::profiles[profNum] +
+                   (dataSize * index),
+               &payload[pos],
+               valueSize);
+
+        return true;
+    }
+
+    if(valueSize != dataSize ||
+       pos + valueSize != length)
+        return false;
+
+    // The last button entry is intentionally not managed by the App.
+    if(buttonData &&
+       index >= ButtonCount - 1)
+        return true;
+
+    memcpy((uint8_t*)data + (dataSize * index),
+           &payload[pos],
+           valueSize);
+
+    return true;
 }
 
 void OF_Serial::PrintResults()

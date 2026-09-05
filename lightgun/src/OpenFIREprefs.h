@@ -234,7 +234,7 @@ public:
 
     /// @brief Generic loading method using provided pointers to a block of data and its associated string map for lookups
     /// @return An error code from Errors_e
-    static int LoadToPtr(File, void*, const std::unordered_map<std::string_view, int>&);
+    static int LoadToPtr(File, void*, const std::unordered_map<std::string_view, int>&, const size_t&);
 
     /// @brief Load preferences
     /// @return An error code from Errors_e
@@ -246,7 +246,7 @@ public:
 
     /// @brief Load toggles (macro for LoadToPtr)
     /// @return An error code from Errors_e
-    static int LoadToggles() { return LoadToPtr(LittleFS.open("/toggles.conf", "r"), toggles, OFPresets.boolTypes_Strings); }
+    static int LoadToggles() { return LoadToPtr(LittleFS.open("/toggles.conf", "r"), toggles, OFPresets.boolTypes_Strings, sizeof(toggles) / OF_Const::boolTypesCount); }
 
     /// @brief Save current toggles states (macro for SaveToPtr)
     /// @return An error code from Errors_e
@@ -254,7 +254,7 @@ public:
 
     /// @brief Load pin mapping (macro for LoadToPtr)
     /// @return An error code from Errors_e
-    static int LoadPins() { return LoadToPtr(LittleFS.open("/pins.conf", "r"), pins, OFPresets.boardInputs_Strings); }
+    static int LoadPins() { return LoadToPtr(LittleFS.open("/pins.conf", "r"), pins, OFPresets.boardInputs_Strings, sizeof(pins) / OF_Const::boardInputsCount); }
 
     /// @brief Save current pin mapping (macro for SaveToPtr)
     /// @return An error code from Errors_e
@@ -262,7 +262,7 @@ public:
 
     /// @brief Load settings (macro for LoadToPtr)
     /// @return An error code from Errors_e
-    static int LoadSettings() { return LoadToPtr(LittleFS.open("/settings.conf", "r"), settings, OFPresets.settingsTypes_Strings); }
+    static int LoadSettings() { return LoadToPtr(LittleFS.open("/settings.conf", "r"), settings, OFPresets.settingsTypes_Strings, sizeof(settings) / OF_Const::settingsTypesCount); }
 
     /// @brief Save current settings (macro for SaveToPtr)
     /// @return An error code from Errors_e
@@ -270,7 +270,7 @@ public:
 
     /// @brief Load settings (macro for LoadToPtr)
     /// @return An error code from Errors_e
-    static int LoadButtons() { return LoadToPtr(LittleFS.open("/btns.conf", "r"), backupButtonDesc, OFPresets.boardInputs_Strings); }
+    static int LoadButtons() { return LoadToPtr(LittleFS.open("/btns.conf", "r"), backupButtonDesc, OFPresets.boardInputs_Strings, sizeof(backupButtonDesc[0])); }
 
     /// @brief Save current settings (macro for SaveToPtr)
     /// @return An error code from Errors_e

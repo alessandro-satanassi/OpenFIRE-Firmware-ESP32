@@ -21,6 +21,42 @@
 
 #include "OpenFIREprefs.h"
 
+static constexpr size_t PREF_NAME_SIZE = 32;
+
+static bool ReadPreferenceName(File &prefsFile, char *name, const size_t nameSize)
+{
+    if(name == nullptr || nameSize == 0)
+        return false;
+
+    size_t length = 0;
+    while(true) {
+        const int value = prefsFile.read();
+        if(value < 0)
+            return false;
+
+        if(value == '\0') {
+            name[length] = '\0';
+            return length > 0;
+        }
+
+        if(length >= nameSize - 1)
+            return false;
+
+        name[length++] = (char)value;
+    }
+}
+
+static bool SkipPreferenceData(File &prefsFile, size_t length)
+{
+    while(length > 0) {
+        if(prefsFile.read() < 0)
+            return false;
+        --length;
+    }
+
+    return true;
+}
+
 /*
 void OF_Prefs::InitProfileDefaults(const CameraProfile& profile)
 {
@@ -88,138 +124,199 @@ void OF_Prefs::Load()
 int OF_Prefs::LoadProfiles()
 {
     File prefsFile = LittleFS.open("/profiles.conf", "r");
-    if(prefsFile) {
-        int profileNum = 0;
-        char buf[32];
-        size_t bWritten = 0;
-        size_t readSize = 0;
-        while(prefsFile.available()) {
-            bWritten = prefsFile.readBytesUntil('\0', buf, 32);
-            // readBytesUntil discards the terminator, so plop one at the end
-            buf[bWritten++] = '\0';
-            if(bWritten && OFPresets.profSettingTypes_Strings.count(buf)) {
-                switch(OFPresets.profSettingTypes_Strings.at(buf)) {
-                  case OF_Const::profCurrent:
-                      currentProfile = prefsFile.read();
-                      if(currentProfile >= PROFILE_COUNT) currentProfile = 0;
-                      break;
-                  default:
-                      profileNum = prefsFile.read();
-                      readSize = prefsFile.read();
-                      profileNum < PROFILE_COUNT ? prefsFile.readBytes((char*)&profiles[profileNum] + (sizeof(uint32_t) * OFPresets.profSettingTypes_Strings.at(buf)), readSize) : prefsFile.seek(readSize, fs::SeekCur);
-                      break;
-                }
+    if(!prefsFile)
+        return Error_Read;
+
+    char name[PREF_NAME_SIZE];
+    bool loaded = true;
+
+    while(loaded && prefsFile.available()) {
+        loaded = ReadPreferenceName(prefsFile, name, sizeof(name));
+        if(!loaded)
+            break;
+
+        const auto field = OFPresets.profSettingTypes_Strings.find(name);
+        if(field != OFPresets.profSettingTypes_Strings.end() &&
+           field->second == OF_Const::profCurrent) {
+            const int profileNum = prefsFile.read();
+            if(profileNum < 0) {
+                loaded = false;
             } else {
-                prefsFile.seek(1, fs::SeekCur);
-                readSize = prefsFile.read();
-                prefsFile.seek(readSize, fs::SeekCur);
+                currentProfile = profileNum < PROFILE_COUNT ? profileNum : 0;
             }
+            continue;
         }
 
-        prefsFile.close();
-        return Error_Success;
-    } else return Error_Read;
+        const int profileNum = prefsFile.read();
+        const int storedSize = prefsFile.read();
+        if(profileNum < 0 || storedSize < 0) {
+            loaded = false;
+            break;
+        }
+
+        if(field == OFPresets.profSettingTypes_Strings.end() ||
+           profileNum >= PROFILE_COUNT) {
+            loaded = SkipPreferenceData(prefsFile, (uint8_t)storedSize);
+            continue;
+        }
+
+        const int index = field->second;
+        if(index < 0 || index >= OF_Const::profDataTypes) {
+            loaded = false;
+            break;
+        }
+
+        const size_t expectedSize = index == OF_Const::profName ?
+                                    sizeof(ProfileData_t::name) :
+                                    sizeof(uint32_t);
+
+        uint8_t value[sizeof(ProfileData_t::name)];
+        if((size_t)storedSize != expectedSize ||
+           prefsFile.readBytes((char*)value, expectedSize) != expectedSize) {
+            loaded = false;
+        } else {
+            memcpy((uint8_t*)&profiles[profileNum] +
+                       (sizeof(uint32_t) * index),
+                   value,
+                   expectedSize);
+
+            if(index == OF_Const::profName)
+                profiles[profileNum].name[sizeof(ProfileData_t::name) - 1] = '\0';
+        }
+    }
+
+    prefsFile.close();
+    return loaded ? Error_Success : Error_Read;
 }
 
 int OF_Prefs::SaveProfiles()
 {
     File prefsFile = LittleFS.open("/profiles.conf", "w");
-    if(prefsFile) {
-        bool currentProfLogged = false;
-        for(size_t i = 0; i < PROFILE_COUNT; ++i) {
-            for(auto &pair : OFPresets.profSettingTypes_Strings) {
-                if(pair.second == OF_Const::profCurrent) {
-                    if(!currentProfLogged) {
-                        // only write string and profile num
-                        prefsFile.write((const uint8_t*)pair.first.data(), pair.first.length()+1);
-                        prefsFile.write((uint8_t)currentProfile);
-                        currentProfLogged = true;
-                    }
-                } else {
-                    // write data type:
-                    prefsFile.write((const uint8_t*)pair.first.data(), pair.first.length()+1);
-                    // Append profile number:
-                    prefsFile.write((uint8_t*)&i, 1);
+    if(!prefsFile)
+        return Error_Write;
 
-                    // data type:
+    bool written = true;
+    bool currentProfLogged = false;
+    for(size_t i = 0; i < PROFILE_COUNT && written; ++i) {
+        for(auto &pair : OFPresets.profSettingTypes_Strings) {
+            if(pair.second == OF_Const::profCurrent) {
+                if(!currentProfLogged) {
+                    // Same bytes and order: field name, then current profile.
+                    written = prefsFile.write((const uint8_t*)pair.first.data(), pair.first.length()+1) == pair.first.length()+1 &&
+                              prefsFile.write((uint8_t)currentProfile) == 1;
+                    currentProfLogged = true;
+                }
+            } else {
+                // Field name, profile number, byte count, value (unchanged format).
+                written = prefsFile.write((const uint8_t*)pair.first.data(), pair.first.length()+1) == pair.first.length()+1 &&
+                          prefsFile.write((uint8_t*)&i, 1) == 1;
+                if(written) {
                     switch(pair.second) {
-                    // 16-bytes profile name
                     case OF_Const::profName:
-                        prefsFile.write(sizeof(ProfileData_t::name));
-                        prefsFile.write((uint8_t*)profiles[i].name, sizeof(ProfileData_t::name));
+                        written = prefsFile.write((uint8_t)sizeof(ProfileData_t::name)) == 1 &&
+                                  prefsFile.write((uint8_t*)profiles[i].name, sizeof(ProfileData_t::name)) == sizeof(ProfileData_t::name);
                         break;
-                    // everything else is generic 32-bit data
                     default:
-                        prefsFile.write(sizeof(int));
-                        prefsFile.write((uint8_t*)&profiles[i] + (sizeof(int)*pair.second), sizeof(int));
+                        written = prefsFile.write((uint8_t)sizeof(int)) == 1 &&
+                                  prefsFile.write((uint8_t*)&profiles[i] + (sizeof(int)*pair.second), sizeof(int)) == sizeof(int);
                         break;
                     }
                 }
             }
+            if(!written)
+                break;
         }
-
-        prefsFile.close();
-        return Error_Success;
-    } else return Error_Write;
+    }
+    prefsFile.close();
+    return written ? Error_Success : Error_Write;
 }
 
 int OF_Prefs::SaveToPtr(File prefsFile, void *dataPtr, const std::unordered_map<std::string_view, int> &mapPtr, const size_t &dataSize)
 {
-    if(prefsFile) {
-        for(auto &pair : mapPtr) {
-            if((pair.second >= 0 && dataPtr != backupButtonDesc) || dataPtr == backupButtonDesc && pair.second >= 0 && pair.second < ButtonCount) {
-                prefsFile.write((const uint8_t*)pair.first.data(), pair.first.length()+1);
-                prefsFile.write((uint8_t)dataSize);
-                prefsFile.write((uint8_t*)dataPtr + (dataSize * pair.second), dataSize);
-            }
+    if(!prefsFile)
+        return Error_Write;
+
+    bool written = true;
+    for(auto &pair : mapPtr) {
+        if((pair.second >= 0 && dataPtr != backupButtonDesc) || (dataPtr == backupButtonDesc && pair.second >= 0 && pair.second < ButtonCount)) {
+            written = prefsFile.write((const uint8_t*)pair.first.data(), pair.first.length()+1) == pair.first.length()+1 &&
+                      prefsFile.write((uint8_t)dataSize) == 1 &&
+                      prefsFile.write((uint8_t*)dataPtr + (dataSize * pair.second), dataSize) == dataSize;
+            if(!written)
+                break;
         }
-        
-        prefsFile.close();
-        return Error_Success;
-    } else return Error_NoData;
+    }
+    prefsFile.close();
+    return written ? Error_Success : Error_Write;
 }
 
-int OF_Prefs::LoadToPtr(File prefsFile, void *dataPtr, const std::unordered_map<std::string_view, int> &mapPtr)
+int OF_Prefs::LoadToPtr(File prefsFile, void *dataPtr, const std::unordered_map<std::string_view, int> &mapPtr, const size_t &dataSize)
 {
-    if(prefsFile) {
-        char buf[32];
-        size_t bWritten = 0;
-        size_t dataSize = 0;
-        while(prefsFile.available()) {
-            bWritten = prefsFile.readBytesUntil('\0', buf, 32);
-            // readBytesUntil discards the terminator, so plop one at the end
-            buf[bWritten++] = '\0';
-            dataSize = prefsFile.read();
-            if(bWritten && mapPtr.count(buf))
-                prefsFile.readBytes((char*)dataPtr + (dataSize * mapPtr.at(buf)), dataSize);
-            else prefsFile.seek(dataSize, fs::SeekCur);
+    if(!prefsFile)
+        return Error_NoData;
+
+    char name[PREF_NAME_SIZE];
+    bool loaded = true;
+
+    while(loaded && prefsFile.available()) {
+        loaded = ReadPreferenceName(prefsFile, name, sizeof(name));
+        if(!loaded)
+            break;
+
+        const int storedSize = prefsFile.read();
+        if(storedSize < 0) {
+            loaded = false;
+            break;
         }
 
-        prefsFile.close();
-        return Error_Success;
-    } else return Error_NoData;
+        const auto field = mapPtr.find(name);
+        if(field == mapPtr.end() || field->second < 0 ||
+           (dataPtr == backupButtonDesc && field->second >= ButtonCount)) {
+            loaded = SkipPreferenceData(prefsFile, (uint8_t)storedSize);
+            continue;
+        }
+
+        if((size_t)storedSize != dataSize ||
+           (size_t)prefsFile.available() < dataSize ||
+           prefsFile.readBytes((char*)dataPtr + (dataSize * field->second),
+                               dataSize) != dataSize) {
+            loaded = false;
+        }
+    }
+
+    prefsFile.close();
+    return loaded ? Error_Success : Error_Read;
 }
 
 int OF_Prefs::LoadUSBID()
 {
     File idFile = LittleFS.open("/USB.conf", "r");
-    if(idFile) {
-        idFile.readBytes((char*)&usb, sizeof(USBMap_t));
+    if(!idFile)
+        return Error_NoData;
 
-        idFile.close();
-        return Error_Success;
-    } else return Error_NoData;
+    USBMap_t loadedUSB;
+    const bool loaded = idFile.readBytes((char*)&loadedUSB,
+                                         sizeof(loadedUSB)) == sizeof(loadedUSB);
+
+    idFile.close();
+
+    if(!loaded)
+        return Error_Read;
+
+    loadedUSB.deviceName[sizeof(loadedUSB.deviceName) - 1] = '\0';
+    usb = loadedUSB;
+    return Error_Success;
 }
 
 int OF_Prefs::SaveUSBID()
 {
     File idFile = LittleFS.open("/USB.conf", "w");
     if(idFile) {
-        idFile.write((uint8_t*)&usb, sizeof(USBMap_t));
+        const bool written = idFile.write((uint8_t*)&usb, sizeof(USBMap_t)) == sizeof(USBMap_t);
 
         idFile.close();
-        return Error_Success;
-    } else return Error_NoData;
+        return written ? Error_Success : Error_Write;
+    } else return Error_Write;
 }
 
 void OF_Prefs::ResetPreferences()

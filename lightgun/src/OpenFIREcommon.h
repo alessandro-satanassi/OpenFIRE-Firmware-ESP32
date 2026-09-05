@@ -59,10 +59,10 @@ public:
     //            external NeoPixels)
     static void FeedbackSet();
 
-    /// @brief    Unsets any currently mapped pins back to board defaults (non-pullup inputs).
-    /// @note     This should be run before any sync operation, to ensure no problems
-    ///           when setting pins to any new values.
-    static void PinsReset();
+    /// @brief Releases hardware resources using the pin map currently active.
+    /// @param pinMap Active hardware pin map; nullptr uses OF_Prefs::pins.
+    /// @note Call before reinitializing hardware with a different pin map.
+    static void PinsReset(const int8_t *pinMap = nullptr);
 
     /// @brief Selects and initializes the configured camera and positioning algorithms.
     /// @note  Called at startup and after camera/pin reinitialization.
@@ -136,6 +136,9 @@ public:
 
     /// @brief    Checks Button Descriptor and replaces instances of 0xFF/0xFE with player-relative Start/Select
     static void UpdateStartSelect();
+
+    /// @brief Shows the firmware update message and enters the MCU bootloader.
+    static void RebootToBootloader();
 
     // initial gunmode
     static inline FW_Const::GunMode_e gunMode = FW_Const::GunMode_Init;

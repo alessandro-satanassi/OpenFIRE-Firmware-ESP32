@@ -101,6 +101,39 @@
 #endif
 // ======[ESP32_PORT]====== DUAL-CORE MANAGEMENT FOR ESP32 USING FREERTOS / FINE GESTIONE DUAL CORE ESP32 (FINE INIZIALIZZAZIONE)
 
+static void CheckFirmwareUpdateRequest()
+{
+    const int triggerPin = OF_Prefs::pins[OF_Const::btnTrigger];
+    const int buttonAPin = OF_Prefs::pins[OF_Const::btnGunA];
+
+    // Both buttons must be configured on different GPIOs.
+    if(triggerPin < 0 || buttonAPin < 0 || triggerPin == buttonAPin)
+        return;
+
+    // Allow mechanical contacts to settle before the first reading.
+    delay(50);
+    
+    // Buttons use INPUT_PULLUP: LOW means pressed.
+    if(digitalRead(triggerPin) != LOW ||
+       digitalRead(buttonAPin) != LOW)
+        return;
+
+    const unsigned long holdStart = millis();
+
+    // Both buttons must remain continuously pressed for 1.5 seconds.
+    while((millis() - holdStart) < 1500UL) {
+        if(digitalRead(triggerPin) != LOW ||
+           digitalRead(buttonAPin) != LOW)
+            return;
+
+        delay(10);
+    }
+
+    // Perform one final reading at the end of the hold interval.
+    if(digitalRead(triggerPin) == LOW &&
+       digitalRead(buttonAPin) == LOW)
+        FW_Common::RebootToBootloader();
+}
 
 // Sets up the environment
 void setup() {
@@ -341,6 +374,7 @@ void setup() {
     #endif // LED_ENABLE
 // ====== [ESP32_PORT] ==== End initialize camera before the connection / fine del blocco che per opportunità è spostato sopra prima della connessione =======
 
+CheckFirmwareUpdateRequest();
 
 // ===================================================================================
 // EMPIRICAL HARDWARE CALIBRATION OF ANALOG STICKS / CALIBRAZIONE EMPIRICA HARDWARE DEGLI STICK ANALOGICI
@@ -1375,7 +1409,9 @@ void ExecRunModeProcessing()
             OF_Serial::SerialProcessingDocked();
         }
 
-        if(FW_Common::runMode != FW_Const::RunMode_Processing)
+        if(FW_Common::dockedSaving ||
+           FW_Common::runMode != FW_Const::RunMode_Processing ||
+           FW_Common::gunMode != FW_Const::GunMode_Docked)
             return;
 
         if(FW_Common::irPosUpdateTick) {
@@ -1392,7 +1428,8 @@ void ExecGunModeDocked()
     FW_Common::buttons.ReleaseAll();
 
     #ifdef LED_ENABLE
-        OF_RGB::LedUpdate(127, 127, 255);
+        if(!FW_Common::dockedSaving)
+            OF_RGB::LedUpdate(127, 127, 255);
     #endif // LED_ENABLE
 
     unsigned long tempChecked = millis();
@@ -1400,45 +1437,49 @@ void ExecGunModeDocked()
     unsigned long currentMillis = millis();
 
     char buf[64];
-    int pos = sprintf(&buf[0], "%.1f"
-                                #ifdef GIT_HASH
-                                "-%s"
-                                #endif // GIT_HASH
-                                , OPENFIRE_VERSION
-                                #ifdef GIT_HASH
-                                , GIT_HASH
-                                #endif // GIT_HASH
-                      );
-    buf[pos++] = OF_Const::serialTerminator;
-    pos += sprintf(&buf[pos], "%s", OPENFIRE_BOARD);
-    buf[pos++] = OF_Const::serialTerminator;
-    memcpy(&buf[pos], &OF_Prefs::usb, sizeof(OF_Prefs::USBMap_t));
-    pos += sizeof(OF_Prefs::USBMap_t);
-    if(FW_Common::camNotAvailable) {
-        buf[pos++] = OF_Const::serialTerminator;
-        buf[pos++] = OF_Const::sError;
-    }
-    Serial.write(buf, pos);
-    Serial.flush();
-
+    bool sendBoardInfo = true;
     for(;;) {
-        FW_Common::buttons.Poll(1);
+        if(sendBoardInfo) {
+            int pos = sprintf(&buf[0], "%.1f"
+                                        #ifdef GIT_HASH
+                                        "-%s"
+                                        #endif // GIT_HASH
+                                        , OPENFIRE_VERSION
+                                        #ifdef GIT_HASH
+                                        , GIT_HASH
+                                        #endif // GIT_HASH
+                              );
+            buf[pos++] = OF_Const::serialTerminator;
+            pos += sprintf(&buf[pos], "%s", OPENFIRE_BOARD);
+            buf[pos++] = OF_Const::serialTerminator;
+            memcpy(&buf[pos], &OF_Prefs::usb, sizeof(OF_Prefs::USBMap_t));
+            pos += sizeof(OF_Prefs::USBMap_t);
+            if(FW_Common::camNotAvailable) {
+                buf[pos++] = OF_Const::serialTerminator;
+                buf[pos++] = OF_Const::sError;
+            }
+            OF_Serial::AppSerialSendResponse(OF_Const::sDock2, buf, (uint8_t)pos);
+        
+            sendBoardInfo = false;
+        }
+
         currentMillis = millis();
 
         if(!FW_Common::dockedSaving) {
+            FW_Common::buttons.Poll(1);
             if(FW_Common::buttons.pressed) {
                 for(uint i = 0; i < ButtonCount; ++i)
                     if(bitRead(FW_Common::buttons.pressed, i)) {
-                        buf[0] = OF_Const::sBtnPressed, buf[1] = i;
-                        Serial.write(buf, 2);
+                        buf[0] = i;
+                        OF_Serial::AppSerialSendEvent(OF_Const::sBtnPressed, buf, 1);
                     }
             }
 
             if(FW_Common::buttons.released) {
                 for(uint i = 0; i < ButtonCount; ++i)
                     if(bitRead(FW_Common::buttons.released, i)) {
-                        buf[0] = OF_Const::sBtnReleased, buf[1] = i;
-                        Serial.write(buf, 2);
+                        buf[0] = i;
+                        OF_Serial::AppSerialSendEvent(OF_Const::sBtnReleased, buf, 1);
                     }
             }
 
@@ -1447,8 +1488,8 @@ void ExecGunModeDocked()
                     OF_FFB::TemperatureUpdate();
 
                     if(currentMillis - tempChecked >= 1000) {
-                        buf[0] = OF_Const::sTemperatureUpd, buf[1] = OF_FFB::temperatureCurrent;
-                        Serial.write(buf, 2);
+                        buf[0] = OF_FFB::temperatureCurrent;
+                        OF_Serial::AppSerialSendEvent(OF_Const::sTemperatureUpd, buf, 1);
 
                         tempChecked = currentMillis;
                     }
@@ -1482,26 +1523,33 @@ void ExecGunModeDocked()
                         analogValueY = (uint16_t)map(rawY, ANALOG_STICK_DEADZONE_Y_MAX, 4095, ANALOG_STICK_CENTER_Y, 4095);
                     else 
                         analogValueY = ANALOG_STICK_CENTER_Y;
-                    #else                  
+                    #else  // rp2040                
                     // Leggiamo il valore puro dall'ADC (0-4095)
                     uint16_t analogValueX = analogRead(OF_Prefs::pins[OF_Const::analogX]);
                     uint16_t analogValueY = analogRead(OF_Prefs::pins[OF_Const::analogY]);
-                    #endif // COMMENTO
+                    #endif // esp32/rp2040
                     
-                    buf[0] = OF_Const::sAnalogPosUpd;
-                    memcpy(&buf[1], (uint8_t*)&analogValueX, sizeof(uint16_t));
-                    memcpy(&buf[3], (uint8_t*)&analogValueY, sizeof(uint16_t));
-                    Serial.write(buf, 5);
+                    memcpy(&buf[0], (uint8_t*)&analogValueX, sizeof(uint16_t));
+                    memcpy(&buf[2], (uint8_t*)&analogValueY, sizeof(uint16_t));
+                    OF_Serial::AppSerialSendEvent(OF_Const::sAnalogPosUpd, buf, 4);
                 }
             #endif // USES_ANALOG
         }
 
-        if(Serial.available()) OF_Serial::SerialProcessingDocked();
+        if(Serial.available()) {
+            const bool wasActive = OF_Serial::AppSerialSessionIsActive();
+            OF_Serial::SerialProcessingDocked();
+            // Stay here during recovery: returning to the first-boot caller
+            // could resume initialization with a partly updated configuration.
+            if(!wasActive && OF_Serial::AppSerialSessionIsActive())
+                sendBoardInfo = true;
+        }
 
         if(FW_Common::gunMode != FW_Const::GunMode_Docked)
             return;
 
-        if(FW_Common::runMode == FW_Const::RunMode_Processing)
+        if(!FW_Common::dockedSaving &&
+           FW_Common::runMode == FW_Const::RunMode_Processing)
             ExecRunModeProcessing();
     }
 }

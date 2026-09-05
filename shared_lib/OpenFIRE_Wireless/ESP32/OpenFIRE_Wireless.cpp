@@ -2840,11 +2840,30 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint16_
     }
 }
 
+// IL CODICE SOTTOSTANTE O SIMILE VIENE AGGIUNTO AUTOMATICAMENTE CON AL DIRETTIVA
+// IN PLATFORMIO.INI SEGUENTE: -D CONFIG_TINYUSB_CDC_ENABLED=1 
+/*
+// #include "soc/rtc_cntl_reg.h"
+//#include "class/cdc/cdc_device.h" // Dipendenza di TinyUSB
+// FA IN MODO CHE IL TRUCCO DI ESP-FLASHER DI IMPOSTARE LA COM A 1200 FACCIA RIAVVIARE IL MICRO IN MODALITA' BOOTLOADER
+// Sovrascriviamo la callback debole (weak) di TinyUSB per intercettare il cambio di baud rate
+void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const* p_line_coding) {
+    if (p_line_coding->bit_rate == 1200) {
+        // Il PC (esptool) ha richiesto il flashing!
+        REG_WRITE(RTC_CNTL_OPTION1_REG, RTC_CNTL_FORCE_DOWNLOAD_BOOT);
+        //esp_rom_software_reset_system();
+        esp_restart();
+    }
+}
+*/
+
 #ifdef __cplusplus
 }
 #endif
 
 #endif // DONGLE
+
+
 // ============ END TinyUSB Send Callback / FINE CALLBACK PER SPEDIZIONE TINYUSB =============================
 
 

@@ -25,6 +25,10 @@
 #include "OpenFIRElights.h"
 #include "OpenFIREserial.h"
 
+#ifdef ARDUINO_ARCH_ESP32
+    #include "esp32-hal-tinyusb.h"
+#endif
+
 // ============ [ESP32_PORT] ============
 // Definition of Serial for managing wireless serial connections / redifinizione di Serial per gestire le connessione wireless seriali
 #ifdef OPENFIRE_WIRELESS_ENABLE
@@ -51,23 +55,34 @@
 // button object instance (defined in OpenFIREcommon.h/OpenFIREprefs.h)
 LightgunButtons FW_Common::buttons(lgbData, ButtonCount);
 
-/*
-bool FW_Common::CameraSelect(CameraModel model)
+void FW_Common::RebootToBootloader()
 {
-    if (!OpenFIRECamera::Select(model))
-        return false;
+    #ifdef USES_DISPLAY
+    if(OLED.display != nullptr) {
+        OLED.display->clearDisplay();
+        OLED.display->setTextColor(WHITE, BLACK);
+        OLED.display->setTextSize(1);
 
-    const CameraProfile& profile = OpenFIRECamera::Profile();
-    OF_Prefs::InitProfileDefaults(profile);
-    OpenFIREsquare.configure(profile);
-    OpenFIREdiamond.configure(profile);
-    OpenFIREper.configure(profile);
-    #ifdef USE_MULTI_ONE_EURO_FILTER
-        oef_multi.configure(profile);
+        FW_Common::OLED.display->setCursor(37, 16);
+        FW_Common::OLED.display->print("Ready for");
+
+        FW_Common::OLED.display->setCursor(40, 30);
+        FW_Common::OLED.display->print("firmware");
+
+        FW_Common::OLED.display->setCursor(46, 44);
+        FW_Common::OLED.display->print("update");
+
+        // Transfer the framebuffer to the OLED before rebooting.
+        OLED.display->display();
+    }
     #endif
-    return true;
+
+    #ifdef ARDUINO_ARCH_ESP32
+        usb_persist_restart(RESTART_BOOTLOADER);
+    #elif defined(ARDUINO_ARCH_RP2040)
+        rp2040.rebootToBootloader();
+    #endif
 }
-*/
 
 void FW_Common::FeedbackSet()
 {
@@ -153,74 +168,71 @@ void FW_Common::FeedbackSet()
     }
 }
 
-void FW_Common::PinsReset()
+void FW_Common::PinsReset(const int8_t *pinMap)
 {
+    if(pinMap == nullptr)
+        pinMap = OF_Prefs::pins;
+
     OpenFIRECamera::End();
 
     #ifdef USES_RUMBLE
-        if(OF_Prefs::pins[OF_Const::rumblePin] >= 0)
-            pinMode(OF_Prefs::pins[OF_Const::rumblePin], INPUT);
-    #endif // USES_RUMBLE
+        if(pinMap[OF_Const::rumblePin] >= 0)
+            pinMode(pinMap[OF_Const::rumblePin], INPUT);
+    #endif
 
     #ifdef USES_SOLENOID
-        if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0)
-            pinMode(OF_Prefs::pins[OF_Const::solenoidPin], INPUT);
-    #endif // USES_SOLENOID
+        if(pinMap[OF_Const::solenoidPin] >= 0)
+            pinMode(pinMap[OF_Const::solenoidPin], INPUT);
+    #endif
 
     #ifdef USES_SWITCHES
         #ifdef USES_RUMBLE
-            if(OF_Prefs::pins[OF_Const::rumbleSwitch] >= 0)
-                pinMode(OF_Prefs::pins[OF_Const::rumbleSwitch], INPUT);
-        #endif // USES_RUMBLE
+            if(pinMap[OF_Const::rumbleSwitch] >= 0)
+                pinMode(pinMap[OF_Const::rumbleSwitch], INPUT);
+        #endif
 
         #ifdef USES_SOLENOID
-            if(OF_Prefs::pins[OF_Const::solenoidSwitch] >= 0)
-                pinMode(OF_Prefs::pins[OF_Const::solenoidSwitch], INPUT);
-        #endif // USES_SOLENOID
+            if(pinMap[OF_Const::solenoidSwitch] >= 0)
+                pinMode(pinMap[OF_Const::solenoidSwitch], INPUT);
+        #endif
 
-        if(OF_Prefs::pins[OF_Const::autofireSwitch] >= 0)
-            pinMode(OF_Prefs::pins[OF_Const::autofireSwitch], INPUT);
-    #endif // USES_SWITCHES
+        if(pinMap[OF_Const::autofireSwitch] >= 0)
+            pinMode(pinMap[OF_Const::autofireSwitch], INPUT);
+    #endif
 
     #ifdef LED_ENABLE
-        OF_RGB::LedOff();
+        // LedOff() uses OF_Prefs::pins. Call it only when that array still
+        // describes the hardware currently active.
+        if(pinMap == OF_Prefs::pins)
+            OF_RGB::LedOff();
 
         #ifdef FOURPIN_LED
             if(ledIsValid) {
-                pinMode(OF_Prefs::pins[OF_Const::ledR], INPUT);
-                pinMode(OF_Prefs::pins[OF_Const::ledG], INPUT);
-                pinMode(OF_Prefs::pins[OF_Const::ledB], INPUT);
+                if(pinMap[OF_Const::ledR] >= 0)
+                    pinMode(pinMap[OF_Const::ledR], INPUT);
+                if(pinMap[OF_Const::ledG] >= 0)
+                    pinMode(pinMap[OF_Const::ledG], INPUT);
+                if(pinMap[OF_Const::ledB] >= 0)
+                    pinMode(pinMap[OF_Const::ledB], INPUT);
             }
-        #endif // FOURPIN_LED
+            ledIsValid = false;
+        #endif
 
         #ifdef CUSTOM_NEOPIXEL
             if(OF_RGB::externPixel != nullptr) {
                 OF_RGB::externPixel->clear();
+                OF_RGB::externPixel->show();
                 delete OF_RGB::externPixel;
                 OF_RGB::externPixel = nullptr;
             }
-        #endif // CUSTOM_NEOPIXEL
-    #endif // LED_ENABLE
+        #endif
+    #endif
 
     #ifdef USES_DISPLAY
         if(OLED.display != nullptr)
             OLED.Stop();
-    #endif // USES_DISPLAY
+    #endif
 }
-
-/*
-void FW_Common::CameraSet()
-{
-
-    if (!OpenFIRECamera::Begin((OpenFIRECamera::Sensitivity_e)OF_Prefs::profiles[OF_Prefs::currentProfile].irSens,
-                               OpenFIRECamera::DataFormat_Basic)) {
-        PrintIrError();
-        return;
-    }
-
-    camNotAvailable = false;
-}
-*/
 
 void FW_Common::CameraSet()
 {
@@ -245,9 +257,7 @@ void FW_Common::CameraSet()
         OF_Prefs::profiles[OF_Prefs::currentProfile].adjX,
         OF_Prefs::profiles[OF_Prefs::currentProfile].adjY);
     OpenFIREper.deinit(0);
-
-    //SetRunMode((FW_Const::RunMode_e)OF_Prefs::profiles[OF_Prefs::currentProfile].runMode);
-
+    
     camNotAvailable = false;
 }
 
@@ -277,8 +287,7 @@ void FW_Common::SetMode(const FW_Const::GunMode_e &newMode)
     case FW_Const::GunMode_Pause:
         break;
     case FW_Const::GunMode_Docked:
-        if(newMode != FW_Const::GunMode_Calibration)
-            Serial.println("Undocking.");
+        // Docked mode has no hardware resources that need explicit release.
         break;
     }
     
@@ -348,8 +357,6 @@ void FW_Common::SetRunMode(const FW_Const::RunMode_e &newMode)
     
     if(runMode != newMode) {
         runMode = newMode;
-        //if(!(stateFlags & FW_Const::StateFlag_PrintSelectedProfile))
-            //PrintRunMode();
     }
 }
 
@@ -358,8 +365,8 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
     buttons.ReportDisable();
 
     uint8_t calStage = 0;
-    char buf[6];
-    buf[0] = OF_Const::sCaliInfoUpd;
+    bool communicationFailed = false;
+    uint8_t caliPayload[5];
 
     // Queste sostituiscono i vecchi valori hardcoded (512 e 384) e 
     // garantiscono una calibrazione perfetta sia per la DFRobot (4:3) che per la PixArt (1:1).
@@ -405,15 +412,26 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
 
     // Jack in, CaliMan, execute!!!
     SetMode(FW_Const::GunMode_Calibration);
-    Serial.printf("%c%c", OF_Const::sCaliStageUpd, FW_Const::Cali_Init);
+    if(fromDesktop) {
+        const uint8_t stage = FW_Const::Cali_Init;
+        if(!OF_Serial::AppSerialSendResponse(OF_Const::sCaliStageUpd, &stage, 1))
+            goto calibration_failed;
+    }
 
     while(gunMode == FW_Const::GunMode_Calibration) {
         buttons.Poll(1);
+
+        if(fromDesktop)
+            OF_Serial::SerialProcessingDocked();
+        const bool desktopCancel = fromDesktop && OF_Serial::AppSerialTakeCalibrationCancel();
 
         if(irPosUpdateTick) {
             irPosUpdateTick = 0;
             GetPosition();
         }
+
+        if(fromDesktop && camNotAvailable)
+            goto calibration_failed;
 
         // Handle incremental mouse movement
         if (mouseMoving) {
@@ -441,33 +459,13 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
         }
 
         // Handle button presses and calibration stages
-        if((buttons.pressedReleased & (FW_Const::ExitPauseModeBtnMask | FW_Const::ExitPauseModeHoldBtnMask) || Serial.read() == OF_Const::serialTerminator) && !justBooted) {
-            Serial.printf("%c%c", OF_Const::sCaliStageUpd, FW_Const::Cali_Verify+1);
-            Serial.flush();
-
-            // Reapplying backed up data
-            OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset = _topOffset;
-            OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset = _bottomOffset;
-            OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset = _leftOffset;
-            OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset = _rightOffset;
-            OF_Prefs::profiles[OF_Prefs::currentProfile].TLled = _TLled;
-            OF_Prefs::profiles[OF_Prefs::currentProfile].TRled = _TRled;
-            OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = _adjX;
-            OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = _adjY;
-
-            // Re-print the profile
-            stateFlags |= FW_Const::StateFlag_PrintSelectedProfile;
-
-            // Exit back to docked mode or run mode, depending on if pinged from Desktop App
-            if(fromDesktop)
-                SetMode(FW_Const::GunMode_Docked);
-            else SetMode(FW_Const::GunMode_Run);
-
-            return;
+        if(((buttons.pressedReleased & (FW_Const::ExitPauseModeBtnMask | FW_Const::ExitPauseModeHoldBtnMask)) && !justBooted) ||
+           desktopCancel) {
+            goto calibration_cancelled;
         } else if(buttons.pressed == FW_Const::BtnMask_Trigger && !mouseMoving) {
-            Serial.printf("%c%c", OF_Const::sCaliStageUpd, ++calStage);
-            // Ensure our messages go through, or else the HID reports eat UART.
-            Serial.flush();
+            ++calStage;
+            if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliStageUpd, &calStage, 1))
+                goto calibration_failed;
 
             switch(calStage) {
                 case FW_Const::Cali_Init:
@@ -515,10 +513,10 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                     // Set Offset buffer
                     topOffset = mouseY;
 
-                    buf[1] = 1;
-                    memcpy(&buf[2], &topOffset, sizeof(int));
-                    Serial.write(buf, sizeof(buf));
-                    Serial.flush();
+                    caliPayload[0] = 1;
+                    memcpy(&caliPayload[1], &topOffset, sizeof(int));
+                    if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliInfoUpd, caliPayload, sizeof(caliPayload)))
+                        goto calibration_failed;
 
                     // Set mouse movement to bottom position
                     if(!fromDesktop) {
@@ -531,10 +529,10 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                     // Set Offset buffer
                     bottomOffset = (res_y - mouseY);
 
-                    buf[1] = 2;
-                    memcpy(&buf[2], &bottomOffset, sizeof(int));
-                    Serial.write(buf, sizeof(buf));
-                    Serial.flush();
+                    caliPayload[0] = 2;
+                    memcpy(&caliPayload[1], &bottomOffset, sizeof(int));
+                    if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliInfoUpd, caliPayload, sizeof(caliPayload)))
+                        goto calibration_failed;
 
                     // Set mouse movement to left position
                     if(!fromDesktop) {
@@ -547,10 +545,10 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                     // Set Offset buffer
                     leftOffset = mouseX;
 
-                    buf[1] = 3;
-                    memcpy(&buf[2], &leftOffset, sizeof(int));
-                    Serial.write(buf, sizeof(buf));
-                    Serial.flush();
+                    caliPayload[0] = 3;
+                    memcpy(&caliPayload[1], &leftOffset, sizeof(int));
+                    if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliInfoUpd, caliPayload, sizeof(caliPayload)))
+                        goto calibration_failed;
 
                     // Set mouse movement to right position
                     if(!fromDesktop) {
@@ -563,10 +561,10 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                     // Set Offset buffer
                     rightOffset = (res_x - mouseX);
 
-                    buf[1] = 4;
-                    memcpy(&buf[2], &rightOffset, sizeof(int));
-                    Serial.write(buf, sizeof(buf));
-                    Serial.flush();
+                    caliPayload[0] = 4;
+                    memcpy(&caliPayload[1], &rightOffset, sizeof(int));
+                    if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliInfoUpd, caliPayload, sizeof(caliPayload)))
+                        goto calibration_failed;
 
                     // Save Offset buffer to profile
                     OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset = topOffset;
@@ -595,15 +593,15 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                                                                              (OpenFIREsquare.testMedianY() - CENTER_Y) * cos(OpenFIREsquare.Ang()) + CENTER_Y;
                     }
 
-                    buf[1] = 5;
-                    memcpy(&buf[2], &OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, sizeof(float));
-                    Serial.write(buf, sizeof(buf));
-                    Serial.flush();
+                    caliPayload[0] = 5;
+                    memcpy(&caliPayload[1], &OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, sizeof(float));
+                    if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliInfoUpd, caliPayload, sizeof(caliPayload)))
+                        goto calibration_failed;
 
-                    buf[1] = 6;
-                    memcpy(&buf[2], &OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, sizeof(float));
-                    Serial.write(buf, sizeof(buf));
-                    Serial.flush();
+                    caliPayload[0] = 6;
+                    memcpy(&caliPayload[1], &OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, sizeof(float));
+                    if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliInfoUpd, caliPayload, sizeof(caliPayload)))
+                        goto calibration_failed;
 
                     // Update Cam centre in perspective library
                     OpenFIREper.source(OF_Prefs::profiles[OF_Prefs::currentProfile].adjX, OF_Prefs::profiles[OF_Prefs::currentProfile].adjY);
@@ -614,10 +612,22 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                     while(gunMode == FW_Const::GunMode_Verification) {
                         buttons.Poll();
 
+                        if(fromDesktop)
+                            OF_Serial::SerialProcessingDocked();
+                        const bool verificationCancel = fromDesktop && OF_Serial::AppSerialTakeCalibrationCancel();
+
                         if(irPosUpdateTick) {
                             irPosUpdateTick = 0;
                             GetPosition();
                         }
+
+                        if(fromDesktop && camNotAvailable)
+                            goto calibration_failed;
+
+                        // Cancellation wins over a simultaneous trigger/restart.
+                        if(verificationCancel ||
+                           ((buttons.pressedReleased & FW_Const::ExitPauseModeBtnMask) && !justBooted))
+                            goto calibration_cancelled;
 
                         // If it's good, move onto calibration finish.
                         if(buttons.pressed == FW_Const::BtnMask_Trigger) {
@@ -627,8 +637,9 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                         // Press A/B to restart calibration for current profile
                         } else if(buttons.pressedReleased & FW_Const::ExitPauseModeHoldBtnMask) {
                             calStage = 0;
-                            Serial.printf("%c%c", OF_Const::sCaliStageUpd, FW_Const::Cali_Init);
-                            Serial.flush();
+                            const uint8_t stage = FW_Const::Cali_Init;
+                            if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliStageUpd, &stage, 1))
+                                goto calibration_failed;
 
                             // (Re)set current values to factory defaults
                             OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset = 0;
@@ -643,29 +654,7 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                             SetMode(FW_Const::GunMode_Calibration);
                             AbsMouse5.move(32768/2, 32768/2);
                             AbsMouse5.report();
-                        // Press C/Home to exit without committing new calibration values
-                        } else if(buttons.pressedReleased & FW_Const::ExitPauseModeBtnMask && !justBooted) {
-                            Serial.printf("%c%c", OF_Const::sCaliStageUpd, FW_Const::Cali_Verify+1);
-                            Serial.flush();
 
-                            // Reapply backed-up data
-                            OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset = _topOffset;
-                            OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset = _bottomOffset;
-                            OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset = _leftOffset;
-                            OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset = _rightOffset;
-                            OF_Prefs::profiles[OF_Prefs::currentProfile].TLled = _TLled;
-                            OF_Prefs::profiles[OF_Prefs::currentProfile].TRled = _TRled;
-                            OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = _adjX;
-                            OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = _adjY;
-
-                            // Re-print the profile
-                            stateFlags |= FW_Const::StateFlag_PrintSelectedProfile;
-
-                            // Re-apply the calibration stored in the profile
-                            if(fromDesktop)
-                                SetMode(FW_Const::GunMode_Docked);
-                            else SetMode(FW_Const::GunMode_Run);
-                            return;
                         }
                     }
                     break;
@@ -706,8 +695,49 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
         }
     #endif // USES_RUMBLE
 
-    Serial.printf("%c%c", OF_Const::sCaliStageUpd, FW_Const::Cali_Verify+1);
-    Serial.flush();
+    // The trigger has confirmed the new calibration. A lost final ACK must
+    // not undo values that the App may already have accepted.
+    calStage = FW_Const::Cali_Verify + 1;
+    if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliStageUpd, &calStage, 1))
+        OF_Serial::AppSerialSendError();
+    return;
+
+calibration_failed:
+    communicationFailed = true;
+
+calibration_cancelled:
+    // One restore path for user cancellation and failed intermediate updates.
+    OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset = _topOffset;
+    OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset = _bottomOffset;
+    OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset = _leftOffset;
+    OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset = _rightOffset;
+    OF_Prefs::profiles[OF_Prefs::currentProfile].TLled = _TLled;
+    OF_Prefs::profiles[OF_Prefs::currentProfile].TRled = _TRled;
+    OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = _adjX;
+    OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = _adjY;
+    OpenFIREper.source(_adjX, _adjY);
+    OpenFIREper.deinit(0);
+    stateFlags |= FW_Const::StateFlag_PrintSelectedProfile;
+
+    SetMode(fromDesktop ? FW_Const::GunMode_Docked : FW_Const::GunMode_Run);
+
+    if(fromDesktop) {
+        if(!communicationFailed) {
+            // Reuse existing messages: reset the App's provisional values
+            // before End, so it cannot report a cancelled calibration as saved.
+            calStage = FW_Const::Cali_Init;
+            if(!OF_Serial::AppSerialSendResponse(OF_Const::sCaliStageUpd, &calStage, 1))
+                communicationFailed = true;
+            else {
+                calStage = FW_Const::Cali_Verify + 1;
+                if(!OF_Serial::AppSerialSendResponse(OF_Const::sCaliStageUpd, &calStage, 1))
+                    communicationFailed = true;
+            }
+        }
+
+        if(communicationFailed)
+            OF_Serial::AppSerialSendError();
+    }
 }
 
 void FW_Common::GetPosition()
@@ -970,41 +1000,39 @@ void FW_Common::GetPosition()
                                                   CAM_TEST_OFFSET_X + CAM_TEST_WIDTH, CAM_TEST_OFFSET_X);
                             int testMedianY = map(OpenFIREdiamond.testMedianY(), 0, CAM_COORD_RES_Y,
                                                   CAM_TEST_OFFSET_Y, CAM_TEST_OFFSET_Y + CAM_TEST_HEIGHT);
-                            char buf[49];
-                            buf[0] = OF_Const::sTestCoords;
-                            memcpy(&buf[1],  &serialX[0],      sizeof(int));
-                            memcpy(&buf[5],  &rawY[0],      sizeof(int));
-                            memcpy(&buf[9],  &serialX[1],      sizeof(int));
-                            memcpy(&buf[13], &rawY[1],      sizeof(int));
-                            memcpy(&buf[17], &serialX[2],      sizeof(int));
-                            memcpy(&buf[21], &rawY[2],      sizeof(int));
-                            memcpy(&buf[25], &serialX[3],      sizeof(int));
-                            memcpy(&buf[29], &rawY[3],      sizeof(int));
-                            memcpy(&buf[33], &mouseXscaled, sizeof(int));
-                            memcpy(&buf[37], &mouseYscaled, sizeof(int));
-                            memcpy(&buf[41], &testMedianX,  sizeof(int));
-                            memcpy(&buf[45], &testMedianY,  sizeof(int));
-                            Serial.write(buf, sizeof(buf));
+                            uint8_t payload[sizeof(int) * 12];
+                            memcpy(&payload[0],  &serialX[0],   sizeof(int));
+                            memcpy(&payload[4],  &rawY[0],      sizeof(int));
+                            memcpy(&payload[8],  &serialX[1],   sizeof(int));
+                            memcpy(&payload[12], &rawY[1],      sizeof(int));
+                            memcpy(&payload[16], &serialX[2],   sizeof(int));
+                            memcpy(&payload[20], &rawY[2],      sizeof(int));
+                            memcpy(&payload[24], &serialX[3],   sizeof(int));
+                            memcpy(&payload[28], &rawY[3],      sizeof(int));
+                            memcpy(&payload[32], &mouseXscaled, sizeof(int));
+                            memcpy(&payload[36], &mouseYscaled, sizeof(int));
+                            memcpy(&payload[40], &testMedianX,  sizeof(int));
+                            memcpy(&payload[44], &testMedianY,  sizeof(int));
+                            OF_Serial::AppSerialSendEvent(OF_Const::sTestCoords, payload, sizeof(payload));
                         } else {
                             int testMedianX = map(OpenFIREsquare.testMedianX(), 0, CAM_COORD_RES_X,
                                                   CAM_TEST_OFFSET_X, CAM_TEST_OFFSET_X + CAM_TEST_WIDTH);
                             int testMedianY = map(OpenFIREsquare.testMedianY(), 0, CAM_COORD_RES_Y,
                                                   CAM_TEST_OFFSET_Y, CAM_TEST_OFFSET_Y + CAM_TEST_HEIGHT);
-                            char buf[49];
-                            buf[0] = OF_Const::sTestCoords;
-                            memcpy(&buf[1],  &serialX[0],      sizeof(int));
-                            memcpy(&buf[5],  &rawY[0],      sizeof(int));
-                            memcpy(&buf[9],  &serialX[1],      sizeof(int));
-                            memcpy(&buf[13], &rawY[1],      sizeof(int));
-                            memcpy(&buf[17], &serialX[2],      sizeof(int));
-                            memcpy(&buf[21], &rawY[2],      sizeof(int));
-                            memcpy(&buf[25], &serialX[3],      sizeof(int));
-                            memcpy(&buf[29], &rawY[3],      sizeof(int));
-                            memcpy(&buf[33], &mouseXscaled, sizeof(int));
-                            memcpy(&buf[37], &mouseYscaled, sizeof(int));
-                            memcpy(&buf[41], &testMedianX,  sizeof(int));
-                            memcpy(&buf[45], &testMedianY,  sizeof(int));
-                            Serial.write(buf, sizeof(buf));
+                            uint8_t payload[sizeof(int) * 12];
+                            memcpy(&payload[0],  &serialX[0],   sizeof(int));
+                            memcpy(&payload[4],  &rawY[0],      sizeof(int));
+                            memcpy(&payload[8],  &serialX[1],   sizeof(int));
+                            memcpy(&payload[12], &rawY[1],      sizeof(int));
+                            memcpy(&payload[16], &serialX[2],   sizeof(int));
+                            memcpy(&payload[20], &rawY[2],      sizeof(int));
+                            memcpy(&payload[24], &serialX[3],   sizeof(int));
+                            memcpy(&payload[28], &rawY[3],      sizeof(int));
+                            memcpy(&payload[32], &mouseXscaled, sizeof(int));
+                            memcpy(&payload[36], &mouseYscaled, sizeof(int));
+                            memcpy(&payload[40], &testMedianX,  sizeof(int));
+                            memcpy(&payload[44], &testMedianY,  sizeof(int));
+                            OF_Serial::AppSerialSendEvent(OF_Const::sTestCoords, payload, sizeof(payload));
                         }
                     }
 
@@ -1034,14 +1062,19 @@ void FW_Common::GetPosition()
 void FW_Common::PrintIrError()
 {
     // set flag to warn desktop app when docking
-    if(!camNotAvailable)
+    const bool firstError = !camNotAvailable;
+    if(firstError)
         camNotAvailable = true;
 
-    if(dockedSaving) {
-        char buf[2] = { OF_Const::sError, OF_Const::sErrCam };
-        Serial.write(buf, 2);
-    } else if(millis() - camWarningTimestamp > CAM_WARNING_INTERVAL) {
-        Serial.println("CAMERROR: Not available");
+    const uint8_t error = OF_Const::sErrCam;
+    if(firstError && OF_Serial::AppSerialSendEvent(OF_Const::sError, &error, 1)) {
+        camWarningTimestamp = millis();
+        return;
+    }
+
+    if(millis() - camWarningTimestamp > CAM_WARNING_INTERVAL) {
+        if(!OF_Serial::AppSerialSendEvent(OF_Const::sError, &error, 1))
+            Serial.println("CAMERROR: Not available");
         camWarningTimestamp = millis();
     }
 }
@@ -1168,8 +1201,7 @@ void FW_Common::SetIrSensitivity(const int &sensitivity)
     }
 
     OpenFIRECamera::SetSensitivity((OpenFIRECamera::Sensitivity_e)sensitivity);
-    //if(!(stateFlags & FW_Const::StateFlag_PrintSelectedProfile))
-        //PrintIrSensitivity();
+
 }
 
 void FW_Common::SetIrLayout(const int &layout)
@@ -1206,22 +1238,51 @@ int FW_Common::SavePreferences()
         #endif // USES_DISPLAY
     }
 
-    if(OF_Prefs::SaveProfiles() == OF_Prefs::Error_Success) {
+    int saveResult = OF_Prefs::SaveProfiles();
+
+    if(saveResult == OF_Prefs::Error_Success) {
+        int result = OF_Prefs::SaveToggles();
+        if(saveResult == OF_Prefs::Error_Success &&
+           result != OF_Prefs::Error_Success)
+             saveResult = result;
+
+        if(OF_Prefs::toggles[OF_Const::customPins]) {
+            result = OF_Prefs::SavePins();
+            if(saveResult == OF_Prefs::Error_Success &&
+               result != OF_Prefs::Error_Success)
+                saveResult = result;
+        }
+
+        result = OF_Prefs::SaveSettings();
+        if(saveResult == OF_Prefs::Error_Success &&
+           result != OF_Prefs::Error_Success)
+            saveResult = result;
+
+        result = OF_Prefs::SaveButtons();
+        if(saveResult == OF_Prefs::Error_Success &&
+           result != OF_Prefs::Error_Success)
+            saveResult = result;
+
+        result = OF_Prefs::SaveUSBID();
+        if(saveResult == OF_Prefs::Error_Success &&
+           result != OF_Prefs::Error_Success)
+            saveResult = result;
+    }
+
+    // During an App commit the pin map in RAM may not be active yet.
+    // Report the result through the protocol; do not drive LEDs/OLED here.
+    if(dockedSaving)
+        return saveResult;
+
+    if(saveResult == OF_Prefs::Error_Success) {
+
         #ifdef USES_DISPLAY
             OLED.ScreenModeChange(ExtDisplay::Screen_SaveSuccess);
         #endif // USES_DISPLAY
 
-        if(gunMode != FW_Const::GunMode_Docked) Serial.println("Settings saved to Flash"), Serial.flush();
-        else Serial.printf("%c%c (Successfully saved to LittleFS Storage)", OF_Const::sSave, true), Serial.flush();
-        OF_Prefs::SaveToggles();
-
-        if(OF_Prefs::toggles[OF_Const::customPins])
-            OF_Prefs::SavePins();
-
-        OF_Prefs::SaveSettings();
-        OF_Prefs::SaveButtons();
-        OF_Prefs::SaveUSBID();
-
+        if(gunMode != FW_Const::GunMode_Docked)
+            Serial.println("Settings saved to Flash"), Serial.flush();
+        
         #ifdef LED_ENABLE
             for(uint i = 0; i < 3; ++i) {
                 OF_RGB::LedUpdate(25,25,255);
@@ -1244,19 +1305,8 @@ int FW_Common::SavePreferences()
         #endif // USES_DISPLAY
 
         // TODO: reimpl a detailed error string
-        if(gunMode != FW_Const::GunMode_Docked) Serial.println("Error saving Preferences to Flash.");
-        else Serial.printf("%c%c (Failed to save to LittleFS Storage)", OF_Const::sSave, false), Serial.flush();
-
-        /*
-        if(nvPrefsError != OF_Prefs::Error_Success) {
-            Serial.print(NVRAMlabel);
-            Serial.print(" error: ");
-        #ifdef SAMCO_FLASH_ENABLE
-            Serial.println(OF_Prefs::ErrorCodeToString(nvPrefsError));
-        #else
-            Serial.println(nvPrefsError);
-        #endif // SAMCO_FLASH_ENABLE
-        }*/
+        if(gunMode != FW_Const::GunMode_Docked)
+            Serial.println("Error saving Preferences to Flash.");
 
         #ifdef LED_ENABLE
             for(uint i = 0; i < 2; ++i) {
@@ -1271,7 +1321,8 @@ int FW_Common::SavePreferences()
             RedrawDisplay();
         #endif // USES_DISPLAY
 
-        return OF_Prefs::Error_Write;
+        return saveResult;
+
     }
 }
 
