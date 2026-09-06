@@ -1472,6 +1472,7 @@ bool OF_Serial::AppSerialDispatchCommit(const AppSerialFrame_s &frame,
 
                 // Apply all newly saved runtime settings.
                 FW_Common::CameraSet();
+                FW_Common::SetMode(FW_Common::gunMode); // Riallineamento Square Advanced dopo il salvataggio. Con USE_SQUARE_ADVANCED disabilitato è praticamente ininfluente.
                 FW_Common::FeedbackSet();
                 FW_Common::UpdateBindings(true);
 
