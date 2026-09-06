@@ -954,7 +954,7 @@ void loop()
             if(OF_Prefs::toggles[OF_Const::simplePause]) {
                 if(pauseModeSelectingProfile) {
                     //if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_A) {
-                    if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_A || 
+                    if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_A ||
                        FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Up) {
                         SetProfileSelection(false);
                     //} else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_B) {
@@ -1000,11 +1000,11 @@ void loop()
                         #endif // USES_DISPLAY
                     }
                 //} else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_A) {
-                } else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_A || 
+                } else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_A ||
                             FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Up) {
                     SetPauseModeSelection(false);
                 //} else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_B) {
-                } else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_B || 
+                } else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_B ||
                             FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Down) {
                     SetPauseModeSelection(true);
                 } else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Trigger) {
