@@ -77,9 +77,6 @@ public:
         SerialQueueBitsCount
     };
 
-    static inline char TXbuf[64];
-    static inline char RXbuf[64];
-
     static inline bool serialMode = false;                         // Set if we're prioritizing force feedback over serial commands or not.
     static inline bool serialQueue[SerialQueueBitsCount] = {false};// Array of events we've queued from the serial receipt.
     static inline bool serialARcorrection = false;                 // 4:3 AR correction mode flag

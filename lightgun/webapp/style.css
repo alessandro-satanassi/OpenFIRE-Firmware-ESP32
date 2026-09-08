@@ -1,0 +1,44 @@
+﻿body {
+    font-family: Arial, sans-serif;
+    background-color: #1e1e1e;
+    color: #ffffff;
+    margin: 0;
+    padding: 20px;
+    text-align: center;
+}
+
+header {
+    margin-bottom: 2rem;
+}
+
+#status {
+    color: #ff9800;
+    font-weight: bold;
+}
+
+.board-container {
+    margin: 2rem auto;
+    padding: 1rem;
+    background: #2d2d2d;
+    border-radius: 8px;
+    max-width: 400px;
+}
+
+#board-image {
+    max-width: 100%;
+    height: auto;
+}
+
+button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #45a049;
+}

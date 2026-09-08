@@ -108,20 +108,28 @@ public:
 
 
     #ifdef USE_MULTI_ONE_EURO_FILTER
-    static inline ProfileData_t profiles[PROFILE_COUNT] = {
-        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, 0.0f, 0.0f, 0, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF0000, "Profile A"},
-        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, 0.0f, 0.0f, 0, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0x00FF00, "Profile B"},
-        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, 0.0f, 0.0f, 0, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0x0000FF, "Profile Start"},
-        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, 0.0f, 0.0f, 0, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF00FF, "Profile Select"}
-    };
+    static constexpr int DEFAULT_PROFILE_RUN_MODE = FW_Const::RunMode_Normal;
     #else
+    static constexpr int DEFAULT_PROFILE_RUN_MODE = FW_Const::RunMode_Average;
+    #endif
+
     static inline ProfileData_t profiles[PROFILE_COUNT] = {
-        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, 0.0f, 0.0f, 0, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF0000, "Profile A"},
-        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, 0.0f, 0.0f, 0, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0x00FF00, "Profile B"},
-        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, 0.0f, 0.0f, 0, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0x0000FF, "Profile Start"},
-        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED, 0.0f, 0.0f, 0, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF00FF, "Profile Select"}
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED,
+         0.0f, 0.0f, 0, DEFAULT_PROFILE_RUN_MODE,
+         OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF0000, "Profile A"},
+
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED,
+         0.0f, 0.0f, 0, DEFAULT_PROFILE_RUN_MODE,
+         OF_Const::layoutSquare, OF_Const::ar16_9, 0x00FF00, "Profile B"},
+
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED,
+         0.0f, 0.0f, 0, DEFAULT_PROFILE_RUN_MODE,
+         OF_Const::layoutSquare, OF_Const::ar16_9, 0x0000FF, "Profile Start"},
+
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED,
+         0.0f, 0.0f, 0, DEFAULT_PROFILE_RUN_MODE,
+         OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF00FF, "Profile Select"}
     };
-    #endif // USE_MULTI_ONE_EURO_FILTER
 
 
     /*
@@ -161,11 +169,7 @@ public:
         false,          // low buttons mode
         false,          // rumble force-feedback mode
         false,          // invert static pixels
-        #ifdef ARDUINO_ARCH_ESP32
-        false, //true, //false,          // i2c OLED enabled //[ESP32_PORT] per abilitare subito display
-        #else //rp2040
         false,          // i2c OLED enabled
-        #endif //ARDUINO_ARCH_ESP32
         false,          // i2c OLED alt address
     };
 

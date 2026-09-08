@@ -1390,19 +1390,18 @@ void OF_Serial::SerialProcessingDocked()
             if(incoming < 0)
                 return;
 
-            if(appSerialRawDockState == 0) {
-                appSerialRawDockState = incoming == OF_Const::sDock1 ? 1 : 0;
-                if(appSerialRawDockState != 0)
-                    appSerialRxTimestamp = millis();
-            } else if(incoming == OF_Const::sDock2) {
+            if(appSerialRawDockState != 0 &&
+               incoming == OF_Const::sDock2) {
                 AppSerialSessionBegin();
                 FW_Common::SetMode(FW_Const::GunMode_Docked);
                 break;
-            } else {
-                appSerialRawDockState = incoming == OF_Const::sDock1 ? 1 : 0;
-                if(appSerialRawDockState != 0)
-                    appSerialRxTimestamp = millis();
             }
+
+            appSerialRawDockState =
+                incoming == OF_Const::sDock1 ? 1 : 0;
+
+            if(appSerialRawDockState != 0)
+                appSerialRxTimestamp = millis();
         }
     }
 

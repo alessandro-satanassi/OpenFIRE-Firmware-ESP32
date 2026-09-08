@@ -232,9 +232,6 @@ public:
     #endif // USES_DISPLAY
 };
 
-// button runtime data arrays
-static inline LightgunButtonsStatic<ButtonCount> lgbData;
-
 #ifdef ARDUINO_ARCH_ESP32
 
 // #include <Arduino.h>

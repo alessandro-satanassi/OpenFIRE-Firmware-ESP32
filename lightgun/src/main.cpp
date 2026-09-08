@@ -35,6 +35,9 @@
 #include "OpenFIREprefs.h"
 #include "OpenFIREconstant.h"
 
+// #include "web_assets.h"
+#include "OpenFIREweb.h"
+
 // ===================================================================================
 // OS ABSTRACTION: DELAY REDEFINITION / RIDEFINIZIONE DEL DELAY (FREERTOS)
 // ===================================================================================
@@ -623,6 +626,12 @@ CheckFirmwareUpdateRequest();
         FW_Common::OLED.ScreenModeChange(ExtDisplay::ScreenMode_e::Screen_None);
     #endif // USES_DISPLAY
     #endif //ARDUINO_ARCH_ESP32
+
+
+    // ================== avvia webapp ======================
+    if (OF_WebConfigModeActive) WebApp_Init();
+    // ======================================================
+
 
 // ===================================================================================
 // POLYMORPHIC I/O: THE VIRTUAL SERIAL PORT TRICK / IL TRUCCO DELLA SERIALE VIRTUALE

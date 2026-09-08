@@ -52,7 +52,10 @@
 
 
 
-// button object instance (defined in OpenFIREcommon.h/OpenFIREprefs.h)
+// Button runtime storage, used only in this source file.
+static LightgunButtonsStatic<ButtonCount> lgbData;
+
+// Button object instance.
 LightgunButtons FW_Common::buttons(lgbData, ButtonCount);
 
 void FW_Common::RebootToBootloader()
@@ -995,45 +998,37 @@ void FW_Common::GetPosition()
                         for(int i = 0; i < 4; ++i)
                             serialX[i] = rawX[i] * 2 + (outsideFov[i] ? 1 : 0);
 
+                        int testMedianX;
+                        int testMedianY;
+
                         if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout) {
-                            int testMedianX = map(OpenFIREdiamond.testMedianX(), 0, CAM_COORD_RES_X,
-                                                  CAM_TEST_OFFSET_X + CAM_TEST_WIDTH, CAM_TEST_OFFSET_X);
-                            int testMedianY = map(OpenFIREdiamond.testMedianY(), 0, CAM_COORD_RES_Y,
-                                                  CAM_TEST_OFFSET_Y, CAM_TEST_OFFSET_Y + CAM_TEST_HEIGHT);
-                            uint8_t payload[sizeof(int) * 12];
-                            memcpy(&payload[0],  &serialX[0],   sizeof(int));
-                            memcpy(&payload[4],  &rawY[0],      sizeof(int));
-                            memcpy(&payload[8],  &serialX[1],   sizeof(int));
-                            memcpy(&payload[12], &rawY[1],      sizeof(int));
-                            memcpy(&payload[16], &serialX[2],   sizeof(int));
-                            memcpy(&payload[20], &rawY[2],      sizeof(int));
-                            memcpy(&payload[24], &serialX[3],   sizeof(int));
-                            memcpy(&payload[28], &rawY[3],      sizeof(int));
-                            memcpy(&payload[32], &mouseXscaled, sizeof(int));
-                            memcpy(&payload[36], &mouseYscaled, sizeof(int));
-                            memcpy(&payload[40], &testMedianX,  sizeof(int));
-                            memcpy(&payload[44], &testMedianY,  sizeof(int));
-                            OF_Serial::AppSerialSendEvent(OF_Const::sTestCoords, payload, sizeof(payload));
+                            testMedianX = map(OpenFIREdiamond.testMedianX(), 0, CAM_COORD_RES_X,
+                                              CAM_TEST_OFFSET_X + CAM_TEST_WIDTH, CAM_TEST_OFFSET_X);
+                            testMedianY = map(OpenFIREdiamond.testMedianY(), 0, CAM_COORD_RES_Y,
+                                              CAM_TEST_OFFSET_Y, CAM_TEST_OFFSET_Y + CAM_TEST_HEIGHT);
                         } else {
-                            int testMedianX = map(OpenFIREsquare.testMedianX(), 0, CAM_COORD_RES_X,
-                                                  CAM_TEST_OFFSET_X, CAM_TEST_OFFSET_X + CAM_TEST_WIDTH);
-                            int testMedianY = map(OpenFIREsquare.testMedianY(), 0, CAM_COORD_RES_Y,
-                                                  CAM_TEST_OFFSET_Y, CAM_TEST_OFFSET_Y + CAM_TEST_HEIGHT);
-                            uint8_t payload[sizeof(int) * 12];
-                            memcpy(&payload[0],  &serialX[0],   sizeof(int));
-                            memcpy(&payload[4],  &rawY[0],      sizeof(int));
-                            memcpy(&payload[8],  &serialX[1],   sizeof(int));
-                            memcpy(&payload[12], &rawY[1],      sizeof(int));
-                            memcpy(&payload[16], &serialX[2],   sizeof(int));
-                            memcpy(&payload[20], &rawY[2],      sizeof(int));
-                            memcpy(&payload[24], &serialX[3],   sizeof(int));
-                            memcpy(&payload[28], &rawY[3],      sizeof(int));
-                            memcpy(&payload[32], &mouseXscaled, sizeof(int));
-                            memcpy(&payload[36], &mouseYscaled, sizeof(int));
-                            memcpy(&payload[40], &testMedianX,  sizeof(int));
-                            memcpy(&payload[44], &testMedianY,  sizeof(int));
-                            OF_Serial::AppSerialSendEvent(OF_Const::sTestCoords, payload, sizeof(payload));
+                            testMedianX = map(OpenFIREsquare.testMedianX(), 0, CAM_COORD_RES_X,
+                                              CAM_TEST_OFFSET_X, CAM_TEST_OFFSET_X + CAM_TEST_WIDTH);
+                            testMedianY = map(OpenFIREsquare.testMedianY(), 0, CAM_COORD_RES_Y,
+                                              CAM_TEST_OFFSET_Y, CAM_TEST_OFFSET_Y + CAM_TEST_HEIGHT);
                         }
+
+                        uint8_t payload[sizeof(int) * 12];
+                        memcpy(&payload[0],  &serialX[0],   sizeof(int));
+                        memcpy(&payload[4],  &rawY[0],      sizeof(int));
+                        memcpy(&payload[8],  &serialX[1],   sizeof(int));
+                        memcpy(&payload[12], &rawY[1],      sizeof(int));
+                        memcpy(&payload[16], &serialX[2],   sizeof(int));
+                        memcpy(&payload[20], &rawY[2],      sizeof(int));
+                        memcpy(&payload[24], &serialX[3],   sizeof(int));
+                        memcpy(&payload[28], &rawY[3],      sizeof(int));
+                        memcpy(&payload[32], &mouseXscaled, sizeof(int));
+                        memcpy(&payload[36], &mouseYscaled, sizeof(int));
+                        memcpy(&payload[40], &testMedianX,  sizeof(int));
+                        memcpy(&payload[44], &testMedianY,  sizeof(int));
+
+                        OF_Serial::AppSerialSendEvent(
+                            OF_Const::sTestCoords, payload, sizeof(payload));
                     }
 
                     #ifdef USES_DISPLAY
@@ -1084,7 +1079,7 @@ void FW_Common::UpdateLastSeen()
     if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout) {
         if(lastSeen != OpenFIREdiamond.seen()) {
             #ifdef MAMEHOOKER
-            if(!OF_Serial::serialMode)
+            if(!OF_Serial::serialMode) {
             #endif // MAMEHOOKER
                 #ifdef LED_ENABLE
                 if(!lastSeen && OpenFIREdiamond.seen())
@@ -1092,6 +1087,9 @@ void FW_Common::UpdateLastSeen()
                 else if(lastSeen && !OpenFIREdiamond.seen())
                     OF_RGB::SetLedPackedColor(OF_RGB::IRSeen0Color);
                 #endif // LED_ENABLE
+            #ifdef MAMEHOOKER
+            }
+            #endif // MAMEHOOKER
 
             lastSeen = OpenFIREdiamond.seen();
         }

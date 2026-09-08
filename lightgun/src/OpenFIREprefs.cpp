@@ -231,21 +231,34 @@ int OF_Prefs::SaveProfiles()
     return written ? Error_Success : Error_Write;
 }
 
-int OF_Prefs::SaveToPtr(File prefsFile, void *dataPtr, const std::unordered_map<std::string_view, int> &mapPtr, const size_t &dataSize)
+int OF_Prefs::SaveToPtr(
+    File prefsFile,
+    void *dataPtr,
+    const std::unordered_map<std::string_view, int> &mapPtr,
+    const size_t &dataSize)
 {
     if(!prefsFile)
         return Error_Write;
 
+    const bool buttonData = dataPtr == backupButtonDesc;
     bool written = true;
+
     for(auto &pair : mapPtr) {
-        if((pair.second >= 0 && dataPtr != backupButtonDesc) || (dataPtr == backupButtonDesc && pair.second >= 0 && pair.second < ButtonCount)) {
-            written = prefsFile.write((const uint8_t*)pair.first.data(), pair.first.length()+1) == pair.first.length()+1 &&
-                      prefsFile.write((uint8_t)dataSize) == 1 &&
-                      prefsFile.write((uint8_t*)dataPtr + (dataSize * pair.second), dataSize) == dataSize;
-            if(!written)
-                break;
-        }
+        if(pair.second < 0 ||
+           (buttonData && pair.second >= ButtonCount))
+            continue;
+
+        written =
+            prefsFile.write((const uint8_t*)pair.first.data(),
+                            pair.first.length() + 1) == pair.first.length() + 1 &&
+            prefsFile.write((uint8_t)dataSize) == 1 &&
+            prefsFile.write((uint8_t*)dataPtr + (dataSize * pair.second),
+                            dataSize) == dataSize;
+
+        if(!written)
+            break;
     }
+
     prefsFile.close();
     return written ? Error_Success : Error_Write;
 }
@@ -328,16 +341,25 @@ void OF_Prefs::LoadPresets()
 {
     memset(pins, -1, sizeof(OF_Prefs::pins));
 
-    if(OFPresets.boardsPresetsMap.count(OPENFIRE_BOARD)) {
-        for(int i = 0; i < OFPresets.boardsPresetsMap.at(OPENFIRE_BOARD).size(); ++i)
-            if(OFPresets.boardsPresetsMap.at(OPENFIRE_BOARD).at(i) > -1)
-                pins[OFPresets.boardsPresetsMap.at(OPENFIRE_BOARD).at(i)] = i;
+    const auto boardIt =
+        OFPresets.boardsPresetsMap.find(OPENFIRE_BOARD);
+
+    if(boardIt != OFPresets.boardsPresetsMap.end()) {
+        const auto &boardPins = boardIt->second;
+
+        for(int i = 0; i < boardPins.size(); ++i) {
+            const int pinFunction = boardPins.at(i);
+
+            if(pinFunction > -1)
+                pins[pinFunction] = i;
+        }
     }
 
-    // save buttons map to backup descriptor (important for initializing backupDesc for saving)
-    // couldn't find a better place for this tbh lol
+    // Initialize the backup button descriptors used when saving.
     for(int i = 0; i < ButtonCount; ++i)
-        memcpy(OF_Prefs::backupButtonDesc[i], &LightgunButtons::ButtonDesc[i].reportType, sizeof(OF_Prefs::backupButtonDesc[i]));
+        memcpy(OF_Prefs::backupButtonDesc[i],
+               &LightgunButtons::ButtonDesc[i].reportType,
+               sizeof(OF_Prefs::backupButtonDesc[i]));
 }
 
 #if defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
