@@ -1,23 +1,24 @@
 import os
 import gzip
 import datetime
+import sys
 
 Import("env")
+
+sys.path.append(os.path.join(env.get('PROJECT_DIR'), 'scripts'))
+import build_shared_js
 
 # Obtain the current PlatformIO environment name (e.g., WAVESHARE_ESP32_S3_ZERO_N8R8)
 env_name = env["PIOENV"]
 print(f"\n[WebApp Packer] Building Web Assets for environment: {env_name}")
-
 # Directories
 PROJECT_DIR = env.get("PROJECT_DIR")
 WEBAPP_DIR = os.path.join(PROJECT_DIR, "webapp")
 BOARDS_PICS_DIR = os.path.join(PROJECT_DIR, "..", "shared_boards", "boardPics") # adjust if it's different in the patch
 if not os.path.exists(BOARDS_PICS_DIR):
     BOARDS_PICS_DIR = os.path.join(PROJECT_DIR, "src", "boards", "boardPics")
-
 INCLUDE_DIR = os.path.join(PROJECT_DIR, "include")
 OUTPUT_FILE = os.path.join(INCLUDE_DIR, "web_assets.h")
-
 # Map environment names to SVG filenames
 SVG_MAP = {
     "ESP32_S3_WROOM1_DevKitC_1_N16R8": "esp32-s3-devkitc-1.svg",
@@ -30,20 +31,18 @@ SVG_MAP = {
     "rpipico2": "rpipico2.svg",
     "rpipico2w": "rpipico2w.svg",
 }
-
 svg_filename = SVG_MAP.get(env_name, "generic.svg")
 svg_path = os.path.join(BOARDS_PICS_DIR, svg_filename)
-
 # Files to pack (HTML/JS/CSS)
+build_shared_js.generate_shared_js(PROJECT_DIR, WEBAPP_DIR)
 files_to_pack = [
     {"name": "index.html", "var": "web_index_html"},
     {"name": "style.css", "var": "web_style_css"},
-    {"name": "app.js", "var": "web_app_js"}
+    {"name": "app.js", "var": "web_app_js"},
+    {"name": "boards/OpenFIREshared.js", "var": "web_openfireshared_js"}
 ]
-
 if not os.path.exists(INCLUDE_DIR):
     os.makedirs(INCLUDE_DIR)
-
 def generate_c_array(file_path, var_name, is_gzip=True):
     if not os.path.exists(file_path):
         # Create empty placeholder if file doesn't exist yet
@@ -61,9 +60,7 @@ def generate_c_array(file_path, var_name, is_gzip=True):
     out += f"const uint8_t {var_name}_gz[] PROGMEM = {{{hex_array}}};\n"
     out += f"const size_t {var_name}_gz_len = {len(data)};\n\n"
     return out
-
 print(f"[WebApp Packer] Generating {OUTPUT_FILE} ...")
-
 with open(OUTPUT_FILE, "w") as out_f:
     out_f.write(f"// AUTO-GENERATED FILE. DO NOT EDIT.\n")
     out_f.write(f"// Generated on {datetime.datetime.now()}\n")
@@ -85,5 +82,6 @@ with open(OUTPUT_FILE, "w") as out_f:
         print(f"[WebApp Packer] WARNING: SVG {svg_path} not found!")
         out_f.write(f"// WARNING: SVG {svg_filename} not found during build\n")
         out_f.write("const uint8_t web_board_svg_gz[] PROGMEM = {0x00};\nconst size_t web_board_svg_gz_len = 1;\n")
-
 print("[WebApp Packer] Done!\n")
+
+

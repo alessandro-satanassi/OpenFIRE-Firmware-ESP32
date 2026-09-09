@@ -629,6 +629,7 @@ CheckFirmwareUpdateRequest();
 
 
     // ================== avvia webapp ======================
+    //OF_WebConfigModeActive = true;
     if (OF_WebConfigModeActive) WebApp_Init();
     // ======================================================
 
@@ -706,7 +707,7 @@ CheckFirmwareUpdateRequest();
 
         while(!(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Trigger) || FW_Common::camNotAvailable) {
             // Check and process serial commands, in case user needs to change EEPROM settings.
-            if(Serial.available())
+            if(WebAppSerial::available())
                 OF_Serial::SerialProcessingDocked();
             
             if(FW_Common::gunMode == FW_Const::GunMode_Docked) {
@@ -1418,7 +1419,7 @@ void ExecRunModeProcessing()
     for(;;) {
         FW_Common::buttons.Poll(1);
 
-        if(Serial.available()) {
+        if(WebAppSerial::available()) {
             #ifdef USES_DISPLAY
                 FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Docked);
             #endif // USES_DISPLAY
@@ -1553,7 +1554,7 @@ void ExecGunModeDocked()
             #endif // USES_ANALOG
         }
 
-        if(Serial.available()) {
+        if(WebAppSerial::available()) {
             const bool wasActive = OF_Serial::AppSerialSessionIsActive();
             OF_Serial::SerialProcessingDocked();
             // Stay here during recovery: returning to the first-boot caller

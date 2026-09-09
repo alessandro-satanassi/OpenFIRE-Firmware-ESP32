@@ -770,6 +770,7 @@ void FW_Common::GetPosition()
             if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout) { // layoutDiamond = 1
                 OpenFIREdiamond.begin(OpenFIRECamera::XPositions(), OpenFIRECamera::YPositions(), OpenFIRECamera::Seen());
 
+                /*
                 OpenFIREper.warp(OpenFIREdiamond.X(0), OpenFIREdiamond.Y(0),
                                  OpenFIREdiamond.X(1), OpenFIREdiamond.Y(1),
                                  OpenFIREdiamond.X(2), OpenFIREdiamond.Y(2),
@@ -777,6 +778,34 @@ void FW_Common::GetPosition()
                                  res_x / 2, 0, 0,
                                  res_y / 2, res_x / 2,
                                  res_y, res_x, res_y / 2);
+                */
+               #ifdef USE_PERSPECTIVE_ADVANCED
+    // Adapt Diamond's vertex order to Perspective Advanced.
+    // Swap the third and fourth source/destination pairs together.
+    OpenFIREper.warp(
+        OpenFIREdiamond.X(0), OpenFIREdiamond.Y(0),
+        OpenFIREdiamond.X(1), OpenFIREdiamond.Y(1),
+        OpenFIREdiamond.X(3), OpenFIREdiamond.Y(3),
+        OpenFIREdiamond.X(2), OpenFIREdiamond.Y(2),
+
+        res_x / 2, 0,
+        0,         res_y / 2,
+        res_x,     res_y / 2,
+        res_x / 2, res_y);
+#else
+    // Preserve the original order for classic Perspective.
+    OpenFIREper.warp(
+        OpenFIREdiamond.X(0), OpenFIREdiamond.Y(0),
+        OpenFIREdiamond.X(1), OpenFIREdiamond.Y(1),
+        OpenFIREdiamond.X(2), OpenFIREdiamond.Y(2),
+        OpenFIREdiamond.X(3), OpenFIREdiamond.Y(3),
+
+        res_x / 2, 0,
+        0,         res_y / 2,
+        res_x / 2, res_y,
+        res_x,     res_y / 2);
+#endif
+
             } else { // layoutSquare = 0
                 OpenFIREsquare.begin(OpenFIRECamera::XPositions(), OpenFIRECamera::YPositions(), OpenFIRECamera::Seen());               
                

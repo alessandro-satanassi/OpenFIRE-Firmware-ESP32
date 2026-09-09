@@ -24,6 +24,8 @@
 #include "boards/OpenFIREshared.h"
 #include "OpenFIREcommon.h"
 
+#include "OpenFIREweb.h"
+
 // ============ [ESP32_PORT] ============
 // redefinition of Serial to handle wireless serial connections / redifinizione di Serial per gestire le connessione wireless seriali
 #ifdef OPENFIRE_WIRELESS_ENABLE
@@ -1064,13 +1066,13 @@ bool OF_Serial::AppSerialWriteFrame(uint8_t typeFlags, uint8_t command, uint8_t 
     appSerialTxBuffer[6 + length] = AppSerialCRC8(&appSerialTxBuffer[2], (uint16_t)(4 + length));
     const uint16_t frameLength = (uint16_t)(APP_SERIAL_OVERHEAD + length);
 
-    const bool written = Serial.write(appSerialTxBuffer, frameLength) == frameLength;
+    const bool written = WebAppSerial::write(appSerialTxBuffer, frameLength) == frameLength;
 
     // Reliable frames are followed immediately by a wait for the peer's ACK.
     // Push them out now instead of relying on the USB/serial buffer latency.
     // Best-effort real-time events deliberately remain non-blocking.
     if(written && (typeFlags & APP_SERIAL_TYPE_MASK) != APP_SERIAL_TYPE_EVENT)
-        Serial.flush();
+        WebAppSerial::flush();
 
     return written;
 }
@@ -1149,10 +1151,10 @@ bool OF_Serial::AppSerialReadFrame(AppSerialFrame_s &frame)
             return true;
         }
 
-        if(!Serial.available())
+        if(!WebAppSerial::available())
             return false;
 
-        const int incoming = Serial.read();
+        const int incoming = WebAppSerial::read();
         if(incoming < 0)
             return false;
 
@@ -1385,8 +1387,8 @@ void OF_Serial::SerialProcessingDocked()
            millis() - appSerialRxTimestamp > APP_SERIAL_FRAME_TIMEOUT)
             appSerialRawDockState = 0;
 
-        while(Serial.available()) {
-            const int incoming = Serial.read();
+        while(WebAppSerial::available()) {
+            const int incoming = WebAppSerial::read();
             if(incoming < 0)
                 return;
 
@@ -1835,7 +1837,7 @@ void OF_Serial::AppSerialDispatchRequest(const AppSerialFrame_s &frame)
 
     case OF_Const::sClearFlash:
         OF_Prefs::ResetPreferences();
-        Serial.flush();
+        WebAppSerial::flush();
         #ifdef ARDUINO_ARCH_ESP32
             #ifdef OPENFIRE_WIRELESS_ENABLE
             if(TinyUSBDevices.onBattery) {
@@ -1850,7 +1852,7 @@ void OF_Serial::AppSerialDispatchRequest(const AppSerialFrame_s &frame)
         break;
 
     case OF_Const::sRebootToBootloader:
-        Serial.flush();
+        WebAppSerial::flush();
         FW_Common::RebootToBootloader();
         break;
 
@@ -2248,11 +2250,11 @@ void OF_Serial::PrintDebugSerial()
 bool OF_Serial::Serial_available(uint8_t min) 
 {
     // in futuro valutare di togliere questa funzione
-    if ((Serial.available() >= min)) return true;
+    if ((WebAppSerial::available() >= min)) return true;
     else {
         unsigned long timer_out = millis();
-        while ((Serial.available() < min) && (millis() - timer_out < 1000)) yield();
-        return Serial.available() >= min ? true : false;
+        while ((WebAppSerial::available() < min) && (millis() - timer_out < 1000)) yield();
+        return WebAppSerial::available() >= min ? true : false;
     }
 }
 
