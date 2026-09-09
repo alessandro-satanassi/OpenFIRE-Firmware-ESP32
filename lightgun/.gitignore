@@ -4,3 +4,6 @@
 .vscode/launch.json
 .vscode/ipch
 .include/web_assets.h
+.webapp/boards/OpenFIREshared.js
+.scripts/__pycache__
+.webapp/boardPics
