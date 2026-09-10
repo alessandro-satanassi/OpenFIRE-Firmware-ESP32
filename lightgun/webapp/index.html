@@ -218,7 +218,8 @@
         </nav>
         
         <div class="status-bar">
-            <span id="status" data-i18n>Connecting...</span>
+            <button id="btn-connect" class="save-btn" style="padding: 10px 50px; font-size: 16px; font-weight: bold; border-radius: 6px; letter-spacing: 0.5px; box-shadow: 0 2px 5px rgba(0,0,0,0.4);" data-i18n>Connect</button>
+            <span id="status" style="display: none; margin-left: 10px;" data-i18n>Ready.</span>
             <button id="btn-save" class="save-btn" style="display: none;" data-i18n>Save and Send Settings</button>
         </div>
     </footer>
@@ -256,8 +257,8 @@
             <h2 style="font-size: 32px; font-weight: bold; margin-bottom: 5px;">OpenFIRE Esp32</h2>
             <p>Web Configurator</p>
             <hr style="border-color: #444;">
-            <p style="font-size: 14px;">La manutenzione principale del firmware OpenFIRE e lo sviluppo dell'app Desktop originale sono a cura di <a href="#" style="color:#0099FF;">That One Seong</a>.</p>
-            <p style="font-size: 14px;">Il fork ESP-IDF e questa WebApp sono a cura di <b>Alessandro Satanassi</b>.</p>
+            <p style="font-size: 14px;" data-i18n>Primary OpenFIRE Firmware maintainership and original Desktop App developed by <a href="#" style="color:#0099FF;">That One Seong</a>.</p>
+            <p style="font-size: 14px;" data-i18n>ESP-IDF fork and this WebApp by <b>Alessandro Satanassi</b>.</p>
             <br>
             <button class="test-action-btn" id="btn-close-about" data-i18n>Close</button>
         </div>

@@ -970,6 +970,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         async function doConnect() {
             const statusText = document.getElementById("status");
+            const btnConnect = document.getElementById("btn-connect");
+            if (btnConnect) btnConnect.style.display = "none";
+            if (statusText) statusText.style.display = "inline";
             statusText.innerText = i18n.t("Connecting...");
             const success = await window.ofProtocol.connect();
             
@@ -1002,21 +1005,27 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             } else {
                 statusText.innerText = i18n.t("Connection failed");
+                if (btnConnect) btnConnect.style.display = "inline-block";
             }
         }
 
         if (window.location.protocol === 'file:') {
-            const btn = document.createElement('button');
-            btn.id = 'btn-connect-serial';
-            btn.className = 'save-btn';
-            btn.innerText = i18n.t('Connect (Web Serial)');
-            btn.setAttribute('data-i18n', '');
-            btn.style.marginLeft = '10px';
-            btn.onclick = doConnect;
-            document.querySelector('.status-bar').appendChild(btn);
-            document.getElementById("status").innerText = i18n.t("Ready (File).");
+            const btnConnect = document.getElementById("btn-connect");
+            if (btnConnect) {
+                btnConnect.onclick = doConnect;
+                btnConnect.style.display = "inline-block";
+            }
+            const statusText = document.getElementById("status");
+            if (statusText) {
+                statusText.innerText = i18n.t("Ready.");
+                statusText.style.display = "none";
+            }
         } else {
             // Auto-connect for WebSocket
+            const btnConnect = document.getElementById("btn-connect");
+            if (btnConnect) btnConnect.style.display = "none";
+            const statusText = document.getElementById("status");
+            if (statusText) statusText.style.display = "inline";
             doConnect();
         }
     } else {

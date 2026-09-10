@@ -199,7 +199,11 @@ const TRANSLATIONS = {
         "UI & UX": "UI & UX",
         "Hold to Pause Time:": "Hold to Pause Time:",
         "Enable OLED Display (SSD1306 128x64)": "Enable OLED Display (SSD1306 128x64)",
-        "Hover over settings to view details.": "Hover over settings to view details."
+        "Hover over settings to view details.": "Hover over settings to view details.",
+        "Primary OpenFIRE Firmware maintainership and original Desktop App developed by <a href=\"#\" style=\"color:#0099FF;\">That One Seong</a>.": "Primary OpenFIRE Firmware maintainership and original Desktop App developed by <a href=\"#\" style=\"color:#0099FF;\">That One Seong</a>.",
+        "ESP-IDF fork and this WebApp by <b>Alessandro Satanassi</b>.": "ESP-IDF fork and this WebApp by <b>Alessandro Satanassi</b>.",
+        "Connect": "Connect",
+        "Ready.": "Ready."
     },
     "it": {
         "About OpenFIRE": "Informazioni su OpenFIRE",
@@ -608,7 +612,11 @@ const TRANSLATIONS = {
         "Static NeoPixels:": "NeoPixel statici:",
         "UI & UX": "UI e UX",
         "Hold to Pause Time:": "Tempo pressione per pausa:",
-        "Hover over settings to view details.": "Passa il mouse sopra le impostazioni per visualizzarne i dettagli."
+        "Hover over settings to view details.": "Passa il mouse sopra le impostazioni per visualizzarne i dettagli.",
+        "Primary OpenFIRE Firmware maintainership and original Desktop App developed by <a href=\"#\" style=\"color:#0099FF;\">That One Seong</a>.": "La manutenzione principale del firmware OpenFIRE e lo sviluppo dell'app Desktop originale sono a cura di <a href=\"#\" style=\"color:#0099FF;\">That One Seong</a>.",
+        "ESP-IDF fork and this WebApp by <b>Alessandro Satanassi</b>.": "Il fork ESP-IDF e questa WebApp sono a cura di <b>Alessandro Satanassi</b>.",
+        "Connect": "Connetti",
+        "Ready.": "Pronto."
     }
 };
 

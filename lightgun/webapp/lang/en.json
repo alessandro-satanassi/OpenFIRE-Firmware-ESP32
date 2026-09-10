@@ -197,5 +197,9 @@
     "UI & UX": "UI & UX",
     "Hold to Pause Time:": "Hold to Pause Time:",
     "Enable OLED Display (SSD1306 128x64)": "Enable OLED Display (SSD1306 128x64)",
-    "Hover over settings to view details.": "Hover over settings to view details."
+    "Hover over settings to view details.": "Hover over settings to view details.",
+    "Primary OpenFIRE Firmware maintainership and original Desktop App developed by <a href=\"#\" style=\"color:#0099FF;\">That One Seong</a>.": "Primary OpenFIRE Firmware maintainership and original Desktop App developed by <a href=\"#\" style=\"color:#0099FF;\">That One Seong</a>.",
+    "ESP-IDF fork and this WebApp by <b>Alessandro Satanassi</b>.": "ESP-IDF fork and this WebApp by <b>Alessandro Satanassi</b>.",
+    "Connect": "Connect",
+    "Ready.": "Ready."
 }
