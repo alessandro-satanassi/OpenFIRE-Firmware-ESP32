@@ -988,7 +988,17 @@ document.addEventListener("DOMContentLoaded", () => {
                         } else {
                             imgBoard.src = "board.svg";
                         }
+                        imgBoard.style.display = "block";
                     }
+                    
+                    const fwVer = document.getElementById("fw-version");
+                    if (fwVer && boardInfo.firmwareVersion) {
+                        fwVer.innerText = "FW v" + boardInfo.firmwareVersion;
+                        fwVer.style.display = "block";
+                    }
+                    
+                    // Abilita i tab
+                    document.querySelectorAll('.tab-btn').forEach(btn => btn.disabled = false);
 
                     statusText.innerText = i18n.t("Docked! Syncing Settings...");
                     

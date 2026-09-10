@@ -18,7 +18,7 @@
             </select>
         </div>
                 <h1 id="board-title" data-i18n style="text-align: center;">OpenFIRE Esp32 Web Configurator</h1>
-        <p id="fw-version" style="text-align: center; margin-top: 5px;">FW v--</p>
+        <p id="fw-version" style="text-align: center; margin-top: 5px; display: none;">FW v--</p>
     </header>
 
     <main class="content-area">
@@ -27,7 +27,7 @@
                 <div id="pins-left" class="pins-column"></div>
                 
                 <div id="board-center">
-                    <img src="board.svg" alt="Microcontroller Board" id="board-image" />
+                    <img src="board.svg" alt="Microcontroller Board" id="board-image" style="display: none;" />
                     <div id="pins-middle" class="pins-row"></div>
                 </div>
                 
@@ -210,11 +210,11 @@
 
     <footer class="app-footer">
         <nav class="main-tabs">
-            <button class="tab-btn active" data-tab="tab-pins"><span class="icon">🔧</span> <span data-i18n>Board Layout</span></button>
-            <button class="tab-btn" data-tab="tab-buttons"><span class="icon">⌨️</span> <span data-i18n>Button Mapping</span></button>
-            <button class="tab-btn" data-tab="tab-gun"><span class="icon">🔘</span> <span data-i18n>Gun Settings</span></button>
-            <button class="tab-btn" data-tab="tab-profiles"><span class="icon">🔲</span> <span data-i18n>Calibration Profiles</span></button>
-            <button class="tab-btn" data-tab="tab-tests"><span class="icon">➖</span> <span data-i18n>Gun Tests</span></button>
+            <button class="tab-btn active" disabled data-tab="tab-pins"><span class="icon">🔧</span> <span data-i18n>Board Layout</span></button>
+            <button class="tab-btn" disabled data-tab="tab-buttons"><span class="icon">⌨️</span> <span data-i18n>Button Mapping</span></button>
+            <button class="tab-btn" disabled data-tab="tab-gun"><span class="icon">🔘</span> <span data-i18n>Gun Settings</span></button>
+            <button class="tab-btn" disabled data-tab="tab-profiles"><span class="icon">🔲</span> <span data-i18n>Calibration Profiles</span></button>
+            <button class="tab-btn" disabled data-tab="tab-tests"><span class="icon">➖</span> <span data-i18n>Gun Tests</span></button>
         </nav>
         
         <div class="status-bar">

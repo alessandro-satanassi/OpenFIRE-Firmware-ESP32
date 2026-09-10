@@ -560,3 +560,12 @@ canvas {
     text-align: center;
 }
 
+
+
+.tab-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: #222;
+    color: #666;
+    border-color: #333;
+}
