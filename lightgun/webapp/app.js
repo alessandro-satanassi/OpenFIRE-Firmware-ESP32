@@ -564,8 +564,9 @@ function initBoardPreviewUI() {
     if (!sel || !container) return;
     
     sel.innerHTML = "";
-    Object.keys(OpenFIREshared.boardsPresetsMap).forEach(key => {
-        const name = OpenFIREshared.boardNames[key] || key;
+    Object.keys(OpenFIREshared.boardsBoxPositions).forEach(key => {
+        if (!OpenFIREshared.boardImagesMap[key]) return; // skip boards without an SVG
+        const name = (OpenFIREshared.boardNames && OpenFIREshared.boardNames[key]) ? OpenFIREshared.boardNames[key] : key;
         sel.innerHTML += `<option value="${key}">${name}</option>`;
     });
 
@@ -573,7 +574,12 @@ function initBoardPreviewUI() {
         const boxPositions = OpenFIREshared.boardsBoxPositions[boardName];
         if (!boxPositions) return;
         const presets = OpenFIREshared.boardsPresetsMap[boardName] || [];
-        const capab = OpenFIREshared.mcuCapableMaps[boardName] || [];
+        let capab = OpenFIREshared.mcuCapableMaps[boardName];
+        if (!capab) {
+            if (boardName.includes('esp32-s3')) capab = OpenFIREshared.mcuCapableMaps['esp32-s3'];
+            else capab = OpenFIREshared.mcuCapableMaps['rp2040_235X'];
+        }
+        if (!capab) capab = [];
 
         // Reverse map from boardInputs_e value to name string
         const inputMapReverse = {};
@@ -588,9 +594,11 @@ function initBoardPreviewUI() {
         const posMiddle = OpenFIREshared.boardBoxPositions_e.posMiddle;
         const posCheck = OpenFIREshared.boardBoxPositions_e.posCheck;
 
-        const leftItems = [];
-        const rightItems = [];
         const middleItems = [];
+        const leftMap = {};
+        const rightMap = {};
+        let maxLeft = 0;
+        let maxRight = 0;
 
         boxPositions.forEach((val, gpioPin) => {
             if (val === 0) return;
@@ -603,49 +611,100 @@ function initBoardPreviewUI() {
             if (funcVal === OpenFIREshared.boardInputs_e.unavailable) funcName = "Unavailable";
 
             const cap = capab[gpioPin] || 0;
+            const OF_Const = OpenFIREshared.pinCapabilities_e;
             const cStr = [];
-            if (cap & OpenFIREshared.pinCapabilities_e.pinAnyADC) cStr.push('<span style="color:#BE00B0">ADC</span>');
-            if (cap & OpenFIREshared.pinCapabilities_e.pinAnyI2C) cStr.push('<span style="color:#0099FF">I2C (*)</span>');
-            else if (cap & OpenFIREshared.pinCapabilities_e.pinI2C0) cStr.push('<span style="color:#0099FF">I2C0</span>');
-            else if (cap & OpenFIREshared.pinCapabilities_e.pinI2C1) cStr.push('<span style="color:#FF8800">I2C1</span>');
-            if (cap & OpenFIREshared.pinCapabilities_e.pinAnySPI) cStr.push('<span style="color:#BE00B0">SPI (*)</span>');
-            else if (cap & OpenFIREshared.pinCapabilities_e.pinSPI0) cStr.push('<span style="color:#0099FF">SPI0</span>');
-            else if (cap & OpenFIREshared.pinCapabilities_e.pinSPI1) cStr.push('<span style="color:#FF8800">SPI1</span>');
+            if (cap & OF_Const.pinHasADC) cStr.push('<span style="color:#FF0099; font-family:monospace; font-weight:bold;">ADC</span>');
+            else cStr.push('<span style="color:#555555; font-family:monospace;">ADC</span>');
             
-            const capHtml = `<span style="font-size:10px; margin:0 5px; opacity:0.7">${cStr.join(" ")}</span>`;
-            const gpioHtml = `<span style="color:#BE00B0; font-size:11px;">«GPIO${gpioPin}»</span>`;
+            let gpioColor = '#aaaaaa';
+            if (cap & OF_Const.pinAnyI2C) {
+                gpioColor = '#BE00B0';
+                cStr.push('<span style="color:#BE00B0; font-family:monospace; font-weight:bold;">I2C(*)</span>');
+            } else if (cap & OF_Const.pinCanI2C) {
+                const isI2C1 = (cap & OF_Const.pinIsI2C1);
+                const isSCL = (cap & OF_Const.pinIsI2CSCL);
+                gpioColor = isI2C1 ? '#FF8800' : '#0099FF';
+                cStr.push(`<span style="color:${gpioColor}; font-family:monospace; font-weight:bold;">I2C${isI2C1 ? '1' : '0'}${isSCL ? 'SCL' : 'SDA'}</span>`);
+            } else {
+                cStr.push('<span style="color:#555555; font-family:monospace;">I2C</span>');
+            }
             
-            // In QT: FuncName << GPIOxx >> ADC I2C SPI
-            // We use simple flex layout
+            if (cap & OF_Const.pinAnySPI) {
+                cStr.push('<span style="color:#D1003D; font-family:monospace; font-weight:bold;">SPI(*)</span>');
+            } else if (cap & OF_Const.pinCanSPI) {
+                const isSPI1 = (cap & OF_Const.pinIsSPI1);
+                let spiFunc = '';
+                const st = (cap & OF_Const.pinCanSPI) >> 5;
+                if (st === 1) spiFunc = 'RX';
+                else if (st === 2) spiFunc = 'TX';
+                else if (st === 3) spiFunc = 'SCK';
+                else if (st === 4) spiFunc = 'CSn';
+                cStr.push(`<span style="color:#009C3A; font-family:monospace; font-weight:bold;">SPI${isSPI1 ? '1' : '0'}${spiFunc}</span>`);
+            } else {
+                cStr.push('<span style="color:#555555; font-family:monospace;">SPI</span>');
+            }
+            
+            const capHtml = `<span style="font-size:10px; margin:0 5px; white-space:nowrap;">${cStr.join(' ')}</span>`;
+            const gpioHtml = `<span style="color:${gpioColor}; font-size:12px; white-space:nowrap;">«GPIO${gpioPin}»</span>`;
+            const funcHtml = `<span id="func-gpio-${gpioPin}" style="color:#ddd; font-size:14px; transition: font-weight 0.1s;">${i18n.t(funcName)}</span>`;
+            
+            // Hover logic added via inline events
+            const hoverEvents = `onmouseenter="highlightBoardPin(${gpioPin}, true)" onmouseleave="highlightBoardPin(${gpioPin}, false)"`;
+            
             const labelStr = (group === posLeft) ? 
-                `<div style="margin-bottom:12px; text-align:right;">${i18n.t(funcName)}${gpioHtml}${capHtml}</div>` : 
-                `<div style="margin-bottom:12px; text-align:left;">${capHtml}${gpioHtml}${i18n.t(funcName)}</div>`;
-
-            if (group === posLeft) leftItems.push({ order, html: labelStr });
-            else if (group === posRight) rightItems.push({ order, html: labelStr });
-            else if (group === posMiddle) middleItems.push({ order, html: `<div style="text-align:center; color:#BE00B0; font-size:11px; font-style:italic;">${i18n.t(funcName)}</div>` });
+                `<tr ${hoverEvents} style="background:transparent; cursor:default;" title="Pin GPIO N. ${gpioPin}.\n\nI pin con numero blu appartengono a I2C0.\nQuelli con numero arancione appartengono a I2C1.\nQuelli in viola possono selezionare automaticamente qualsiasi canale I2C.\nQuelli grigi non supportano I2C.\n\nADC indica la capacità di leggere input analogici.\nI2C e SPI indicano se il pin supporta tali dispositivi e su quale canale.\n(*) significa che il pin può usare la funzione tramite canali selezionabili dal software."><td style="border:none; text-align:right; padding:2px 5px;">${funcHtml}</td><td style="border:none; text-align:center; padding:2px 5px;">${gpioHtml}</td><td style="border:none; text-align:left; padding:2px 5px;">${capHtml}</td></tr>` : 
+                `<tr ${hoverEvents} style="background:transparent; cursor:default;" title="Pin GPIO N. ${gpioPin}.\n\nI pin con numero blu appartengono a I2C0.\nQuelli con numero arancione appartengono a I2C1.\nQuelli in viola possono selezionare automaticamente qualsiasi canale I2C.\nQuelli grigi non supportano I2C.\n\nADC indica la capacità di leggere input analogici.\nI2C e SPI indicano se il pin supporta tali dispositivi e su quale canale.\n(*) significa che il pin può usare la funzione tramite canali selezionabili dal software."><td style="border:none; text-align:right; padding:2px 5px;">${capHtml}</td><td style="border:none; text-align:center; padding:2px 5px;">${gpioHtml}</td><td style="border:none; text-align:left; padding:2px 5px;">${funcHtml}</td></tr>`;
+            
+            if (group === posLeft) { leftMap[order] = labelStr; maxLeft = Math.max(maxLeft, order); }
+            else if (group === posRight) { rightMap[order] = labelStr; maxRight = Math.max(maxRight, order); }
+            else if (group === posMiddle) { middleItems.push({ order, html: `<div ${hoverEvents} style="text-align:center; color:#BE00B0; font-size:11px; font-style:italic; cursor:default;" title="Pin GPIO N. ${gpioPin}.\n\nI pin con numero blu appartengono a I2C0.\nQuelli con numero arancione appartengono a I2C1.\nQuelli in viola possono selezionare automaticamente qualsiasi canale I2C.\nQuelli grigi non supportano I2C.\n\nADC indica la capacità di leggere input analogici.\nI2C e SPI indicano se il pin supporta tali dispositivi e su quale canale.\n(*) significa che il pin può usare la funzione tramite canali selezionabili dal software.">${funcHtml}</div>` }); }
         });
 
-        leftItems.sort((a,b)=>a.order-b.order).forEach(x => htmlLeft += x.html);
-        rightItems.sort((a,b)=>a.order-b.order).forEach(x => htmlRight += x.html);
+        for(let i = 1; i <= maxLeft; i++) {
+            if (leftMap[i]) htmlLeft += leftMap[i];
+            else htmlLeft += `<tr style="background:transparent;"><td colspan="3" style="border:none; height:22px;"></td></tr>`;
+        }
+        for(let i = 1; i <= maxRight; i++) {
+            if (rightMap[i]) htmlRight += rightMap[i];
+            else htmlRight += `<tr style="background:transparent;"><td colspan="3" style="border:none; height:22px;"></td></tr>`;
+        }
         middleItems.sort((a,b)=>a.order-b.order).forEach(x => htmlMiddle += x.html);
 
         container.innerHTML = `
-            <div style="display:flex; align-items:center;">
-                <div style="width:250px; text-align:right; padding-right:10px;">${htmlLeft}</div>
-                <div style="position:relative;">
+            <div style="display:flex; align-items:center; justify-content:center;">
+                <div style="min-width:200px; max-width:350px; text-align:right; padding-right:10px;"><table style="width:100%; border-collapse:collapse; background:transparent;">${htmlLeft}</table></div>
+                <div style="position:relative; flex-shrink:0;">
                     <div style="position:absolute; top:-20px; left:0; width:100%; display:flex; justify-content:space-around;">${htmlMiddle}</div>
-                    <img src="boardPics/${boardName}.svg" style="max-height: 60vh; max-width: 300px; display:block;">
+                    <div id="board-svg-container" style="display:flex; align-items:center; justify-content:center; padding: 0 15px;">
+                          ${OpenFIREshared.boardSVGsMap && OpenFIREshared.boardSVGsMap[boardName] ? OpenFIREshared.boardSVGsMap[boardName] : '<img src="boardPics/' + (OpenFIREshared.boardImagesMap[boardName] || 'generic.svg') + '" style="height: 100%; width: auto;">'}
+                      </div>
                 </div>
-                <div style="width:250px; text-align:left; padding-left:10px;">${htmlRight}</div>
+                <div style="min-width:200px; max-width:350px; text-align:left; padding-left:10px;"><table style="width:100%; border-collapse:collapse; background:transparent;">${htmlRight}</table></div>
+            </div>
+            <div style="text-align:center; margin-top:20px; padding-top:10px; border-top:1px solid #444; font-size:14px; color:#ddd;">
+                Compatibile con <a href="#" style="color:#66b3ff; text-decoration:none;">il Firmware OpenFIRE upstream</a> del <span style="font-style:italic;">Team OpenFIRE</span>.
             </div>
         `;
+        
+        // Fix SVG styling to match container with proper min/max bounds
+        const svgEl = container.querySelector('#board-svg-container svg');
+        if (svgEl) {
+            if (svgEl.hasAttribute('width')) svgEl.removeAttribute('width');
+            if (svgEl.hasAttribute('height')) svgEl.removeAttribute('height');
+            
+            svgEl.style.height = '55vh';
+            svgEl.style.minHeight = '300px';
+            svgEl.style.maxHeight = '600px';
+            svgEl.style.width = '100%';
+            svgEl.style.maxWidth = '320px';
+            svgEl.style.display = 'block';
+        }
     };
 
     sel.onchange = () => drawPreview(sel.value);
     
     // Select default or current
-    if (window.gunConfig && window.gunConfig.boardName && OpenFIREshared.boardsPresetsMap[window.gunConfig.boardName]) {
+    if (window.gunConfig && window.gunConfig.boardName && OpenFIREshared.boardsBoxPositions[window.gunConfig.boardName]) {
         sel.value = window.gunConfig.boardName;
     }
         if (document.getElementById("menu-btn-preview").style.display !== "none") {
@@ -697,7 +756,7 @@ function initBoardPreviewUI() {
             crosshair.style.display = "block";
             
             const topText = overlayCali.querySelector('.top-text');
-            if (topText) topText.innerHTML = i18n.t("Inizia calibrazione:<br>Spara al bersaglio al centro per iniziare.");
+            if (topText) topText.innerHTML = i18n.t("Start calibration:<br>Shoot the target in the center to begin.");
         });
 
         document.addEventListener("keydown", (e) => {
@@ -721,31 +780,31 @@ function initBoardPreviewUI() {
             switch (stage) {
                 case 0: // Init
                     crosshair.style.left = "50%"; crosshair.style.top = "50%";
-                    topText.innerHTML = i18n.t("Inizia calibrazione:<br>Spara al bersaglio al centro per iniziare.");
+                    topText.innerHTML = i18n.t("Start calibration:<br>Shoot the target in the center to begin.");
                     break;
                 case 1: // Top
                     crosshair.style.left = "50%"; crosshair.style.top = "0%";
-                    topText.innerHTML = i18n.t("Step 1:<br>Spara al bersaglio sul bordo SUPERIORE dello schermo.");
+                    topText.innerHTML = i18n.t("Step 1:<br>Shoot the target at the TOP edge of the screen.");
                     break;
                 case 2: // Bottom
                     crosshair.style.left = "50%"; crosshair.style.top = "100%";
-                    topText.innerHTML = i18n.t("Step 2:<br>Spara al bersaglio sul bordo INFERIORE dello schermo.");
+                    topText.innerHTML = i18n.t("Step 2:<br>Shoot the target at the BOTTOM edge of the screen.");
                     break;
                 case 3: // Left
                     crosshair.style.left = "0%"; crosshair.style.top = "50%";
-                    topText.innerHTML = i18n.t("Step 3:<br>Spara al bersaglio sul bordo SINISTRO dello schermo.");
+                    topText.innerHTML = i18n.t("Step 3:<br>Shoot the target at the LEFT edge of the screen.");
                     break;
                 case 4: // Right
                     crosshair.style.left = "100%"; crosshair.style.top = "50%";
-                    topText.innerHTML = i18n.t("Step 4:<br>Spara al bersaglio sul bordo DESTRO dello schermo.");
+                    topText.innerHTML = i18n.t("Step 4:<br>Shoot the target at the RIGHT edge of the screen.");
                     break;
                 case 5: // Center
                     crosshair.style.left = "50%"; crosshair.style.top = "50%";
-                    topText.innerHTML = i18n.t("Step 5:<br>Spara al bersaglio al CENTRO dello schermo.");
+                    topText.innerHTML = i18n.t("Step 5:<br>Shoot the target at the CENTER of the screen.");
                     break;
                 case 6: // Verify
                     crosshair.style.left = "50%"; crosshair.style.top = "50%";
-                    topText.innerHTML = i18n.t("Verifica Calibrazione:<br>Spara fuori dallo schermo per salvare.");
+                    topText.innerHTML = i18n.t("Verify Calibration:<br>Shoot off-screen to save.");
                     break;
                 case 7: // End
                     caliActive = false;
@@ -877,86 +936,87 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    
+    // ============================================================================
+    // Connection Logic
+    // ============================================================================
+    if (typeof OpenFIREConnection !== 'undefined') {
+        window.ofProtocol = new OpenFIREConnection();
+        window.ofProtocol.onEventReceived = (evt) => { console.log(evt); };
+
+        async function doConnect() {
+            const statusText = document.getElementById("status");
+            statusText.innerText = i18n.t("Connecting...");
+            const success = await window.ofProtocol.connect();
+            
+            if (success) {
+                statusText.innerText = i18n.t("Connected! Starting Handshake...");
+                try {
+                    const boardInfo = await window.ofProtocol.beginDock();
+                    
+                    const imgBoard = document.getElementById("board-image");
+                    if (imgBoard) {
+                        if (window.ofProtocol.isWebSerial) {
+                            imgBoard.src = `boardPics/${OpenFIREshared.boardImagesMap[boardInfo.boardName] || 'generic.svg'}`;
+                        } else {
+                            imgBoard.src = "board.svg";
+                        }
+                    }
+
+                    statusText.innerText = i18n.t("Docked! Syncing Settings...");
+                    
+                    const gunConfig = await window.ofProtocol.syncSettings();
+                    statusText.innerText = i18n.t("Sync complete! Active profile: ") + gunConfig.currentProfile;
+                    
+                    // Re-render things that depend on gunConfig
+                    if (window.boardName) {
+                        drawPreview(window.boardName, true);
+                    }
+                } catch (e) {
+                    console.error(e);
+                    statusText.innerText = i18n.t("Sync Error");
+                }
+            } else {
+                statusText.innerText = i18n.t("Connection failed");
+            }
+        }
+
+        if (window.location.protocol === 'file:') {
+            const btn = document.createElement('button');
+            btn.id = 'btn-connect-serial';
+            btn.className = 'save-btn';
+            btn.innerText = i18n.t('Connect (Web Serial)');
+            btn.setAttribute('data-i18n', '');
+            btn.style.marginLeft = '10px';
+            btn.onclick = doConnect;
+            document.querySelector('.status-bar').appendChild(btn);
+            document.getElementById("status").innerText = i18n.t("Ready (File).");
+        } else {
+            // Auto-connect for WebSocket
+            doConnect();
+        }
+    } else {
+        document.getElementById("status").innerText = i18n.t("Ready (File).");
+    }
+
 });
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// ============================================================================
-// Connection Logic
-// ============================================================================
-window.ofProtocol = new OpenFIREProtocol();
-window.ofProtocol.onEventReceived = (evt) => { console.log(evt); };
-
-async function doConnect() {
-    const statusText = document.getElementById("status");
-    statusText.innerText = i18n.t("Connessione in corso...");
-    const success = await window.ofProtocol.connect();
-    
-    if (success) {
-        statusText.innerText = i18n.t("Connesso! Avvio Handshake...");
-        try {
-            const boardInfo = await window.ofProtocol.beginDock();
-            statusText.innerText = i18n.t("Docked! Sincronizzazione dei Settings in corso...");
-            
-            const gunConfig = await window.ofProtocol.syncSettings();
-            statusText.innerText = i18n.t("Sincronizzazione completata! Profilo attivo: ") + gunConfig.currentProfile;
-            
-            // Re-render things that depend on gunConfig
-            if (window.boardName) {
-                drawPreview(window.boardName, true);
+// Global hover function for board preview
+window.highlightBoardPin = function(gpioPin, isHover) {
+    const pinObj = document.getElementById(`OF_pin${gpioPin}`);
+    if (pinObj) {
+        if (isHover) {
+            // Check if we already have the original opacity stored
+            if (!pinObj.dataset.origOpacity) {
+                pinObj.dataset.origOpacity = pinObj.style.opacity || "0";
             }
-        } catch (e) {
-            console.error(e);
-            statusText.innerText = i18n.t("Errore di sincronizzazione");
+            pinObj.style.opacity = "1";
+        } else {
+            pinObj.style.opacity = pinObj.dataset.origOpacity || "0";
         }
-    } else {
-        statusText.innerText = i18n.t("Connessione fallita");
     }
-}
-
-if (window.location.protocol === 'file:') {
-    const btn = document.createElement('button');
-    btn.id = 'btn-connect-serial';
-    btn.className = 'save-btn';
-    btn.innerText = 'Connect (Web Serial)';
-    btn.style.marginLeft = '10px';
-    btn.onclick = doConnect;
-    document.querySelector('.status-bar').appendChild(btn);
-    document.getElementById("status").innerText = "Pronto (File).";
-} else {
-    // Auto-connect for WebSocket
-    doConnect();
-}
+    const funcSpan = document.getElementById(`func-gpio-${gpioPin}`);
+    if (funcSpan) {
+        funcSpan.style.fontWeight = isHover ? "bold" : "normal";
+    }
+};
