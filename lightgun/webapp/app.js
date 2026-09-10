@@ -1,408 +1,962 @@
-// ============================================================================
-// Costanti del protocollo OpenFIRE (Da appserial.h e OpenFIREshared.h)
-// ============================================================================
-const OF_CONST = {
-    // Framing
-    APP_SERIAL_START_1: 0xA5,
-    APP_SERIAL_START_2: 0x5A,
-    APP_SERIAL_MAX_PAYLOAD: 200,
-    APP_SERIAL_OVERHEAD: 7,
-
-    // Types
-    APP_SERIAL_TYPE_REQUEST:  0x00,
-    APP_SERIAL_TYPE_RESPONSE: 0x01,
-    APP_SERIAL_TYPE_EVENT:    0x02,
-    APP_SERIAL_TYPE_ACK:      0x03,
-    APP_SERIAL_TYPE_MASK:     0x03,
-    APP_SERIAL_FLAG_FINAL:    0x80,
-
-    // Commands
-    sDock1: 1,
-    sDock2: 2,
-    serialTerminator: 0 
+const OpenFIREmaps = {
+    mouseMap: [
+        { name: "Left Click", val: 0b00000001 },
+        { name: "Right Click", val: 0b00000010 },
+        { name: "Middle Click", val: 0b00000100 },
+        { name: "Side Button Back", val: 0b00001000 },
+        { name: "Side Button Forward", val: 0b00010000 }
+    ],
+    gamepadMap: [
+        { name: "A Button", val: 0 },
+        { name: "B Button", val: 1 },
+        { name: "X Button", val: 3 },
+        { name: "Y Button", val: 4 },
+        { name: "Left Shoulder", val: 6 },
+        { name: "Right Shoulder", val: 7 },
+        { name: "Left Trigger", val: 8 },
+        { name: "Right Trigger", val: 9 },
+        { name: "Select Button", val: 10 },
+        { name: "Start Button", val: 11 },
+        { name: "Left Stick Click", val: 13 },
+        { name: "Right Stick Click", val: 14 },
+        { name: "D-Pad Up", val: 15 },
+        { name: "D-Pad Down", val: 16 },
+        { name: "D-Pad Left", val: 17 },
+        { name: "D-Pad Right", val: 18 }
+    ],
+    keyboardMap: [
+        { name: "Player-relative Start Key", val: 0xFF },
+        { name: "Player-relative Coin Key", val: 0xFE },
+        { name: "Up Arrow", val: 0xDA },
+        { name: "Down Arrow", val: 0xD9 },
+        { name: "Left Arrow", val: 0xD8 },
+        { name: "Right Arrow", val: 0xD7 },
+        { name: "Enter/Return", val: 0xB0 },
+        { name: "Backspace", val: 0xB2 },
+        { name: "Escape", val: 0xB1 },
+        { name: "Left Ctrl", val: 0x80 },
+        { name: "Right Ctrl", val: 0x84 },
+        { name: "Left Alt", val: 0x82 },
+        { name: "Right Alt", val: 0x86 },
+        { name: "Left Shift", val: 0x81 },
+        { name: "Right Shift", val: 0x85 },
+        { name: "Tab", val: 0xB3 },
+        { name: "A", val: 97 }, { name: "B", val: 98 }, { name: "C", val: 99 }, { name: "D", val: 100 },
+        { name: "E", val: 101 }, { name: "F", val: 102 }, { name: "G", val: 103 }, { name: "H", val: 104 },
+        { name: "I", val: 105 }, { name: "J", val: 106 }, { name: "K", val: 107 }, { name: "L", val: 108 },
+        { name: "M", val: 109 }, { name: "N", val: 110 }, { name: "O", val: 111 }, { name: "P", val: 112 },
+        { name: "Q", val: 113 }, { name: "R", val: 114 }, { name: "S", val: 115 }, { name: "T", val: 116 },
+        { name: "U", val: 117 }, { name: "V", val: 118 }, { name: "W", val: 119 }, { name: "X", val: 120 },
+        { name: "Y", val: 121 }, { name: "Z", val: 122 },
+        { name: "F1", val: 0xC2 }, { name: "F2", val: 0xC3 }, { name: "F3", val: 0xC4 }, { name: "F4", val: 0xC5 },
+        { name: "F5", val: 0xC6 }, { name: "F6", val: 0xC7 }, { name: "F7", val: 0xC8 }, { name: "F8", val: 0xC9 },
+        { name: "F9", val: 0xCA }, { name: "F10", val: 0xCB }, { name: "F11", val: 0xCC }, { name: "F12", val: 0xCD }
+    ],
+    funcTypes: ["Mouse", "Keyboard", "Gamepad"]
 };
 
-// ============================================================================
-// Utilities: CRC8 e Assemblatore Frame (Porting di appserial.cpp)
-// ============================================================================
 
-function AppSerialCRC8(dataArray) {
-    let crc = 0;
-    for (let i = 0; i < dataArray.length; i++) {
-        crc ^= dataArray[i];
-        for (let bit = 0; bit < 8; bit++) {
-            crc = (crc & 0x80) ? ((crc << 1) ^ 0x9B) : (crc << 1);
-        }
-    }
-    return crc & 0xFF;
-}
+function drawBoardUI(boardName, gunConfig) {
+    const boxPositions = OpenFIREshared.boardsBoxPositions[boardName];
+    if (!boxPositions) return;
 
-function BuildFrame(typeFlags, command, sequence, payloadUint8) {
-    const length = payloadUint8 ? payloadUint8.length : 0;
-    const frameLength = OF_CONST.APP_SERIAL_OVERHEAD + length;
-    const buffer = new Uint8Array(frameLength);
+    const boardTitle = document.getElementById("board-title");
+    boardTitle.innerHTML = `<span style="color:#aaa;">${gunConfig.currentProfile} | </span>` + (OpenFIREshared.boardNames ? (OpenFIREshared.boardNames[boardName] || boardName) : boardName);
+
+    const pinsLeft = document.getElementById("pins-left");
+    const pinsRight = document.getElementById("pins-right");
+    const pinsMiddle = document.getElementById("pins-middle");
+    pinsLeft.innerHTML = "";
+    pinsRight.innerHTML = "";
+    pinsMiddle.innerHTML = "";
+
+    const posLeft = OpenFIREshared.boardBoxPositions_e.posLeft;
+    const posRight = OpenFIREshared.boardBoxPositions_e.posRight;
+    const posMiddle = OpenFIREshared.boardBoxPositions_e.posMiddle;
+    const posCheck = OpenFIREshared.boardBoxPositions_e.posCheck;
+
+    const allFunctions = Object.keys(gunConfig.pins).sort();
+    const isCustomPins = gunConfig.toggles["CustomPins"] === true;
+    const chkCustom = document.getElementById('chk-custom-pins');
+    if (chkCustom) { chkCustom.checked = isCustomPins; }
+
+
+    const elementsLeft = [];
+    const elementsRight = [];
+    const elementsMiddle = [];
+
     
-    buffer[0] = OF_CONST.APP_SERIAL_START_1;
-    buffer[1] = OF_CONST.APP_SERIAL_START_2;
-    buffer[2] = typeFlags;
-    buffer[3] = command;
-    buffer[4] = sequence;
-    buffer[5] = length;
-    
-    if (length > 0) {
-        buffer.set(payloadUint8, 6);
-    }
-    
-    const crcData = buffer.subarray(2, 6 + length);
-    buffer[6 + length] = AppSerialCRC8(crcData);
-    
-    return buffer;
-}
 
-// ============================================================================
-// Gestore Connessione Ibrido (WebSocket / WebSerial) e Parser
-// ============================================================================
+    for (let gpio = 0; gpio < boxPositions.length; gpio++) {
+        const val = boxPositions[gpio];
+        if (val === 0) continue; 
 
-class OpenFIREConnection {
-    constructor() {
-        this.socket = null;
-        this.serialPort = null;
-        this.serialReader = null;
-        this.serialWriter = null;
-        this.isWebSocket = false;
-        
-        // Stato del parser e protocollo
-        this.rxBuffer = new Uint8Array(0);
-        this.appSerialResponses = [];
-        this.onEventReceived = null; // Callback per gli EVENT
-    }
+        const group = val & posCheck;
+        const order = val ^ group;
 
-    async connect() {
-        const hostname = window.location.hostname;
-        // Auto-Discovery per WebSocket
-        const isLocalHost = hostname === "openfire.local" || /^192\.168\./.test(hostname) || hostname === "10.0.0.1" || hostname === "localhost";
-        
-        if (isLocalHost) {
-            try {
-                await this.connectWebSocket(`ws://${hostname}/ws`);
-                return true;
-            } catch (e) {
-                console.warn("WebSocket fallito, provo fallback USB...");
+        let currentFunc = "-1";
+        for (const funcName of allFunctions) {
+            if (gunConfig.pins[funcName] === gpio) {
+                currentFunc = funcName;
+                break;
             }
         }
-        
-        return await this.connectWebSerial();
+
+        let labelColor = "#aaaaaa";
+        let capText = "GPIO" + gpio;
+        if (capabilitiesMap) {
+            const cap = capabilitiesMap[gpio];
+            const OF_Const = OpenFIREshared.pinCapabilities_e;
+            if (cap & OF_Const.pinAnyI2C) {
+                labelColor = "#BE00B0";
+                capText += " - I2C(*)";
+            } else if (cap & OF_Const.pinCanI2C) {
+                if (cap & OF_Const.pinIsI2C1) {
+                    labelColor = "#FF8800";
+                    capText += " - I2C1";
+                } else {
+                    labelColor = "#0099FF";
+                    capText += " - I2C0";
+                }
+            }
+        }
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "pin-control";
+        wrapper.dataset.order = order;
+
+        let optionsHtml = `<option value="-1">(${i18n.t("Unmapped")})</option>`;
+        for (const f of allFunctions) {
+            const selected = (currentFunc === f) ? "selected" : "";
+            optionsHtml += `<option value="${f}" ${selected}>${i18n.t(f)}</option>`;
+        }
+
+        wrapper.innerHTML = `
+            <span class="pin-label" style="color: ${labelColor}" title="${capText}">«GPIO${gpio}»</span>
+            <select class="pin-select" data-gpio="${gpio}" ${isCustomPins ? "" : "disabled"}>${optionsHtml}</select>
+        `;
+
+        if (group === posLeft) { wrapper.style.flexDirection = 'row-reverse'; elementsLeft.push(wrapper); }
+        else if (group === posRight) {
+            elementsRight.push(wrapper);
+        }
+        else if (group === posMiddle) {
+            wrapper.style.flexDirection = "column";
+            elementsMiddle.push(wrapper);
+        }
     }
 
-    connectWebSocket(url) {
-        return new Promise((resolve, reject) => {
-            this.socket = new WebSocket(url);
-            this.socket.binaryType = "arraybuffer"; 
+    elementsLeft.sort((a, b) => a.dataset.order - b.dataset.order).forEach(el => pinsLeft.appendChild(el));
+    elementsRight.sort((a, b) => a.dataset.order - b.dataset.order).forEach(el => pinsRight.appendChild(el));
+    elementsMiddle.sort((a, b) => a.dataset.order - b.dataset.order).forEach(el => pinsMiddle.appendChild(el));
+}
 
-            this.socket.onopen = () => {
-                this.isWebSocket = true;
-                console.log("Connesso via Wi-Fi (WebSocket)!");
-                resolve();
+function populateSettingsUI(gunConfig) {
+    // Toggles (Checkbox)
+    const togglesMap = {
+        "Autofire": "tgl-Autofire",
+        "Solenoid": "tgl-Solenoid",
+        "Rumble": "tgl-Rumble",
+        "RumbFFB": "tgl-RumbFFB",
+        "LEDAnode": "tgl-LEDAnode",
+        "LowButtons": "tgl-LowButtons",
+        "SimplePause": "tgl-SimplePause",
+        "HoldToPause": "tgl-HoldToPause",
+        "i2cOLED": "tgl-i2cOLED",
+        "i2cOLEDaltAddr": "tgl-i2cOLEDaltAddr"
+    };
+
+    for (const [key, id] of Object.entries(togglesMap)) {
+        const el = document.getElementById(id);
+        if (el && gunConfig.toggles.hasOwnProperty(key)) {
+            el.checked = gunConfig.toggles[key];
+        }
+    }
+
+    // Settings (Number inputs)
+        const settingsMap = {
+        "SolOn": "set-SolenoidTime",
+        "SolOff": "set-SolenoidAutofireTime",
+        "SolHold": "set-AutofireTriggerTime",
+        "RumbPwr": "set-RumblePWM",
+        "RumbTime": "set-RumbleTime",
+        "CtmPixelsCount": "set-LEDPixelCount",
+        "StaticPixels": "set-StaticPixelCount",
+        "HoldToPauseLength": "set-HoldTime"
+    };
+
+    for (const [key, id] of Object.entries(settingsMap)) {
+        const el = document.getElementById(id);
+        if (el && gunConfig.settings.hasOwnProperty(key)) {
+            el.value = gunConfig.settings[key];
+        }
+    }
+}
+
+function populateButtonsUI(gunConfig) {
+    const tbody = document.getElementById("buttons-tbody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    const btnEntries = Object.entries(OpenFIREshared.boardInputs_Strings)
+                             .filter(([name, val]) => val >= 0)
+                             .sort((a, b) => a[1] - b[1]);
+
+        const typeOptions = OpenFIREmaps.funcTypes.map((t, idx) => `<option value="${idx}">${i18n.t(t)}</option>`).join('');
+
+    // Analog Stick Mode
+    const analogSel = document.getElementById("sel-AnalogStickMode");
+    if (analogSel) {
+        analogSel.innerHTML = `
+            <option value="0">${i18n.t("Gamepad Analog Stick (Left/Right)")}</option>
+            <option value="1">${i18n.t("Gamepad D-Pad")}</option>
+            <option value="2">${i18n.t("Keyboard Arrows")}</option>
+        `;
+        if (gunConfig.settings["Analog Mode"] !== undefined) {
+            analogSel.value = gunConfig.settings["Analog Mode"];
+        } else if (gunConfig.settings["Analog Stick Mode"] !== undefined) {
+            analogSel.value = gunConfig.settings["Analog Stick Mode"];
+        }
+    }
+
+    for (const [btnName, btnEnum] of btnEntries) {
+        const btnData = gunConfig.buttons[btnName];
+        if (!btnData || btnData.length < 6) continue;
+
+        const onType = btnData[0];
+        const onVal = btnData[1];
+        const offType = btnData[2];
+        const offVal = btnData[3];
+        const gpType = btnData[4];
+        const gpVal = btnData[5];
+
+        const tr = document.createElement("tr");
+
+        const tdName = document.createElement("td");
+        tdName.innerText = i18n.t(btnName);
+        tr.appendChild(tdName);
+
+        const createCell = (type, val, isGamepadMode) => {
+            const tdType = document.createElement("td");
+            const tdVal = document.createElement("td");
+            
+            const selType = document.createElement("select");
+            selType.innerHTML = typeOptions;
+            selType.value = type;
+            
+            const selVal = document.createElement("select");
+            const populateSelVal = (t) => {
+                let mapArr = [];
+                if (t == 0) mapArr = OpenFIREmaps.mouseMap;
+                else if (t == 1) mapArr = OpenFIREmaps.keyboardMap;
+                else if (t == 2) mapArr = OpenFIREmaps.gamepadMap;
+                
+                selVal.innerHTML = mapArr.map(item => `<option value="${item.val}">${i18n.t(item.name)}</option>`).join('');
             };
+            
+            selType.addEventListener('change', () => {
+                populateSelVal(selType.value);
+            });
+            
+            populateSelVal(type);
+            selVal.value = val;
 
-            this.socket.onerror = (err) => reject(err);
+            if (isGamepadMode) {
+                selType.disabled = true;
+                selType.value = 2; // Forzato a Gamepad
+                populateSelVal(2);
+                selVal.value = gpVal;
+            }
 
-            this.socket.onmessage = (event) => {
-                this.processIncoming(new Uint8Array(event.data));
-            };
+            tdType.appendChild(selType);
+            tdVal.appendChild(selVal);
+            tr.appendChild(tdType);
+            tr.appendChild(tdVal);
+        };
+
+        createCell(onType, onVal, false);
+        createCell(offType, offVal, false);
+        createCell(gpType, gpVal, true);
+
+        tbody.appendChild(tr);
+    }
+}
+
+function populateProfilesUI(gunConfig) {
+    const tbody = document.getElementById("profiles-tbody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    for (let i = 0; i < 4; i++) {
+        const prof = gunConfig.profiles[i] || {};
+        const isCurrent = (gunConfig.currentProfile === i);
+        
+        const tr = document.createElement("tr");
+
+        // Nome
+        const nameVal = prof.Name ? prof.Name.replace(/"/g, '&quot;') : `Profile ${i+1}`;
+        
+        // Offset
+        const formatVal = (v) => v === undefined ? 0 : (Number.isInteger(v) ? v : Number(v).toFixed(2));
+        const top = formatVal(prof.TopOffset);
+        const btm = formatVal(prof.BtmOffset);
+        const lft = formatVal(prof.LftOffset);
+        const rht = formatVal(prof.RhtOffset);
+        const tlled = formatVal(prof.TLLed);
+        const trled = formatVal(prof.TRLed);
+
+        // Sensibilità
+        const optsSens = ["Default", "Higher", "Highest"].map((s, idx) => `<option value="${idx}" ${(prof.IrSens==idx)?'selected':''}>${i18n.t(s)}</option>`).join('');
+        // Modalità
+        const optsMode = ["Normal", "1-Frame Avg", "2-Frame Avg"].map((s, idx) => `<option value="${idx}" ${(prof.IrRunMode==idx)?'selected':''}>${i18n.t(s)}</option>`).join('');
+        // Layout
+        const optsLayout = ["Square", "Diamond"].map((s, idx) => `<option value="${idx}" ${(prof.IrLayout==idx)?'selected':''}>${i18n.t(s)}</option>`).join('');
+        // Display
+        const optsAr = ["16:9", "16:10", "3:2", "5:4", "4:3"].map((s, idx) => `<option value="${idx}" ${(prof.AspectRatio==idx)?'selected':''}>${s}</option>`).join(''); // AR labels don't need translation usually
+
+        // Colore
+        let colHex = "#000000";
+        if (prof.Color !== undefined) {
+            colHex = "#" + ("000000" + prof.Color.toString(16)).slice(-6);
+        }
+
+        tr.innerHTML = `
+            <td><input type="radio" name="currentProf" value="${i}" ${isCurrent ? 'checked' : ''} style="transform: scale(1.5);"></td>
+            <td><input type="text" value="${nameVal}" style="width: 100px; text-align: left;"></td>
+            <td style="color:#aaa;">${top}</td>
+            <td style="color:#aaa;">${btm}</td>
+            <td style="color:#aaa;">${lft}</td>
+            <td style="color:#aaa;">${rht}</td>
+            <td style="color:#aaa;">${tlled}</td>
+            <td style="color:#aaa;">${trled}</td>
+            <td><select data-prof="${i}" data-field="IrSens">${optsSens}</select></td>
+            <td><select data-prof="${i}" data-field="IrRunMode">${optsMode}</select></td>
+            <td><select data-prof="${i}" data-field="IrLayout">${optsLayout}</select></td>
+            <td><select data-prof="${i}" data-field="AspectRatio">${optsAr}</select></td>
+            <td><input type="color" data-prof="${i}" data-field="Color" value="${colHex}" style="padding: 0; width: 25px; height: 25px; cursor: pointer; border: none; border-radius: 4px;"></td>
+        `;
+
+        tbody.appendChild(tr);
+    }
+}
+
+function initGunTestsUI() {
+    const grid = document.getElementById("tests-buttons-grid");
+    if (!grid) return;
+    grid.innerHTML = "";
+
+    const btnEntries = Object.entries(OpenFIREshared.boardInputs_Strings)
+                             .filter(([name, val]) => val >= 0)
+                             .sort((a, b) => a[1] - b[1]);
+
+    window.testBtnIndicators = [];
+    
+    for (const [btnName, btnIndex] of btnEntries) {
+        const div = document.createElement("div");
+        div.className = "test-btn-indicator";
+        div.innerText = i18n.t(btnName);
+        div.id = `test-btn-${btnIndex}`;
+        grid.appendChild(div);
+        window.testBtnIndicators[btnIndex] = div;
+    }
+}
+
+
+function gatherGunConfigFromUI() {
+    const gc = window.gunConfig;
+    if (!gc) return;
+
+    // Toggles
+    const togglesMap = {
+        "Autofire": "tgl-Autofire", "Solenoid": "tgl-Solenoid", "Rumble": "tgl-Rumble", "RumbFFB": "tgl-RumbFFB",
+        "LEDAnode": "tgl-LEDAnode", "LowButtons": "tgl-LowButtons", "SimplePause": "tgl-SimplePause",
+        "HoldToPause": "tgl-HoldToPause", "i2cOLED": "tgl-i2cOLED", "i2cOLEDaltAddr": "tgl-i2cOLEDaltAddr",
+        "CustomPins": "tgl-CustomPins"
+    };
+    for (const [key, id] of Object.entries(togglesMap)) {
+        const el = document.getElementById(id);
+        if (el) gc.toggles[key] = el.checked;
+    }
+
+    // Pins
+    for (const [key, val] of Object.entries(gc.pins)) {
+        const sel = document.getElementById(`pin-${key}`);
+        if (sel) gc.pins[key] = parseInt(sel.value);
+    }
+
+    // Settings
+        const settingsMap = {
+        "SolOn": "set-SolenoidTime",
+        "SolOff": "set-SolenoidAutofireTime",
+        "SolHold": "set-AutofireTriggerTime",
+        "RumbPwr": "set-RumblePWM",
+        "RumbTime": "set-RumbleTime",
+        "CtmPixelsCount": "set-LEDPixelCount",
+        "StaticPixels": "set-StaticPixelCount",
+        "HoldToPauseLength": "set-HoldTime"
+    };
+    for (const [key, id] of Object.entries(settingsMap)) {
+        const el = document.getElementById(id);
+        if (el) gc.settings[key] = parseInt(el.value);
+    }
+    const selAnalog = document.getElementById("sel-AnalogStickMode");
+    if (selAnalog) gc.settings["Analog Mode"] = parseInt(selAnalog.value);
+
+    // Buttons
+    const tbodyBtn = document.getElementById("buttons-tbody");
+    if (tbodyBtn) {
+        const rows = tbodyBtn.querySelectorAll("tr");
+        rows.forEach(tr => {
+            const btnNameStr = tr.cells[0].innerText;
+            // Reverse translation is hard, let's just find the key that matches i18n.t(key)
+            const btnKey = Object.keys(OpenFIREshared.boardInputs_Strings).find(k => i18n.t(k) === btnNameStr || k === btnNameStr);
+            if (btnKey && gc.buttons[btnKey]) {
+                gc.buttons[btnKey][0] = parseInt(tr.cells[1].querySelector("select").value);
+                gc.buttons[btnKey][1] = parseInt(tr.cells[2].querySelector("select").value);
+                gc.buttons[btnKey][2] = parseInt(tr.cells[3].querySelector("select").value);
+                gc.buttons[btnKey][3] = parseInt(tr.cells[4].querySelector("select").value);
+                gc.buttons[btnKey][4] = parseInt(tr.cells[5].querySelector("select").value);
+                gc.buttons[btnKey][5] = parseInt(tr.cells[6].querySelector("select").value);
+            }
         });
     }
 
-    async connectWebSerial() {
-        if (!navigator.serial) {
-            alert("Web Serial API non supportata da questo browser. Usa Chrome/Edge o la modalità Wi-Fi.");
-            return false;
-        }
-
-        try {
-            this.serialPort = await navigator.serial.requestPort();
-            await this.serialPort.open({ baudRate: 9600 });
-            this.isWebSocket = false;
-            console.log("Connesso via Cavo USB (Web Serial)!");
-
-            this.serialWriter = this.serialPort.writable.getWriter();
-            this.serialReader = this.serialPort.readable.getReader();
+    // Profiles
+    const tbodyProf = document.getElementById("profiles-tbody");
+    if (tbodyProf) {
+        const rows = tbodyProf.querySelectorAll("tr");
+        rows.forEach((tr, i) => {
+            if (tr.querySelector("input[type=radio]").checked) gc.currentProfile = i;
+            if (!gc.profiles[i]) gc.profiles[i] = {};
             
-            this.readSerialLoop();
-            return true;
-        } catch (e) {
-            console.error("Connessione Seriale interrotta o rifiutata:", e);
-            return false;
-        }
-    }
+            gc.profiles[i].Name = tr.querySelector("input[type=text]").value;
+            
+            const selects = tr.querySelectorAll("select");
+            selects.forEach(sel => {
+                gc.profiles[i][sel.dataset.field] = parseInt(sel.value);
+            });
 
-    async readSerialLoop() {
-        try {
-            while (true) {
-                const { value, done } = await this.serialReader.read();
-                if (done) break;
-                if (value) {
-                    this.processIncoming(new Uint8Array(value));
-                }
+            const colInp = tr.querySelector("input[type=color]");
+            if (colInp) {
+                const hex = colInp.value.replace("#", "");
+                gc.profiles[i].Color = parseInt(hex, 16);
             }
-        } catch (error) {
-            console.error("Errore di lettura Seriale:", error);
-        } finally {
-            this.serialReader.releaseLock();
-        }
+        });
     }
+}
 
-    async write(uint8Array) {
-        if (this.isWebSocket && this.socket) {
-            this.socket.send(uint8Array);
-        } else if (this.serialWriter) {
-            await this.serialWriter.write(uint8Array);
-        } else {
-            console.error("Nessuna connessione attiva per scrivere!");
-        }
-    }
-
-    // ========================================================================
-    // Protocollo Binario
-    // ========================================================================
-
-    processIncoming(newBytes) {
-        const combined = new Uint8Array(this.rxBuffer.length + newBytes.length);
-        combined.set(this.rxBuffer);
-        combined.set(newBytes, this.rxBuffer.length);
-        this.rxBuffer = combined;
-
-        while (this.rxBuffer.length >= 2) {
-            let start = 0;
-            while (start + 1 < this.rxBuffer.length && 
-                  (this.rxBuffer[start] !== OF_CONST.APP_SERIAL_START_1 || 
-                   this.rxBuffer[start + 1] !== OF_CONST.APP_SERIAL_START_2)) {
-                start++;
+    // --- Camera Tester Overlay ---
+    let cameraTesterActive = false;
+    const btnCam = document.getElementById("btn-test-camera");
+    const overlayCam = document.getElementById("overlay-camera");
+    const canvasCam = document.getElementById("canvas-camera");
+    
+    if (btnCam && overlayCam && canvasCam) {
+        const ctx = canvasCam.getContext("2d");
+        
+        btnCam.addEventListener("click", async () => {
+            cameraTesterActive = true;
+            overlayCam.style.display = "flex";
+            if(document.documentElement.requestFullscreen) {
+                try {
+                    await document.documentElement.requestFullscreen();
+                    if (navigator.keyboard && navigator.keyboard.lock) await navigator.keyboard.lock(['Escape']);
+                } catch (e) {}
             }
-
-            if (start + 1 >= this.rxBuffer.length) {
-                if (this.rxBuffer[this.rxBuffer.length - 1] === OF_CONST.APP_SERIAL_START_1) {
-                    this.rxBuffer = new Uint8Array([OF_CONST.APP_SERIAL_START_1]);
+            
+            canvasCam.width = window.innerWidth;
+            canvasCam.height = window.innerHeight;
+            
+            window.ofProtocol.sendCommand(OpenFIREshared.serialCmdTypes_e.sIRTest, new Uint8Array([1]));
+        });
+        
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && cameraTesterActive) {
+                e.preventDefault();
+                cameraTesterActive = false;
+                overlayCam.style.display = "none";
+                if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+                if(navigator.keyboard && navigator.keyboard.unlock) navigator.keyboard.unlock();
+                window.ofProtocol.sendCommand(OpenFIREshared.serialCmdTypes_e.sIRTest, new Uint8Array([0]));
+            }
+        });
+        
+        // Expose a draw function
+        window.drawCameraTest = (coordsList) => {
+            if (!cameraTesterActive) return;
+            
+            const w = canvasCam.width;
+            const h = canvasCam.height;
+            ctx.clearRect(0, 0, w, h);
+            
+            // The coordinates are presumably scaled to 1920x1080
+            const scaleX = w / 1920.0;
+            const scaleY = h / 1080.0;
+            const scale = Math.min(scaleX, scaleY);
+            const offsetX = (w - (1920.0 * scale)) / 2.0;
+            const offsetY = (h - (1080.0 * scale)) / 2.0;
+            
+            ctx.save();
+            ctx.translate(offsetX, offsetY);
+            ctx.scale(scale, scale);
+            
+            const pointX = [0,0,0,0];
+            const pointY = [0,0,0,0];
+            const outsideFov = [false, false, false, false];
+            
+            for(let i=0; i<4; i++) {
+                const encodedX = coordsList[i * 2];
+                outsideFov[i] = (encodedX % 2) !== 0;
+                pointX[i] = (encodedX - (outsideFov[i] ? 1 : 0)) / 2;
+                pointY[i] = coordsList[(i * 2) + 1];
+            }
+            
+            // Draw Box
+            ctx.beginPath();
+            ctx.moveTo(pointX[0], pointY[0]);
+            ctx.lineTo(pointX[1], pointY[1]);
+            ctx.lineTo(pointX[3], pointY[3]);
+            ctx.lineTo(pointX[2], pointY[2]);
+            ctx.closePath();
+            ctx.strokeStyle = "gray";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Draw Points
+            const colors = ["lime", "lime", "cyan", "cyan"]; // TL, TR, BL, BR
+            for(let i=0; i<4; i++) {
+                ctx.beginPath();
+                ctx.arc(pointX[i], pointY[i], 25, 0, 2*Math.PI);
+                ctx.strokeStyle = colors[i];
+                ctx.lineWidth = 3;
+                if (outsideFov[i]) {
+                    ctx.fillStyle = colors[i];
+                    ctx.fill();
                 } else {
-                    this.rxBuffer = new Uint8Array(0);
+                    ctx.stroke();
                 }
-                break;
             }
-
-            if (start > 0) {
-                this.rxBuffer = this.rxBuffer.subarray(start);
-            }
-
-            if (this.rxBuffer.length < OF_CONST.APP_SERIAL_OVERHEAD) {
-                break; 
-            }
-
-            const length = this.rxBuffer[5];
-            const totalFrameSize = OF_CONST.APP_SERIAL_OVERHEAD + length;
-
-            if (this.rxBuffer.length < totalFrameSize) {
-                break;
-            }
-
-            const crcData = this.rxBuffer.subarray(2, 6 + length);
-            const expectedCRC = AppSerialCRC8(crcData);
-            const actualCRC = this.rxBuffer[6 + length];
-
-            if (expectedCRC === actualCRC) {
-                const frame = {
-                    typeFlags: this.rxBuffer[2],
-                    command: this.rxBuffer[3],
-                    sequence: this.rxBuffer[4],
-                    payload: this.rxBuffer.subarray(6, 6 + length)
-                };
-
-                this.handleFrame(frame);
-                this.rxBuffer = this.rxBuffer.subarray(totalFrameSize);
-            } else {
-                console.warn("CRC Errato! Scarto il pacchetto corroto.");
-                this.rxBuffer = this.rxBuffer.subarray(2);
-            }
-        }
+            
+            // Point D (Red)
+            ctx.beginPath();
+            ctx.arc(coordsList[10], coordsList[11], 25, 0, 2*Math.PI);
+            ctx.strokeStyle = "red";
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            ctx.restore();
+            
+            // Point Med (Gray) - scaled to full window
+            ctx.save();
+            ctx.scale(scaleX, scaleY);
+            ctx.beginPath();
+            ctx.arc(coordsList[8], coordsList[9], 25, 0, 2*Math.PI);
+            ctx.strokeStyle = "gray";
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.restore();
+        };
     }
 
-    handleFrame(frame) {
-        const type = frame.typeFlags & OF_CONST.APP_SERIAL_TYPE_MASK;
-        if (type === OF_CONST.APP_SERIAL_TYPE_EVENT) {
-            if (this.onEventReceived) this.onEventReceived(frame);
-        } else {
-            this.appSerialResponses.push(frame);
-        }
+function initBoardPreviewUI() {
+    const sel = document.getElementById("preview-board-select");
+    const container = document.getElementById("preview-board-container");
+    if (!sel || !container) return;
+    
+    sel.innerHTML = "";
+    Object.keys(OpenFIREshared.boardsPresetsMap).forEach(key => {
+        const name = OpenFIREshared.boardNames[key] || key;
+        sel.innerHTML += `<option value="${key}">${name}</option>`;
+    });
+
+    const drawPreview = (boardName) => {
+        const boxPositions = OpenFIREshared.boardsBoxPositions[boardName];
+        if (!boxPositions) return;
+        const presets = OpenFIREshared.boardsPresetsMap[boardName] || [];
+        const capab = OpenFIREshared.mcuCapableMaps[boardName] || [];
+
+        // Reverse map from boardInputs_e value to name string
+        const inputMapReverse = {};
+        Object.entries(OpenFIREshared.boardInputs_Strings).forEach(([k, v]) => inputMapReverse[v] = k);
+
+        let htmlLeft = "";
+        let htmlRight = "";
+        let htmlMiddle = "";
+
+        const posLeft = OpenFIREshared.boardBoxPositions_e.posLeft;
+        const posRight = OpenFIREshared.boardBoxPositions_e.posRight;
+        const posMiddle = OpenFIREshared.boardBoxPositions_e.posMiddle;
+        const posCheck = OpenFIREshared.boardBoxPositions_e.posCheck;
+
+        const leftItems = [];
+        const rightItems = [];
+        const middleItems = [];
+
+        boxPositions.forEach((val, gpioPin) => {
+            if (val === 0) return;
+            const group = val & posCheck;
+            const order = val ^ group;
+
+            const funcVal = presets[gpioPin];
+            let funcName = "Unmapped";
+            if (funcVal !== undefined && inputMapReverse[funcVal]) funcName = inputMapReverse[funcVal];
+            if (funcVal === OpenFIREshared.boardInputs_e.unavailable) funcName = "Unavailable";
+
+            const cap = capab[gpioPin] || 0;
+            const cStr = [];
+            if (cap & OpenFIREshared.pinCapabilities_e.pinAnyADC) cStr.push('<span style="color:#BE00B0">ADC</span>');
+            if (cap & OpenFIREshared.pinCapabilities_e.pinAnyI2C) cStr.push('<span style="color:#0099FF">I2C (*)</span>');
+            else if (cap & OpenFIREshared.pinCapabilities_e.pinI2C0) cStr.push('<span style="color:#0099FF">I2C0</span>');
+            else if (cap & OpenFIREshared.pinCapabilities_e.pinI2C1) cStr.push('<span style="color:#FF8800">I2C1</span>');
+            if (cap & OpenFIREshared.pinCapabilities_e.pinAnySPI) cStr.push('<span style="color:#BE00B0">SPI (*)</span>');
+            else if (cap & OpenFIREshared.pinCapabilities_e.pinSPI0) cStr.push('<span style="color:#0099FF">SPI0</span>');
+            else if (cap & OpenFIREshared.pinCapabilities_e.pinSPI1) cStr.push('<span style="color:#FF8800">SPI1</span>');
+            
+            const capHtml = `<span style="font-size:10px; margin:0 5px; opacity:0.7">${cStr.join(" ")}</span>`;
+            const gpioHtml = `<span style="color:#BE00B0; font-size:11px;">«GPIO${gpioPin}»</span>`;
+            
+            // In QT: FuncName << GPIOxx >> ADC I2C SPI
+            // We use simple flex layout
+            const labelStr = (group === posLeft) ? 
+                `<div style="margin-bottom:12px; text-align:right;">${i18n.t(funcName)}${gpioHtml}${capHtml}</div>` : 
+                `<div style="margin-bottom:12px; text-align:left;">${capHtml}${gpioHtml}${i18n.t(funcName)}</div>`;
+
+            if (group === posLeft) leftItems.push({ order, html: labelStr });
+            else if (group === posRight) rightItems.push({ order, html: labelStr });
+            else if (group === posMiddle) middleItems.push({ order, html: `<div style="text-align:center; color:#BE00B0; font-size:11px; font-style:italic;">${i18n.t(funcName)}</div>` });
+        });
+
+        leftItems.sort((a,b)=>a.order-b.order).forEach(x => htmlLeft += x.html);
+        rightItems.sort((a,b)=>a.order-b.order).forEach(x => htmlRight += x.html);
+        middleItems.sort((a,b)=>a.order-b.order).forEach(x => htmlMiddle += x.html);
+
+        container.innerHTML = `
+            <div style="display:flex; align-items:center;">
+                <div style="width:250px; text-align:right; padding-right:10px;">${htmlLeft}</div>
+                <div style="position:relative;">
+                    <div style="position:absolute; top:-20px; left:0; width:100%; display:flex; justify-content:space-around;">${htmlMiddle}</div>
+                    <img src="boardPics/${boardName}.svg" style="max-height: 60vh; max-width: 300px; display:block;">
+                </div>
+                <div style="width:250px; text-align:left; padding-left:10px;">${htmlRight}</div>
+            </div>
+        `;
+    };
+
+    sel.onchange = () => drawPreview(sel.value);
+    
+    // Select default or current
+    if (window.gunConfig && window.gunConfig.boardName && OpenFIREshared.boardsPresetsMap[window.gunConfig.boardName]) {
+        sel.value = window.gunConfig.boardName;
     }
+        if (document.getElementById("menu-btn-preview").style.display !== "none") {
+        drawPreview(sel.value);
+    }
+}
 
-    // ========================================================================
-    // Operazioni ad alto livello (Handshake)
-    // ========================================================================
+    // --- Calibration Overlay Logic ---
+    let caliActive = false;
+    const btnCaliStart = document.getElementById("btn-cali-start");
+    const overlayCali = document.getElementById("overlay-cali");
 
-    async beginDock() {
-        this.appSerialResponses = []; // Svuota lo stato
-        
-        // AppSerial::BeginDock() in C++ invia nudi i byte sDock1 e sDock2
-        const dockHandshake = new Uint8Array([OF_CONST.sDock1, OF_CONST.sDock2]);
-        await this.write(dockHandshake);
-        console.log("Handshake sDock inviato, in attesa di boardInfo...");
+    if (btnCaliStart && overlayCali) {
+        // Create a crosshair element dynamically
+        const crosshair = document.createElement("div");
+        crosshair.innerHTML = `<svg width="50" height="50" viewBox="0 0 50 50">
+            <circle cx="25" cy="25" r="20" stroke="red" stroke-width="4" fill="none"/>
+            <line x1="25" y1="0" x2="25" y2="50" stroke="red" stroke-width="4"/>
+            <line x1="0" y1="25" x2="50" y2="25" stroke="red" stroke-width="4"/>
+        </svg>`;
+        crosshair.style.position = "absolute";
+        crosshair.style.transform = "translate(-50%, -50%)"; // Center the point exactly
+        crosshair.style.transition = "top 0.3s, left 0.3s";
+        crosshair.style.display = "none";
+        overlayCali.appendChild(crosshair);
 
-        // Ora aspettiamo il pacchetto RESPONSE con command == sDock2
-        // Simuliamo un timeout asincrono (polling per semplicità)
-        for(let i = 0; i < 30; i++) { // Timeout ~3 secondi
-            await new Promise(r => setTimeout(r, 100));
-            const responseIndex = this.appSerialResponses.findIndex(f => f.command === OF_CONST.sDock2);
-            if (responseIndex !== -1) {
-                const deviceInfoFrame = this.appSerialResponses.splice(responseIndex, 1)[0];
-                console.log("Docked con successo! BoardInfo ricevuto:", new TextDecoder().decode(deviceInfoFrame.payload));
-                return deviceInfoFrame.payload;
+        btnCaliStart.addEventListener("click", async () => {
+            caliActive = true;
+            overlayCali.style.display = "flex";
+            if(document.documentElement.requestFullscreen) {
+                try {
+                    await document.documentElement.requestFullscreen();
+                    if (navigator.keyboard && navigator.keyboard.lock) await navigator.keyboard.lock(['Escape']);
+                } catch (e) {}
             }
-        }
-        throw new Error("Timeout durante l'handshake Docked!");
-    }
+            
+            // Start command: sCaliProfile (6) -> [sCaliStart (7), profileNum, (irSens) + (layoutType << 4)]
+            const prof = window.gunConfig.currentProfile;
+            const pObj = window.gunConfig.profiles[prof];
+            const irSens = pObj ? pObj.IrSens : 0;
+            const layout = pObj ? pObj.IrLayout : 0;
 
-    async sendCommand(command, payload = null) {
-        if (this.appSerialTxSequence === undefined) this.appSerialTxSequence = 0;
-        this.appSerialTxSequence = (this.appSerialTxSequence + 1) % 256;
-        if (this.appSerialTxSequence === 0) this.appSerialTxSequence = 1;
-        
-        const frame = BuildFrame(OF_CONST.APP_SERIAL_TYPE_REQUEST, command, this.appSerialTxSequence, payload);
-        await this.write(frame);
-    }
+            const payload = new Uint8Array([7, prof, irSens + (layout << 4)]);
+            window.ofProtocol.sendCommand(OpenFIREshared.serialCmdTypes_e.sCaliProfile, payload);
+            
+            // Set initial state
+            crosshair.style.left = "50%";
+            crosshair.style.top = "50%";
+            crosshair.style.display = "block";
+            
+            const topText = overlayCali.querySelector('.top-text');
+            if (topText) topText.innerHTML = i18n.t("Inizia calibrazione:<br>Spara al bersaglio al centro per iniziare.");
+        });
 
-    async receiveSettingsRecords(command) {
-        const records = [];
-        const timeoutMs = 3000;
-        
-        while (true) {
-            let foundFrame = null;
-            for (let i = 0; i < timeoutMs / 10; i++) {
-                const idx = this.appSerialResponses.findIndex(f => f.command === command);
-                if (idx !== -1) {
-                    foundFrame = this.appSerialResponses.splice(idx, 1)[0];
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && caliActive) {
+                e.preventDefault();
+                caliActive = false;
+                overlayCali.style.display = "none";
+                if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+                if(navigator.keyboard && navigator.keyboard.unlock) navigator.keyboard.unlock();
+                // Abort with serialTerminator
+                window.ofProtocol.sendCommand(OpenFIREshared.serialCmdTypes_e.serialTerminator);
+            }
+        });
+
+        window.updateCaliStage = (stage) => {
+            if (!caliActive) return;
+            const topText = overlayCali.querySelector('.top-text');
+            if (!topText) return;
+
+            // Cali_Init = 0, Top = 1, Bottom = 2, Left = 3, Right = 4, Center = 5, Verify = 6, End = 7
+            switch (stage) {
+                case 0: // Init
+                    crosshair.style.left = "50%"; crosshair.style.top = "50%";
+                    topText.innerHTML = i18n.t("Inizia calibrazione:<br>Spara al bersaglio al centro per iniziare.");
                     break;
-                }
-                await new Promise(r => setTimeout(r, 10));
+                case 1: // Top
+                    crosshair.style.left = "50%"; crosshair.style.top = "0%";
+                    topText.innerHTML = i18n.t("Step 1:<br>Spara al bersaglio sul bordo SUPERIORE dello schermo.");
+                    break;
+                case 2: // Bottom
+                    crosshair.style.left = "50%"; crosshair.style.top = "100%";
+                    topText.innerHTML = i18n.t("Step 2:<br>Spara al bersaglio sul bordo INFERIORE dello schermo.");
+                    break;
+                case 3: // Left
+                    crosshair.style.left = "0%"; crosshair.style.top = "50%";
+                    topText.innerHTML = i18n.t("Step 3:<br>Spara al bersaglio sul bordo SINISTRO dello schermo.");
+                    break;
+                case 4: // Right
+                    crosshair.style.left = "100%"; crosshair.style.top = "50%";
+                    topText.innerHTML = i18n.t("Step 4:<br>Spara al bersaglio sul bordo DESTRO dello schermo.");
+                    break;
+                case 5: // Center
+                    crosshair.style.left = "50%"; crosshair.style.top = "50%";
+                    topText.innerHTML = i18n.t("Step 5:<br>Spara al bersaglio al CENTRO dello schermo.");
+                    break;
+                case 6: // Verify
+                    crosshair.style.left = "50%"; crosshair.style.top = "50%";
+                    topText.innerHTML = i18n.t("Verifica Calibrazione:<br>Spara fuori dallo schermo per salvare.");
+                    break;
+                case 7: // End
+                    caliActive = false;
+                    overlayCali.style.display = "none";
+                if(document.fullscreenElement) document.exitFullscreen();
+                    break;
             }
-
-            if (!foundFrame) throw new Error(`Timeout attesa dati per comando 0x${command.toString(16)}`);
-
-            if (foundFrame.typeFlags & OF_CONST.APP_SERIAL_FLAG_FINAL) {
-                break;
-            }
-
-            const payload = foundFrame.payload;
-            if (payload.length === 0) continue; // Salta gli ACK vuoti iniziali
-
-            const nullPos = payload.indexOf(0);
-            if (nullPos < 0) continue;
-
-            const fieldName = new TextDecoder().decode(payload.subarray(0, nullPos));
-            let pos = nullPos + 1;
-            const valueSize = payload[pos++];
-            
-            let profNum = null;
-            if (command === OpenFIREshared.serialCmdTypes_e.sGetProfile && fieldName !== "CurrentProf") {
-                profNum = payload[pos++];
-            }
-            
-            const valueBytes = payload.subarray(pos, pos + valueSize);
-            const dataView = new DataView(valueBytes.buffer, valueBytes.byteOffset, valueBytes.byteLength);
-
-            let value = 0;
-            if (valueSize === 1) {
-                value = dataView.getInt8(0);
-            } else if (valueSize === 2) {
-                value = dataView.getInt16(0, true);
-            } else if (valueSize === 4) {
-                if (["TLled", "TRled", "AdjX", "AdjY"].includes(fieldName)) {
-                    value = dataView.getFloat32(0, true);
-                } else if (["TopOffset", "BottomOffset", "LeftOffset", "RightOffset"].includes(fieldName)) {
-                    value = dataView.getInt32(0, true);
-                } else {
-                    value = dataView.getUint32(0, true);
-                }
-            } else {
-                value = new TextDecoder().decode(valueBytes).replace(/\0/g, '');
-            }
-
-            records.push({ fieldName, profNum, value });
-        }
-        return records;
+        };
     }
 
-    async syncSettings() {
-        const config = { toggles: {}, pins: {}, settings: {}, buttons: {}, profiles: [] };
-        const cmds = OpenFIREshared.serialCmdTypes_e;
-
-        console.log("Richiesta Toggles...");
-        await this.sendCommand(cmds.sGetToggles);
-        const toggles = await this.receiveSettingsRecords(cmds.sGetToggles);
-        toggles.forEach(r => config.toggles[r.fieldName] = (r.value !== 0));
-
-        if (config.toggles["CustomPins"]) {
-            console.log("Richiesta Pins...");
-            await this.sendCommand(cmds.sGetPins);
-            const pins = await this.receiveSettingsRecords(cmds.sGetPins);
-            pins.forEach(r => config.pins[r.fieldName] = r.value);
-        }
-
-        console.log("Richiesta Settings...");
-        await this.sendCommand(cmds.sGetSettings);
-        const settings = await this.receiveSettingsRecords(cmds.sGetSettings);
-        settings.forEach(r => config.settings[r.fieldName] = r.value);
-
-        console.log("Richiesta Buttons...");
-        await this.sendCommand(cmds.sGetBtns);
-        const btns = await this.receiveSettingsRecords(cmds.sGetBtns);
-        btns.forEach(r => config.buttons[r.fieldName] = r.value);
-
-        console.log("Richiesta Profili...");
-        await this.sendCommand(cmds.sGetProfile);
-        const profiles = await this.receiveSettingsRecords(cmds.sGetProfile);
-        profiles.forEach(r => {
-            if (r.fieldName === "CurrentProf") {
-                config.currentProfile = r.value;
-            } else {
-                if (!config.profiles[r.profNum]) config.profiles[r.profNum] = {};
-                config.profiles[r.profNum][r.fieldName] = r.value;
-            }
-        });
-
-        console.log("Sincronizzazione completata con successo!", config);
-        return config;
-    }
-}
-
-// ============================================================================
-// Logica UI Base
 // ============================================================================
 document.addEventListener("DOMContentLoaded", () => {
-    const statusText = document.getElementById("status");
-    const btnTest = document.getElementById("btn-test");
-    
-    const connection = new OpenFIREConnection();
-    statusText.innerText = "Pronto. Clicca Connetti per avviare l'Handshake e la Sincronizzazione.";
+    // Inizializza subito la UI delle preview in modo che sia disponibile prima della connessione
+    initBoardPreviewUI();
+    if (window.location.protocol === "http:" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+        document.getElementById('menu-btn-preview').style.display = 'none';
+    }
 
-    btnTest.addEventListener("click", async () => {
-        statusText.innerText = "Connessione in corso...";
-        const success = await connection.connect();
-        
-        if (success) {
-            statusText.innerText = "Connesso! Avvio Handshake...";
-            try {
-                const boardInfo = await connection.beginDock();
-                statusText.innerText = "Docked! Sincronizzazione dei Settings in corso...";
-                
-                const gunConfig = await connection.syncSettings();
-                statusText.innerText = `Sincronizzazione completata! Profilo attivo: ${gunConfig.currentProfile}`;
-                
-                // Alert o UI update con i dati completi
-                console.log("Gun Config Completo: ", gunConfig);
-            } catch (err) {
-                statusText.innerText = "Errore: " + err.message;
+
+    // Emitter Alignment Overlay
+    const btnAlign = document.getElementById('menu-btn-align');
+    const overlayAlign = document.getElementById('overlay-align');
+    const canvasAlign = document.getElementById('canvas-align');
+    if (btnAlign && overlayAlign && canvasAlign) {
+        const drawAlign = () => {
+            if (overlayAlign.style.display !== 'block') return;
+            const ctx = canvasAlign.getContext('2d');
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            canvasAlign.width = w;
+            canvasAlign.height = h;
+            
+            ctx.clearRect(0, 0, w, h);
+            
+            const centerX = w / 2;
+            const centerY = h / 2;
+            const offset = (h * 0.711) / 2;
+            const leftX = centerX - offset;
+            const rightX = centerX + offset;
+            
+            const boxW = Math.max(30, w * 0.02);
+            const boxH = Math.max(20, h * 0.02);
+            
+            ctx.strokeStyle = "firebrick";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(leftX, 0, rightX - leftX, h);
+            
+            ctx.strokeStyle = "olivedrab";
+            ctx.beginPath();
+            ctx.moveTo(centerX, 0);
+            ctx.lineTo(w, centerY);
+            ctx.lineTo(centerX, h);
+            ctx.lineTo(0, centerY);
+            ctx.closePath();
+            ctx.stroke();
+            
+            ctx.fillStyle = "firebrick";
+            ctx.fillRect(leftX - boxW/2, 0, boxW, boxH);
+            ctx.fillRect(rightX - boxW/2, 0, boxW, boxH);
+            ctx.fillRect(leftX - boxW/2, h - boxH, boxW, boxH);
+            ctx.fillRect(rightX - boxW/2, h - boxH, boxW, boxH);
+            
+            ctx.fillStyle = "olivedrab";
+            ctx.fillRect(centerX - boxW/2, 0, boxW, boxH);
+            ctx.fillRect(centerX - boxW/2, h - boxH, boxW, boxH);
+            ctx.fillRect(0, centerY - boxW/2, boxH, boxW);
+            ctx.fillRect(w - boxH, centerY - boxW/2, boxH, boxW);
+        };
+
+        btnAlign.addEventListener('click', async () => {
+            overlayAlign.style.display = 'block';
+            if(document.documentElement.requestFullscreen) {
+                try {
+                    await document.documentElement.requestFullscreen();
+                    if (navigator.keyboard && navigator.keyboard.lock) await navigator.keyboard.lock(['Escape']);
+                } catch (e) {}
             }
-        } else {
-            statusText.innerText = "Errore di connessione.";
+            drawAlign();
+            setTimeout(drawAlign, 100);
+            setTimeout(drawAlign, 500);
+        });
+        
+        window.addEventListener('resize', drawAlign);
+        
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && overlayAlign.style.display === "block") {
+                e.preventDefault();
+                overlayAlign.style.display = "none";
+                if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+                if(navigator.keyboard && navigator.keyboard.unlock) navigator.keyboard.unlock();
+            }
+        });
+    }
+
+    // Modal Events
+
+
+    document.getElementById('menu-btn-about').addEventListener('click', () => document.getElementById('modal-about').style.display = 'flex');
+    document.getElementById('btn-close-about').addEventListener('click', () => document.getElementById('modal-about').style.display = 'none');
+    
+        // Gun Test Action Buttons
+    const bindTest = (id, cmd) => {
+        const btn = document.getElementById(id);
+        if (btn) btn.addEventListener('mousedown', () => window.ofProtocol && window.ofProtocol.sendCommand(OpenFIREshared.serialCmdTypes_e[cmd]));
+    };
+    bindTest('btn-test-rumble', 'sTestRumble');
+    bindTest('btn-test-solenoid', 'sTestSolenoid');
+    bindTest('btn-test-led-r', 'sTestLEDR');
+    bindTest('btn-test-led-g', 'sTestLEDG');
+        bindTest('btn-test-led-b', 'sTestLEDB');
+    bindTest('btn-restart-dfu', 'sRebootToBootloader');
+    
+    const btnFormat = document.getElementById('btn-format-mem');
+    if (btnFormat) btnFormat.addEventListener('click', () => {
+        if (confirm("Sei sicuro di voler cancellare tutta la memoria e riavviare la scheda?")) {
+            window.ofProtocol && window.ofProtocol.sendCommand(OpenFIREshared.serialCmdTypes_e.sClearFlash);
         }
     });
+
+    document.getElementById('menu-btn-preview').addEventListener('click', () => document.getElementById('modal-preview').style.display = 'flex');
+    document.getElementById('btn-close-preview').addEventListener('click', () => document.getElementById('modal-preview').style.display = 'none');
+    // Setup Tabs Navigation
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+            btn.classList.add('active');
+            document.getElementById(btn.dataset.tab).style.display = 'block';
+        });
+    });
+
+    
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ============================================================================
+// Connection Logic
+// ============================================================================
+window.ofProtocol = new OpenFIREProtocol();
+window.ofProtocol.onEventReceived = (evt) => { console.log(evt); };
+
+async function doConnect() {
+    const statusText = document.getElementById("status");
+    statusText.innerText = i18n.t("Connessione in corso...");
+    const success = await window.ofProtocol.connect();
+    
+    if (success) {
+        statusText.innerText = i18n.t("Connesso! Avvio Handshake...");
+        try {
+            const boardInfo = await window.ofProtocol.beginDock();
+            statusText.innerText = i18n.t("Docked! Sincronizzazione dei Settings in corso...");
+            
+            const gunConfig = await window.ofProtocol.syncSettings();
+            statusText.innerText = i18n.t("Sincronizzazione completata! Profilo attivo: ") + gunConfig.currentProfile;
+            
+            // Re-render things that depend on gunConfig
+            if (window.boardName) {
+                drawPreview(window.boardName, true);
+            }
+        } catch (e) {
+            console.error(e);
+            statusText.innerText = i18n.t("Errore di sincronizzazione");
+        }
+    } else {
+        statusText.innerText = i18n.t("Connessione fallita");
+    }
+}
+
+if (window.location.protocol === 'file:') {
+    const btn = document.createElement('button');
+    btn.id = 'btn-connect-serial';
+    btn.className = 'save-btn';
+    btn.innerText = 'Connect (Web Serial)';
+    btn.style.marginLeft = '10px';
+    btn.onclick = doConnect;
+    document.querySelector('.status-bar').appendChild(btn);
+    document.getElementById("status").innerText = "Pronto (File).";
+} else {
+    // Auto-connect for WebSocket
+    doConnect();
+}

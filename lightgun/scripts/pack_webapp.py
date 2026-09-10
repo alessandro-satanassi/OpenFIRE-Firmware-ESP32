@@ -7,6 +7,8 @@ Import("env")
 
 sys.path.append(os.path.join(env.get('PROJECT_DIR'), 'scripts'))
 import build_shared_js
+import build_lang_js
+import build_board_pics
 
 # Obtain the current PlatformIO environment name (e.g., WAVESHARE_ESP32_S3_ZERO_N8R8)
 env_name = env["PIOENV"]
@@ -35,8 +37,11 @@ svg_filename = SVG_MAP.get(env_name, "generic.svg")
 svg_path = os.path.join(BOARDS_PICS_DIR, svg_filename)
 # Files to pack (HTML/JS/CSS)
 build_shared_js.generate_shared_js(PROJECT_DIR, WEBAPP_DIR)
+build_lang_js.build_lang_js(WEBAPP_DIR)
+build_board_pics.build_board_pics(PROJECT_DIR, WEBAPP_DIR)
 files_to_pack = [
     {"name": "index.html", "var": "web_index_html"},
+    {"name": "lang.js", "var": "web_lang_js"},
     {"name": "style.css", "var": "web_style_css"},
     {"name": "app.js", "var": "web_app_js"},
     {"name": "boards/OpenFIREshared.js", "var": "web_openfireshared_js"}
@@ -83,5 +88,9 @@ with open(OUTPUT_FILE, "w") as out_f:
         out_f.write(f"// WARNING: SVG {svg_filename} not found during build\n")
         out_f.write("const uint8_t web_board_svg_gz[] PROGMEM = {0x00};\nconst size_t web_board_svg_gz_len = 1;\n")
 print("[WebApp Packer] Done!\n")
+
+
+
+
 
 

@@ -46,28 +46,45 @@ def generate_shared_js(project_dir, webapp_dir):
         js_content += "  },\n"
 
     # Fix the map pattern
-    map_pattern = re.compile(r'const\s+std::unordered_map[\s\S]*?(boards[A-Za-z0-9_]+)\s*=\s*\{([\s\S]*?)\};')
+    map_pattern = re.compile(r'const\s+std::(?:unordered_)?map[\s\S]*?\s+([A-Za-z0-9_]+)\s*=\s*\{([\s\S]*?)\};')
     for match in map_pattern.finditer(content):
         map_name = match.group(1)
         map_body = match.group(2)
+        if not map_name.startswith('board') and map_name != 'pinCapabilitiesMap' and map_name != 'mcuCapableMaps':
+            continue
         js_content += f"  {map_name}: {{\n"
         map_body = re.sub(r'//.*', '', map_body)
         map_body = re.sub(r'/\*.*?\*/', '', map_body, flags=re.DOTALL)
         
-        entry_pattern = re.compile(r'\{\s*"([^"]+)"\s*,\s*\{([^}]+)\}\s*\}')
+        entry_pattern = re.compile(r'\{\s*"([^"]+)"\s*,\s*([^}]+?)\s*\}')
         for e_match in entry_pattern.finditer(map_body):
             board_name = e_match.group(1)
-            vals = e_match.group(2)
-            vals_clean = []
-            for v in vals.split(','):
-                v = v.strip()
-                if not v: continue
-                try:
-                    val_int = eval(v.replace('|', '|'), {}, env_vars)
-                    vals_clean.append(str(val_int))
-                except Exception as e:
-                    vals_clean.append(v)
-            js_content += f"    '{board_name}': [{', '.join(vals_clean)}],\n"
+            val_block = e_match.group(2).strip()
+            if val_block.startswith('{'):
+                val_block = val_block[1:].strip()
+                vals_clean = []
+                for v in val_block.split(','):
+                    v = v.strip()
+                    if not v: continue
+                    try:
+                        val_int = eval(v.replace('|', '|'), {}, env_vars)
+                        vals_clean.append(str(val_int))
+                    except Exception as e:
+                        vals_clean.append(v)
+                js_content += f"    '{board_name}': [{', '.join(vals_clean)}],\n"
+            else:
+                if val_block.startswith('"') and val_block.endswith('"'):
+                    pass # Keep the quotes!
+                else:
+                    try:
+                        val_int = eval(val_block.replace('|', '|'), {}, env_vars)
+                        if isinstance(val_int, str):
+                            val_block = f"'{val_int}'"
+                        else:
+                            val_block = str(val_int)
+                    except Exception:
+                        pass
+                js_content += f"    '{board_name}': {val_block},\n"
         js_content += "  },\n"
         
     js_content += "};\n"
@@ -76,4 +93,4 @@ def generate_shared_js(project_dir, webapp_dir):
         f.write(js_content)
 
 if __name__ == "__main__":
-    generate_shared_js("F:/OpenFIREFirmware/lightgun", "F:/OpenFIREFirmware/lightgun/webapp")
+    generate_shared_js("E:/PROGETTI/OpenFIRE-ESP32/OpenFIRE-Firmware-ESP32/lightgun", "F:/OpenFIREFirmware/lightgun/webapp")
