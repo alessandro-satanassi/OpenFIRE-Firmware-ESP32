@@ -674,14 +674,14 @@ function initBoardPreviewUI() {
         container.innerHTML = `
 <div style="width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;">
 <div style="width:100%; display:flex; align-items:center; justify-content:center;">
-                <div style="min-width:200px; max-width:350px; text-align:right; padding-right:10px;"><table style="width:100%; border-collapse:collapse; background:transparent;">${htmlLeft}</table></div>
-                <div style="flex-shrink:0; display:flex; flex-direction:column; align-items:center;">
+                <div style="flex: 1 1 200px; min-width:150px; max-width:350px; text-align:right; padding-right:10px;"><table style="width:100%; border-collapse:collapse; background:transparent;">${htmlLeft}</table></div>
+                <div style="flex: 1 1 150px; min-width:100px; max-width:350px; display:flex; flex-direction:column; align-items:center;">
                     <div id="board-svg-container" style="display:flex; align-items:center; justify-content:center; padding: 0 15px;">
                           ${OpenFIREshared.boardSVGsMap && OpenFIREshared.boardSVGsMap[boardName] ? OpenFIREshared.boardSVGsMap[boardName] : '<img src="boardPics/' + (OpenFIREshared.boardImagesMap[boardName] || 'generic.svg') + '" style="height: 100%; width: auto;">'}
                       </div>
                     <div style="width:100%; display:flex; justify-content:center; gap:20px; margin-top:10px;">${htmlMiddle}</div>
                 </div>
-                <div style="min-width:200px; max-width:350px; text-align:left; padding-left:10px;"><table style="width:100%; border-collapse:collapse; background:transparent;">${htmlRight}</table></div>
+                <div style="flex: 1 1 200px; min-width:150px; max-width:350px; text-align:left; padding-left:10px;"><table style="width:100%; border-collapse:collapse; background:transparent;">${htmlRight}</table></div>
             </div>
                           <div style="width: 100%; text-align:center; margin-top:20px; padding-top:10px; border-top:1px solid #444; font-size:14px; color:#ddd; line-height:1.4;">
                   ${boardName.includes('esp32-s3') ? 
