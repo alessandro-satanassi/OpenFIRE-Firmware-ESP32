@@ -565,7 +565,7 @@ function initBoardPreviewUI() {
     
     sel.innerHTML = "";
     Object.keys(OpenFIREshared.boardsBoxPositions).forEach(key => {
-        if (!OpenFIREshared.boardImagesMap[key]) return; // skip boards without an SVG
+        if (key.includes("generic")) return; // Match Qt App: skip "generic" boards
         const name = (OpenFIREshared.boardNames && OpenFIREshared.boardNames[key]) ? OpenFIREshared.boardNames[key] : key;
         sel.innerHTML += `<option value="${key}">${name}</option>`;
     });
@@ -646,18 +646,19 @@ function initBoardPreviewUI() {
             
             const capHtml = `<span style="font-size:10px; margin:0 5px; white-space:nowrap;">${cStr.join(' ')}</span>`;
             const gpioHtml = `<span style="color:${gpioColor}; font-size:12px; white-space:nowrap;">«GPIO${gpioPin}»</span>`;
-            const funcHtml = `<span id="func-gpio-${gpioPin}" style="color:#ddd; font-size:14px; transition: font-weight 0.1s;">${i18n.t(funcName)}</span>`;
+            const funcHtml = `<span id="func-gpio-${gpioPin}" style="color:#ddd; font-size:14px; transition: text-shadow 0.1s;">${i18n.t(funcName)}</span>`;
             
             // Hover logic added via inline events
             const hoverEvents = `onmouseenter="highlightBoardPin(${gpioPin}, true)" onmouseleave="highlightBoardPin(${gpioPin}, false)"`;
             
+                        const tooltipText = `Pin GPIO N. ${gpioPin}.\n\nI pin con numero blu appartengono a I2C0.\nQuelli con numero arancione appartengono a I2C1.\nQuelli in viola possono selezionare automaticamente qualsiasi canale I2C.\nQuelli grigi non supportano I2C.\n\nADC indica la capacità di leggere input analogici.\nI2C e SPI indicano se il pin supporta tali dispositivi e su quale canale.\n(*) significa che il pin può usare la funzione tramite canali selezionabili dal software.`;
             const labelStr = (group === posLeft) ? 
-                `<tr ${hoverEvents} style="background:transparent; cursor:default;" title="Pin GPIO N. ${gpioPin}.\n\nI pin con numero blu appartengono a I2C0.\nQuelli con numero arancione appartengono a I2C1.\nQuelli in viola possono selezionare automaticamente qualsiasi canale I2C.\nQuelli grigi non supportano I2C.\n\nADC indica la capacità di leggere input analogici.\nI2C e SPI indicano se il pin supporta tali dispositivi e su quale canale.\n(*) significa che il pin può usare la funzione tramite canali selezionabili dal software."><td style="border:none; text-align:right; padding:2px 5px;">${funcHtml}</td><td style="border:none; text-align:center; padding:2px 5px;">${gpioHtml}</td><td style="border:none; text-align:left; padding:2px 5px;">${capHtml}</td></tr>` : 
-                `<tr ${hoverEvents} style="background:transparent; cursor:default;" title="Pin GPIO N. ${gpioPin}.\n\nI pin con numero blu appartengono a I2C0.\nQuelli con numero arancione appartengono a I2C1.\nQuelli in viola possono selezionare automaticamente qualsiasi canale I2C.\nQuelli grigi non supportano I2C.\n\nADC indica la capacità di leggere input analogici.\nI2C e SPI indicano se il pin supporta tali dispositivi e su quale canale.\n(*) significa che il pin può usare la funzione tramite canali selezionabili dal software."><td style="border:none; text-align:right; padding:2px 5px;">${capHtml}</td><td style="border:none; text-align:center; padding:2px 5px;">${gpioHtml}</td><td style="border:none; text-align:left; padding:2px 5px;">${funcHtml}</td></tr>`;
+                `<tr ${hoverEvents} style="background:transparent; cursor:default;" title="${tooltipText}"><td style="border:none; text-align:right; padding:2px 5px;">${funcHtml}</td><td style="border:none; text-align:center; padding:2px 5px;">${gpioHtml}</td><td style="border:none; text-align:left; padding:2px 5px;">${capHtml}</td></tr>` : 
+                `<tr ${hoverEvents} style="background:transparent; cursor:default;" title="${tooltipText}"><td style="border:none; text-align:right; padding:2px 5px;">${capHtml}</td><td style="border:none; text-align:center; padding:2px 5px;">${gpioHtml}</td><td style="border:none; text-align:left; padding:2px 5px;">${funcHtml}</td></tr>`;
             
             if (group === posLeft) { leftMap[order] = labelStr; maxLeft = Math.max(maxLeft, order); }
             else if (group === posRight) { rightMap[order] = labelStr; maxRight = Math.max(maxRight, order); }
-            else if (group === posMiddle) { middleItems.push({ order, html: `<div ${hoverEvents} style="text-align:center; color:#BE00B0; font-size:11px; font-style:italic; cursor:default;" title="Pin GPIO N. ${gpioPin}.\n\nI pin con numero blu appartengono a I2C0.\nQuelli con numero arancione appartengono a I2C1.\nQuelli in viola possono selezionare automaticamente qualsiasi canale I2C.\nQuelli grigi non supportano I2C.\n\nADC indica la capacità di leggere input analogici.\nI2C e SPI indicano se il pin supporta tali dispositivi e su quale canale.\n(*) significa che il pin può usare la funzione tramite canali selezionabili dal software.">${funcHtml}</div>` }); }
+            else if (group === posMiddle) { middleItems.push({ order, html: `<div ${hoverEvents} style="display:flex; flex-direction:column; align-items:center; margin: 0 10px; cursor:default;" title="${tooltipText}"><div style="margin-bottom:2px;">${capHtml}</div><div style="margin-bottom:2px;">${gpioHtml}</div><div>${funcHtml}</div></div>` }); }
         });
 
         for(let i = 1; i <= maxLeft; i++) {
@@ -671,20 +672,24 @@ function initBoardPreviewUI() {
         middleItems.sort((a,b)=>a.order-b.order).forEach(x => htmlMiddle += x.html);
 
         container.innerHTML = `
-            <div style="display:flex; align-items:center; justify-content:center;">
+<div style="width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+<div style="width:100%; display:flex; align-items:center; justify-content:center;">
                 <div style="min-width:200px; max-width:350px; text-align:right; padding-right:10px;"><table style="width:100%; border-collapse:collapse; background:transparent;">${htmlLeft}</table></div>
-                <div style="position:relative; flex-shrink:0;">
-                    <div style="position:absolute; top:-20px; left:0; width:100%; display:flex; justify-content:space-around;">${htmlMiddle}</div>
+                <div style="flex-shrink:0; display:flex; flex-direction:column; align-items:center;">
                     <div id="board-svg-container" style="display:flex; align-items:center; justify-content:center; padding: 0 15px;">
                           ${OpenFIREshared.boardSVGsMap && OpenFIREshared.boardSVGsMap[boardName] ? OpenFIREshared.boardSVGsMap[boardName] : '<img src="boardPics/' + (OpenFIREshared.boardImagesMap[boardName] || 'generic.svg') + '" style="height: 100%; width: auto;">'}
                       </div>
+                    <div style="width:100%; display:flex; justify-content:center; gap:20px; margin-top:10px;">${htmlMiddle}</div>
                 </div>
                 <div style="min-width:200px; max-width:350px; text-align:left; padding-left:10px;"><table style="width:100%; border-collapse:collapse; background:transparent;">${htmlRight}</table></div>
             </div>
-            <div style="text-align:center; margin-top:20px; padding-top:10px; border-top:1px solid #444; font-size:14px; color:#ddd;">
-                Compatibile con <a href="#" style="color:#66b3ff; text-decoration:none;">il Firmware OpenFIRE upstream</a> del <span style="font-style:italic;">Team OpenFIRE</span>.
-            </div>
-        `;
+                          <div style="width: 100%; text-align:center; margin-top:20px; padding-top:10px; border-top:1px solid #444; font-size:14px; color:#ddd; line-height:1.4;">
+                  ${boardName.includes('esp32-s3') ? 
+                      `${i18n.t("Compatible with the <a href='https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32' target='_blank'><span style='text-decoration: underline; color:#8ab4f8;'>ESP-IDF fork of the OpenFIRE Firmware</span></a> by <i>Alessandro Satanassi.</i>")}<br>${i18n.t("Any issues should be reported <b><a href='https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/issues' target='_blank'><span style='text-decoration: underline; color:#8ab4f8;'>here!</span></a></b>")}` : 
+                      i18n.t("Compatible with <a href='https://github.com/TeamOpenFIRE/OpenFIRE-Firmware' target='_blank'><span style='text-decoration: underline; color:#8ab4f8;'>upstream OpenFIRE Firmware</span></a> by <i>Team OpenFIRE.</i>")}
+              </div>
+</div>
+`;
         
         // Fix SVG styling to match container with proper min/max bounds
         const svgEl = container.querySelector('#board-svg-container svg');
@@ -1017,6 +1022,7 @@ window.highlightBoardPin = function(gpioPin, isHover) {
     }
     const funcSpan = document.getElementById(`func-gpio-${gpioPin}`);
     if (funcSpan) {
-        funcSpan.style.fontWeight = isHover ? "bold" : "normal";
+        funcSpan.style.webkitTextStroke = isHover ? "0.6px currentColor" : "0px";
+        funcSpan.style.textShadow = isHover ? "0 0 1px rgba(255,255,255,0.3)" : "none";
     }
 };

@@ -170,7 +170,10 @@ const TRANSLATIONS = {
         "Step 3:<br>Shoot the target at the LEFT edge of the screen.": "Step 3:<br>Shoot the target at the LEFT edge of the screen.",
         "Step 4:<br>Shoot the target at the RIGHT edge of the screen.": "Step 4:<br>Shoot the target at the RIGHT edge of the screen.",
         "Step 5:<br>Shoot the target at the CENTER of the screen.": "Step 5:<br>Shoot the target at the CENTER of the screen.",
-        "Verify Calibration:<br>Shoot off-screen to save.": "Verify Calibration:<br>Shoot off-screen to save."
+        "Verify Calibration:<br>Shoot off-screen to save.": "Verify Calibration:<br>Shoot off-screen to save.",
+        "Compatible with <a href='https://github.com/TeamOpenFIRE/OpenFIRE-Firmware' target='_blank'><span style='text-decoration: underline; color:#8ab4f8;'>upstream OpenFIRE Firmware</span></a> by <i>Team OpenFIRE.</i>": "Compatible with <a href='https://github.com/TeamOpenFIRE/OpenFIRE-Firmware' target='_blank'><span style='text-decoration: underline; color:#8ab4f8;'>upstream OpenFIRE Firmware</span></a> by <i>Team OpenFIRE.</i>",
+        "Compatible with the <a href='https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32' target='_blank'><span style='text-decoration: underline; color:#8ab4f8;'>ESP-IDF fork of the OpenFIRE Firmware</span></a> by <i>Alessandro Satanassi.</i>": "Compatible with the <a href='https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32' target='_blank'><span style='text-decoration: underline; color:#8ab4f8;'>ESP-IDF fork of the OpenFIRE Firmware</span></a> by <i>Alessandro Satanassi.</i>",
+        "Any issues should be reported <b><a href='https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/issues' target='_blank'><span style='text-decoration: underline; color:#8ab4f8;'>here!</span></a></b>": "Any issues should be reported <b><a href='https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/issues' target='_blank'><span style='text-decoration: underline; color:#8ab4f8;'>here!</span></a></b>"
     },
     "it": {
         "About OpenFIRE": "Informazioni su OpenFIRE",
@@ -561,7 +564,10 @@ const TRANSLATIONS = {
         "Step 3:<br>Shoot the target at the LEFT edge of the screen.": "Step 3:<br>Spara al bersaglio sul bordo SINISTRO dello schermo.",
         "Step 4:<br>Shoot the target at the RIGHT edge of the screen.": "Step 4:<br>Spara al bersaglio sul bordo DESTRO dello schermo.",
         "Step 5:<br>Shoot the target at the CENTER of the screen.": "Step 5:<br>Spara al bersaglio al CENTRO dello schermo.",
-        "Verify Calibration:<br>Shoot off-screen to save.": "Verifica Calibrazione:<br>Spara fuori dallo schermo per salvare."
+        "Verify Calibration:<br>Shoot off-screen to save.": "Verifica Calibrazione:<br>Spara fuori dallo schermo per salvare.",
+        "Compatible with <a href='https://github.com/TeamOpenFIRE/OpenFIRE-Firmware' target='_blank'><span style='text-decoration: underline; color:#8ab4f8;'>upstream OpenFIRE Firmware</span></a> by <i>Team OpenFIRE.</i>": "Compatibile con <a href='https://github.com/TeamOpenFIRE/OpenFIRE-Firmware' target='_blank'><span style='text-decoration: underline; color:#8ab4f8;'>il Firmware OpenFIRE upstream</span></a> del <i>Team OpenFIRE.</i>",
+        "Compatible with the <a href='https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32' target='_blank'><span style='text-decoration: underline; color:#8ab4f8;'>ESP-IDF fork of the OpenFIRE Firmware</span></a> by <i>Alessandro Satanassi.</i>": "Compatibile con il <a href='https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32' target='_blank'><span style='text-decoration: underline; color:#8ab4f8;'>fork ESP-IDF del Firmware OpenFIRE</span></a> di <i>Alessandro Satanassi.</i>",
+        "Any issues should be reported <b><a href='https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/issues' target='_blank'><span style='text-decoration: underline; color:#8ab4f8;'>here!</span></a></b>": "Eventuali problemi possono essere segnalati <b><a href='https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/issues' target='_blank'><span style='text-decoration: underline; color:#8ab4f8;'>qui!</span></a></b>"
     }
 };
 
