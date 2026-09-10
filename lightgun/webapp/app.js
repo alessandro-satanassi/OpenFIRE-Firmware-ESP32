@@ -651,7 +651,17 @@ function initBoardPreviewUI() {
             // Hover logic added via inline events
             const hoverEvents = `onmouseenter="highlightBoardPin(${gpioPin}, true)" onmouseleave="highlightBoardPin(${gpioPin}, false)"`;
             
-                        const tooltipText = `Pin GPIO N. ${gpioPin}.\n\nI pin con numero blu appartengono a I2C0.\nQuelli con numero arancione appartengono a I2C1.\nQuelli in viola possono selezionare automaticamente qualsiasi canale I2C.\nQuelli grigi non supportano I2C.\n\nADC indica la capacità di leggere input analogici.\nI2C e SPI indicano se il pin supporta tali dispositivi e su quale canale.\n(*) significa che il pin può usare la funzione tramite canali selezionabili dal software.`;
+                        const tooltipPart1Template = `GPIO Pin No. %1.
+
+Blue pin numbers are members of I2C0.
+Orange are members of I2C1.
+Purple pin numbers can automatically select any I2C channel in software.
+Gray cannot use I2C devices.`;
+                        const tooltipPart2 = `ADC indicates whether this pin can read Analog Inputs.
+I2C indicates if this pin can interact with I2C devices, and what channel and type it uses.
+SPI indicates if this pin can interact with SPI devices, and what channel and type it uses.
+(*) means pin can use any type via automated software selectable channels/type.`;
+                        const tooltipText = i18n.t(tooltipPart1Template).replace("%1", gpioPin) + "\n\n" + i18n.t(tooltipPart2);
             const labelStr = (group === posLeft) ? 
                 `<tr ${hoverEvents} style="background:transparent; cursor:default;" title="${tooltipText}"><td style="border:none; text-align:right; padding:2px 5px;">${funcHtml}</td><td style="border:none; text-align:center; padding:2px 5px;">${gpioHtml}</td><td style="border:none; text-align:left; padding:2px 5px;">${capHtml}</td></tr>` : 
                 `<tr ${hoverEvents} style="background:transparent; cursor:default;" title="${tooltipText}"><td style="border:none; text-align:right; padding:2px 5px;">${capHtml}</td><td style="border:none; text-align:center; padding:2px 5px;">${gpioHtml}</td><td style="border:none; text-align:left; padding:2px 5px;">${funcHtml}</td></tr>`;
@@ -707,6 +717,16 @@ function initBoardPreviewUI() {
     };
 
     sel.onchange = () => drawPreview(sel.value);
+
+    const langSel = document.getElementById('lang-selector');
+    if (langSel) {
+        langSel.addEventListener('change', () => {
+            if (document.getElementById("modal-preview").style.display !== "none" || document.getElementById("menu-btn-preview").style.display !== "none") {
+                if (sel.value) drawPreview(sel.value);
+            }
+        });
+    }
+
     
     // Select default or current
     if (window.gunConfig && window.gunConfig.boardName && OpenFIREshared.boardsBoxPositions[window.gunConfig.boardName]) {

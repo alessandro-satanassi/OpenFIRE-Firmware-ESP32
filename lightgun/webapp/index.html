@@ -37,9 +37,9 @@
             <div class="board-actions" style="display: none;" id="main-board-actions">
                 <label class="custom-pins-label">
                     <input type="checkbox" id="chk-custom-pins">
-                    <span data-i18n>Usa pin personalizzati</span>
+                    <span data-i18n>Use Custom Pins</span>
                 </label>
-                <button id="btn-user-layout" data-i18n>Layout Utente</button>
+                <button id="btn-user-layout" data-i18n>User Layouts</button>
             </div>
         </section>
 
@@ -49,9 +49,9 @@
                     <thead>
                         <tr>
                             <th></th>
-                            <th colspan="2" data-i18n>Azione dentro schermo</th>
-                            <th colspan="2" data-i18n>Azione fuori schermo</th>
-                            <th colspan="2" data-i18n>Modalità Gamepad</th>
+                            <th colspan="2" data-i18n>On-Screen Function</th>
+                            <th colspan="2" data-i18n>Off-Screen Function</th>
+                            <th colspan="2" data-i18n>Gamepad Mode</th>
                         </tr>
                     </thead>
                     <tbody id="buttons-tbody">
@@ -68,8 +68,8 @@
                     </tbody>
                 </table>
                 <div class="center-item margin-top">
-                    <div class="sub-header" data-i18n>Stick Analogico</div>
-                    <label class="margin-left"><span data-i18n>Usa Stick Analogico come:</span> <select id="sel-AnalogStickMode"><option>Stick Analogico Gamepad (Sinistro/Destro)</option></select></label>
+                    <div class="sub-header" data-i18n>Analog Stick</div>
+                    <label class="margin-left"><span data-i18n>Use Analog Stick As:</span> <select id="sel-AnalogStickMode"><option>Stick Analogico Gamepad (Sinistro/Destro)</option></select></label>
                 </div>
             </div>
         </section>
@@ -80,22 +80,22 @@
                 <div class="settings-group">
                     <div class="settings-header" data-i18n>Force Feedback</div>
                     <div class="settings-body center-item">
-                        <label class="custom-checkbox"><input type="checkbox" id="tgl-Autofire"> <span data-i18n>Autofire abilitato</span></label>
+                        <label class="custom-checkbox"><input type="checkbox" id="tgl-Autofire"> <span data-i18n>Autofire Enabled</span></label>
                     </div>
                 </div>
 
                 <div class="settings-group">
-                    <div class="settings-header" data-i18n>Solenoide</div>
+                    <div class="settings-header" data-i18n>Solenoid</div>
                     <div class="settings-body">
                         <div class="center-item margin-bottom">
-                            <label class="custom-checkbox"><input type="checkbox" id="tgl-Solenoid"> <span data-i18n>Solenoide abilitato</span></label>
+                            <label class="custom-checkbox"><input type="checkbox" id="tgl-Solenoid"> <span data-i18n>Solenoid Enabled</span></label>
                         </div>
                         <div class="settings-grid-2">
-                            <label><span data-i18n>Durata Impulso Solenoide:</span> <input type="number" id="set-SolenoidTime" min="0" max="255"> ms</label>
-                            <label><span data-i18n>Intervallo Autofire Solenoide:</span> <input type="number" id="set-SolenoidAutofireTime" min="0" max="255"> ms</label>
+                            <label><span data-i18n>Solenoid Pulse Length:</span> <input type="number" id="set-SolenoidTime" min="0" max="255"> ms</label>
+                            <label><span data-i18n>Solenoid Autofire Interval:</span> <input type="number" id="set-SolenoidAutofireTime" min="0" max="255"> ms</label>
                         </div>
                         <div class="center-item margin-top">
-                            <label><span data-i18n>Durata pressione grilletto per autofire del solenoide:</span> <input type="number" id="set-AutofireTriggerTime" min="0" max="65535"> ms</label>
+                            <label><span data-i18n>Trigger Hold Length for Solenoid Autofire:</span> <input type="number" id="set-AutofireTriggerTime" min="0" max="65535"> ms</label>
                         </div>
                     </div>
                 </div>
@@ -104,31 +104,31 @@
                     <div class="settings-header" data-i18n>Rumble</div>
                     <div class="settings-body">
                         <div class="center-item margin-bottom">
-                            <label class="custom-checkbox"><input type="checkbox" id="tgl-Rumble"> <span data-i18n>Rumble abilitato</span></label>
+                            <label class="custom-checkbox"><input type="checkbox" id="tgl-Rumble"> <span data-i18n>Rumble Enabled</span></label>
                         </div>
                         <div class="center-item margin-bottom">
-                            <label class="custom-checkbox"><input type="checkbox" id="tgl-RumbFFB"> <span data-i18n>Usa Rumble come Force Feedback principale</span></label>
+                            <label class="custom-checkbox"><input type="checkbox" id="tgl-RumbFFB"> <span data-i18n>Use Rumble as Main Force Feedback</span></label>
                         </div>
                         <div class="settings-grid-2">
-                            <label><span data-i18n>Intensità Rumble:</span> <input type="number" id="set-RumblePWM" min="0" max="255"> / 255</label>
-                            <label><span data-i18n>Durata Impulso Rumble:</span> <input type="number" id="set-RumbleTime" min="0" max="65535"> ms</label>
+                            <label><span data-i18n>Rumble Intensity:</span> <input type="number" id="set-RumblePWM" min="0" max="255"> / 255</label>
+                            <label><span data-i18n>Rumble Pulse Length:</span> <input type="number" id="set-RumbleTime" min="0" max="65535"> ms</label>
                         </div>
                     </div>
                 </div>
 
                 <div class="settings-group">
-                    <div class="settings-header" data-i18n>Illuminazione</div>
+                    <div class="settings-header" data-i18n>Lighting</div>
                     <div class="settings-body">
                         <div class="center-item margin-bottom">
-                            <label class="custom-checkbox"><input type="checkbox" id="tgl-LEDAnode"> <span data-i18n>RGB 4-pin ad anodo comune</span></label>
+                            <label class="custom-checkbox"><input type="checkbox" id="tgl-LEDAnode"> <span data-i18n>4-Pin RGB LED Common Anode Toggle</span></label>
                         </div>
                         <div class="sub-group">
                             <div class="sub-header" data-i18n>NeoPixels</div>
                             <div class="center-item margin-bottom">
-                                <label><span data-i18n>Lunghezza striscia NeoPixel:</span> <input type="number" id="set-LEDPixelCount" min="0" max="255"> Pixel(s)</label>
+                                <label><span data-i18n>NeoPixel Strip Length:</span> <input type="number" id="set-LEDPixelCount" min="0" max="255"> Pixel(s)</label>
                             </div>
                             <div class="settings-grid-3">
-                                <label><span data-i18n>NeoPixel statici:</span> <input type="number" id="set-StaticPixelCount" min="0" max="255"> Pixel(s)</label>
+                                <label><span data-i18n>Static NeoPixels:</span> <input type="number" id="set-StaticPixelCount" min="0" max="255"> Pixel(s)</label>
                                 <!-- Colori statici and Inverti Colori will be added later if needed -->
                             </div>
                         </div>
@@ -138,34 +138,34 @@
                 <div class="settings-group">
                     <div class="settings-header" data-i18n>Input</div>
                     <div class="settings-body center-item">
-                        <label class="custom-checkbox"><input type="checkbox" id="tgl-LowButtons"> <span data-i18n>Modalità pulsanti 'fuori schermo'</span></label>
+                        <label class="custom-checkbox"><input type="checkbox" id="tgl-LowButtons"> <span data-i18n>Low Buttons Mode</span></label>
                     </div>
                 </div>
 
                 <div class="settings-group">
-                    <div class="settings-header" data-i18n>UI e UX</div>
+                    <div class="settings-header" data-i18n>UI & UX</div>
                     <div class="settings-body center-item flex-col">
-                        <label class="custom-checkbox margin-bottom"><input type="checkbox" id="tgl-SimplePause"> <span data-i18n>Menu pausa semplice</span></label>
+                        <label class="custom-checkbox margin-bottom"><input type="checkbox" id="tgl-SimplePause"> <span data-i18n>Simple Pause Menu Toggle</span></label>
                         <div class="settings-grid-2" style="width: 100%; justify-content: center;">
-                            <label class="custom-checkbox"><input type="checkbox" id="tgl-HoldToPause"> <span data-i18n>Abilita pausa con pressione prolungata</span></label>
-                            <label><span data-i18n>Tempo pressione per pausa:</span> <input type="number" id="set-HoldTime" min="0" max="65535"> ms</label>
+                            <label class="custom-checkbox"><input type="checkbox" id="tgl-HoldToPause"> <span data-i18n>Hold to Pause Enabled</span></label>
+                            <label><span data-i18n>Hold to Pause Time:</span> <input type="number" id="set-HoldTime" min="0" max="65535"> ms</label>
                         </div>
                     </div>
                 </div>
 
                 <div class="settings-group">
-                    <div class="settings-header" data-i18n>Periferiche I2C</div>
+                    <div class="settings-header" data-i18n>I2C Peripherals</div>
                     <div class="settings-body center-item flex-col gap-10">
-                        <label class="custom-checkbox"><input type="checkbox" id="tgl-i2cOLED"> <span data-i18n>Abilita Display OLED (SSD1306 128x64)</span></label>
-                        <label class="custom-checkbox"><input type="checkbox" id="tgl-i2cOLEDaltAddr"> <span data-i18n>Usa Indirizzo Dispositivo Alternativo</span></label>
+                        <label class="custom-checkbox"><input type="checkbox" id="tgl-i2cOLED"> <span data-i18n>Enable OLED Display (SSD1306 128x64)</span></label>
+                        <label class="custom-checkbox"><input type="checkbox" id="tgl-i2cOLEDaltAddr"> <span data-i18n>Use Alternative Device Address</span></label>
                     </div>
                 </div>
 
             </div>
             
             <div id="help-box" class="help-box">
-                <h3 id="help-title" data-i18n>Benvenuto</h3>
-                <p id="help-desc" data-i18n>Passa il mouse sopra le impostazioni per visualizzarne i dettagli.</p>
+                <h3 id="help-title" data-i18n>Welcome</h3>
+                <p id="help-desc" data-i18n>Hover over settings to view details.</p>
             </div>
         </section>
 
@@ -194,10 +194,10 @@
                     </tbody>
                 </table>
                 <div class="profiles-actions">
-                    <button id="btn-cal-1" data-i18n>Calibra profilo 1</button>
-                    <button id="btn-cal-2" data-i18n>Calibra profilo 2</button>
-                    <button id="btn-cal-3" data-i18n>Calibra profilo 3</button>
-                    <button id="btn-cal-4" data-i18n>Calibra profilo 4</button>
+                    <button id="btn-cal-1" data-i18n>Calibrate Profile 1</button>
+                    <button id="btn-cal-2" data-i18n>Calibrate Profile 2</button>
+                    <button id="btn-cal-3" data-i18n>Calibrate Profile 3</button>
+                    <button id="btn-cal-4" data-i18n>Calibrate Profile 4</button>
                 </div>
             </div>
         </section>
@@ -210,16 +210,16 @@
 
     <footer class="app-footer">
         <nav class="main-tabs">
-            <button class="tab-btn active" data-tab="tab-pins"><span class="icon">🔧</span> <span data-i18n>Layout Scheda</span></button>
-            <button class="tab-btn" data-tab="tab-buttons"><span class="icon">⌨️</span> <span data-i18n>Mappatura Pulsanti</span></button>
-            <button class="tab-btn" data-tab="tab-gun"><span class="icon">🔘</span> <span data-i18n>Impostazioni Gun</span></button>
-            <button class="tab-btn" data-tab="tab-profiles"><span class="icon">🔲</span> <span data-i18n>Profili di calibrazione</span></button>
+            <button class="tab-btn active" data-tab="tab-pins"><span class="icon">🔧</span> <span data-i18n>Board Layout</span></button>
+            <button class="tab-btn" data-tab="tab-buttons"><span class="icon">⌨️</span> <span data-i18n>Button Mapping</span></button>
+            <button class="tab-btn" data-tab="tab-gun"><span class="icon">🔘</span> <span data-i18n>Gun Settings</span></button>
+            <button class="tab-btn" data-tab="tab-profiles"><span class="icon">🔲</span> <span data-i18n>Calibration Profiles</span></button>
             <button class="tab-btn" data-tab="tab-tests"><span class="icon">➖</span> <span data-i18n>Gun Tests</span></button>
         </nav>
         
         <div class="status-bar">
             <span id="status" data-i18n>Connecting...</span>
-            <button id="btn-save" class="save-btn" style="display: none;" data-i18n>Salva Modifiche</button>
+            <button id="btn-save" class="save-btn" style="display: none;" data-i18n>Save and Send Settings</button>
         </div>
     </footer>
 
@@ -229,22 +229,22 @@
     <!-- Overlay Camera Tester -->
     <div id="overlay-camera" class="fullscreen-overlay" style="display: none;">
         <canvas id="canvas-camera"></canvas>
-        <div class="overlay-text top-text" data-i18n>L'insieme di forme visualizzato...</div>
-        <div class="overlay-text bottom-text" data-i18n>Premi ESC per uscire.</div>
+        <div class="overlay-text top-text" data-i18n>The set of shapes displayed here should match the IR Layout you are using.</div>
+        <div class="overlay-text bottom-text" data-i18n>Press ESC to exit.</div>
     </div>
 
         <!-- Overlay Alignment -->
     <div id="overlay-align" class="fullscreen-overlay" style="display: none; background: #2F4F4F;">
         <canvas id="canvas-align"></canvas>
-        <div class="overlay-text top-text" data-i18n>A seconda del layout desiderato...</div>
-        <div class="overlay-text bottom-text" data-i18n>Premi ESC per uscire.</div>
+        <div class="overlay-text top-text" data-i18n>Depending on your desired layout, your IR emitters should be aligned to either one of the two sets of colored boxes:</div>
+        <div class="overlay-text bottom-text" data-i18n>Press ESC to exit.</div>
     </div>
 
     <!-- Overlay Calibration -->
     <div id="overlay-cali" class="fullscreen-overlay" style="display: none;">
         <canvas id="canvas-cali"></canvas>
-        <div class="overlay-text top-text" data-i18n>Inizia calibrazione:<br>Spara al bersaglio per calibrare.</div>
-        <div class="overlay-text bottom-text" data-i18n>Puoi uscire senza apportare modifiche...</div>
+        <div class="overlay-text top-text" data-i18n>Start calibration:<br>Shoot the target in the center to begin.</div>
+        <div class="overlay-text bottom-text" data-i18n>Verify Calibration:<br>Shoot off-screen to save.</div>
     </div>
 
     
@@ -267,7 +267,7 @@
     <div id="modal-preview" class="modal-overlay" style="display: none;">
         <div class="modal-content" style="width: 80%; max-width: 900px; height: 80vh; display: flex; flex-direction: column;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                <h3 style="margin:0;" data-i18n>Anteprima Schede</h3>
+                <h3 style="margin:0;" data-i18n>Board Previews</h3>
                 <select id="preview-board-select"></select>
             </div>
             
