@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <string_view>
 #include "OpenFIREDefines.h"
+#include "OpenFIREweb.h"
 
 class OF_Serial
 {
@@ -30,7 +31,28 @@ public:
     /// @details  Only method that allows for reading/writing to system settings.
     static void SerialProcessingDocked();
 
+    /// @brief    Web configuration mode: looks for the raw dock handshake on the
+    ///           WebSocket link while the gun is not docked (Run/Pause).
+    /// @details  An App can dock on the serial port (SerialProcessing) or on the
+    ///           WebSocket, one at a time: while one of them is docked the dock
+    ///           attempts of the other link are discarded.
+    static void SerialProcessingWebDock();
+
+    /// @brief    True when SerialProcessingWebDock() has something to do.
+    static bool AppSerialWebDockPending();
+
     static bool AppSerialSessionIsActive() { return appSerialSessionActive; }
+
+    /// @brief    Changes every time a new App session begins (used to resend board info).
+    static uint32_t AppSerialSessionId() { return appSerialSessionCounter; }
+
+    /// @brief    True when SerialProcessingDocked() has something to do: bytes on the
+    ///           session link, dock attempts on either link, a closed WebSocket page.
+    static bool AppSerialInputPending();
+
+    /// @brief    Ends a session whose App never answered (no valid frame received),
+    ///           so it cannot keep the other link blocked.
+    static void AppSerialEndUnansweredSession();
 
     /// @brief    Sends an acknowledged response to the Desktop App.
     static bool AppSerialSendResponse(uint8_t command,
@@ -147,6 +169,17 @@ private:
     static void AppSerialSendCommitError(const AppSerialFrame_s &frame);
     static void AppSerialSessionBegin();
     static void AppSerialSessionEnd();
+    // Shared by the USB (SerialProcessing) and WebSocket dock handshakes:
+    // selects the link of the new App session and enters Docked mode.
+    static void AppSerialEnterDockedMode(WebAppLink link);
+    // Raw dock handshake on one link while no session is active; the bytes of a
+    // link that does not own the active session are discarded. True if docked.
+    static bool AppSerialPollDock(WebAppLink link);
+    // Takes the "WebSocket page closed" notice; true only for a WebSocket session.
+    static bool AppSerialTakeLinkLost();
+    // The App disappeared (WebSocket closed/replaced, or a new App docked on the
+    // same link): end its session without replying, keeping unsaved data protected.
+    static void AppSerialAbandonSession();
     static uint8_t AppSerialNextSequence();
 
     static bool AppSerialSendRecords(
@@ -166,8 +199,20 @@ private:
 
     // Session and outgoing-response state.
     static inline uint8_t appSerialTxSequence = 0;
-    static inline uint8_t appSerialRawDockState = 0;
+    static inline uint8_t appSerialRawDockState[2] = { 0, 0 };        // per WebAppLink
+    static inline unsigned long appSerialRawDockTimestamp[2] = { 0, 0 };
     static inline bool appSerialSessionActive = false;
+    static inline uint32_t appSerialSessionCounter = 0;
+
+    // Re-dock detection inside an active session: a raw "sDock1 sDock2" pair is
+    // accepted only when it starts on a clean frame boundary (nothing discarded
+    // since the last valid frame), so frame payload bytes can never trigger it,
+    // and only after the App has sent at least one valid frame in this session,
+    // so the App's own dock retries (sent before it received the board info)
+    // are ignored exactly as before.
+    static inline bool appSerialRxClean = true;
+    static inline bool appSerialRedockRequested = false;
+    static inline bool appSerialSessionConfirmed = false;
 
     // A request received while a reliable response is waiting for its ACK
     // is retained and processed after the current transaction has completed.

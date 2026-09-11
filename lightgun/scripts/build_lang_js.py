@@ -1,88 +1,60 @@
-import os
+"""Translations of the web app: webapp/lang/<code>.json is the main source.
+
+Each file maps the English text of the app to its translation. Entries identical to
+the English text or empty are dropped from the build, the web app shows the English text.
+
+    load_translations(webapp_dir)   -> {code: {source: translation}}
+    render_translations_js(data)    -> "OF.TRANSLATIONS = {...};"
+    build_lang_js(webapp_dir)       -> writes webapp/lang/translations.js (used when the
+                                       unbundled webapp folder is served during development)
+"""
 import json
-import glob
+import os
+import re
+import sys
+
+LANG_CODE = re.compile(r'^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})?$')
+
+
+def load_translations(webapp_dir):
+    lang_dir = os.path.join(webapp_dir, "lang")
+    translations = {}
+    if not os.path.isdir(lang_dir):
+        return translations
+    for name in sorted(os.listdir(lang_dir)):
+        code, extension = os.path.splitext(name)
+        if extension.lower() != ".json" or not LANG_CODE.match(code):
+            continue
+        try:
+            with open(os.path.join(lang_dir, name), "r", encoding="utf-8-sig") as f:
+                entries = json.load(f)
+        except ValueError as error:
+            raise ValueError(f"webapp/lang/{name}: {error}") from None
+        translations[code] = {source: text for source, text in entries.items()
+                              if isinstance(text, str) and text.strip() and text != source}
+    translations.setdefault("en", {})
+    return translations
+
+
+def render_translations_js(translations):
+    body = json.dumps(translations, ensure_ascii=False, separators=(',', ':'), sort_keys=True)
+    return ("// AUTO-GENERATED from webapp/lang/*.json - do not edit.\n"
+            "(globalThis.OF = globalThis.OF || {}).TRANSLATIONS = " + body + ";\n")
+
 
 def build_lang_js(webapp_dir):
-    lang_dir = os.path.join(webapp_dir, "lang")
-    lang_js_path = os.path.join(webapp_dir, "lang.js")
-    
-    if not os.path.exists(lang_dir):
-        return
+    path = os.path.join(webapp_dir, "lang", "translations.js")
+    text = render_translations_js(load_translations(webapp_dir))
+    old = None
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8", newline="") as f:
+            old = f.read()
+    if old != text:
+        with open(path, "w", encoding="utf-8", newline="") as f:
+            f.write(text)
+    return path
 
-    translations = {}
-    
-    # Read all .json files in the lang directory
-    for file_path in glob.glob(os.path.join(lang_dir, "*.json")):
-        lang_code = os.path.splitext(os.path.basename(file_path))[0]
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                translations[lang_code] = json.load(f)
-        except Exception as e:
-            print(f"Error loading {file_path}: {e}")
-
-    # Generate the JS file content
-    js_content = f"// AUTO-GENERATED from lang/*.json\n"
-    js_content += f"const TRANSLATIONS = {json.dumps(translations, ensure_ascii=False, indent=4)};\n\n"
-    
-    js_content += """
-class I18n {
-    constructor() {
-        const savedLang = localStorage.getItem('of_lang');
-        const browserLang = (navigator.language || navigator.userLanguage).substring(0, 2).toLowerCase();
-        
-        let targetLang = savedLang || browserLang;
-        this.currentLang = TRANSLATIONS[targetLang] ? targetLang : "en";
-    }
-
-    t(text) {
-        if (this.currentLang === "en" || !TRANSLATIONS[this.currentLang]) {
-            return text; 
-        }
-        return TRANSLATIONS[this.currentLang][text] || text;
-    }
-
-    translateDOM() {
-        const elements = document.querySelectorAll('[data-i18n]');
-        elements.forEach(el => {
-            if (!el.dataset.originalText) {
-                el.dataset.originalText = el.innerText.trim();
-            }
-            const originalText = el.dataset.originalText;
-            el.innerText = this.t(originalText);
-        });
-    }
-
-    setLanguage(langCode) {
-        if (langCode === "en" || TRANSLATIONS[langCode]) {
-            this.currentLang = langCode;
-            localStorage.setItem('of_lang', langCode);
-            this.translateDOM();
-            
-            const selector = document.getElementById('lang-selector');
-            if (selector) selector.value = langCode;
-        }
-    }
-}
-
-const i18n = new I18n();
-
-document.addEventListener("DOMContentLoaded", () => {
-    i18n.translateDOM();
-    
-    const selector = document.getElementById('lang-selector');
-    if (selector) {
-        selector.value = i18n.currentLang;
-        selector.addEventListener('change', (e) => {
-            i18n.setLanguage(e.target.value);
-        });
-    }
-});
-"""
-
-    with open(lang_js_path, "w", encoding="utf-8") as f:
-        f.write(js_content)
-        
-    print(f"[WebApp Packer] Generated {lang_js_path} with {len(translations)} languages.")
 
 if __name__ == "__main__":
-    build_lang_js("F:/OpenFIREFirmware/lightgun/webapp")
+    webapp = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "..", "webapp"))
+    print("Written", build_lang_js(webapp))

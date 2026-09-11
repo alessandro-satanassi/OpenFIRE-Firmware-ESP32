@@ -381,23 +381,10 @@ void OF_Serial::SerialProcessing()
           break;
         // Enter Docked Mode
         case OF_Const::sDock1:
-          if(Serial_available(1) && Serial.read() == OF_Const::sDock2) {
-            AppSerialSessionBegin();
-            #if /*defined(ARDUINO_ARCH_RP2040) &&*/ defined(DUAL_CORE) // This may be being run from Core 1, so signal if running in main Run Mode.
-            if(FW_Common::gunMode == FW_Const::GunMode_Run) {
-                #ifdef ARDUINO_ARCH_ESP32 
-                esp32_fifo.push(FW_Const::GunMode_Docked);
-                esp32_fifo.pop();
-                #else //rp2040
-                rp2040.fifo.push(FW_Const::GunMode_Docked);
-                rp2040.fifo.pop();
-                #endif
-            }
-            else FW_Common::SetMode(FW_Const::GunMode_Docked);
-            #else
-            FW_Common::SetMode(FW_Const::GunMode_Docked);
-            #endif // DUAL_CORE
-          }
+          // Dock on the serial link, unless an App (e.g. a page over WiFi in web
+          // configuration mode) is already docked.
+          if(Serial_available(1) && Serial.read() == OF_Const::sDock2 && !appSerialSessionActive)
+            AppSerialEnterDockedMode(WebAppLink::SerialPort);
           break;
         // Force Feedback
         case 'F':
@@ -1018,7 +1005,7 @@ void OF_Serial::AppSerialSessionBegin()
     appSerialRxLength = 0;
     appSerialRxTimestamp = 0;
     appSerialTxSequence = 0;
-    appSerialRawDockState = 0;
+    appSerialRawDockState[0] = appSerialRawDockState[1] = 0;
     appSerialLastRxValid = false;
     appSerialCommitActive = false;
     appSerialCommitFailed = false;
@@ -1030,6 +1017,11 @@ void OF_Serial::AppSerialSessionBegin()
     appSerialDispatching = false;
     appSerialProcessingDeferred = false;
     appSerialDeferredValid = false;
+
+    appSerialRxClean = true;
+    appSerialRedockRequested = false;
+    appSerialSessionConfirmed = false;
+    ++appSerialSessionCounter;
 }
 
 void OF_Serial::AppSerialSessionEnd()
@@ -1037,7 +1029,7 @@ void OF_Serial::AppSerialSessionEnd()
     appSerialSessionActive = false;
     appSerialRxLength = 0;
     appSerialRxTimestamp = 0;
-    appSerialRawDockState = 0;
+    appSerialRawDockState[0] = appSerialRawDockState[1] = 0;
     appSerialLastRxValid = false;
     appSerialCommitActive = false;
     appSerialCommitFailed = false;
@@ -1046,6 +1038,133 @@ void OF_Serial::AppSerialSessionEnd()
 
     appSerialWaitingForAck = false;
     appSerialDeferredValid = false;
+
+    appSerialRxClean = true;
+    appSerialRedockRequested = false;
+}
+
+void OF_Serial::AppSerialEnterDockedMode(WebAppLink link)
+{
+    WebAppSerial::Use(link);
+    AppSerialSessionBegin();
+
+    #if /*defined(ARDUINO_ARCH_RP2040) &&*/ defined(DUAL_CORE) // This may be being run from Core 1, so signal if running in main Run Mode.
+    if(FW_Common::gunMode == FW_Const::GunMode_Run) {
+        #ifdef ARDUINO_ARCH_ESP32
+        esp32_fifo.push(FW_Const::GunMode_Docked);
+        esp32_fifo.pop();
+        #else //rp2040
+        rp2040.fifo.push(FW_Const::GunMode_Docked);
+        rp2040.fifo.pop();
+        #endif
+    }
+    else FW_Common::SetMode(FW_Const::GunMode_Docked);
+    #else
+    FW_Common::SetMode(FW_Const::GunMode_Docked);
+    #endif // DUAL_CORE
+}
+
+void OF_Serial::AppSerialAbandonSession()
+{
+    appSerialRedockRequested = false;
+
+    if(!appSerialSessionActive)
+        return;
+
+    if(FW_Common::gunMode == FW_Const::GunMode_Calibration ||
+       FW_Common::gunMode == FW_Const::GunMode_Verification) {
+        // Same as a full disconnect received during calibration: ExecCalMode()
+        // consumes the cancel request and restores the backed-up profile, then
+        // the sCaliProfile dispatch ends the session and restores Run mode.
+        appSerialCalibrationCancel = true;
+        appSerialSessionActive = false;
+        return;
+    }
+
+    appSerialCommitActive = false;
+    appSerialCommitFailed = false;
+    AppSerialSessionEnd();
+
+    // With a partly transferred configuration stay Docked (as after FE FE FE):
+    // the next App session is told to save again.
+    if(!appSerialPinsBeforeCommitValid)
+        AppSerialRestoreRunState();
+}
+
+void OF_Serial::AppSerialEndUnansweredSession()
+{
+    if(appSerialSessionActive && !appSerialSessionConfirmed)
+        AppSerialAbandonSession();
+}
+
+bool OF_Serial::AppSerialTakeLinkLost()
+{
+    // Always consumed: a page closing while the App uses the serial link is irrelevant.
+    const bool lost = WebApp_TakeClientLost();
+    return lost && appSerialSessionActive && WebAppSerial::IsWebSocket();
+}
+
+bool OF_Serial::AppSerialWebDockPending()
+{
+    return WebAppSerial::Ops(WebAppLink::WebSocket).available() > 0 || WebApp_ClientLostPending();
+}
+
+bool OF_Serial::AppSerialInputPending()
+{
+    if(WebAppSerial::available() > 0)
+        return true;
+    if(WebAppSerial::Ops(WebAppLink::SerialPort).available() > 0)
+        return true;
+    return OF_WebConfigModeActive && AppSerialWebDockPending();
+}
+
+bool OF_Serial::AppSerialPollDock(WebAppLink link)
+{
+    if(link == WebAppLink::WebSocket && !OF_WebConfigModeActive)
+        return false;
+
+    const OF_WebSerialWrapper::SerialOps &stream = WebAppSerial::Ops(link);
+    const uint8_t index = link == WebAppLink::WebSocket ? 1 : 0;
+
+    if(appSerialSessionActive) {
+        // One App at a time: discard what arrives on the other link (its dock
+        // retries must not start a stale session when this one ends).
+        if(link != WebAppSerial::link) {
+            while(stream.available() > 0 && stream.read() >= 0) {}
+            appSerialRawDockState[index] = 0;
+        }
+        return false;
+    }
+
+    if(appSerialRawDockState[index] != 0 &&
+       millis() - appSerialRawDockTimestamp[index] > APP_SERIAL_FRAME_TIMEOUT)
+        appSerialRawDockState[index] = 0;
+
+    while(stream.available() > 0) {
+        const int incoming = stream.read();
+        if(incoming < 0)
+            return false;
+
+        if(appSerialRawDockState[index] != 0 && incoming == OF_Const::sDock2) {
+            appSerialRawDockState[index] = 0;
+            AppSerialEnterDockedMode(link);
+            return true;
+        }
+
+        appSerialRawDockState[index] = incoming == OF_Const::sDock1 ? 1 : 0;
+        if(appSerialRawDockState[index] != 0)
+            appSerialRawDockTimestamp[index] = millis();
+    }
+    return false;
+}
+
+void OF_Serial::SerialProcessingWebDock()
+{
+    // A page that disconnected while no App was docked has no session to end.
+    if(!appSerialSessionActive)
+        WebApp_TakeClientLost();
+
+    AppSerialPollDock(WebAppLink::WebSocket);
 }
 
 bool OF_Serial::AppSerialWriteFrame(uint8_t typeFlags, uint8_t command, uint8_t sequence, const void *payload, uint8_t length)
@@ -1084,8 +1203,10 @@ void OF_Serial::AppSerialSendAck(uint8_t command, uint8_t sequence)
 
 bool OF_Serial::AppSerialReadFrame(AppSerialFrame_s &frame)
 {
-    if(appSerialRxLength > 0 && millis() - appSerialRxTimestamp > APP_SERIAL_FRAME_TIMEOUT)
+    if(appSerialRxLength > 0 && millis() - appSerialRxTimestamp > APP_SERIAL_FRAME_TIMEOUT) {
         appSerialRxLength = 0;
+        appSerialRxClean = true;
+    }
 
     for(;;) {
         while(appSerialRxLength >= 2) {
@@ -1095,16 +1216,31 @@ bool OF_Serial::AppSerialReadFrame(AppSerialFrame_s &frame)
                 ++start;
 
             if(start + 1 >= appSerialRxLength) {
+                // A new App docking on this link while the previous session is
+                // still active (page reload, App restarted): the raw handshake
+                // must start exactly on a clean frame boundary, and the current
+                // App must already have answered (else it is its own dock retry).
+                if(appSerialSessionActive && appSerialSessionConfirmed &&
+                   appSerialRxClean && appSerialRxLength == 2 &&
+                   appSerialRxBuffer[0] == OF_Const::sDock1 &&
+                   appSerialRxBuffer[1] == OF_Const::sDock2) {
+                    appSerialRxLength = 0;
+                    appSerialRedockRequested = true;
+                    return false;
+                }
+
                 if(appSerialRxBuffer[appSerialRxLength - 1] == APP_SERIAL_START_1) {
                     appSerialRxBuffer[0] = APP_SERIAL_START_1;
                     appSerialRxLength = 1;
                 } else appSerialRxLength = 0;
+                appSerialRxClean = false;
                 break;
             }
 
             if(start > 0) {
                 memmove(appSerialRxBuffer, &appSerialRxBuffer[start], appSerialRxLength - start);
                 appSerialRxLength -= start;
+                appSerialRxClean = false;
             }
 
             if(appSerialRxLength < 6)
@@ -1122,6 +1258,7 @@ bool OF_Serial::AppSerialReadFrame(AppSerialFrame_s &frame)
 
             if(invalidFlags || invalidFinal || invalidSequence || invalidAck || length > APP_SERIAL_MAX_PAYLOAD) {
                 memmove(appSerialRxBuffer, &appSerialRxBuffer[1], --appSerialRxLength);
+                appSerialRxClean = false;
                 continue;
             }
 
@@ -1133,6 +1270,7 @@ bool OF_Serial::AppSerialReadFrame(AppSerialFrame_s &frame)
             const uint8_t calculatedCRC = AppSerialCRC8(&appSerialRxBuffer[2], (uint16_t)(4 + length));
             if(receivedCRC != calculatedCRC) {
                 memmove(appSerialRxBuffer, &appSerialRxBuffer[1], --appSerialRxLength);
+                appSerialRxClean = false;
                 continue;
             }
 
@@ -1148,6 +1286,9 @@ bool OF_Serial::AppSerialReadFrame(AppSerialFrame_s &frame)
             if(appSerialRxLength > 0)
                 memmove(appSerialRxBuffer, &appSerialRxBuffer[frameLength], appSerialRxLength);
 
+            appSerialRxClean = true;
+            if(appSerialSessionActive)
+                appSerialSessionConfirmed = true;
             return true;
         }
 
@@ -1161,6 +1302,7 @@ bool OF_Serial::AppSerialReadFrame(AppSerialFrame_s &frame)
         if(appSerialRxLength >= APP_SERIAL_MAX_FRAME) {
             memmove(appSerialRxBuffer, &appSerialRxBuffer[1], APP_SERIAL_MAX_FRAME - 1);
             appSerialRxLength = APP_SERIAL_MAX_FRAME - 1;
+            appSerialRxClean = false;
         }
 
         appSerialRxBuffer[appSerialRxLength++] = (uint8_t)incoming;
@@ -1299,6 +1441,12 @@ bool OF_Serial::AppSerialSendReliable(uint8_t typeFlags,
                 }
             }
 
+            // The App that owned this session is gone: stop waiting for its ACK.
+            if(!success && (appSerialRedockRequested || AppSerialTakeLinkLost())) {
+                AppSerialAbandonSession();
+                break;
+            }
+
             if(!success)
                 yield();
         }
@@ -1362,6 +1510,13 @@ bool OF_Serial::AppSerialTakeCalibrationCancel()
 // Serial Buffer in Docked Mode should always be read by the main core on multicore systems.
 void OF_Serial::SerialProcessingDocked()
 {
+    const bool calibrating =
+        FW_Common::gunMode == FW_Const::GunMode_Calibration ||
+        FW_Common::gunMode == FW_Const::GunMode_Verification;
+
+    // The WebSocket page of the current session closed or was replaced.
+    if(AppSerialTakeLinkLost())
+        AppSerialAbandonSession();
 
     // ExecCalMode() is still inside the dispatch of the calibration command.
     // A request received while a calibration response is waiting for its ACK
@@ -1382,29 +1537,13 @@ void OF_Serial::SerialProcessingDocked()
 
     // The two-byte docking handshake intentionally remains unframed. Once it
     // succeeds, every App byte in both directions uses the framed protocol.
-    if(!appSerialSessionActive) {
-        if(appSerialRawDockState != 0 &&
-           millis() - appSerialRxTimestamp > APP_SERIAL_FRAME_TIMEOUT)
-            appSerialRawDockState = 0;
-
-        while(WebAppSerial::available()) {
-            const int incoming = WebAppSerial::read();
-            if(incoming < 0)
-                return;
-
-            if(appSerialRawDockState != 0 &&
-               incoming == OF_Const::sDock2) {
-                AppSerialSessionBegin();
-                FW_Common::SetMode(FW_Const::GunMode_Docked);
-                break;
-            }
-
-            appSerialRawDockState =
-                incoming == OF_Const::sDock1 ? 1 : 0;
-
-            if(appSerialRawDockState != 0)
-                appSerialRxTimestamp = millis();
-        }
+    // No new session can start until an abandoned calibration has been unwound.
+    // Without a session both links are listened to (web configuration mode).
+    if(!appSerialSessionActive && !calibrating) {
+        if(!AppSerialPollDock(WebAppLink::SerialPort))
+            AppSerialPollDock(WebAppLink::WebSocket);
+    } else if(appSerialSessionActive) {
+        AppSerialPollDock(WebAppSerial::IsWebSocket() ? WebAppLink::SerialPort : WebAppLink::WebSocket);
     }
 
     if(appSerialSessionActive) {
@@ -1412,6 +1551,11 @@ void OF_Serial::SerialProcessingDocked()
         while(appSerialSessionActive && AppSerialReadFrame(frame))
             AppSerialHandleFrame(frame);
     }
+
+    // A new App sent the raw dock handshake over an active session: the old App
+    // is gone. End its session; the App's next dock retry starts a new one.
+    if(appSerialRedockRequested)
+        AppSerialAbandonSession();
 }
 
 bool OF_Serial::AppSerialDispatchCommit(const AppSerialFrame_s &frame,
@@ -1736,7 +1880,9 @@ void OF_Serial::AppSerialDispatchRequest(const AppSerialFrame_s &frame)
     }
 
     case OF_Const::sIRTest:
-        if(FW_Common::camNotAvailable) {
+        // Leaving test mode is always accepted, also when the camera stopped working
+        // while testing: the App would otherwise report the camera error twice.
+        if(frame.payload[0] && FW_Common::camNotAvailable) {
             AppSerialSendError(OF_Const::sErrCam);
         } else if(frame.payload[0]) {
             FW_Common::SetRunMode(FW_Const::RunMode_Processing);
@@ -1813,6 +1959,9 @@ void OF_Serial::AppSerialDispatchRequest(const AppSerialFrame_s &frame)
 
     #ifdef USES_RUMBLE
     case OF_Const::sTestRumble:
+        // The App enables the test from its unsaved toggle: the saved map may have no rumble pin.
+        if(OF_Prefs::pins[OF_Const::rumblePin] < 0)
+            break;
         analogWrite(OF_Prefs::pins[OF_Const::rumblePin], OF_Prefs::settings[OF_Const::rumbleStrength]);
         delay(OF_Prefs::settings[OF_Const::rumbleInterval]);
         #ifdef ARDUINO_ARCH_ESP32
@@ -2250,11 +2399,12 @@ void OF_Serial::PrintDebugSerial()
 bool OF_Serial::Serial_available(uint8_t min) 
 {
     // in futuro valutare di togliere questa funzione
-    if ((WebAppSerial::available() >= min)) return true;
+    // Used by SerialProcessing(), which reads the serial port (not the App session link).
+    if ((Serial.available() >= min)) return true;
     else {
         unsigned long timer_out = millis();
-        while ((WebAppSerial::available() < min) && (millis() - timer_out < 1000)) yield();
-        return WebAppSerial::available() >= min ? true : false;
+        while ((Serial.available() < min) && (millis() - timer_out < 1000)) yield();
+        return Serial.available() >= min ? true : false;
     }
 }
 

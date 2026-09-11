@@ -629,7 +629,7 @@ CheckFirmwareUpdateRequest();
 
 
     // ================== avvia webapp ======================
-    //OF_WebConfigModeActive = true;
+    OF_WebConfigModeActive = true;
     if (OF_WebConfigModeActive) WebApp_Init();
     // ======================================================
 
@@ -707,7 +707,7 @@ CheckFirmwareUpdateRequest();
 
         while(!(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Trigger) || FW_Common::camNotAvailable) {
             // Check and process serial commands, in case user needs to change EEPROM settings.
-            if(WebAppSerial::available())
+            if(OF_Serial::AppSerialInputPending())
                 OF_Serial::SerialProcessingDocked();
             
             if(FW_Common::gunMode == FW_Const::GunMode_Docked) {
@@ -854,6 +854,10 @@ void loop1()
 
         if(Serial.available()) OF_Serial::SerialProcessing();
 
+        // Web configuration mode: an App can also dock through the WebSocket.
+        if(OF_WebConfigModeActive && OF_Serial::AppSerialWebDockPending())
+            OF_Serial::SerialProcessingWebDock();
+
         #ifdef MAMEHOOKER
             if(OF_Serial::serialMode) OF_Serial::SerialHandling();                                   // Process the force feedback from the current queue.
         #endif // MAMEHOOKER
@@ -958,6 +962,13 @@ void loop()
     #ifdef MAMEHOOKER
         if(Serial.available()) OF_Serial::SerialProcessing();
     #endif // MAMEHOOKER
+
+    // Web configuration mode: an App can also dock through the WebSocket.
+    // Run mode is served by ExecRunMode()/loop1(); polling here only in Pause
+    // avoids signalling the second core from the main core.
+    if(OF_WebConfigModeActive && FW_Common::gunMode == FW_Const::GunMode_Pause &&
+       OF_Serial::AppSerialWebDockPending())
+        OF_Serial::SerialProcessingWebDock();
 
     switch(FW_Common::gunMode) {
         case FW_Const::GunMode_Pause:
@@ -1344,6 +1355,10 @@ void ExecRunMode()
         // Run through serial receive buffer once this run, if it has contents.
         if(Serial.available()) OF_Serial::SerialProcessing();
 
+        // Web configuration mode: an App can also dock through the WebSocket.
+        if(OF_WebConfigModeActive && OF_Serial::AppSerialWebDockPending())
+            OF_Serial::SerialProcessingWebDock();
+
         #ifdef MAMEHOOKER
             if(OF_Serial::serialMode) OF_Serial::SerialHandling();                                   // Process the force feedback from the current queue.
         #endif // MAMEHOOKER
@@ -1419,9 +1434,12 @@ void ExecRunModeProcessing()
     for(;;) {
         FW_Common::buttons.Poll(1);
 
-        if(WebAppSerial::available()) {
+        // Only bytes of the App session change the screen (not the other link).
+        const bool sessionInput = WebAppSerial::available() > 0;
+        if(sessionInput || OF_Serial::AppSerialInputPending()) {
             #ifdef USES_DISPLAY
-                FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Docked);
+                if(sessionInput)
+                    FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Docked);
             #endif // USES_DISPLAY
 
             OF_Serial::SerialProcessingDocked();
@@ -1476,9 +1494,18 @@ void ExecGunModeDocked()
                 buf[pos++] = OF_Const::serialTerminator;
                 buf[pos++] = OF_Const::sError;
             }
-            OF_Serial::AppSerialSendResponse(OF_Const::sDock2, buf, (uint8_t)pos);
+            const bool boardInfoSent = OF_Serial::AppSerialSendResponse(OF_Const::sDock2, buf, (uint8_t)pos);
         
             sendBoardInfo = false;
+
+            // Nobody answered the board information (the App is gone, or the dock
+            // bytes did not come from an App): end that session, so it cannot keep
+            // the gun docked and the other link (serial / WiFi) refused.
+            if(!boardInfoSent) {
+                OF_Serial::AppSerialEndUnansweredSession();
+                if(FW_Common::gunMode != FW_Const::GunMode_Docked)
+                    return;
+            }
         }
 
         currentMillis = millis();
@@ -1554,12 +1581,14 @@ void ExecGunModeDocked()
             #endif // USES_ANALOG
         }
 
-        if(WebAppSerial::available()) {
-            const bool wasActive = OF_Serial::AppSerialSessionIsActive();
+        if(OF_Serial::AppSerialInputPending()) {
+            const uint32_t sessionBefore = OF_Serial::AppSerialSessionId();
             OF_Serial::SerialProcessingDocked();
             // Stay here during recovery: returning to the first-boot caller
             // could resume initialization with a partly updated configuration.
-            if(!wasActive && OF_Serial::AppSerialSessionIsActive())
+            // A session that replaced an abandoned one also needs board info.
+            if(OF_Serial::AppSerialSessionIsActive() &&
+               OF_Serial::AppSerialSessionId() != sessionBefore)
                 sendBoardInfo = true;
         }
 

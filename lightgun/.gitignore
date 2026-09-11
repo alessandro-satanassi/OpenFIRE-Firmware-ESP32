@@ -6,4 +6,6 @@
 .vscode/ipch
 include/web_assets.h
 scripts/__pycache__
-webapp/boardPics
+dist
+webapp/boards/OpenFIREshared.js
+webapp/lang/translations.js

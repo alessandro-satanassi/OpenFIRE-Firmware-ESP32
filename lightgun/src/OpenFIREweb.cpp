@@ -1,14 +1,18 @@
 #include <Arduino.h>
 #include "OpenFIREweb.h"
-#include "web_assets.h"
-bool OF_WebConfigModeActive = false;
 
 #if defined(ARDUINO_ARCH_ESP32)
-
+// Included before the Serial redefinition below, as in the original file.
+#include "web_assets.h"
 #include <WiFi.h>
+#include <esp_wifi.h>
 #include <esp_http_server.h>
 #include <DNSServer.h>
 #include <ESPmDNS.h>
+#include <unistd.h>
+#endif // ARDUINO_ARCH_ESP32
+
+bool OF_WebConfigModeActive = false;
 
 // ============ [ESP32_PORT] ============
 // redefinition of Serial to handle wireless serial connections / redifinizione di Serial per gestire le connessione wireless seriali
@@ -24,12 +28,9 @@ bool OF_WebConfigModeActive = false;
 // END redefinition of Serial to handle wireless serial connections / fine redifinizione di Serial per gestire le connessione wireless seriali ========
 
 
-static httpd_handle_t web_server = NULL;
-static DNSServer dnsServer;
-
-
 // =================================================================================================
-// --- GRUPPO: MOTORE SERIALE HARDWARE ---
+// --- SERIAL STREAM ENGINE (all architectures) / MOTORE SERIALE (tutte le architetture) ---
+// Default App protocol link: the USB serial port, or the wireless stream through the dongle.
 static int hw_available() { return Serial.available(); }
 static int hw_read() { return Serial.read(); }
 static size_t hw_writeByte(uint8_t c) { return Serial.write(c); }
@@ -37,25 +38,63 @@ static size_t hw_writeBuf(const uint8_t* buf, size_t size) { return Serial.write
 static void hw_flush() { Serial.flush(); }
 static size_t hw_readBytes(char* buf, size_t size) { return Serial.readBytes(buf, size); }
 
-OF_WebSerialWrapper::SerialOps hardwareOps = {
+static constexpr OF_WebSerialWrapper::SerialOps hardwareOps = {
     hw_available, hw_read, hw_writeByte, hw_writeBuf, hw_flush, hw_readBytes
 };
 
-// ===========================================================================================================
+OF_WebSerialWrapper::SerialOps WebAppSerial::ops = hardwareOps;
+WebAppLink WebAppSerial::link = WebAppLink::SerialPort;
+// =================================================================================================
 
-// --- GRUPPO: MOTORE WEBSOCKET ---
 
-// --- LOGICA RING BUFFER ---
-#define WS_RX_BUFFER_SIZE 256
+#if defined(ARDUINO_ARCH_ESP32)
+
+#ifndef WEBAPP_AP_SSID
+    #define WEBAPP_AP_SSID "OpenFIRE_Config"
+#endif
+#ifndef WEBAPP_AP_PASSWORD
+    #define WEBAPP_AP_PASSWORD "12345678"
+#endif
+// Channel used when the radio is not already in use by the ESP-NOW link.
+#ifndef WEBAPP_AP_DEFAULT_CHANNEL
+    #define WEBAPP_AP_DEFAULT_CHANNEL 1
+#endif
+
+static httpd_handle_t web_server = NULL;
+static DNSServer dnsServer;
+
+// =================================================================================================
+// --- WEBSOCKET ENGINE / MOTORE WEBSOCKET ---
+// One App page at a time. The HTTP server task produces incoming bytes, the
+// firmware loop consumes them (single-producer / single-consumer ring buffer).
+
+#define WS_RX_BUFFER_SIZE 1024   // a few App frames (max 207 bytes each)
+#define WS_MAX_MESSAGE    512    // larger WebSocket messages are refused
 static uint8_t ws_rx_buffer[WS_RX_BUFFER_SIZE];
-static uint16_t ws_rx_head = 0;
-static uint16_t ws_rx_tail = 0;
+static volatile uint16_t ws_rx_head = 0;   // written by the HTTP server task only
+static volatile uint16_t ws_rx_tail = 0;   // written by the firmware loop only
+
+// Socket of the current App page (-1 = none). Changed only in the server task.
+static volatile int ws_client_fd = -1;
+
+// Set by the server task, consumed by the firmware loop.
+static volatile bool ws_client_lost = false;     // the page that owned the session is gone
+static volatile bool ws_flush_request = false;   // drop bytes left by a previous page
+
+static void ws_handle_flush() {
+    if (ws_flush_request) {
+        ws_flush_request = false;
+        ws_rx_tail = ws_rx_head;
+    }
+}
 
 static int ws_available() {
+    ws_handle_flush();
     return (WS_RX_BUFFER_SIZE + ws_rx_head - ws_rx_tail) % WS_RX_BUFFER_SIZE;
 }
 
 static int ws_read() {
+    ws_handle_flush();
     if (ws_rx_head == ws_rx_tail) return -1;
     uint8_t c = ws_rx_buffer[ws_rx_tail];
     ws_rx_tail = (ws_rx_tail + 1) % WS_RX_BUFFER_SIZE;
@@ -63,24 +102,17 @@ static int ws_read() {
 }
 
 static size_t ws_writeBuf(const uint8_t* buf, size_t size) {
-    if (!web_server) return 0;
+    const int fd = ws_client_fd;
+    if (!web_server || fd < 0) return 0;
 
     httpd_ws_frame_t ws_pkt;
     memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
-    ws_pkt.type = HTTPD_WS_TYPE_BINARY; // Tutto il protocollo è binario!
+    ws_pkt.type = HTTPD_WS_TYPE_BINARY; // The whole protocol is binary / tutto il protocollo è binario
     ws_pkt.payload = (uint8_t*)buf;
     ws_pkt.len = size;
 
-    size_t clients = 8;
-    int client_fds[8];
-    // Trova tutti i client connessi e spara il pacchetto
-    if (httpd_get_client_list(web_server, &clients, client_fds) == ESP_OK) {
-        for (size_t i = 0; i < clients; ++i) {
-            if (httpd_ws_get_fd_info(web_server, client_fds[i]) == HTTPD_WS_CLIENT_WEBSOCKET) {
-                httpd_ws_send_data(web_server, client_fds[i], &ws_pkt);
-            }
-        }
-    }
+    if (httpd_ws_send_data(web_server, fd, &ws_pkt) != ESP_OK)
+        return 0;
     return size;
 }
 
@@ -89,38 +121,41 @@ static size_t ws_writeByte(uint8_t c) {
 }
 
 static void ws_flush() {
-    // I websocket inviano a pacchetti interi, non c'è un buffer TX da svuotare
+    // WebSocket frames are sent whole: there is no TX buffer to flush.
 }
 
 static size_t ws_readBytes(char* buf, size_t size) {
     size_t count = 0;
     unsigned long startMillis = millis();
-    // Timeout di 1000ms, emulando il comportamento standard della Seriale Arduino
+    // 1000 ms timeout, emulating the standard Arduino Serial behaviour.
     while (count < size && (millis() - startMillis < 1000)) {
         if (ws_available() > 0) {
             buf[count++] = (char)ws_read();
         } else {
-            vTaskDelay(pdMS_TO_TICKS(1)); // Fa respirare il FreeRTOS durante l'attesa
+            vTaskDelay(pdMS_TO_TICKS(1));
         }
     }
     return count;
 }
 
-// --- GRUPPO: MOTORE WEBSOCKET ---
-OF_WebSerialWrapper::SerialOps websocketOps = {
+static constexpr OF_WebSerialWrapper::SerialOps websocketOps = {
     ws_available, ws_read, ws_writeByte, ws_writeBuf, ws_flush, ws_readBytes
 };
 
-// ===============================================================================================================
+bool WebApp_TakeClientLost() {
+    if (!ws_client_lost) return false;
+    ws_client_lost = false;
+    return true;
+}
 
-// Partiamo di base caricando il motore Hardware!
-OF_WebSerialWrapper::SerialOps WebAppSerial::ops = hardwareOps;
-// ===============================================================================================================
+bool WebApp_ClientLostPending() {
+    return ws_client_lost;
+}
 
-//static httpd_handle_t web_server = NULL;
-//static DNSServer dnsServer;
+// =================================================================================================
+// --- HTTP SERVER / SERVER HTTP ---
 
-// Handler per il Captive Portal: intercetta tutte le richieste 404 e redireziona alla pagina principale
+// Captive portal: every unknown URL (OS connectivity checks included) goes to the App page.
 static esp_err_t captive_portal_handler(httpd_req_t *req, httpd_err_code_t error) {
     httpd_resp_set_status(req, "302 Found");
     httpd_resp_set_hdr(req, "Location", "http://192.168.4.1/");
@@ -128,57 +163,62 @@ static esp_err_t captive_portal_handler(httpd_req_t *req, httpd_err_code_t error
     return ESP_OK;
 }
 
-static esp_err_t index_get_handler(httpd_req_t *req) {
-    httpd_resp_set_type(req, "text/html");
+static esp_err_t send_gzip(httpd_req_t *req, const char *type, const uint8_t *data, size_t len) {
+    httpd_resp_set_type(req, type);
     httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
-    return httpd_resp_send(req, (const char*)web_index_html_gz, web_index_html_gz_len);
+    // The assets change with every firmware build.
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+    return httpd_resp_send(req, (const char*)data, len);
+}
+
+static esp_err_t index_get_handler(httpd_req_t *req) {
+    return send_gzip(req, "text/html", web_index_html_gz, web_index_html_gz_len);
 }
 
 static esp_err_t style_get_handler(httpd_req_t *req) {
-    httpd_resp_set_type(req, "text/css");
-    httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
-    return httpd_resp_send(req, (const char*)web_style_css_gz, web_style_css_gz_len);
+    return send_gzip(req, "text/css", web_style_css_gz, web_style_css_gz_len);
 }
 
 static esp_err_t app_js_get_handler(httpd_req_t *req) {
-    httpd_resp_set_type(req, "application/javascript");
-    httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
-    return httpd_resp_send(req, (const char*)web_app_js_gz, web_app_js_gz_len);
-}
-
-static esp_err_t board_svg_get_handler(httpd_req_t *req) {
-    httpd_resp_set_type(req, "image/svg+xml");
-    httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
-    return httpd_resp_send(req, (const char*)web_board_svg_gz, web_board_svg_gz_len);
+    return send_gzip(req, "application/javascript", web_app_js_gz, web_app_js_gz_len);
 }
 
 static esp_err_t ws_handler(httpd_req_t *req) {
-    // Handshake iniziale quando il browser si connette
-    if (req->method == HTTP_GET) return ESP_OK; 
-    
+    const int fd = httpd_req_to_sockfd(req);
+
+    // Handshake: a new App page. Only one page at a time owns the App link:
+    // the previous page (if any) is closed and its session abandoned.
+    if (req->method == HTTP_GET) {
+        const int previous = ws_client_fd;
+        ws_client_fd = fd;
+        if (previous >= 0 && previous != fd)
+            httpd_sess_trigger_close(web_server, previous);
+        ws_flush_request = true;
+        ws_client_lost = true;
+        return ESP_OK;
+    }
+
     httpd_ws_frame_t ws_pkt;
     memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
-    ws_pkt.type = HTTPD_WS_TYPE_BINARY; 
-    
-    // 1. Chiediamo al server QUANTO è lungo il pacchetto arrivato
+    ws_pkt.type = HTTPD_WS_TYPE_BINARY;
+
+    // 1. Ask the server how long the incoming packet is
     esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
     if (ret != ESP_OK || ws_pkt.len == 0) return ret;
 
-    // Se è più grande del nostro RingBuffer lo rifiutiamo
-    if (ws_pkt.len > WS_RX_BUFFER_SIZE - 1) return ESP_ERR_NO_MEM;
-    
-    // 2. Prepariamo un cesto per raccogliere i dati
+    // Not an App protocol message: refuse it (the server closes the socket)
+    if (ws_pkt.len > WS_MAX_MESSAGE) return ESP_ERR_INVALID_SIZE;
+
     uint8_t *buf = (uint8_t*)malloc(ws_pkt.len);
     if (!buf) return ESP_ERR_NO_MEM;
     ws_pkt.payload = buf;
-    
-    // 3. Scarichiamo i dati nel cesto
+
+    // 2. Receive the data, 3. queue it only if it comes from the current App page
     ret = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);
-    if (ret == ESP_OK) {
-        // 4. Li infiliamo nel nostro RingBuffer per ingannare la pistola!
+    if (ret == ESP_OK && fd == ws_client_fd) {
         for (size_t i = 0; i < ws_pkt.len; i++) {
             uint16_t next_head = (ws_rx_head + 1) % WS_RX_BUFFER_SIZE;
-            if (next_head != ws_rx_tail) { // Se c'è spazio
+            if (next_head != ws_rx_tail) { // if there is room / se c'è spazio
                 ws_rx_buffer[ws_rx_head] = buf[i];
                 ws_rx_head = next_head;
             }
@@ -188,69 +228,112 @@ static esp_err_t ws_handler(httpd_req_t *req) {
     return ret;
 }
 
+// Called by the server for every closed socket; it must close the socket itself.
+static void web_close_fn(httpd_handle_t hd, int sockfd) {
+    if (sockfd == ws_client_fd) {
+        ws_client_fd = -1;
+        ws_client_lost = true;
+    }
+    close(sockfd);
+}
+
 static const httpd_uri_t uri_index = { .uri = "/", .method = HTTP_GET, .handler = index_get_handler, .user_ctx = NULL };
 static const httpd_uri_t uri_style = { .uri = "/style.css", .method = HTTP_GET, .handler = style_get_handler, .user_ctx = NULL };
 static const httpd_uri_t uri_app   = { .uri = "/app.js", .method = HTTP_GET, .handler = app_js_get_handler, .user_ctx = NULL };
-static const httpd_uri_t uri_board = { .uri = "/board.svg", .method = HTTP_GET, .handler = board_svg_get_handler, .user_ctx = NULL };
 static const httpd_uri_t uri_ws    = { .uri = "/ws", .method = HTTP_GET, .handler = ws_handler, .user_ctx = NULL, .is_websocket = true };
 
-// Task background per gestire le richieste DNS del Captive Portal
+// Background task for the captive portal DNS requests
 static void dns_server_task(void *pvParameters) {
     while (true) {
         if (OF_WebConfigModeActive) {
             dnsServer.processNextRequest();
         }
-        vTaskDelay(pdMS_TO_TICKS(10)); // Pausa di 10ms per non bloccare la CPU
+        vTaskDelay(pdMS_TO_TICKS(10)); // 10 ms pause so the CPU is not blocked
     }
 }
 
-void WebApp_Init() {      
+void WebApp_Init() {
     if (!OF_WebConfigModeActive) return;
 
-    // Inizializza il reindirizzamento al nuovo motore
-    WebAppSerial::ops = websocketOps;
+    // The App protocol keeps using the serial link until an App docks on the
+    // WebSocket (OF_Serial::SerialProcessingWebDock selects the link).
 
-    // 1. Accendiamo forzatamente il Wi-Fi in modalità ibrida (AP + Station)
+    // 1. Access point. If the ESP-NOW link to the dongle already uses the radio,
+    //    keep its channel: a single radio cannot serve two channels.
+    uint8_t apChannel = WEBAPP_AP_DEFAULT_CHANNEL;
+    if (WiFi.getMode() != WIFI_OFF) {
+        uint8_t primary = 0;
+        wifi_second_chan_t second = WIFI_SECOND_CHAN_NONE;
+        if (esp_wifi_get_channel(&primary, &second) == ESP_OK && primary >= 1 && primary <= 13)
+            apChannel = primary;
+    }
+
     WiFi.mode(WIFI_AP_STA);
-    WiFi.softAP("OpenFIRE_Config", "12345678");
+    WiFi.softAP(WEBAPP_AP_SSID, WEBAPP_AP_PASSWORD, apChannel);
 
-    // 2. Avviamo il leggerissimo server HTTP/WS nativo dell'ESP-IDF
+    // 2. Lightweight native ESP-IDF HTTP/WebSocket server
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.max_uri_handlers = 8;
+    config.close_fn = web_close_fn;
+    config.lru_purge_enable = true;
 
     if (httpd_start(&web_server, &config) == ESP_OK) {
         httpd_register_uri_handler(web_server, &uri_index);
         httpd_register_uri_handler(web_server, &uri_style);
         httpd_register_uri_handler(web_server, &uri_app);
-        httpd_register_uri_handler(web_server, &uri_board);
         httpd_register_uri_handler(web_server, &uri_ws);
-        
-        // Registriamo il captive portal per intercettare tutto ciò che non esiste
+
+        // Captive portal for everything else
         httpd_register_err_handler(web_server, HTTPD_404_NOT_FOUND, captive_portal_handler);
     }
-    
-    // 3. Avviamo mDNS per permettere l'accesso tramite http://openfire.local
+
+    // 3. mDNS: http://openfire.local
     if (MDNS.begin("openfire")) {
         MDNS.addService("http", "tcp", 80);
     }
-    
-    // 4. Avviamo il DNS Server per il Captive Portal
+
+    // 4. DNS server for the captive portal
     dnsServer.start(53, "*", WiFi.softAPIP());
 
-    // 5. Creiamo il task background per il server DNS (Core 0, così non interferisce col loop principale)
+    // 5. DNS task on Core 0 so it does not interfere with the main loop
     xTaskCreatePinnedToCore(dns_server_task, "dns_task", 2048, NULL, 1, NULL, 0);
 }
 
 void WebApp_Loop() {
-    // Svuotato: non c'è più bisogno di chiamarlo dal loop principale!
+    // Nothing to do: the server and the DNS run in their own tasks.
 }
 
+static const OF_WebSerialWrapper::SerialOps& webSocketLinkOps() { return websocketOps; }
 
 #else
-// RP2040 STUBS - Occupano zero spazio e compilano sempre
+// RP2040: no web configuration mode; the App protocol always uses Serial.
 void WebApp_Init() {}
 void WebApp_Loop() {}
+bool WebApp_TakeClientLost() { return false; }
+bool WebApp_ClientLostPending() { return false; }
+
+static int none_available() { return 0; }
+static int none_read() { return -1; }
+static size_t none_writeByte(uint8_t) { return 0; }
+static size_t none_writeBuf(const uint8_t*, size_t) { return 0; }
+static void none_flush() {}
+static size_t none_readBytes(char*, size_t) { return 0; }
+static constexpr OF_WebSerialWrapper::SerialOps noLinkOps = {
+    none_available, none_read, none_writeByte, none_writeBuf, none_flush, none_readBytes
+};
+static const OF_WebSerialWrapper::SerialOps& webSocketLinkOps() { return noLinkOps; }
 #endif
+
+const OF_WebSerialWrapper::SerialOps& WebAppSerial::Ops(WebAppLink which)
+{
+    return which == WebAppLink::WebSocket ? webSocketLinkOps() : hardwareOps;
+}
+
+void WebAppSerial::Use(WebAppLink newLink)
+{
+    ops = Ops(newLink);
+    link = newLink;
+}
 
 
 // ============ [ESP32_PORT] ============

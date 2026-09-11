@@ -2,301 +2,44 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenFIRE Esp32 Web Configurator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#1f2229">
+    <title>OpenFIRE</title>
+    <link rel="icon" href='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90.691 90.691"%3E%3Crect width="90.691" height="90.691" ry="9.6" fill="#2a2a2a"/%3E%3Cg transform="translate(2,2)"%3E%3Cpath fill="#fff" d="M86.6 40H81.3C79.6 22.2 65.4 7.9 47.6 6.3V0h-7V6.1C22.8 7.9 8.5 22.1 6.9 40h-7v7h7c1.7 17.8 15.9 32.1 33.7 33.7v5.6h7V80.7C65.4 79 79.7 64.8 81.3 47h5.3zm-72.9 3.5c0-16.8 13.6-30.4 30.4-30.4 16.8 0 28.4 11.8 30.2 26.9H40.6V73.7C25.5 72 13.7 59.1 13.7 43.5ZM47.6 73.6V60.9H59.8V55.2H47.6V46.9H74.3C72.7 60.9 61.6 72 47.6 73.6Z"/%3E%3Cg fill="#ed1a3b"%3E%3Ccircle cx="24.9" cy="49" r="3.1"/%3E%3Ccircle cx="34" cy="49" r="3.1"/%3E%3Ccircle cx="24.9" cy="57.8" r="3.1"/%3E%3Ccircle cx="34" cy="57.8" r="3.1"/%3E%3C/g%3E%3Cpath fill="#00b3f0" d="M44.3 20.2C33 20.2 23.6 28.7 22.2 39.7h4.7c1.3-8.4 8.6-14.9 17.4-14.9 8.8 0 9.1 1.8 12.5 5.2l3.3-3.3C55.9 22.5 50.3 20.2 44.4 20.2Z"/%3E%3C/g%3E%3C/svg%3E'>
     <link rel="stylesheet" href="style.css">
+    <script>
+        /* Theme before the first paint: 'system' (default), 'light' or 'dark' (View menu). */
+        try { var theme = localStorage.getItem('of_theme'); if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme; } catch (e) {}
+    </script>
 </head>
 <body>
-        <header class="app-header">
-                <div class="top-menu-bar">
-            <button id="menu-btn-preview" class="menu-btn" data-i18n>Board Previews</button>
-            <button id="menu-btn-align" class="menu-btn" data-i18n>Emitter Alignment</button>
-            <button id="menu-btn-about" class="menu-btn" data-i18n>About</button>
-            <select id="lang-selector" style="margin-left: auto; height: fit-content; align-self: center;">
-                <option value="en">🇬🇧 English</option>
-                <option value="it">🇮🇹 Italiano</option>
-            </select>
-        </div>
-                <h1 id="board-title" data-i18n style="text-align: center;">OpenFIRE Esp32 Web Configurator</h1>
-        <p id="fw-version" style="text-align: center; margin-top: 5px; display: none;">FW v--</p>
-    </header>
-
-    <main class="content-area">
-        <section id="tab-pins" class="tab-content active">
-            <div id="board-preview-container">
-                <div id="pins-left" class="pins-column"></div>
-                
-                <div id="board-center">
-                    <button id="btn-connect" class="save-btn" style="padding: 20px 80px; font-size: 24px; font-weight: bold; border-radius: 12px; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); cursor: pointer; margin-top: 25vh; margin-bottom: 25vh;" data-i18n>Connect</button>
-                    <img src="board.svg" alt="Microcontroller Board" id="board-image" style="display: none;" />
-                    <div id="pins-middle" class="pins-row"></div>
-                </div>
-                
-                <div id="pins-right" class="pins-column"></div>
-            </div>
-            
-            <div class="board-actions" style="display: none;" id="main-board-actions">
-                <label class="custom-pins-label">
-                    <input type="checkbox" id="chk-custom-pins">
-                    <span data-i18n>Use Custom Pins</span>
-                </label>
-                <button id="btn-user-layout" data-i18n>User Layouts</button>
-            </div>
-        </section>
-
-                <section id="tab-buttons" class="tab-content" style="display: none;">
-            <div class="buttons-scroll-area">
-                <table class="buttons-table">
-                    <thead>
-                        <tr>
-                            <th></th>
-                            <th colspan="2" data-i18n>On-Screen Function</th>
-                            <th colspan="2" data-i18n>Off-Screen Function</th>
-                            <th colspan="2" data-i18n>Gamepad Mode</th>
-                        </tr>
-                    </thead>
-                    <tbody id="buttons-tbody">
-                        <!-- Generato dinamicamente in Javascript -->
-                        <tr>
-                            <td>Trigger</td>
-                            <td><select><option>Mouse</option></select></td>
-                            <td><select><option>Left Click</option></select></td>
-                            <td><select><option>Mouse</option></select></td>
-                            <td><select><option>Left Click</option></select></td>
-                            <td><select><option>Gamepad</option></select></td>
-                            <td><select><option>Right Trigger</option></select></td>
-                        </tr>
-                    </tbody>
-                </table>
-                <div class="center-item margin-top">
-                    <div class="sub-header" data-i18n>Analog Stick</div>
-                    <label class="margin-left"><span data-i18n>Use Analog Stick As:</span> <select id="sel-AnalogStickMode"><option>Stick Analogico Gamepad (Sinistro/Destro)</option></select></label>
-                </div>
-            </div>
-        </section>
-
-                <section id="tab-gun" class="tab-content" style="display: none;">
-            <div class="settings-scroll-area">
-                
-                <div class="settings-group">
-                    <div class="settings-header" data-i18n>Force Feedback</div>
-                    <div class="settings-body center-item">
-                        <label class="custom-checkbox"><input type="checkbox" id="tgl-Autofire"> <span data-i18n>Autofire Enabled</span></label>
-                    </div>
-                </div>
-
-                <div class="settings-group">
-                    <div class="settings-header" data-i18n>Solenoid</div>
-                    <div class="settings-body">
-                        <div class="center-item margin-bottom">
-                            <label class="custom-checkbox"><input type="checkbox" id="tgl-Solenoid"> <span data-i18n>Solenoid Enabled</span></label>
-                        </div>
-                        <div class="settings-grid-2">
-                            <label><span data-i18n>Solenoid Pulse Length:</span> <input type="number" id="set-SolenoidTime" min="0" max="255"> ms</label>
-                            <label><span data-i18n>Solenoid Autofire Interval:</span> <input type="number" id="set-SolenoidAutofireTime" min="0" max="255"> ms</label>
-                        </div>
-                        <div class="center-item margin-top">
-                            <label><span data-i18n>Trigger Hold Length for Solenoid Autofire:</span> <input type="number" id="set-AutofireTriggerTime" min="0" max="65535"> ms</label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="settings-group">
-                    <div class="settings-header" data-i18n>Rumble</div>
-                    <div class="settings-body">
-                        <div class="center-item margin-bottom">
-                            <label class="custom-checkbox"><input type="checkbox" id="tgl-Rumble"> <span data-i18n>Rumble Enabled</span></label>
-                        </div>
-                        <div class="center-item margin-bottom">
-                            <label class="custom-checkbox"><input type="checkbox" id="tgl-RumbFFB"> <span data-i18n>Use Rumble as Main Force Feedback</span></label>
-                        </div>
-                        <div class="settings-grid-2">
-                            <label><span data-i18n>Rumble Intensity:</span> <input type="number" id="set-RumblePWM" min="0" max="255"> / 255</label>
-                            <label><span data-i18n>Rumble Pulse Length:</span> <input type="number" id="set-RumbleTime" min="0" max="65535"> ms</label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="settings-group">
-                    <div class="settings-header" data-i18n>Lighting</div>
-                    <div class="settings-body">
-                        <div class="center-item margin-bottom">
-                            <label class="custom-checkbox"><input type="checkbox" id="tgl-LEDAnode"> <span data-i18n>4-Pin RGB LED Common Anode Toggle</span></label>
-                        </div>
-                        <div class="sub-group">
-                            <div class="sub-header" data-i18n>NeoPixels</div>
-                            <div class="center-item margin-bottom">
-                                <label><span data-i18n>NeoPixel Strip Length:</span> <input type="number" id="set-LEDPixelCount" min="0" max="255"> Pixel(s)</label>
-                            </div>
-                            <div class="settings-grid-3">
-                                <label><span data-i18n>Static NeoPixels:</span> <input type="number" id="set-StaticPixelCount" min="0" max="255"> Pixel(s)</label>
-                                <!-- Colori statici and Inverti Colori will be added later if needed -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="settings-group">
-                    <div class="settings-header" data-i18n>Input</div>
-                    <div class="settings-body center-item">
-                        <label class="custom-checkbox"><input type="checkbox" id="tgl-LowButtons"> <span data-i18n>Low Buttons Mode</span></label>
-                    </div>
-                </div>
-
-                <div class="settings-group">
-                    <div class="settings-header" data-i18n>UI & UX</div>
-                    <div class="settings-body center-item flex-col">
-                        <label class="custom-checkbox margin-bottom"><input type="checkbox" id="tgl-SimplePause"> <span data-i18n>Simple Pause Menu Toggle</span></label>
-                        <div class="settings-grid-2" style="width: 100%; justify-content: center;">
-                            <label class="custom-checkbox"><input type="checkbox" id="tgl-HoldToPause"> <span data-i18n>Hold to Pause Enabled</span></label>
-                            <label><span data-i18n>Hold to Pause Time:</span> <input type="number" id="set-HoldTime" min="0" max="65535"> ms</label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="settings-group">
-                    <div class="settings-header" data-i18n>I2C Peripherals</div>
-                    <div class="settings-body center-item flex-col gap-10">
-                        <label class="custom-checkbox"><input type="checkbox" id="tgl-i2cOLED"> <span data-i18n>Enable OLED Display (SSD1306 128x64)</span></label>
-                        <label class="custom-checkbox"><input type="checkbox" id="tgl-i2cOLEDaltAddr"> <span data-i18n>Use Alternative Device Address</span></label>
-                    </div>
-                </div>
-
-            </div>
-            
-            <div id="help-box" class="help-box">
-                <h3 id="help-title" data-i18n>Welcome</h3>
-                <p id="help-desc" data-i18n>Hover over settings to view details.</p>
-            </div>
-        </section>
-
-                <section id="tab-profiles" class="tab-content" style="display: none;">
-            <div class="profiles-scroll-area">
-                <table class="profiles-table">
-                    <thead>
-                        <tr>
-                            <th></th>
-                            <th></th>
-                            <th>Top</th>
-                            <th>Bottom</th>
-                            <th>Left</th>
-                            <th>Right</th>
-                            <th>TLled</th>
-                            <th>TRled</th>
-                            <th>Sensibilità</th>
-                            <th>Modalità</th>
-                            <th>Layout</th>
-                            <th>Display</th>
-                            <th>Colore</th>
-                        </tr>
-                    </thead>
-                    <tbody id="profiles-tbody">
-                        <!-- Generato dinamicamente -->
-                    </tbody>
-                </table>
-                <div class="profiles-actions">
-                    <button id="btn-cal-1" data-i18n>Calibrate Profile 1</button>
-                    <button id="btn-cal-2" data-i18n>Calibrate Profile 2</button>
-                    <button id="btn-cal-3" data-i18n>Calibrate Profile 3</button>
-                    <button id="btn-cal-4" data-i18n>Calibrate Profile 4</button>
-                </div>
-            </div>
-        </section>
-
-        <section id="tab-tests" class="tab-content" style="display: none;">
-            <h2 data-i18n>Gun Tests</h2>
-            <p>Work in progress...</p>
-        </section>
-    </main>
-
-    <footer class="app-footer">
-        <nav class="main-tabs">
-            <button class="tab-btn active" disabled data-tab="tab-pins"><span class="icon">🔧</span> <span data-i18n>Board Layout</span></button>
-            <button class="tab-btn" disabled data-tab="tab-buttons"><span class="icon">⌨️</span> <span data-i18n>Button Mapping</span></button>
-            <button class="tab-btn" disabled data-tab="tab-gun"><span class="icon">🔘</span> <span data-i18n>Gun Settings</span></button>
-            <button class="tab-btn" disabled data-tab="tab-profiles"><span class="icon">🔲</span> <span data-i18n>Calibration Profiles</span></button>
-            <button class="tab-btn" disabled data-tab="tab-tests"><span class="icon">➖</span> <span data-i18n>Gun Tests</span></button>
-        </nav>
-        
-        <div class="status-bar">
-                        <span id="status" style="display: none; margin-left: 10px;" data-i18n>Ready.</span>
-            <button id="btn-save" class="save-btn" style="display: none;" data-i18n>Save and Send Settings</button>
-        </div>
-    </footer>
-
-    
-    
-    
-    <!-- Overlay Camera Tester -->
-    <div id="overlay-camera" class="fullscreen-overlay" style="display: none;">
-        <canvas id="canvas-camera"></canvas>
-        <div class="overlay-text top-text" data-i18n>The set of shapes displayed here should match the IR Layout you are using.</div>
-        <div class="overlay-text bottom-text" data-i18n>Press ESC to exit.</div>
+    <div id="app" class="app">
+        <noscript>OpenFIRE needs JavaScript.</noscript>
     </div>
+    <div id="overlay-root"></div>
+    <div id="dialog-root"></div>
 
-        <!-- Overlay Alignment -->
-    <div id="overlay-align" class="fullscreen-overlay" style="display: none; background: #2F4F4F;">
-        <canvas id="canvas-align"></canvas>
-        <div class="overlay-text top-text" data-i18n>Depending on your desired layout, your IR emitters should be aligned to either one of the two sets of colored boxes:</div>
-        <div class="overlay-text bottom-text" data-i18n>Press ESC to exit.</div>
-    </div>
-
-    <!-- Overlay Calibration -->
-    <div id="overlay-cali" class="fullscreen-overlay" style="display: none;">
-        <canvas id="canvas-cali"></canvas>
-        <div class="overlay-text top-text" data-i18n>Start calibration:<br>Shoot the target in the center to begin.</div>
-        <div class="overlay-text bottom-text" data-i18n>Verify Calibration:<br>Shoot off-screen to save.</div>
-    </div>
-
-    
-    
-    
-    <!-- Modal About -->
-    <div id="modal-about" class="modal-overlay" style="display: none;">
-        <div class="modal-content text-center">
-            <h2 style="font-size: 32px; font-weight: bold; margin-bottom: 5px;">OpenFIRE Esp32</h2>
-            <p>Web Configurator</p>
-            <hr style="border-color: #444;">
-            <p style="font-size: 14px;" data-i18n>Primary OpenFIRE Firmware maintainership and original Desktop App developed by <a href="#" style="color:#0099FF;">That One Seong</a>.</p>
-            <p style="font-size: 14px;" data-i18n>ESP-IDF fork and this WebApp by <b>Alessandro Satanassi</b>.</p>
-            <br>
-            <button class="test-action-btn" id="btn-close-about" data-i18n>Close</button>
-        </div>
-    </div>
-
-    <!-- Modal Board Preview -->
-    <div id="modal-preview" class="modal-overlay" style="display: none;">
-        <div class="modal-content" style="width: 80%; max-width: 900px; height: 80vh; display: flex; flex-direction: column;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                <h3 style="margin:0;" data-i18n>Board Previews</h3>
-                <select id="preview-board-select"></select>
-            </div>
-            
-            <div id="preview-board-container" style="flex-grow: 1; display: flex; justify-content: center; overflow-y: auto; background: #111; border: 1px solid #444; border-radius: 5px; padding: 10px;">
-                <!-- Dinamico, simile a tab-pins ma in sola lettura -->
-            </div>
-            
-            <div style="text-align: center; margin-top: 15px;">
-                <button class="test-action-btn" id="btn-close-preview" data-i18n>Close</button>
-            </div>
-        </div>
-    </div>
-
-    
-    
-    
-
-    <script src="lang.js"></script>
+    <!-- OF:SCRIPTS  (joined in this order into app.js by scripts/webapp_build.py) -->
+    <script src="lang/translations.js"></script>
+    <script src="js/core/i18n.js"></script>
     <script src="boards/OpenFIREshared.js"></script>
-    <script src="OpenFIREProtocol.js"></script>
-    <script src="app.js"></script>
+    <script src="js/core/boards.js"></script>
+    <script src="js/core/transport.js"></script>
+    <script src="js/core/protocol.js"></script>
+    <script src="js/app/connection.js"></script>
+    <script src="js/app/testfont.js"></script>
+    <script src="js/app/maps.js"></script>
+    <script src="js/app/state.js"></script>
+    <script src="js/app/ui.js"></script>
+    <script src="js/app/fullscreen.js"></script>
+    <script src="js/app/windows.js"></script>
+    <script src="js/app/tab-pins.js"></script>
+    <script src="js/app/tab-buttons.js"></script>
+    <script src="js/app/tab-settings.js"></script>
+    <script src="js/app/tab-profiles.js"></script>
+    <script src="js/app/tab-tests.js"></script>
+    <script src="js/app/main.js"></script>
+    <!-- /OF:SCRIPTS -->
 </body>
 </html>
-
-
-
-
-
-
-
-
