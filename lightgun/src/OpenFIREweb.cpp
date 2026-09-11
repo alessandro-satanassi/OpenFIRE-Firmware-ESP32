@@ -10,6 +10,7 @@
 #include <DNSServer.h>
 #include <ESPmDNS.h>
 #include <unistd.h>
+#include "OpenFIREserial.h"   // http://<gun>/status
 #endif // ARDUINO_ARCH_ESP32
 
 bool OF_WebConfigModeActive = false;
@@ -80,11 +81,24 @@ static volatile int ws_client_fd = -1;
 // Set by the server task, consumed by the firmware loop.
 static volatile bool ws_client_lost = false;     // the page that owned the session is gone
 static volatile bool ws_flush_request = false;   // drop bytes left by a previous page
+static volatile uint16_t ws_flush_to = 0;        // ...up to here: what the new page sent is kept
+
+// Counters of http://<gun>/status (diagnosis of the link with the App page).
+// Plain counters: only read for the diagnosis, an exact count is not needed
+// (C++20 deprecates ++ on a volatile).
+static uint32_t ws_stat_handshakes = 0;  // pages that opened the WebSocket
+static uint32_t ws_stat_rx = 0;          // bytes received from the page
+static uint32_t ws_stat_dropped = 0;     // bytes discarded (buffer full, or not the current page)
+static uint32_t ws_stat_tx = 0;          // bytes sent to the page
+static uint32_t ws_stat_tx_failed = 0;   // sends the server refused
+static uint32_t ws_stat_flushed = 0;     // bytes dropped when a new page arrived
 
 static void ws_handle_flush() {
     if (ws_flush_request) {
         ws_flush_request = false;
-        ws_rx_tail = ws_rx_head;
+        const uint16_t mark = ws_flush_to;
+        ws_stat_flushed += (WS_RX_BUFFER_SIZE + mark - ws_rx_tail) % WS_RX_BUFFER_SIZE;
+        ws_rx_tail = mark;
     }
 }
 
@@ -111,8 +125,11 @@ static size_t ws_writeBuf(const uint8_t* buf, size_t size) {
     ws_pkt.payload = (uint8_t*)buf;
     ws_pkt.len = size;
 
-    if (httpd_ws_send_data(web_server, fd, &ws_pkt) != ESP_OK)
+    if (httpd_ws_send_data(web_server, fd, &ws_pkt) != ESP_OK) {
+        ws_stat_tx_failed++;
         return 0;
+    }
+    ws_stat_tx += size;
     return size;
 }
 
@@ -189,18 +206,47 @@ static esp_err_t app_js_get_handler(httpd_req_t *req) {
     return send_gzip(req, "application/javascript", web_app_js_gz, web_app_js_gz_len);
 }
 
+// http://<gun>/status: state of the link with the App page (diagnosis, no secrets).
+static esp_err_t status_get_handler(httpd_req_t *req) {
+    char body[320];
+    const int length = snprintf(body, sizeof(body),
+        "{\"webConfig\":%d,\"docked\":%d,\"link\":\"%s\",\"wsClient\":%d,"
+        "\"handshakes\":%u,\"rx\":%u,\"tx\":%u,\"txFailed\":%u,\"dropped\":%u,\"flushed\":%u,"
+        "\"pending\":%d,\"uptimeMs\":%lu}",
+        OF_WebConfigModeActive ? 1 : 0,
+        OF_Serial::AppSerialSessionIsActive() ? 1 : 0,
+        WebAppSerial::IsWebSocket() ? "ws" : "serial",
+        ws_client_fd,
+        (unsigned)ws_stat_handshakes, (unsigned)ws_stat_rx, (unsigned)ws_stat_tx,
+        (unsigned)ws_stat_tx_failed, (unsigned)ws_stat_dropped, (unsigned)ws_stat_flushed,
+        (int)((WS_RX_BUFFER_SIZE + ws_rx_head - ws_rx_tail) % WS_RX_BUFFER_SIZE), // without consuming a pending flush
+        (unsigned long)millis());
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+    return httpd_resp_send(req, body, length > 0 ? length : 0);
+}
+
+// A new App page owns the link: the previous one (if any) is closed and its
+// session abandoned, and the bytes received so far are dropped (not the ones of
+// this page, which arrive after the mark).
+static void ws_adopt_client(int fd) {
+    const int previous = ws_client_fd;
+    ws_stat_handshakes++;
+    ws_client_fd = fd;
+    if (previous >= 0 && previous != fd)
+        httpd_sess_trigger_close(web_server, previous);
+    ws_flush_to = ws_rx_head;
+    ws_flush_request = true;
+    ws_client_lost = true;
+}
+
 static esp_err_t ws_handler(httpd_req_t *req) {
     const int fd = httpd_req_to_sockfd(req);
 
-    // Handshake: a new App page. Only one page at a time owns the App link:
-    // the previous page (if any) is closed and its session abandoned.
+    // Handshake of a new page. Some esp_http_server versions do not report it
+    // here: the first message of an unknown socket (below) does the same.
     if (req->method == HTTP_GET) {
-        const int previous = ws_client_fd;
-        ws_client_fd = fd;
-        if (previous >= 0 && previous != fd)
-            httpd_sess_trigger_close(web_server, previous);
-        ws_flush_request = true;
-        ws_client_lost = true;
+        ws_adopt_client(fd);
         return ESP_OK;
     }
 
@@ -219,16 +265,21 @@ static esp_err_t ws_handler(httpd_req_t *req) {
     if (!buf) return ESP_ERR_NO_MEM;
     ws_pkt.payload = buf;
 
-    // 2. Receive the data, 3. queue it only if it comes from the current App page
+    // 2. Receive the data, 3. queue it: a message from another socket is a new page
     ret = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);
+    if (ret == ESP_OK && fd != ws_client_fd)
+        ws_adopt_client(fd);
     if (ret == ESP_OK && fd == ws_client_fd) {
         for (size_t i = 0; i < ws_pkt.len; i++) {
             uint16_t next_head = (ws_rx_head + 1) % WS_RX_BUFFER_SIZE;
             if (next_head != ws_rx_tail) { // if there is room / se c'è spazio
                 ws_rx_buffer[ws_rx_head] = buf[i];
                 ws_rx_head = next_head;
-            }
+                ws_stat_rx++;
+            } else ws_stat_dropped++;
         }
+    } else if (ret == ESP_OK) {
+        ws_stat_dropped += ws_pkt.len; // frame of a page that is no longer the current one
     }
     free(buf);
     return ret;
@@ -246,6 +297,7 @@ static void web_close_fn(httpd_handle_t hd, int sockfd) {
 static const httpd_uri_t uri_index = { .uri = "/", .method = HTTP_GET, .handler = index_get_handler, .user_ctx = NULL };
 static const httpd_uri_t uri_style = { .uri = "/style.css", .method = HTTP_GET, .handler = style_get_handler, .user_ctx = NULL };
 static const httpd_uri_t uri_app   = { .uri = "/app.js", .method = HTTP_GET, .handler = app_js_get_handler, .user_ctx = NULL };
+static const httpd_uri_t uri_status = { .uri = "/status", .method = HTTP_GET, .handler = status_get_handler, .user_ctx = NULL };
 static const httpd_uri_t uri_ws    = { .uri = "/ws", .method = HTTP_GET, .handler = ws_handler, .user_ctx = NULL, .is_websocket = true };
 
 // Background task for the captive portal DNS requests
@@ -290,6 +342,7 @@ void WebApp_Init() {
         httpd_register_uri_handler(web_server, &uri_index);
         httpd_register_uri_handler(web_server, &uri_style);
         httpd_register_uri_handler(web_server, &uri_app);
+        httpd_register_uri_handler(web_server, &uri_status);
         httpd_register_uri_handler(web_server, &uri_ws);
 
         // Captive portal for everything else
