@@ -472,5 +472,9 @@
     "The connection was lost before your changes were saved.": "The connection was lost before your changes were saved.",
     "Restore the changes made before the connection was lost?\n\nCalibrations stay in the board only until it restarts: save them to keep them.": "Restore the changes made before the connection was lost?\n\nCalibrations stay in the board only until it restarts: save them to keep them.",
     "Changes restored: press Save and Send Settings to keep them.": "Changes restored: press Save and Send Settings to keep them.",
-    "Description": "Description"
+    "Description": "Description",
+    "The lightgun did not answer the connection request: it may be in use by an App on the USB cable or by another page.": "The lightgun did not answer the connection request: it may be in use by an App on the USB cable or by another page.",
+    "The lightgun answered with data this App does not understand: check that its firmware and this App belong to the same version.": "The lightgun answered with data this App does not understand: check that its firmware and this App belong to the same version.",
+    "The link to the lightgun closed before the settings were read.": "The link to the lightgun closed before the settings were read.",
+    "The settings could not be read (%1): the connection dropped during the transfer.": "The settings could not be read (%1): the connection dropped during the transfer."
 }

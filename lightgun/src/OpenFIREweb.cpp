@@ -156,10 +156,16 @@ bool WebApp_ClientLostPending() {
 // --- HTTP SERVER / SERVER HTTP ---
 
 // Captive portal: every unknown URL (OS connectivity checks included) goes to the App page.
+// The socket is closed right after the redirect: phones repeat these checks every few
+// seconds and their idle connections would otherwise use up the server's sockets
+// (and the App WebSocket would be the one closed to make room).
 static esp_err_t captive_portal_handler(httpd_req_t *req, httpd_err_code_t error) {
     httpd_resp_set_status(req, "302 Found");
     httpd_resp_set_hdr(req, "Location", "http://192.168.4.1/");
+    httpd_resp_set_hdr(req, "Connection", "close");
     httpd_resp_send(req, NULL, 0);
+    if (web_server)
+        httpd_sess_trigger_close(web_server, httpd_req_to_sockfd(req));
     return ESP_OK;
 }
 
@@ -275,6 +281,9 @@ void WebApp_Init() {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.max_uri_handlers = 8;
     config.close_fn = web_close_fn;
+    // Room for the App page, its files and the connectivity checks of a phone;
+    // without it the oldest socket is closed to make room, App WebSocket included.
+    config.max_open_sockets = 7;
     config.lru_purge_enable = true;
 
     if (httpd_start(&web_server, &config) == ESP_OK) {

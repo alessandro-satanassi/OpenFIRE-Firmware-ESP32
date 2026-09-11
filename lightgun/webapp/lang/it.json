@@ -472,5 +472,9 @@
     "The connection was lost before your changes were saved.": "La connessione si è interrotta prima che le modifiche fossero salvate.",
     "Restore the changes made before the connection was lost?\n\nCalibrations stay in the board only until it restarts: save them to keep them.": "Ripristinare le modifiche fatte prima dell'interruzione?\n\nLe calibrazioni restano nella scheda solo fino al riavvio: salvale per mantenerle.",
     "Changes restored: press Save and Send Settings to keep them.": "Modifiche ripristinate: premi Salva e invia impostazioni per mantenerle.",
-    "Description": "Descrizione"
+    "Description": "Descrizione",
+    "The lightgun did not answer the connection request: it may be in use by an App on the USB cable or by another page.": "La pistola non ha risposto alla richiesta di connessione: potrebbe essere in uso da un'App sul cavo USB o da un'altra pagina.",
+    "The lightgun answered with data this App does not understand: check that its firmware and this App belong to the same version.": "La pistola ha risposto con dati che questa App non riconosce: verifica che il firmware e questa App siano della stessa versione.",
+    "The link to the lightgun closed before the settings were read.": "Il collegamento con la pistola si è chiuso prima di leggere le impostazioni.",
+    "The settings could not be read (%1): the connection dropped during the transfer.": "Impossibile leggere le impostazioni (%1): la connessione si è interrotta durante il trasferimento."
 }

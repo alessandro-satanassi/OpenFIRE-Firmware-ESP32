@@ -217,8 +217,9 @@
         buildWelcome() {
             const { el, t, icon } = OF.UI;
             this.welcomeText = el('p', { class: 'welcome-text' });
+            this.welcomeDetail = el('p', { class: 'welcome-detail', hidden: true });
             const logo = el('div', { class: 'welcome-logo', html: OF.LOGO_SVG });
-            const children = [logo, el('div', { class: 'wordmark big', text: 'OpenFIRE' }), this.welcomeText];
+            const children = [logo, el('div', { class: 'wordmark big', text: 'OpenFIRE' }), this.welcomeText, this.welcomeDetail];
             if (this.isDevice) {
                 this.spinner = el('div', { class: 'spinner', attrs: { 'aria-hidden': 'true' } });
                 this.reconnectButton = el('button', { class: 'primary big-button', hidden: true, on: { click: () => this.connection.reconnect() } },
@@ -249,6 +250,10 @@
                 text = t('Connect the lightgun with its USB cable, then select it.');
             }
             this.welcomeText.textContent = text;
+            // Why the last attempt failed: useful where there is no console (phone).
+            const detail = this.connection.state === 'error' ? this.lastConnectionError : null;
+            this.welcomeDetail.textContent = detail ? this.connectionErrorText(detail) : '';
+            this.welcomeDetail.hidden = !detail;
             if (this.connectButton) this.connectButton.disabled = this.connection.state === 'connecting';
         }
 
@@ -406,9 +411,11 @@
 
         onConnectionState(state, detail) {
             const t = OF.UI.t;
+            this.logNote(`state: ${state} ${JSON.stringify(detail || {})}`);
             switch (state) {
             case 'connecting':
                 this.status.show(t('Connecting...'));
+                this.lastConnectionError = null;
                 break;
             case 'lost':
             case 'idle': {
@@ -431,6 +438,7 @@
                 break;
             }
             case 'error':
+                this.lastConnectionError = detail;
                 this.expectClose = false;
                 this.onDisconnected();
                 this.onConnectError(detail);
@@ -517,12 +525,30 @@
             }
         }
 
+        /** What went wrong, in the words of the App protocol (js/core/protocol.js results). */
+        connectionErrorText(detail) {
+            const t = OF.UI.t;
+            switch (detail.error) {
+            case 'dock_timeout':
+                return t('The lightgun did not answer the connection request: it may be in use by an App on the USB cable or by another page.');
+            case 'bad_board_info':
+                return t('The lightgun answered with data this App does not understand: check that its firmware and this App belong to the same version.');
+            case 'not_open':
+            case 'open_failed':
+            case 'closed':
+                return t('The link to the lightgun closed before the settings were read.');
+            default:
+                return t('The settings could not be read (%1): the connection dropped during the transfer.', String(detail.error || '?'));
+            }
+        }
+
         onConnectError(detail) {
             const t = OF.UI.t;
             const esc = OF.UI.escape;
             if (this.isDevice) {
                 // The lightgun page keeps trying: another App (USB) may hold the session.
                 this.status.show(t('Waiting for the lightgun... another App may be using it.'));
+                this.logNote('connect error: ' + JSON.stringify(detail));
                 return;
             }
             this.activePort = null;
@@ -719,6 +745,14 @@
                 text, hex);
             doc.body.append(panel);
             this.debugWindow = { root: panel, text, hex };
+        }
+
+        /** Line written in the debug window (unbundled folder or ?debug), without a board event. */
+        logNote(text) {
+            const win = this.debugWindow;
+            if (!win) return;
+            win.text.value = (win.text.value + `[${new Date().toLocaleTimeString()}] ${text}\n`).slice(-40000);
+            win.text.scrollTop = win.text.scrollHeight;
         }
 
         logDebug(command, payload) {
