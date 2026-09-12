@@ -50,7 +50,8 @@
 
         const rootNode = el('div', { class: 'tab-body pins-tab' },
             el('div', { class: 'tab-scroll' }, layout),
-            el('div', { class: 'pins-bottom' }, el('div', { class: 'pins-bottom-left' }, custom, layoutsMenu), presets));
+            // Qt PinsBottomHalf: checkbox on the left, User Layouts and the presets box on the right.
+            el('div', { class: 'pins-bottom' }, custom, el('div', { class: 'pins-bottom-right' }, layoutsMenu, presets)));
 
         let boxes = [];
         let loadedBoard = null;

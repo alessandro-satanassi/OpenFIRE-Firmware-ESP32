@@ -10,6 +10,7 @@
     const OF = root.OF = root.OF || {};
     const doc = root.document;
 
+    const APP_NAME = 'OpenFIRE Esp32';   // shown where the App names itself (title, welcome, About)
     const THEME_KEY = 'of_theme';
     const TAB_ORDER = ['pins', 'buttons', 'settings', 'profiles', 'tests'];
     const DOCS_URL = 'https://github.com/TeamOpenFIRE/OpenFIRE-Firmware/blob/OpenFIRE-dev/OpenFIREmain/README.md';
@@ -190,7 +191,10 @@
             this.status = new OF.UI.StatusBar(statusText, progress);
             this.status.adopt(previousStatus);
             const footer = el('footer', { class: 'app-footer' }, tabbar,
-                el('div', { class: 'statusbar' }, statusText, progress, this.saveButton));
+                el('div', { class: 'statusbar' },
+                    el('div', { class: 'status-side' }, statusText, progress),
+                    this.saveButton,
+                    el('div', { class: 'status-side' })));
 
             app.append(header, main, footer);
 
@@ -219,7 +223,7 @@
             this.welcomeText = el('p', { class: 'welcome-text' });
             this.welcomeDetail = el('p', { class: 'welcome-detail', hidden: true });
             const logo = el('div', { class: 'welcome-logo', html: OF.LOGO_SVG });
-            const children = [logo, el('div', { class: 'wordmark big', text: 'OpenFIRE' }), this.welcomeText, this.welcomeDetail];
+            const children = [logo, el('div', { class: 'wordmark big', text: APP_NAME }), this.welcomeText, this.welcomeDetail];
             if (this.isDevice) {
                 this.spinner = el('div', { class: 'spinner', attrs: { 'aria-hidden': 'true' } });
                 this.reconnectButton = el('button', { class: 'primary big-button', hidden: true, on: { click: () => this.connection.reconnect() } },
@@ -308,7 +312,7 @@
                 this.addDeviceButton.disabled = this.portSelector.disabled;
             }
             if (!loaded) {
-                this.titleNode.textContent = 'OpenFIRE';
+                this.titleNode.textContent = APP_NAME;
                 this.versionNode.textContent = '';
             }
         }
@@ -951,6 +955,7 @@
         }
     }
 
+    OF.APP_NAME = APP_NAME;
     OF.App = App;
 
     if (doc && !root.OF_NO_AUTOSTART) {

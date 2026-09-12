@@ -482,12 +482,17 @@ input.invalid { color: var(--danger); border-color: var(--danger); }
 .tab-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .statusbar {
-    display: flex;
+    /* Save in the middle of the bar, messages on the left. */
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
     gap: 12px;
     padding: 7px 12px;
     border-top: 1px solid var(--border);
 }
+
+.status-side { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.status-side:last-child { justify-content: flex-end; }
 
 .status-text {
     flex: 1;
@@ -500,7 +505,7 @@ input.invalid { color: var(--danger); border-color: var(--danger); }
 
 .status-progress { width: 150px; height: 8px; accent-color: var(--accent); }
 
-.save-button { min-height: 36px; padding: 0 16px; }
+.save-button { min-height: 36px; padding: 0 16px; min-width: 20rem; }
 .save-button:disabled { background: var(--surface-2); border-color: var(--border); color: var(--muted); font-weight: 500; opacity: 0.85; }
 .save-button:disabled .icon { opacity: 0.5; }
 
@@ -726,7 +731,7 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
     background: var(--surface);
 }
 
-.pins-bottom-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.pins-bottom-right { display: flex; align-items: center; justify-content: flex-end; gap: 10px 14px; flex-wrap: wrap; }
 .tool-button { border-color: var(--border); background: var(--surface-2); }
 .presets-box { min-width: 15rem; }
 
@@ -1043,8 +1048,10 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
     .desc-box.open .desc-toggle .chevron { transform: none; }
     .desc-box .desc-title, .desc-box .desc-text { display: none; }
     .desc-box.open .desc-text { display: block; padding: 0 12px 10px; }
+    .statusbar { grid-template-columns: minmax(0, 1fr) auto; padding: 7px 8px; gap: 8px; }
+    .statusbar .status-side:last-child { display: none; }
     .status-progress { width: 70px; }
-    .save-button { padding: 0 10px; }
+    .save-button { padding: 0 10px; min-width: 0; }
     .tab-button { font-size: 10.5px; min-height: 50px; }
 }
 

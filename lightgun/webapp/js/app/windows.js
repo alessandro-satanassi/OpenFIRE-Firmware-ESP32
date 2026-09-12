@@ -153,16 +153,16 @@
         const logo = el('div', { class: 'about-logo', html: OF.LOGO_SVG });
         const content = el('div', { class: 'about' },
             el('div', { class: 'about-head' }, logo,
-                el('div', null, el('div', { class: 'wordmark', text: 'OpenFIRE' }), el('div', { class: 'about-sub', text: t('Web App') }))),
-            el('div', { class: 'rich', html: t('<html><head/><body><p>Primary OpenFIRE Firmware maintainership and Desktop App developed by <a href="https://github.com/SeongGino"><span style=" text-decoration: underline; color:#8ab4f8;">That One Seong</span></a>.<br/>If this software has given you any value,</p></body></html>') }),
-            el('p', null, el('a', { class: 'kofi', href: 'https://ko-fi.com/thatoneseong', target: '_blank', rel: 'noopener', text: t('Support on Ko-fi') })),
-            el('p', { class: 'rich', html: t('ESP-IDF fork and this WebApp by <b>Alessandro Satanassi</b>.') }),
+                el('div', null, el('div', { class: 'wordmark', text: OF.APP_NAME || 'OpenFIRE Esp32' }), el('div', { class: 'about-sub', text: t('Web App') }))),
+            el('div', { class: 'rich center', html: t('<html><head/><body><p>Primary OpenFIRE Firmware maintainership and Desktop App developed by <a href="https://github.com/SeongGino"><span style=" text-decoration: underline; color:#8ab4f8;">That One Seong</span></a>.<br/>If this software has given you any value,</p></body></html>') }),
+            el('p', { class: 'center' }, el('a', { class: 'kofi', href: 'https://ko-fi.com/thatoneseong', target: '_blank', rel: 'noopener', text: t('Support on Ko-fi') })),
+            el('p', { class: 'rich center', html: t('ESP-IDF fork and this WebApp by <b>Alessandro Satanassi</b>.') }),
             el('div', { class: 'rich center', html: t('<html><head/><body><p align="center"><br/>Special Thanks:<br/>Samuel Ballantyne, for their work on the original <a href="https://github.com/samuelballantyne/IR-Light-Gun"><span style=" text-decoration: underline; color:#8ab4f8;">SAMCO lightgun system</span></a>.<br/>Mike Lynch, AKA Prow7, for their enhanced fork and libraries.<br/><a href="https://forum.arcadecontrols.com/index.php/board,20.0.html"><span style=" text-decoration: underline; color:#8ab4f8;">The ArcadeControls forums</span></a> for their support.<br/>All the early GitHub testers for their feedback.<br/>And You, for enjoying this software!</p><p align="center">OpenFIRE, as the name implies, is FREE SOFTWARE;<br/>if you have paid for the firmware or this utility, you have been scammed and should demand your money back!</p></body></html>') }),
             el('div', { class: 'rich center', html: t('<html><head/><body><p><a href="https://github.com/TeamOpenFIRE/OpenFIRE-Firmware"><span style=" text-decoration: underline; color:#8ab4f8;">Firmware</span></a> | <a href="https://github.com/TeamOpenFIRE/OpenFIRE-App"><span style=" text-decoration: underline; color:#8ab4f8;">Desktop Source</span></a> | <a href="discord.com/invite/dFw5z6PBQv"><span style=" text-decoration: underline; color:#8ab4f8;">Discord</span></a></p></body></html>')
                 .replace('href="discord.com/', 'href="https://discord.com/') }),
             el('p', { class: 'rich center', html: '<a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32">OpenFIRE Firmware ESP32</a>' }));
         for (const link of content.querySelectorAll('a')) { link.target = '_blank'; link.rel = 'noopener'; }
-        return OF.UI.dialog({ title: t('About OpenFIRE'), content, className: 'about-dialog', cancelValue: null, buttons: [{ label: t('Close'), value: null, primary: true }] });
+        return OF.UI.dialog({ title: t('About %1', OF.APP_NAME || 'OpenFIRE Esp32'), content, className: 'about-dialog', cancelValue: null, buttons: [{ label: t('Close'), value: null, primary: true }] });
     }
 
     OF.Windows = { openPreviewer, openAbout, capabilityMarks };
