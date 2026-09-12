@@ -110,6 +110,31 @@ async function installFakeSerial(context, sim) {
         });
     }, scope);
     ok(await rowsOk('#tab-pins'), 'pin boxes on the rows of boardsBoxPositions (empty rows kept, top to bottom)');
+    const fits = async (size) => {
+        if (size) await page.setViewportSize(size);
+        await sleep(400);
+        return page.evaluate(() => {
+            const scroll = document.querySelector('#tab-pins .tab-scroll');
+            return scroll.scrollHeight <= scroll.clientHeight + 1;
+        });
+    };
+    ok(await fits(), 'board layout fits the window without scrolling');
+    ok(await fits({ width: 1280, height: 720 }), 'board layout still fits a shorter window');
+    await page.setViewportSize({ width: 1280, height: 860 });
+    await tab(page, 'profiles');
+    await sleep(400);
+    ok(await page.evaluate(() => {
+        const scroll = document.querySelector('#tab-profiles .table-scroll');
+        return scroll.scrollWidth <= scroll.clientWidth + 1;
+    }), 'profiles table fits the window without scrolling sideways');
+    await tab(page, 'pins');
+    // The User Layouts button sits on the right of the bottom bar: its menu must stay in the window.
+    await page.click('#tab-pins .pins-bottom .menu-button');
+    ok(await page.evaluate(() => {
+        const box = document.querySelector('#tab-pins .menu-panel').getBoundingClientRect();
+        return box.left >= 0 && box.top >= 0 && box.right <= innerWidth + 1 && box.bottom <= innerHeight + 1;
+    }), 'the User Layouts menu opens inside the window');
+    await page.click('#tab-pins .pins-bottom .menu-button');
     ok(await page.locator('.device-bar').count() === 0, 'no device selector on the lightgun page');
     ok(await page.locator('.menu-button', { hasText: 'Board Previews' }).count() === 0, 'board previews hidden on the lightgun page');
     ok(sim.firmware.gunMode === 'docked' && sim.firmware.sessionActive, 'firmware docked');

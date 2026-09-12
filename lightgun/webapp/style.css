@@ -327,6 +327,7 @@ input.invalid { color: var(--danger); border-color: var(--danger); }
     top: calc(100% + 4px);
     left: 0;
     min-width: 240px;
+    max-width: calc(100vw - 12px);
     padding: 5px;
     background: var(--surface);
     border: 1px solid var(--border);
@@ -338,6 +339,8 @@ input.invalid { color: var(--danger); border-color: var(--danger); }
 }
 
 .menu.up .menu-panel { top: auto; bottom: calc(100% + 4px); }
+/* Set when the panel would run past the right edge of the window (see UI.menu). */
+.menu.end .menu-panel { left: auto; right: 0; }
 
 .menu-item {
     display: flex;

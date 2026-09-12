@@ -73,8 +73,12 @@
         const middle = el('div', { class: 'pins-middle' });
         const picture = el('div', { class: 'board-picture' });
         const layout = el('div', { class: 'pins-layout preview' }, left, el('div', { class: 'pins-center' }, picture, middle), right);
+        const scroll = el('div', { class: 'preview-scroll' }, layout);
         const content = el('div', { class: 'previewer' }, el('div', { class: 'preview-selector-row' }, selector),
-            el('div', { class: 'preview-scroll' }, layout), line, subtext);
+            scroll, line, subtext);
+        // Like the board layout tab: the board is shown whole instead of being scrolled.
+        const wide = root.matchMedia ? root.matchMedia('(min-width: 761px)') : null;
+        const fit = () => OF.UI.fitToHeight(scroll, layout, 0.6, !wide || wide.matches);
 
         function show(board) {
             left.textContent = '';
@@ -121,6 +125,7 @@
             left.style.setProperty('--rows', Math.max(1, maxLeft));
             right.style.setProperty('--rows', Math.max(1, maxRight));
             middle.hidden = !middle.children.length;
+            fit();
             OF.Boards.showPicture(picture, board);
         }
 
@@ -133,6 +138,7 @@
         };
         select(currentBoard);
 
+        OF.UI.fitOnResize(scroll, fit);
         previewer = { node: content, select };
         previewer.done = OF.UI.dialog({
             title: t('Boards Previewer'), content, wide: true, className: 'preview-dialog', cancelValue: null,

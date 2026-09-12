@@ -79,12 +79,20 @@
         const help = (key, n) => [t(HELP[key][0], n), t(HELP[key][1], n)];
 
         const table = el('table', { class: 'profiles-table' });
+        const tableScroll = el('div', { class: 'table-scroll' }, table);
         const buttons = el('div', { class: 'cali-buttons' });
+
+        // The whole table is shown: it shrinks instead of being scrolled sideways
+        // (on narrow screens it is scrolled as usual).
+        const wide = root.matchMedia ? root.matchMedia('(min-width: 761px)') : null;
+        const fit = () => OF.UI.fitToWidth(tableScroll, table, 0.6, !wide || wide.matches);
+        OF.UI.fitOnResize(tableScroll, fit);
+        if (wide && wide.addEventListener) wide.addEventListener('change', fit);
         const rootNode = el('div', { class: 'tab-body' },
             el('div', { class: 'tab-scroll' },
                 el('div', { class: 'tab-content' },
                     el('fieldset', { class: 'group' }, el('legend', { text: t('Calibration Profiles') }),
-                        el('div', { class: 'table-scroll' }, table), buttons))),
+                        tableScroll, buttons))),
             desc.root);
 
         let rows = [];
@@ -171,6 +179,7 @@
         function update() {
             if (!state.loaded) return;
             if (builtCount !== state.profileCount) populate();
+            fit();
             const locked = app.commitNeedsRetry;
             rows.forEach((row, i) => {
                 const profile = state.cur.profiles[i];

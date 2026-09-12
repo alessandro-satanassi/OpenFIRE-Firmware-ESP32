@@ -48,13 +48,21 @@
             }
         });
 
+        const scroll = el('div', { class: 'tab-scroll' }, layout);
         const rootNode = el('div', { class: 'tab-body pins-tab' },
-            el('div', { class: 'tab-scroll' }, layout),
+            scroll,
             // Qt PinsBottomHalf: checkbox on the left, User Layouts and the presets box on the right.
             el('div', { class: 'pins-bottom' }, custom, el('div', { class: 'pins-bottom-right' }, layoutsMenu, presets)));
 
         let boxes = [];
         let loadedBoard = null;
+
+        // The board layout is shown whole: it shrinks instead of being scrolled
+        // (on narrow screens the single column is scrolled as usual).
+        const wide = root.matchMedia ? root.matchMedia('(min-width: 761px)') : null;
+        const fit = () => OF.UI.fitToHeight(scroll, layout, 0.6, !wide || wide.matches);
+        OF.UI.fitOnResize(scroll, fit);
+        if (wide && wide.addEventListener) wide.addEventListener('change', fit);
 
         function report(messages) {
             if (messages && messages.length) app.status.show(t(messages[messages.length - 1]), 10000);
@@ -132,7 +140,7 @@
 
         function update() {
             if (!state.loaded) return;
-            if (state.board.type !== loadedBoard || !boxes.length) populate();
+            if (state.board.type !== loadedBoard || !boxes.length) { populate(); fit(); }
             const customOn = state.customPins;
             boxes.forEach((box, gpio) => {
                 if (!box) return;

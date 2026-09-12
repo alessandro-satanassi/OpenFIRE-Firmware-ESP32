@@ -340,6 +340,45 @@
         return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
     }
 
+    /**
+     * Shrinks `content` (CSS zoom) until it fits inside `box`, down to minScale: the board
+     * layout and the profiles table are shown whole instead of being scrolled, like in Qt.
+     * Returns the scale in use. Nothing happens when it already fits, or when disabled.
+     */
+    function fitToBox(box, content, vertical, minScale = 0.6, enabled = true) {
+        if (!box || !content) return 1;
+        content.style.zoom = '';
+        if (!enabled) return 1;
+        const available = vertical ? box.clientHeight : box.clientWidth;
+        let natural = vertical ? content.scrollHeight : content.scrollWidth;
+        if (!available || !natural || natural <= available + 1) return 1;
+        // Smaller content can lay out differently (one line less, a column wider):
+        // measure what it really uses and correct, a couple of times at most.
+        let scale = 1;
+        for (let pass = 0; pass < 3; ++pass) {
+            scale = Math.max(minScale, Math.floor((available / natural) * 1000) / 1000);
+            content.style.zoom = String(scale);
+            const used = vertical ? box.scrollHeight : box.scrollWidth;
+            if (used <= available + 1 || scale <= minScale) break;
+            natural = Math.ceil(used / scale);
+        }
+        return scale;
+    }
+
+    const fitToHeight = (box, content, minScale, enabled) => fitToBox(box, content, true, minScale, enabled);
+    const fitToWidth = (box, content, minScale, enabled) => fitToBox(box, content, false, minScale, enabled);
+
+    /** Calls fit() now and whenever the box is resized (window, tab, orientation). */
+    function fitOnResize(box, fit) {
+        if (typeof root.ResizeObserver === 'function') {
+            const observer = new root.ResizeObserver(() => fit());
+            observer.observe(box);
+        } else {
+            root.addEventListener('resize', fit);
+        }
+        fit();
+    }
+
     // ----- Description box (Qt whatsThis panels) ----------------------------------
 
     /** Qt whatsThis panel. On phones (no pointer to hover with) it is a bar that opens on a tap. */
@@ -494,6 +533,15 @@
             }
         };
 
+        // The panel opens under (or over) the left edge of the button, but is aligned to its
+        // right edge when it would run past the window, like the menus of the Qt App.
+        const place = () => {
+            wrap.classList.remove('end');
+            if (!panel.getBoundingClientRect) return;
+            const width = root.innerWidth || (doc && doc.documentElement.clientWidth) || 0;
+            if (width && panel.getBoundingClientRect().right > width - 6) wrap.classList.add('end');
+        };
+
         button.addEventListener('click', (event) => {
             event.stopPropagation();
             const wasOpen = openMenu && openMenu.panel === panel;
@@ -501,6 +549,7 @@
             if (wasOpen) return;
             build();
             panel.hidden = false;
+            place();
             button.setAttribute('aria-expanded', 'true');
             openMenu = { panel, button };
             const first = panel.querySelector('.menu-item:not([disabled])');
@@ -537,6 +586,7 @@
 
     OF.UI = {
         t, el, icon, dialog, closeDialogs, modalOpen, alert, confirm, prompt, pickColor, toHex, fromHex, formatG,
+        fitToHeight, fitToWidth, fitOnResize,
         spin, select, checkbox, radio, group, setEnabled, escape,
         DescriptionBox, StatusBar, downloadBytes, openFile, menu, closeMenus,
     };
