@@ -50,8 +50,8 @@
         const greenTest = testButton('Test Green LED', C.sTestLEDG, 'Set LED to Green.');
         const blueTest = testButton('Test Blue LED', C.sTestLEDB, 'Set LED to Blue.');
         const feedbackTests = el('fieldset', { class: 'group' }, el('legend', { text: t('Feedback Tests') }),
-            el('div', { class: 'row fill' }, rumbleTest, solenoidTest),
-            el('div', { class: 'row fill' }, redTest, greenTest, blueTest));
+            el('div', { class: 'row fill feedback-row' }, rumbleTest, solenoidTest),
+            el('div', { class: 'row fill feedback-row' }, redTest, greenTest, blueTest));
 
         const irTest = el('button', { class: 'wide-button', text: t('Open IR Camera Tester...'), on: { click: () => app.openIRTest() } });
 

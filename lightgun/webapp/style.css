@@ -792,7 +792,8 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
 
 .profiles-table tr:last-child td { border-bottom: 0; }
 .profiles-table td.value { min-width: 3.8rem; }
-.profiles-table td:nth-child(8), .profiles-table th:nth-child(2) { border-left: 1px solid var(--border); }
+/* One separator only, between the profile name and its values: header and rows in one line. */
+.profiles-table td:nth-child(3), .profiles-table th:nth-child(2) { border-left: 1px solid var(--border); }
 .profile-radio { font-family: var(--mono); text-align: left; min-width: 10rem; }
 .profiles-table select { min-height: 30px; }
 
@@ -824,6 +825,9 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
     gap: 6px;
 }
 
+/* A little more room between the two rows of feedback tests. */
+.feedback-row + .feedback-row { margin-top: 10px; }
+
 .test-button, .temperature {
     display: flex;
     align-items: center;
@@ -839,6 +843,9 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
     white-space: nowrap;
     transition: background-color 0.05s;
 }
+
+/* The boxes are tall: long translated names wrap instead of being cut off. */
+.test-button { white-space: normal; line-height: 1.2; overflow-wrap: anywhere; }
 
 .test-button.not-connected, .temperature.not-connected { color: var(--faint); border-color: var(--border); background: transparent; }
 .test-button.pressed { background: #ff0000; border-color: #ff0000; color: #fff; font-weight: 700; }
