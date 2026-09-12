@@ -300,6 +300,14 @@ async function installFakeSerial(context, sim) {
     ok(await waitFor(() => dev.locator('.test-button.pressed').count().then((n) => n === 0)), 'released button');
     await dev.click('text=Test Rumble Motor');
     ok(await waitFor(() => fw.lastTest === fw.C.sTestRumble), 'rumble test command');
+    await sleep(400);
+    ok(await dev.evaluate(() => {
+        const scroll = document.querySelector('#tab-tests .tab-scroll');
+        const buttons = document.querySelector('#tab-tests .test-buttons').getBoundingClientRect();
+        const temp = document.querySelector('#tab-tests .temperature').getBoundingClientRect();
+        const box = document.querySelector('#tab-tests .test-buttons').closest('.group').getBoundingClientRect();
+        return scroll.scrollHeight <= scroll.clientHeight + 1 && buttons.height > 120 && temp.bottom <= box.bottom;
+    }), 'gun tests fit the window, the buttons fill the box with the temperature at the bottom');
 
     await dev.dblclick('text=Open IR Camera Tester...');
     ok(await waitFor(() => fw.runMode === 'processing'), 'IR test mode on the board');

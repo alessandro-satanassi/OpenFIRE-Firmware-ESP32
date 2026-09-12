@@ -61,9 +61,16 @@
         const boardActions = el('fieldset', { class: 'group' }, el('legend', { text: t('Board Actions') }),
             el('div', { class: 'row fill board-actions' }, reboot, clear));
 
-        const rootNode = el('div', { class: 'tab-body' },
-            el('div', { class: 'tab-scroll' },
-                el('div', { class: 'tab-content narrow' }, inputsTest, feedbackTests, irTest, el('hr'), boardActions)));
+        const content = el('div', { class: 'tab-content narrow' }, inputsTest, feedbackTests, irTest, el('hr'), boardActions);
+        const scroll = el('div', { class: 'tab-scroll' }, content);
+        const rootNode = el('div', { class: 'tab-body' }, scroll);
+
+        // Like the board layout: the whole tab is shown, it shrinks instead of being scrolled
+        // (on narrow screens the single column is scrolled as usual).
+        const wide = root.matchMedia ? root.matchMedia('(min-width: 761px)') : null;
+        const fit = () => OF.UI.fitToHeight(scroll, content, 0.6, !wide || wide.matches);
+        OF.UI.fitOnResize(scroll, fit);
+        if (wide && wide.addEventListener) wide.addEventListener('change', fit);
 
         const mapped = (fn) => (state.testPins[fn] ?? -1) >= 0;
 
@@ -103,6 +110,7 @@
             greenTest.disabled = !mapped(E.ledG);
             blueTest.disabled = !mapped(E.ledB);
             reboot.textContent = t(state.isRP ? 'Reboot to Bootloader' : 'Restart Microcontroller in Firmware Update Mode');
+            fit();
         }
 
         /** Board events for this tab. Returns true when handled. */

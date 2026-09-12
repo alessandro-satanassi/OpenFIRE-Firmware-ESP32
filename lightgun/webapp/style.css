@@ -812,16 +812,22 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
     flex-wrap: wrap;
 }
 
-.inputs-test > .group:first-child { flex: 1 1 380px; }
+/* Qt: the buttons fill the height of the box, with the temperature at the bottom. */
+.inputs-test > .group:first-child { flex: 1 1 380px; display: flex; flex-direction: column; }
 .analog-group { flex: 0 0 auto; text-align: center; }
 
 .test-buttons {
+    flex: 1;
+    grid-auto-rows: minmax(2.1rem, 1fr);
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 6px;
 }
 
 .test-button, .temperature {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     padding: 7px 4px;
     text-align: center;
     border: 1px solid var(--border-strong);
