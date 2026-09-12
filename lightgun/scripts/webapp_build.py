@@ -6,6 +6,9 @@ Outputs
   site   : the complete app (every board, Web Serial) for GitHub Pages and Tauri,
            written to a folder (default: dist/site); one script per board picture in
            boards/pics/ (<picture>.js), so the page also works opened as a local file.
+           Only the files of the app are written: the rest of the folder (.git, README,
+           LICENSE, CNAME of a site repository) is left untouched, so the site folder
+           can be the checkout of the site repository (see scripts/pack_webapp.py).
 
 index.html lists the scripts between <!-- OF:SCRIPTS --> and <!-- /OF:SCRIPTS -->: in
 the build they are joined, in order, into a single app.js. Two of them are generated:
@@ -23,7 +26,6 @@ import gzip
 import json
 import os
 import re
-import shutil
 import sys
 
 SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -159,22 +161,54 @@ def write_device_header(project_dir, board, header_path, env_name=""):
     return total, changed
 
 
+def _write_bytes_if_changed(path, data):
+    """Writes only when the content changes (a repository folder keeps its history tidy)."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    if os.path.exists(path):
+        with open(path, "rb") as f:
+            if f.read() == data:
+                return False
+    with open(path, "wb") as f:
+        f.write(data)
+    return True
+
+
 def build_site(project_dir, out_dir):
+    """Writes the site into out_dir. Only the files of the app are touched: anything
+    else in the folder (.git, README, LICENSE, CNAME of a site repository) is left alone.
+    Returns {'files': {name: bytes}, 'changed': [names], 'removed': [names]}."""
     files = bundle(project_dir, "site")
-    if os.path.isdir(out_dir):
-        shutil.rmtree(out_dir)
-    os.makedirs(os.path.join(out_dir, "boards", "pics"))
+    pictures = build_board_pics.all_picture_scripts(project_dir)
+
+    out_dir = os.path.abspath(out_dir)
+    if os.path.abspath(os.path.join(project_dir, "webapp")) == out_dir:
+        raise RuntimeError("the site folder cannot be the webapp source folder")
+
+    changed = []
     for name, data in files.items():
-        with open(os.path.join(out_dir, name), "wb") as f:
-            f.write(data)
-    for name, data in build_board_pics.all_picture_scripts(project_dir).items():
+        if _write_bytes_if_changed(os.path.join(out_dir, name), data):
+            changed.append(name)
+    for name, data in pictures.items():
         path = os.path.join(out_dir, "boards", "pics", *name.split("/"))
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "wb") as f:
-            f.write(data)
-    with open(os.path.join(out_dir, ".nojekyll"), "wb"):
-        pass  # GitHub Pages: serve the files as they are
-    return files
+        if _write_bytes_if_changed(path, data):
+            changed.append("boards/pics/" + name)
+
+    nojekyll = os.path.join(out_dir, ".nojekyll")  # GitHub Pages: serve the files as they are
+    if not os.path.exists(nojekyll):
+        with open(nojekyll, "wb"):
+            pass
+        changed.append(".nojekyll")
+
+    # Pictures of boards that no longer exist (and the former .svg copies).
+    removed = []
+    pics_dir = os.path.join(out_dir, "boards", "pics")
+    if os.path.isdir(pics_dir):
+        for name in sorted(os.listdir(pics_dir)):
+            if name.lower().endswith((".js", ".svg")) and name not in pictures:
+                os.remove(os.path.join(pics_dir, name))
+                removed.append("boards/pics/" + name)
+
+    return {"files": files, "changed": changed, "removed": removed}
 
 
 def print_sizes(project_dir):
@@ -205,8 +239,9 @@ def main(argv):
     refresh_dev_files(project)
     if args.target == "site":
         out = os.path.abspath(args.out or os.path.join(project, "dist", "site"))
-        build_site(project, out)
-        print("Site written to", out)
+        result = build_site(project, out)
+        print(f"Site written to {out} ({len(result['changed'])} file(s) updated"
+              + (f", {len(result['removed'])} removed" if result["removed"] else "") + ")")
     elif args.target == "device":
         if not args.board:
             parser.error("device needs --board")

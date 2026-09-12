@@ -5,7 +5,7 @@ The web version of the OpenFIRE App. One source folder, three outputs:
 | Output | Boards | Connection | Built by |
 | --- | --- | --- | --- |
 | Lightgun (web configuration mode) | only its own board (picture inside `app.js`) | WebSocket `ws://<gun>/ws` | `scripts/pack_webapp.py` on every PlatformIO build of an ESP32 environment -> `include/web_assets.h` |
-| Site (GitHub Pages) | all boards | Web Serial | `python scripts/webapp_build.py site` -> `dist/site` |
+| Site (GitHub Pages) | all boards | Web Serial | `python scripts/webapp_build.py site` -> `dist/site`, or the site repository folder at every PlatformIO build (`custom_webapp_site_dir`) |
 | Tauri app | all boards | Web Serial | same files as the site |
 
 ## Folder
@@ -72,9 +72,27 @@ with unsaved edits.
 ```
 python scripts/webapp_build.py sizes                 # refresh generated files, print gzipped sizes
 python scripts/webapp_build.py site                  # dist/site
+python scripts/webapp_build.py site --out <folder>   # any folder (e.g. the site repository)
 python scripts/webapp_build.py device --board waveshare-esp32-s3-zero --out dist/device
 python scripts/build_board_pics.py                   # after changing a board picture (needs Pillow)
 ```
+
+## Publishing the site
+
+Every PlatformIO build writes the site into `dist/site` (generated, not in git). To keep the folder
+of the site repository up to date instead, set its path in `platformio.ini` (under `[env]`, or in a
+single environment):
+
+```
+custom_webapp_site_dir = ../../OpenFIRE-WebApp
+```
+
+The build then writes `index.html`, `style.css`, `app.js`, `boards/pics/*.js` and `.nojekyll` there
+instead of `dist/site`, leaving everything else alone (`.git`, `README`, `LICENSE`, `CNAME`), and
+removes the pictures of boards that no longer exist. Files are rewritten only when their content
+changes, so `git status` in that folder shows exactly what the build changed; committing and pushing
+stays yours. A relative path starts from the `lightgun` folder; `OPENFIRE_WEBAPP_SITE_DIR` in the
+environment has priority over `platformio.ini`, and the value `off` disables the site build.
 
 ## Boards: what updates by itself
 

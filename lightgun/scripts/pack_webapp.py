@@ -1,4 +1,16 @@
-"""PlatformIO pre-script: embeds the reduced web app in the firmware (include/web_assets.h).
+"""PlatformIO pre-script: embeds the reduced web app in the firmware (include/web_assets.h)
+and, when asked, updates the folder of the published site.
+
+Site (GitHub Pages / Tauri): every build writes it into dist/site. To keep the folder of
+the site repository up to date instead, set its path in platformio.ini, under [env] (or in
+a single environment):
+
+    custom_webapp_site_dir = ../../OpenFIRE-WebApp
+
+A relative path starts from the lightgun folder; the environment variable
+OPENFIRE_WEBAPP_SITE_DIR has priority over platformio.ini, and the value "off" writes no
+site at all. The folder receives index.html, style.css, app.js, boards/pics/*.js and
+.nojekyll; everything else in it (.git, README, LICENSE, CNAME) is left untouched.
 
 Every build re-reads src/boards (OpenFIREshared.h, boardPics/boards.qrc and the board SVGs) and
 webapp/lang/*.json, so changes to boards, pin maps, alternative layouts and pictures are
@@ -25,6 +37,38 @@ import webapp_build      # noqa: E402
 
 ENV_NAME = env.subst("$PIOENV")  # noqa: F821
 HEADER_PATH = os.path.join(PROJECT_DIR, "include", "web_assets.h")
+
+
+def site_dir():
+    """Folder of the site: dist/site, the configured one, or None ("off")."""
+    value = os.environ.get("OPENFIRE_WEBAPP_SITE_DIR", "").strip()
+    if not value:
+        try:
+            value = str(env.GetProjectOption("custom_webapp_site_dir", "") or "").strip()  # noqa: F821
+        except Exception:
+            value = ""
+    if value.lower() in ("off", "no", "none", "0"):
+        return None
+    if not value:
+        return os.path.join(PROJECT_DIR, "dist", "site")
+    value = os.path.expanduser(env.subst(value))  # noqa: F821
+    return value if os.path.isabs(value) else os.path.abspath(os.path.join(PROJECT_DIR, value))
+
+
+def update_site():
+    """Writes the site into the configured folder (a build must not fail because of it)."""
+    target = site_dir()
+    if not target:
+        return
+    try:
+        result = webapp_build.build_site(PROJECT_DIR, target)
+        changed = len(result["changed"])
+        removed = len(result["removed"])
+        state = "unchanged" if not changed and not removed else \
+            f"{changed} file(s) updated" + (f", {removed} removed" if removed else "")
+        print(f"[WebApp] site in {target}: {state}.")
+    except Exception as error:
+        print(f"[WebApp] WARNING: the site could not be written in {target}: {error}")
 
 
 def _flatten(value):
@@ -89,6 +133,7 @@ def main():
     board = build_shared_js.detect_board(PROJECT_DIR, build_defines())
     ensure_pillow()
     webapp_build.refresh_dev_files(PROJECT_DIR)
+    update_site()
     if "espressif32" not in platform and "esp32" not in board:
         print(f"[WebApp] {ENV_NAME}: web app not embedded (only ESP32 boards serve it).")
         return
