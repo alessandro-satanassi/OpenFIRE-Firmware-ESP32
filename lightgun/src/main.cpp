@@ -104,39 +104,62 @@
 #endif
 // ======[ESP32_PORT]====== DUAL-CORE MANAGEMENT FOR ESP32 USING FREERTOS / FINE GESTIONE DUAL CORE ESP32 (FINE INIZIALIZZAZIONE)
 
-static void CheckFirmwareUpdateRequest()
-{
-    const int triggerPin = OF_Prefs::pins[OF_Const::btnTrigger];
-    const int buttonAPin = OF_Prefs::pins[OF_Const::btnGunA];
+// Buttons to hold at boot (1.5 s) to also serve the App over WiFi (web
+// configuration mode). It works with the dongle too: the access point joins
+// the channel of the ESP-NOW link. / Tasti da tenere premuti all'avvio (1,5 s)
+// per servire l'App anche via WiFi: funziona anche con il dongle, l'access
+// point si aggancia al canale del collegamento ESP-NOW.
+#define WEBCONFIG_COMBO_BUTTON_1 OF_Const::btnStart
+#define WEBCONFIG_COMBO_BUTTON_2 OF_Const::btnSelect
 
+/// @brief True when both buttons are held, uninterrupted, for holdMs at boot.
+static bool BootButtonsHeld(const int firstPin, const int secondPin, const unsigned long holdMs)
+{
     // Both buttons must be configured on different GPIOs.
-    if(triggerPin < 0 || buttonAPin < 0 || triggerPin == buttonAPin)
-        return;
+    if(firstPin < 0 || secondPin < 0 || firstPin == secondPin)
+        return false;
 
     // Allow mechanical contacts to settle before the first reading.
     delay(50);
-    
+
     // Buttons use INPUT_PULLUP: LOW means pressed.
-    if(digitalRead(triggerPin) != LOW ||
-       digitalRead(buttonAPin) != LOW)
-        return;
+    if(digitalRead(firstPin) != LOW ||
+       digitalRead(secondPin) != LOW)
+        return false;
 
     const unsigned long holdStart = millis();
 
-    // Both buttons must remain continuously pressed for 1.5 seconds.
-    while((millis() - holdStart) < 1500UL) {
-        if(digitalRead(triggerPin) != LOW ||
-           digitalRead(buttonAPin) != LOW)
-            return;
+    // Both buttons must remain continuously pressed for the whole interval.
+    while((millis() - holdStart) < holdMs) {
+        if(digitalRead(firstPin) != LOW ||
+           digitalRead(secondPin) != LOW)
+            return false;
 
         delay(10);
     }
 
     // Perform one final reading at the end of the hold interval.
-    if(digitalRead(triggerPin) == LOW &&
-       digitalRead(buttonAPin) == LOW)
+    return digitalRead(firstPin) == LOW &&
+           digitalRead(secondPin) == LOW;
+}
+
+static void CheckFirmwareUpdateRequest()
+{
+    if(BootButtonsHeld(OF_Prefs::pins[OF_Const::btnTrigger],
+                       OF_Prefs::pins[OF_Const::btnGunA], 1500UL))
         FW_Common::RebootToBootloader();
 }
+
+/// @brief Web configuration mode, requested at boot with the buttons above.
+///        Not used yet: OF_WebConfigModeActive is still set by hand below.
+/// /      Non ancora usata: OF_WebConfigModeActive si imposta ancora a mano.
+/*
+static bool CheckWebConfigRequest()
+{
+    return BootButtonsHeld(OF_Prefs::pins[WEBCONFIG_COMBO_BUTTON_1],
+                           OF_Prefs::pins[WEBCONFIG_COMBO_BUTTON_2], 1500UL);
+}
+*/
 
 // Sets up the environment
 void setup() {
@@ -378,6 +401,13 @@ void setup() {
 // ====== [ESP32_PORT] ==== End initialize camera before the connection / fine del blocco che per opportunità è spostato sopra prima della connessione =======
 
 CheckFirmwareUpdateRequest();
+OF_WebConfigModeActive = true;
+//OF_WebConfigModeActive = false;
+
+// Here the buttons are still held: the web configuration mode will be asked for
+// at this point. / Qui i tasti sono ancora premuti: la modalita' di
+// configurazione web verra' richiesta da qui.
+// const bool webConfigRequested = CheckWebConfigRequest();
 
 // ===================================================================================
 // EMPIRICAL HARDWARE CALIBRATION OF ANALOG STICKS / CALIBRAZIONE EMPIRICA HARDWARE DEGLI STICK ANALOGICI
@@ -629,7 +659,18 @@ CheckFirmwareUpdateRequest();
 
 
     // ================== avvia webapp ======================
-    OF_WebConfigModeActive = true;
+    // Web configuration mode (access point + WebSocket). Set by hand for now;
+    // later: OF_WebConfigModeActive = webConfigRequested (buttons held at boot).
+    // It works both on the cable and with the dongle: WebApp_Init() uses a fixed
+    // channel when the radio is free, and the channel of the ESP-NOW link (dongle
+    // or wireless pedal) when that link is already using it.
+    // /
+    // Modalita' di configurazione web (access point + WebSocket). Per ora si
+    // imposta a mano; in seguito: OF_WebConfigModeActive = webConfigRequested
+    // (tasti premuti all'avvio). Funziona sia via cavo sia con il dongle:
+    // WebApp_Init() usa un canale fisso quando la radio e' libera e il canale del
+    // collegamento ESP-NOW (dongle o pedale wireless) quando e' gia' in uso.
+    //OF_WebConfigModeActive = true;
     if (OF_WebConfigModeActive) WebApp_Init();
     // ======================================================
 

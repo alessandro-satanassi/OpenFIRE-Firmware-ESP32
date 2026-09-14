@@ -96,6 +96,7 @@ extern bool display_init;
   #define OPENFIRE_ESPNOW_WIFI_POWER WIFI_POWER_17dBm  // corresponds to 68... maximum power without distortion and with an excellent signal / corrisponde a 68 .. massima potenza senza distursioni con segnale eccellette
   
 #endif //OPENFIRE_ESPNOW_WIFI_POWER
+ 
 
 uint8_t espnow_wifi_channel = OPENFIRE_ESPNOW_WIFI_CHANNEL;  // Configurable for future setup via app or OLED. / FATTA VARIABILE PER FUTURA CONFIGURAZIONE TRAMITE APP O OLED
 uint8_t espnow_wifi_power = OPENFIRE_ESPNOW_WIFI_POWER;      // Configurable for future setup via app or OLED. / FATTA VARIABILE PER FUTURA CONFIGURAZIONE TRAMITE APP O OLED
@@ -147,7 +148,7 @@ static portMUX_TYPE mux_radio_tx = portMUX_INITIALIZER_UNLOCKED;
 
 
 uint8_t buffer_espnow[ESP_NOW_MAX_DATA_LEN];
-esp_now_peer_info_t peerInfo; // It must be placed outside the functions—a global utility variable for configuration. / deve stare fuori funzioni da funzioni -- globale --variabile di utilità per configurazione
+esp_now_peer_info_t peerInfo ={}; // It must be placed outside the functions—a global utility variable for configuration. / deve stare fuori funzioni da funzioni -- globale --variabile di utilità per configurazione
 
 static void _esp_now_rx_cb(const esp_now_recv_info_t *info, const uint8_t *data, int len); // callback esp_now
 static void _esp_now_tx_cb(const esp_now_send_info_t *tx_info, esp_now_send_status_t status);
@@ -1467,6 +1468,24 @@ bool SerialWireless_::end() {
   return true;
 }
 
+bool SerialWireless_::startAccessPoint(const char *ssid, const char *password) {
+  if (WiFi.softAP(WEBAPP_AP_SSID, NULL, espnow_wifi_channel)) {
+    esp_err_t err;
+    err = esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_11G);
+    if (err != ESP_OK) {
+      //Serial.printf("esp_wifi_set_protocol failed! 0x%x", err);
+    }
+    err = esp_wifi_set_bandwidth(WIFI_IF_AP, WIFI_BW_HT20);
+    if (err != ESP_OK) {
+      //Serial.printf("esp_wifi_set_protocol failed! 0x%x", err);
+    }  
+    return true;
+  } else return false;
+}
+
+IPAddress SerialWireless_::ipAddressAP() {
+  return WiFi.softAPIP();
+}
 
 void SerialWireless_::init_wireless() {
   configST myConfig; // configuration utility variable / variabile di utilità per configurazione
@@ -1528,12 +1547,57 @@ void SerialWireless_::begin() {
       espnow_wifi_channel=OPENFIRE_ESPNOW_WIFI_CHANNEL;
   #endif //GUN
 
-
+  WiFi.persistent(false);
   WiFi.mode(WIFI_STA); 
   WiFi.disconnect();
-  
+  #ifdef GUN 
+    // serve per permettere anche i canali 12 e 13 altrimenti se vengono selezioni il 12 e 13 va in crash la creazione dell'AP
+    wifi_country_t country = {
+      .cc = "IT",                            // "EU" va bene uguale
+      .schan = 1,
+      .nchan = 13,
+      .max_tx_power = 20,
+      .policy = WIFI_COUNTRY_POLICY_MANUAL
+    };
+    esp_wifi_set_country(&country);
+  #endif // GUN
 
-  esp_err_t err = esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11G); // | WIFI_PROTOCOL_11N);
+
+#ifdef GUN_COMMENT
+  if (!OF_WebConfigModeActive) {
+    WiFi.mode(WIFI_STA); 
+    WiFi.disconnect();
+  } else {
+      
+    WiFi.mode(WIFI_AP_STA);
+    
+    //WiFi.mode(WIFI_STA);
+    ///WiFi.disconnect();
+    ////////WiFi.softAPdisconnect();
+    //espnow_wifi_channel = 12;
+    //WiFi.mode(WIFI_STA);
+    //WiFi.softAP(WEBAPP_AP_SSID, NULL, espnow_wifi_channel);
+    //delay(100);
+  }
+  #endif
+ 
+
+  esp_err_t err;
+  
+  err = esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11G); // | WIFI_PROTOCOL_11N);
+  if (err != ESP_OK) {
+    //Serial.printf("esp_wifi_set_protocol failed! 0x%x", err);
+  }
+  
+  err = esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW_HT20);
+  if (err != ESP_OK) {
+    //Serial.printf("esp_wifi_set_bandwidth failed! 0x%x", err);
+  }
+
+
+  #ifdef GUN_COMMENT
+  if (!OF_WebConfigModeActive) {
+      err = esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11G); // | WIFI_PROTOCOL_11N);
   if (err != ESP_OK) {
     //Serial.printf("esp_wifi_set_protocol failed! 0x%x", err);
   }
@@ -1543,11 +1607,29 @@ void SerialWireless_::begin() {
     //Serial.printf("esp_wifi_set_bandwidth failed! 0x%x", err);
   }
   
+  } else {
+      err = esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11G); // | WIFI_PROTOCOL_11N);
+      err = esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_11G); // | WIFI_PROTOCOL_11N);
+  if (err != ESP_OK) {
+    //Serial.printf("esp_wifi_set_protocol failed! 0x%x", err);
+  }
+  
+  err = esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW_HT20);
+  err = esp_wifi_set_bandwidth(WIFI_IF_AP, WIFI_BW_HT20);
+  if (err != ESP_OK) {
+    //Serial.printf("esp_wifi_set_bandwidth failed! 0x%x", err);
+  }
+
+  }
+  #endif
+  
+
   err = esp_wifi_get_mac(WIFI_IF_STA, mac_esp_inteface);
   if (err != ESP_OK) {
     //Serial.println("Failed to read MAC address");
   }
   
+
   esp_wifi_set_promiscuous(true);
   err = esp_wifi_set_channel(espnow_wifi_channel, WIFI_SECOND_CHAN_NONE);
   if (err != ESP_OK) {
@@ -1583,6 +1665,7 @@ void SerialWireless_::begin() {
   memcpy(peerInfo.peer_addr, peerAddress, 6);
   peerInfo.channel = espnow_wifi_channel;
   peerInfo.encrypt = false;
+  peerInfo.ifidx = WIFI_IF_STA;
   if (esp_now_add_peer(&peerInfo) != ESP_OK) {
     //Serial.println("Error adding peer");
     //Serial.println("Errore nell'aggiunta del peer");
@@ -1964,7 +2047,14 @@ bool SerialWireless_::connection_gun() {
       //Serial.println("DONGLE - Errore nell'aggiunta del nuovo peer della GUN");
     } else esp_now_set_peer_rate_config(peerAddress, &rate_config);
 
-
+    /*
+    if (OF_WebConfigModeActive) {
+      WiFi.softAP(WEBAPP_AP_SSID, NULL, espnow_wifi_channel);
+      esp_err_t err;
+      err = esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_11G);
+      err = esp_wifi_set_bandwidth(WIFI_IF_AP, WIFI_BW_HT20);
+    }
+    */
 
     #if defined(GUN) && defined(USES_DISPLAY)
       if (animTaskHandleLink != NULL) {

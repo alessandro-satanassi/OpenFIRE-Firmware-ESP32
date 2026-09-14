@@ -4,13 +4,16 @@
 #if defined(ARDUINO_ARCH_ESP32)
 // Included before the Serial redefinition below, as in the original file.
 #include "web_assets.h"
-#include <WiFi.h>
-#include <esp_wifi.h>
+//#include <WiFi.h> //
+//#include <esp_wifi.h> //
 #include <esp_http_server.h>
 #include <DNSServer.h>
 #include <ESPmDNS.h>
 #include <unistd.h>
 #include "OpenFIREserial.h"   // http://<gun>/status
+
+#include "../../shared_lib/OpenFIRE_Wireless/ESP32/OpenFIRE_Wireless.h"
+
 #endif // ARDUINO_ARCH_ESP32
 
 bool OF_WebConfigModeActive = false;
@@ -50,16 +53,38 @@ WebAppLink WebAppSerial::link = WebAppLink::SerialPort;
 
 #if defined(ARDUINO_ARCH_ESP32)
 
+
 #ifndef WEBAPP_AP_SSID
     #define WEBAPP_AP_SSID "OpenFIRE_Config"
 #endif
-#ifndef WEBAPP_AP_PASSWORD
-    #define WEBAPP_AP_PASSWORD "12345678"
-#endif
-// Channel used when the radio is not already in use by the ESP-NOW link.
+
+
+
+// Channel used when the radio is not already in use by the ESP-NOW link (cable
+// only). Without an explicit build flag it is the channel of that link, so a
+// dongle or a wireless pedal connecting later finds the radio already tuned to
+// it. OPENFIRE_ESPNOW_WIFI_CHANNEL is defined inside OpenFIRE_Wireless.cpp and
+// is not visible here, but the library exports the channel in use as a variable
+// (and that one also holds a channel negotiated at run time).
+// /
+// Canale usato quando la radio non e' gia' impegnata dal collegamento ESP-NOW
+// (solo cavo). Senza un flag di compilazione esplicito e' il canale di quel
+// collegamento, cosi' un dongle o un pedale wireless che si connette dopo trova
+// la radio gia' sintonizzata. OPENFIRE_ESPNOW_WIFI_CHANNEL e' definita dentro
+// OpenFIRE_Wireless.cpp e qui non si vede, ma la libreria espone il canale in
+// uso come variabile (che contiene anche un canale negoziato a run time).
+/*
 #ifndef WEBAPP_AP_DEFAULT_CHANNEL
+    #define WEBAPP_AP_CHANNEL_FROM_LINK
     #define WEBAPP_AP_DEFAULT_CHANNEL 1
 #endif
+*/
+
+/*
+#if defined(WEBAPP_AP_CHANNEL_FROM_LINK) && defined(OPENFIRE_WIRELESS_ENABLE)
+extern uint8_t espnow_wifi_channel;   // OpenFIRE_Wireless.h
+#endif
+*/
 
 static httpd_handle_t web_server = NULL;
 static DNSServer dnsServer;
@@ -169,6 +194,22 @@ bool WebApp_ClientLostPending() {
     return ws_client_lost;
 }
 
+void WebApp_RadioState(uint8_t *channel, uint8_t *powerSave) { // DA TOGLIERE
+    if (channel) *channel = 0;
+    if (powerSave) *powerSave = 0;
+    /*
+    if (channel) {
+        uint8_t primary = 0;
+        wifi_second_chan_t second = WIFI_SECOND_CHAN_NONE;
+        *channel = esp_wifi_get_channel(&primary, &second) == ESP_OK ? primary : 0;
+    }
+    if (powerSave) {
+        wifi_ps_type_t ps = WIFI_PS_NONE;
+        *powerSave = esp_wifi_get_ps(&ps) == ESP_OK ? (uint8_t)ps : 0;
+    }
+    */
+}
+
 // =================================================================================================
 // --- HTTP SERVER / SERVER HTTP ---
 
@@ -208,11 +249,16 @@ static esp_err_t app_js_get_handler(httpd_req_t *req) {
 
 // http://<gun>/status: state of the link with the App page (diagnosis, no secrets).
 static esp_err_t status_get_handler(httpd_req_t *req) {
-    char body[320];
+    char body[400];
+    uint8_t radioChannel = 0, radioPowerSave = 0;
+    WebApp_RadioState(&radioChannel, &radioPowerSave); // DA TOGLIERE
     const int length = snprintf(body, sizeof(body),
         "{\"webConfig\":%d,\"docked\":%d,\"link\":\"%s\",\"wsClient\":%d,"
         "\"handshakes\":%u,\"rx\":%u,\"tx\":%u,\"txFailed\":%u,\"dropped\":%u,\"flushed\":%u,"
-        "\"pending\":%d,\"uptimeMs\":%lu}",
+        "\"pending\":%d,"
+        // Radio: channel in use and power saving (0 = none, as ESP-NOW needs).
+        "\"channel\":%u,\"powerSave\":%u,"
+        "\"uptimeMs\":%lu}",
         OF_WebConfigModeActive ? 1 : 0,
         OF_Serial::AppSerialSessionIsActive() ? 1 : 0,
         WebAppSerial::IsWebSocket() ? "ws" : "serial",
@@ -220,6 +266,7 @@ static esp_err_t status_get_handler(httpd_req_t *req) {
         (unsigned)ws_stat_handshakes, (unsigned)ws_stat_rx, (unsigned)ws_stat_tx,
         (unsigned)ws_stat_tx_failed, (unsigned)ws_stat_dropped, (unsigned)ws_stat_flushed,
         (int)((WS_RX_BUFFER_SIZE + ws_rx_head - ws_rx_tail) % WS_RX_BUFFER_SIZE), // without consuming a pending flush
+        (unsigned)radioChannel, (unsigned)radioPowerSave,
         (unsigned long)millis());
     httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Cache-Control", "no-store");
@@ -312,22 +359,82 @@ static void dns_server_task(void *pvParameters) {
 
 void WebApp_Init() {
     if (!OF_WebConfigModeActive) return;
+        //else return;
 
     // The App protocol keeps using the serial link until an App docks on the
     // WebSocket (OF_Serial::SerialProcessingWebDock selects the link).
 
-    // 1. Access point. If the ESP-NOW link to the dongle already uses the radio,
-    //    keep its channel: a single radio cannot serve two channels.
+    // 1. Access point. The App page over WiFi and the ESP-NOW link (dongle or
+    //    wireless pedal) work together, but a single radio has a single channel:
+    //    when that link is already running, the access point joins it on ITS
+    //    channel and its radio settings are put back afterwards (starting the
+    //    WiFi of the Arduino layer resets some of them). With the cable alone the
+    //    radio is free: the channel of the ESP-NOW link is used anyway (see the
+    //    define above), so a later connection finds it already tuned.
+    //    The channel is asked to the radio itself: the ESP-NOW link starts it
+    //    with the IDF API, without going through the Arduino WiFi class, whose
+    //    mode would still read OFF.
+    
+    /*
     uint8_t apChannel = WEBAPP_AP_DEFAULT_CHANNEL;
-    if (WiFi.getMode() != WIFI_OFF) {
+    #if defined(WEBAPP_AP_CHANNEL_FROM_LINK) && defined(OPENFIRE_WIRELESS_ENABLE)
+        if (espnow_wifi_channel >= 1 && espnow_wifi_channel <= 13)
+            apChannel = espnow_wifi_channel;
+    #endif
+    */
+    /*
+    bool linkRunning = false;
+    {
         uint8_t primary = 0;
         wifi_second_chan_t second = WIFI_SECOND_CHAN_NONE;
-        if (esp_wifi_get_channel(&primary, &second) == ESP_OK && primary >= 1 && primary <= 13)
+        if (esp_wifi_get_channel(&primary, &second) == ESP_OK && primary >= 1 && primary <= 13) {
             apChannel = primary;
+            linkRunning = true;
+        }
     }
-
-    WiFi.mode(WIFI_AP_STA);
-    WiFi.softAP(WEBAPP_AP_SSID, WEBAPP_AP_PASSWORD, apChannel);
+    */
+    
+    // With the ESP-NOW link already configured and running, nothing of the radio
+    // is touched: only the access point interface is added, on the channel that
+    // link is already on. Protocol, bandwidth and power stay as the wireless
+    // library set them (the Arduino layer only rewrites them for Long Range,
+    // which is not used here), and the access point configuration is written once.
+    //
+    // The one exception is power saving: every time the station interface starts,
+    // the Arduino layer applies ITS OWN setting (esp_wifi_set_ps(WiFi.getSleep()),
+    // WIFI_PS_MIN_MODEM by default) in the STA_START event handler, undoing the
+    // WIFI_PS_NONE the wireless library needs - and a modem that sleeps loses the
+    // ESP-NOW packets it should receive. Saying it here beforehand is not a change
+    // of configuration: it is the same value the library sets, so that the Arduino
+    // layer stops putting its own back.
+    // /
+    // Con il collegamento ESP-NOW gia' configurato e attivo non si tocca nulla
+    // della radio: si aggiunge solo l'interfaccia access point, sul canale su cui
+    // quel collegamento si trova gia'.
+    //
+    // L'unica eccezione e' il power save: a ogni avvio dell'interfaccia station il
+    // livello Arduino applica la PROPRIA impostazione (esp_wifi_set_ps con
+    // WiFi.getSleep(), di default WIFI_PS_MIN_MODEM) nel gestore dell'evento
+    // STA_START, annullando il WIFI_PS_NONE che serve alla libreria wireless - e un
+    // modem che dorme perde i pacchetti ESP-NOW in ricezione. Dirglielo qui prima
+    // non cambia la configurazione: e' lo stesso valore impostato dalla libreria.
+    
+    //WiFi.setSleep(false);   // WIFI_PS_NONE, come la libreria wireless
+    
+    
+    //WiFi.persistent(false);
+    //WiFi.mode(WIFI_AP_STA);
+    //WiFi.softAPdisconnect();
+    //esp_err_t err;
+    //err = esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_11G);
+    //err = esp_wifi_set_bandwidth(WIFI_IF_AP, WIFI_BW_HT20);
+    //err = esp_wifi_set_ps(WIFI_PS_NONE); // non dovrebbe servire
+    //WiFi.softAP(WEBAPP_AP_SSID, NULL, apChannel);
+    //WiFi.softAP(WEBAPP_AP_SSID, NULL, 13);
+    //esp_err_t err;
+    //err = esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_11G);
+    //err = esp_wifi_set_bandwidth(WIFI_IF_AP, WIFI_BW_HT20);
+    SerialWireless.startAccessPoint(WEBAPP_AP_SSID);   // rete aperta, canale di ESP-NOW
 
     // 2. Lightweight native ESP-IDF HTTP/WebSocket server
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
@@ -355,10 +462,18 @@ void WebApp_Init() {
     }
 
     // 4. DNS server for the captive portal
-    dnsServer.start(53, "*", WiFi.softAPIP());
+    dnsServer.start(53, "*", SerialWireless.ipAddressAP());
+    //dnsServer.start(53, "*", WiFi.softAPIP());
 
     // 5. DNS task on Core 0 so it does not interfere with the main loop
     xTaskCreatePinnedToCore(dns_server_task, "dns_task", 2048, NULL, 1, NULL, 0);
+
+    /*
+    // With no ESP-NOW link there is nothing to preserve: power saving off, so the
+    // App page is as responsive as it is on the cable.
+    if (!linkRunning)
+        esp_wifi_set_ps(WIFI_PS_NONE);
+    */
 }
 
 void WebApp_Loop() {
@@ -373,6 +488,10 @@ void WebApp_Init() {}
 void WebApp_Loop() {}
 bool WebApp_TakeClientLost() { return false; }
 bool WebApp_ClientLostPending() { return false; }
+void WebApp_RadioState(uint8_t *channel, uint8_t *powerSave) { //DA TOGLIERE
+    if (channel) *channel = 0;
+    if (powerSave) *powerSave = 0;
+}
 
 static int none_available() { return 0; }
 static int none_read() { return -1; }

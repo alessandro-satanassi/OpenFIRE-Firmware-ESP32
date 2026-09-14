@@ -18,6 +18,11 @@ bool WebApp_TakeClientLost();
 /// @brief True while a client-lost notification is waiting (does not clear it).
 bool WebApp_ClientLostPending();
 
+/// @brief Radio state for the diagnosis ('Xs', /status): channel in use and
+///        power saving (0 none, 1 min modem, 2 max modem). Zeroes when the radio
+///        is off or on a board without WiFi.
+void WebApp_RadioState(uint8_t *channel, uint8_t *powerSave);  // DA TOGLIERE
+
 namespace OF_WebSerialWrapper {
     using AvailableFn = int (*)();
     using ReadFn = int (*)();

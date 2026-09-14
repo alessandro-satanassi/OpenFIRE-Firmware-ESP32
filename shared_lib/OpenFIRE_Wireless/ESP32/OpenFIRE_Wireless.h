@@ -73,6 +73,7 @@ extern const uint8_t BROADCAST_ADDR[6];
 
 extern uint8_t peerAddress_pedal[6];
  
+//extern bool OF_WebConfigModeActive;
 
 // ===================================================================================
 // DEFINIZIONI DEL PROTOCOLLO (ENUMERATORI) E MACCHINA A STATI DI RETE
@@ -247,6 +248,8 @@ class SerialWireless_ : public Stream
   void init_wireless();
   void begin();
   bool end();
+  bool startAccessPoint(const char *ssid, const char *password = nullptr);
+  IPAddress ipAddressAP();
   
   // overrade da ::Stream
   int peek() override;
