@@ -248,7 +248,7 @@ class SerialWireless_ : public Stream
   void init_wireless();
   void begin();
   bool end();
-  bool startAccessPoint(const char *ssid, const char *password = nullptr);
+  bool startAccessPoint(const char *ssid, const char *password = NULL);
   IPAddress ipAddressAP();
   
   // overrade da ::Stream

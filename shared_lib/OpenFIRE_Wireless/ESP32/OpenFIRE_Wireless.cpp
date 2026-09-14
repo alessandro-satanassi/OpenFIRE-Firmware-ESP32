@@ -1469,7 +1469,7 @@ bool SerialWireless_::end() {
 }
 
 bool SerialWireless_::startAccessPoint(const char *ssid, const char *password) {
-  if (WiFi.softAP(WEBAPP_AP_SSID, NULL, espnow_wifi_channel)) {
+  if (WiFi.softAP(ssid, password, espnow_wifi_channel)) {
     esp_err_t err;
     err = esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_11G);
     if (err != ESP_OK) {
