@@ -109,9 +109,90 @@
 // the channel of the ESP-NOW link. / Tasti da tenere premuti all'avvio (1,5 s)
 // per servire l'App anche via WiFi: funziona anche con il dongle, l'access
 // point si aggancia al canale del collegamento ESP-NOW.
-#define WEBCONFIG_COMBO_BUTTON_1 OF_Const::btnStart
-#define WEBCONFIG_COMBO_BUTTON_2 OF_Const::btnSelect
 
+#define FIRMWARE_COMBO_BUTTON_1 OF_Prefs::pins[OF_Const::btnTrigger]
+#define FIRMWARE_COMBO_BUTTON_2 OF_Prefs::pins[OF_Const::btnGunA]
+
+#define WEBCONFIG_COMBO_BUTTON_1 OF_Prefs::pins[OF_Const::btnGunB]
+#define WEBCONFIG_COMBO_BUTTON_2 -1
+
+static const uint8_t BOOT_FLAG_NORMAL   = 0b00; // 0
+static const uint8_t BOOT_FLAG_FIRMWARE = 0b01; // 1
+static const uint8_t BOOT_FLAG_WEBAPP   = 0b10; // 2
+// Se sono validi entrambi, il risultato sarà 0b11 (cioè 3)
+
+static uint8_t GetBootModeHeld(const int fwPin1, const int fwPin2, 
+                               const int webPin1, const int webPin2, 
+                               const unsigned long holdMs)
+{
+    bool checkFw = (fwPin1 >= 0 || fwPin2 >= 0);
+    bool checkWeb = (webPin1 >= 0 || webPin2 >= 0);
+
+    if (!checkFw && !checkWeb) return BOOT_FLAG_NORMAL;
+
+    delay(50);
+    const unsigned long holdStart = millis();
+
+    while ((millis() - holdStart) < holdMs) {
+        
+        if (checkFw) {
+            if ((fwPin1 >= 0 && digitalRead(fwPin1) != LOW) || 
+                (fwPin2 >= 0 && digitalRead(fwPin2) != LOW)) {
+                checkFw = false;
+            }
+        }
+
+        if (checkWeb) {
+            if ((webPin1 >= 0 && digitalRead(webPin1) != LOW) || 
+                (webPin2 >= 0 && digitalRead(webPin2) != LOW)) {
+                checkWeb = false;
+            }
+        }
+
+        if (!checkFw && !checkWeb) return BOOT_FLAG_NORMAL;
+
+        delay(10);
+    }
+
+    // --- LA NOVITÀ È QUI ---
+    // Invece di decidere chi vince, combiniamo i risultati
+    uint8_t result = BOOT_FLAG_NORMAL;
+    
+    if (checkFw)  result |= BOOT_FLAG_FIRMWARE; // Aggiunge il flag Firmware
+    if (checkWeb) result |= BOOT_FLAG_WEBAPP;   // Aggiunge il flag WebApp
+    
+    // Ritorna lo stato puro: può essere 0 (nessuno), 1 (FW), 2 (Web) o 3 (Entrambi)
+    return result; 
+}
+
+static void CheckBootRequests()
+{
+    uint8_t bootResult = GetBootModeHeld(
+        FIRMWARE_COMBO_BUTTON_1, FIRMWARE_COMBO_BUTTON_2,
+        WEBCONFIG_COMBO_BUTTON_1, WEBCONFIG_COMBO_BUTTON_2,
+        1500UL
+    );
+
+    // Esempio 1: Gestione se li preme entrambi
+    /*
+    if ((bootResult & BOOT_FLAG_FIRMWARE) && (bootResult & BOOT_FLAG_WEBAPP)) {
+        // Ha tenuto premuto tutto! Fai lampeggiare i led di errore o scegli un 3° avvio
+    }
+    */
+
+    // Esempio 2 (Quello che chiedevi): Precedenza stabilita dall'ordine degli if
+    // Se metti prima FIRMWARE, vince Firmware. 
+    // Se un domani vuoi dare precedenza alla WEBAPP, ti basta invertire questi due blocchi!
+    if (bootResult & BOOT_FLAG_FIRMWARE) {
+        FW_Common::RebootToBootloader();
+    } 
+    else if (bootResult & BOOT_FLAG_WEBAPP) {
+        OF_WebConfigModeActive = true;
+        //AvviaConfiguratoreWebApp();
+    }
+}
+
+/*
 /// @brief True when both buttons are held, uninterrupted, for holdMs at boot.
 static bool BootButtonsHeld(const int firstPin, const int secondPin, const unsigned long holdMs)
 {
@@ -149,6 +230,7 @@ static void CheckFirmwareUpdateRequest()
                        OF_Prefs::pins[OF_Const::btnGunA], 1500UL))
         FW_Common::RebootToBootloader();
 }
+*/
 
 /// @brief Web configuration mode, requested at boot with the buttons above.
 ///        Not used yet: OF_WebConfigModeActive is still set by hand below.
@@ -400,8 +482,9 @@ void setup() {
     #endif // LED_ENABLE
 // ====== [ESP32_PORT] ==== End initialize camera before the connection / fine del blocco che per opportunità è spostato sopra prima della connessione =======
 
-CheckFirmwareUpdateRequest();
-OF_WebConfigModeActive = true;
+//CheckFirmwareUpdateRequest();
+CheckBootRequests();
+//OF_WebConfigModeActive = true;
 //OF_WebConfigModeActive = false;
 
 // Here the buttons are still held: the web configuration mode will be asked for
