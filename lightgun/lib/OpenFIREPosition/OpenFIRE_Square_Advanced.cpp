@@ -99,6 +99,9 @@ static bool SquareGeometryValid(const int *x, const int *y) {
 }
 
 void OpenFIRE_Square::configure(const CameraProfile& profile) {
+    for (uint8_t i = 0; i < 4; ++i)
+        motion_X[i] = motion_Y[i] = 0;
+
     camMaxX = profile.camMaxX;
     camToMouseShift = profile.camToMouseShift;
     camToMouseMult = profile.camToMouseMult;
@@ -779,12 +782,12 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
             }
 
             int spostamento = abs(avg_move_x) + abs(avg_move_y);
-            // FORZIAMO UN DEBITO MINIMO DI 1.0f per evitare il congelamento dell'offset
-            //float consumo = (float)spostamento * COSTANTE_MOLLA; 
+            // Default consumption for partial visibility; four-LED recovery
+            // below uses its filtered motion estimate instead.
             float consumo = fmaxf(FPS_NORMALIZATION, (float)spostamento * COSTANTE_MOLLA);
 
-            // With four measured LEDs, stale smoothing offsets should converge
-            // even while the gun is stationary. Partial tracking is unchanged.
+            // With four measured LEDs, blend smoothly at low motion and
+            // converge quickly at high motion. Partial tracking is unchanged.
             if (num_points_seen == 4) {
                 float largest_offset = 0.0f;
                 for (uint8_t i = 0; i < 4; ++i) {
@@ -793,9 +796,49 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
                     if (offset_Y[i] != 0.0f)
                         largest_offset = fmaxf(largest_offset, fabsf(offset_Y[i]));
                 }
-                consumo = fmaxf(consumo, largest_offset * COSTANTE_MOLLA);
+
+                if (largest_offset > 0.0f) {
+                    // Estimate motion only while recovering four measured LEDs.
+                    // Reset on reacquisition: old velocity must not speed up a
+                    // new, slow return. Newly visible LEDs start from zero.
+                    int32_t motion_sum = 0;
+                    for (uint8_t i = 0; i < 4; ++i) {
+                        if (prev_num_points_seen != 4)
+                            motion_X[i] = motion_Y[i] = 0;
+                        if (prev_point_seen_mask & (1 << (3 - i))) {
+                            const int32_t dx = GeomX[i] - prev_GeomX[i];
+                            const int32_t dy = GeomY[i] - prev_GeomY[i];
+                            motion_X[i] = (motion_X[i] + dx) / 2;
+                            motion_Y[i] = (motion_Y[i] + dy) / 2;
+                            motion_sum += abs(motion_X[i]) + abs(motion_Y[i]);
+                        }
+                    }
+
+                    // Average each LED's signed motion over time BEFORE taking magnitudes:
+                    // suppress jitter without cancelling rotation or zoom.
+                    // Integer rounding here affects only the motion estimate,
+                    // not the measured geometry or the fractional spring offsets.
+                    const float movement = stable_count ?
+                        (float)motion_sum / (float)stable_count : (float)spostamento;
+                    const float MIN_RETURN = 0.03125f;
+                    const float MAX_RETURN = 0.5f;
+                    const float MOTION_GAIN = 32.0f;
+                    const float motion = MOTION_GAIN * movement;
+                    const float scale = fmaxf(height, 1.0f) * FPS_NORMALIZATION;
+
+                    float return_rate;
+                    if (motion <= scale * MIN_RETURN)
+                        return_rate = MIN_RETURN;
+                    else if (motion >= scale * MAX_RETURN)
+                        return_rate = MAX_RETURN;
+                    else
+                        return_rate = motion / scale;
+
+                    consumo = fmaxf(0.5f * FPS_NORMALIZATION,
+                        fmaxf(movement * COSTANTE_MOLLA, largest_offset * return_rate));
+                }
             }
-            
+
             // OTTIMIZZAZIONE: Branchless Math per la Molla. 
             // Usa le istruzioni hardware min/max per non far spezzare la pipeline della CPU 
             // all'indovinare i salti logici negativi/positivi del debito.

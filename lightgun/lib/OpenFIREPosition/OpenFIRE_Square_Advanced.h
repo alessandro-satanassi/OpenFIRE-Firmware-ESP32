@@ -67,6 +67,7 @@ public:
             for (uint8_t i = 0; i < 4; i++) {
                 offset_X[i] = 0.0f;
                 offset_Y[i] = 0.0f;
+                motion_X[i] = motion_Y[i] = 0;
             }
         }
     }
@@ -159,9 +160,9 @@ private:
     float offset_X[4] = {0.0f, 0.0f, 0.0f, 0.0f};
     float offset_Y[4] = {0.0f, 0.0f, 0.0f, 0.0f};
     
-    // Definisce la reattività del filtro anti-glitch. Un valore di 0.25 significa che
-    // ogni errore ottico istantaneo viene assorbito al 25% per frame, distribuendo 
-    // l'anomalia su ~4 frame. Mantiene il feeling "snappy" ma uccide il tremolio.
+    // COSTANTE_MOLLA scales the movement-based consumption, not a fixed
+    // percentage of the remaining error. Four-LED recovery also uses a
+    // motion-dependent percentage defined in begin().
     float FPS_NORMALIZATION = 1.0f;
     float COSTANTE_MOLLA = 0.25f; 
     
@@ -183,6 +184,11 @@ private:
 
     bool calibrationMode = false;    // true = è in corso la calibrazione
     bool wideLayout = false;         // true = configurazione con base maggiore di altezza ad esempio per sensori sugli angoli del monitor
+
+    // Signed motion in whole internal-coordinate units, used only during
+    // four-LED spring recovery. No fixed-point scaling or noise estimator.
+    int32_t motion_X[4] = {0, 0, 0, 0};
+    int32_t motion_Y[4] = {0, 0, 0, 0};
 
 };
 
