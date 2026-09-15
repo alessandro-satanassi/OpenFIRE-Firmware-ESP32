@@ -26,6 +26,8 @@ const OF = globalThis.OF;
 
 test('i18n: translation, English fallback and %n arguments', () => {
     const i18n = new OF.I18n({ en: {}, it: { 'About': 'Informazioni', 'GPIO Pin No. %1.': 'Pin GPIO n. %1.' } });
+    // Test translations independently of the saved or automatically detected language.
+    i18n.currentLang = 'en';
     assert.equal(i18n.t('About'), 'About');
     i18n.currentLang = 'it';
     assert.equal(i18n.t('About'), 'Informazioni');

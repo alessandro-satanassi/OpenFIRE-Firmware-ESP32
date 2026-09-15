@@ -149,13 +149,17 @@ test('WebSocket client lost ends the session and restores Run mode', async () =>
     const ctx = await setup({ over: 'web' });
     try {
         assert.equal((await ctx.app.protocol.getSettings()).ok, true);
+        const firstSession = ctx.firmware.sessionCounter;
         closePage(ctx, ctx.app);
         assert.ok(await waitUntil(() => !ctx.firmware.sessionActive && ctx.firmware.gunMode === 'run'));
 
         const app = await newApp(ctx.link);
-        const started = Date.now();
         assert.equal((await app.protocol.getSettings()).ok, true);
-        assert.ok(Date.now() - started < 700, 'the first dock attempt succeeds');
+        // Count dock attempts directly: getSettings() also downloads every settings record.
+        const dockRequests = app.transport.writes.filter((bytes) =>
+            bytes.length === 2 && bytes[0] === C.sDock1 && bytes[1] === C.sDock2);
+        assert.equal(dockRequests.length, 1, 'the first dock attempt succeeds');
+        assert.equal(ctx.firmware.sessionCounter, firstSession + 1, 'exactly one new session is started');
     } finally {
         await teardown(ctx);
     }
