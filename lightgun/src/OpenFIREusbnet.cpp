@@ -18,8 +18,10 @@
 #include "device/dcd.h"
 #include "device/usbd_pvt.h"
 
-extern "C" uint8_t tud_network_mac_address[6] = {0, 0, 0, 0, 0, 0};
-extern "C" volatile bool OF_NcmDataInterfaceReady = false;
+extern "C" {
+    uint8_t tud_network_mac_address[6] = {0, 0, 0, 0, 0, 0};
+    volatile bool OF_NcmDataInterfaceReady = false;
+}
 
 
 #if !CONFIG_IDF_TARGET_ESP32S3 || ARDUINO_USB_MODE || ARDUINO_USB_ON_BOOT
@@ -302,10 +304,7 @@ static bool usb_net_prepare() {
              serialMac[0], serialMac[1], serialMac[2], serialMac[3], serialMac[4], serialMac[5]);
     
 
-    /*
-    snprintf(usbNetSerialString, sizeof(usbNetSerialString), "%02X%02X%02X%02X%02X%02X-NCM2",
-             serialMac[0], serialMac[1], serialMac[2], serialMac[3], serialMac[4], serialMac[5]);
-    */
+
 
 
     if (esp_netif_init() != ESP_OK) return false;
@@ -424,49 +423,7 @@ bool OpenFIREUsbBegin(bool webConfig, uint8_t pollRate) {
     return started;
 }
 
-/*
-bool OpenFIREUsbBegin(bool webConfig, uint8_t pollRate) {
-    // Deliberately not a runtime mode switch. Never edit live descriptors.
-    static bool attempted = false;
-    static bool started = false;
-    if (attempted) return started;
-    attempted = true;
-    if (TinyUSBDevice.isInitialized()) {
-        log_e("OpenFIRE USB was started before boot mode selection");
-        return false;
-    }
 
-    // FONDAMENTALE: Inizializza il device Adafruit per impostare la bDeviceClass a 0xEF (IAD)
-    // e resettare correttamente i contatori delle stringhe, PRIMA di aggiungere le interfacce!
-    TinyUSBDevice.begin(0);
-
-    if (webConfig && !usb_net_prepare())
-        log_e("OpenFIRE NCM preparation failed; keeping CDC and Wi-Fi configuration");
-
-    if (!OpenFIREUsbNetActive()) {
-        static OpenFIRE_USBD_CDC descriptor;
-        static USBCDC serial(0); // Created only on the CDC boot path.
-        if (!TinyUSBDevice.addInterface(descriptor)) {
-            log_e("OpenFIRE CDC descriptor does not fit");
-            return false;
-        }
-        serial.begin(9600);
-        serial.setTimeout(0);
-        usbSerial = &serial;
-    }
-
-    // The existing single HID uses IN 0x81 with CDC, or IN 0x83 with NCM.
-    // Nothing is mounted yet: begin() cannot trigger its detach/attach path.
-    TinyUSBDevices.begin(pollRate);
-    started = USB.begin();
-    if (started && OpenFIREUsbNetActive()) {
-        usbNetAttached.store(true);
-        xTaskNotifyGive(usbNetTask);
-    }
-    if (!started) log_e("OpenFIRE USB startup failed");
-    return started;
-}
-*/
 
 static void usb_net_detach(void *) {
     TinyUSBDevice.detach();
