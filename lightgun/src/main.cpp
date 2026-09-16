@@ -37,6 +37,17 @@
 
 // #include "web_assets.h"
 #include "OpenFIREweb.h"
+#include "OpenFIREusbnet.h"
+
+#include "class/net/net_device.h"
+extern "C" volatile bool OF_NcmDataInterfaceReady;
+
+#if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_USB_NCM)
+    // CDC is created after the boot choice, not by the Arduino core. Route
+    // early diagnostics through the same safe stream used by the firmware.
+    #undef Serial
+    #define Serial (*Serial_OpenFIRE_Stream)
+#endif
 
 // ===================================================================================
 // OS ABSTRACTION: DELAY REDEFINITION / RIDEFINIZIONE DEL DELAY (FREERTOS)
@@ -245,6 +256,10 @@ static bool CheckWebConfigRequest()
 
 // Sets up the environment
 void setup() {
+
+    #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_USB_NCM)
+        Serial_OpenFIRE_Stream = &OpenFIREUsbSerial();
+    #endif
 
     // Temporary source for the saved camera setting. Replace only the RHS with
     // the value loaded by the App/configuration layer. A camera change always reboots.
@@ -484,6 +499,12 @@ void setup() {
 
 //CheckFirmwareUpdateRequest();
 CheckBootRequests();
+#if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_USB_NCM)
+    // Boot choice is final: compose HID + CDC or HID + NCM, then enumerate.
+    // USB can enumerate while the existing analog calibration takes place.
+    OpenFIREUsbBegin(OF_WebConfigModeActive, POLL_RATE);
+    Serial_OpenFIRE_Stream = &OpenFIREUsbSerial();
+#endif
 //OF_WebConfigModeActive = true;
 //OF_WebConfigModeActive = false;
 
@@ -648,7 +669,9 @@ CheckBootRequests();
     // === [ESP32_PORT] === New USB initialization or wireless connection management / NUOVA GESTIONE INIZIALIZZAIZONE USB O CONNESSIONE WIRELESS ==================== //
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    TinyUSBDevices.begin(POLL_RATE);
+    #if !defined(OPENFIRE_USB_NCM)
+        TinyUSBDevices.begin(POLL_RATE);
+    #endif
     #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)   // IF WIRELESS / SE WIRELESS
         #define MILLIS_TIMEOUT  1000 //1 second / 1 secondi
         unsigned long lastMillis = millis ();
@@ -681,8 +704,10 @@ CheckBootRequests();
     #endif // defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
 
     if (TinyUSBDevice.mounted()) {
+        #if !defined(OPENFIRE_USB_NCM)
         Serial.begin(9600);
         Serial.setTimeout(0);
+        #endif
         #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
             if (TinyUSBDevices.onBattery) {  // in the unlikely event that the USB is mounted at the exact moment the wireless connection is established / nel caso incredibile che l'USB sia montato nel momnto esatto in cui è stata stabilita connessione wireless
                 TinyUSBDevices.onBattery = false;
@@ -702,8 +727,12 @@ CheckBootRequests();
         // /
         // CHIUDI TUTTO CIO' CHE E' USB SE E' DA CHIUDERE
         // Salvaguarda la memoria e previene errori del core USB quando non è connesso fisicamente.
-        TinyUSBDevice.clearConfiguration();
-        TinyUSBDevice.detach();
+        #if defined(OPENFIRE_USB_NCM)
+            OpenFIREUsbDetach(); // Do not rewrite descriptors while USB is running.
+        #else
+            TinyUSBDevice.clearConfiguration();
+            TinyUSBDevice.detach();
+        #endif
         
         Serial_OpenFIRE_Stream = &SerialWireless;
 
@@ -754,7 +783,39 @@ CheckBootRequests();
     // WebApp_Init() usa un canale fisso quando la radio e' libera e il canale del
     // collegamento ESP-NOW (dongle o pedale wireless) quando e' gia' in uso.
     //OF_WebConfigModeActive = true;
-    if (OF_WebConfigModeActive) WebApp_Init();
+    ///////////////////if (OF_WebConfigModeActive) WebApp_Init();
+    /*
+    if (OF_WebConfigModeActive) {
+        WebApp_Init();
+
+
+    }
+    */
+    
+    // ================== avvia webapp ======================
+    if (OF_WebConfigModeActive) {
+        WebApp_Init();
+
+        // --- INIZIO BLOCCO ATTESA WINDOWS ---
+        if (TinyUSBDevice.mounted()) {
+            // Blocca l'esecuzione finché Windows non carica il driver usbncm.sys 
+            // e non apre i canali di comunicazione dati (SET_INTERFACE 1)
+            while (!OF_NcmDataInterfaceReady) {
+                delay(10); // Il delay è vitale per far lavorare in background il task USB!
+            }
+            
+            // Windows è pronto. Diamogli 1 secondo per finire di stabilizzarsi internamente.
+            delay(1000); 
+            
+            // Inviamo a Windows il segnale per svegliare la scheda (finto stacca-attacca)
+            tud_network_link_state(0, false);
+            delay(50);
+            tud_network_link_state(0, true);
+        }
+        // --- FINE BLOCCO ATTESA WINDOWS ---
+    }
+    // ======================================================
+    
     // ======================================================
 
 

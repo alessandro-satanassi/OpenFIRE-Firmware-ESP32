@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "OpenFIREweb.h"
+#include "OpenFIREusbnet.h"
 
 #if defined(ARDUINO_ARCH_ESP32)
 // Included before the Serial redefinition below, as in the original file.
@@ -10,6 +11,7 @@
 #include <DNSServer.h>
 #include <ESPmDNS.h>
 #include <unistd.h>
+#include <lwip/sockets.h>
 #include "OpenFIREserial.h"   // http://<gun>/status
 
 #include "../../shared_lib/OpenFIRE_Wireless/ESP32/OpenFIRE_Wireless.h"
@@ -218,8 +220,27 @@ void WebApp_RadioState(uint8_t *channel, uint8_t *powerSave) { // DA TOGLIERE
 // seconds and their idle connections would otherwise use up the server's sockets
 // (and the App WebSocket would be the one closed to make room).
 static esp_err_t captive_portal_handler(httpd_req_t *req, httpd_err_code_t error) {
+    const char *location = "http://192.168.4.1/";
+    #ifdef OPENFIRE_USB_NCM
+    // A request received over USB must not be redirected to the Wi-Fi address.
+    struct sockaddr_storage local = {};
+    socklen_t localSize = sizeof(local);
+    if(OpenFIREUsbNetActive() &&
+       getsockname(httpd_req_to_sockfd(req), (struct sockaddr*)&local, &localSize) == 0) {
+        uint32_t address = 0;
+        if(local.ss_family == AF_INET)
+            address = ((struct sockaddr_in*)&local)->sin_addr.s_addr;
+        #if LWIP_IPV6
+        else if(local.ss_family == AF_INET6) {
+            const struct in6_addr *v6 = &((struct sockaddr_in6*)&local)->sin6_addr;
+            if(IN6_IS_ADDR_V4MAPPED(v6)) memcpy(&address, &v6->s6_addr[12], sizeof(address));
+        }
+        #endif
+        if(address == inet_addr("192.168.7.1")) location = "http://192.168.7.1/";
+    }
+    #endif
     httpd_resp_set_status(req, "302 Found");
-    httpd_resp_set_hdr(req, "Location", "http://192.168.4.1/");
+    httpd_resp_set_hdr(req, "Location", location);
     httpd_resp_set_hdr(req, "Connection", "close");
     httpd_resp_send(req, NULL, 0);
     if (web_server)
@@ -459,6 +480,9 @@ void WebApp_Init() {
     // 3. mDNS: http://openfire.local
     if (MDNS.begin("openfire")) {
         MDNS.addService("http", "tcp", 80);
+        #ifdef OPENFIRE_USB_NCM
+            OpenFIREUsbNetMDNSReady(); // Same mDNS service on Wi-Fi and USB.
+        #endif
     }
 
     // 4. DNS server for the captive portal

@@ -24,6 +24,7 @@
 #include "OpenFIREFeedback.h"
 #include "OpenFIRElights.h"
 #include "OpenFIREserial.h"
+#include "OpenFIREusbnet.h"
 
 #ifdef ARDUINO_ARCH_ESP32
     #include "esp32-hal-tinyusb.h"
@@ -81,6 +82,10 @@ void FW_Common::RebootToBootloader()
     #endif
 
     #ifdef ARDUINO_ARCH_ESP32
+        #ifdef OPENFIRE_USB_NCM
+            // Stop queued NCM work before the helper disables the USB PHY.
+            if(OpenFIREUsbNetActive()) OpenFIREUsbDetach();
+        #endif
         usb_persist_restart(RESTART_BOOTLOADER);
     #elif defined(ARDUINO_ARCH_RP2040)
         rp2040.rebootToBootloader();
