@@ -13,6 +13,8 @@
     const APP_NAME = 'OpenFIRE Esp32';   // shown where the App names itself (title, welcome, About)
     const THEME_KEY = 'of_theme';
     const TAB_ORDER = ['pins', 'buttons', 'settings', 'profiles', 'tests'];
+    const THEME_ICONS = { system: 'themeSystem', light: 'themeLight', dark: 'themeDark' };
+    const THEME_LABELS = { system: 'System Theme', light: 'Light Theme', dark: 'Dark Theme' };
     const DOCS_URL = 'https://github.com/TeamOpenFIRE/OpenFIRE-Firmware/blob/OpenFIRE-dev/OpenFIREmain/README.md';
     const WIKI_URL = 'https://github.com/TeamOpenFIRE/OpenFIRE-Firmware/wiki';
 
@@ -108,6 +110,7 @@
             this.theme = theme;
             storage.set(THEME_KEY, theme);
             this.applyTheme();
+            this.updateThemeButton();
         }
 
         // ----- Page structure -----------------------------------------------------------------
@@ -127,10 +130,6 @@
                 OF.UI.menu(t('View'), () => [
                     { label: t('Show Unsafe Settings'), checked: this.showUnsafe, action: () => this.setUnsafe(!this.showUnsafe) },
                     { label: t('Debug Window'), action: () => this.openDebugWindow(), hidden: !this.debugEnabled },
-                    { separator: true },
-                    { label: t('System Theme'), checked: this.theme === 'system', action: () => this.setTheme('system') },
-                    { label: t('Light Theme'), checked: this.theme === 'light', action: () => this.setTheme('light') },
-                    { label: t('Dark Theme'), checked: this.theme === 'dark', action: () => this.setTheme('dark') },
                 ]),
                 OF.UI.menu(menuText('&Help'), () => [
                     { label: t('View Compatible Boards'), action: () => OF.Windows.openPreviewer(this.state.board && this.state.board.type), hidden: this.isDevice },
@@ -138,10 +137,11 @@
                     { separator: true },
                     { label: menuText('&OpenFIRE Documentation on the Repo...'), href: DOCS_URL, shortcut: 'Alt+D' },
                     { label: menuText('OpenFIRE &Serial Usage Docs on the Wiki...'), href: WIKI_URL, shortcut: 'Alt+S' },
+                    { separator: true },
+                    { label: t('About'), action: () => OF.Windows.openAbout() },
                 ]),
-                el('button', { class: 'menu-button', text: t('About'), on: { click: () => OF.Windows.openAbout() } }),
                 el('span', { class: 'spacer' }),
-                this.languageSelector());
+                this.themeSelector(), this.languageSelector());
 
             // Device selector (site)
             let deviceBar = null;
@@ -206,6 +206,32 @@
             this.renderPortSelector();
             this.selectTab(this.currentTab, true);
             this.refresh();
+        }
+
+        /** Theme, next to the language: the icon shows the one in use, the menu has the three choices. */
+        themeSelector() {
+            const { t, icon, menu } = OF.UI;
+            this.themeIcon = icon(THEME_ICONS[this.theme] || THEME_ICONS.system);
+            const wrap = menu(this.themeIcon, () => [
+                { label: t('System Theme'), checked: this.theme === 'system', action: () => this.setTheme('system') },
+                { label: t('Light Theme'), checked: this.theme === 'light', action: () => this.setTheme('light') },
+                { label: t('Dark Theme'), checked: this.theme === 'dark', action: () => this.setTheme('dark') },
+            ], { class: 'menu-button theme-button' });
+            wrap.classList.add('theme-menu');
+            this.themeButton = wrap.querySelector('.menu-button');
+            this.updateThemeButton();
+            return wrap;
+        }
+
+        /** Icon and tooltip of the theme button: they name the theme in use. */
+        updateThemeButton() {
+            if (!this.themeButton) return;
+            const label = OF.UI.t(THEME_LABELS[this.theme] || THEME_LABELS.system);
+            const next = OF.UI.icon(THEME_ICONS[this.theme] || THEME_ICONS.system);
+            this.themeIcon.replaceWith(next);
+            this.themeIcon = next;
+            this.themeButton.title = label;
+            this.themeButton.setAttribute('aria-label', label);
         }
 
         languageSelector() {

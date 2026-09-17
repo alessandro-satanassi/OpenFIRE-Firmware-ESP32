@@ -320,6 +320,11 @@ input.invalid { color: var(--danger); border-color: var(--danger); }
 
 .lang-selector { min-height: 30px; font-size: 13px; }
 
+/* Theme: the icon of the theme in use, beside the language selector. */
+.theme-button { padding: 0 6px; gap: 2px; }
+.theme-button .icon { width: 18px; height: 18px; }
+.theme-menu .menu-panel { min-width: 13rem; }
+
 .menu { position: relative; display: inline-flex; }
 
 .menu-panel {

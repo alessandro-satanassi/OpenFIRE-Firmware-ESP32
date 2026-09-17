@@ -63,6 +63,10 @@
         question: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.3M12 17v.01',
         usb: 'M12 3v14M12 3l-2 3h4zM12 17a2 2 0 1 0 0 4a2 2 0 1 0 0-4zM12 13l-5-2.5V8M12 11l5-2V7M6 6h2v2H6zM16 5.5a1 1 0 1 0 2 0a1 1 0 1 0-2 0',
         wifi: 'M2.5 9a14 14 0 0 1 19 0M5.5 12.5a9.5 9.5 0 0 1 13 0M8.5 16a5 5 0 0 1 7 0M12 19.5v.01',
+        // Theme (View menu entries, shown on the menu bar button)
+        themeSystem: 'M3.5 5h17a1 1 0 0 1 1 1v9.5a1 1 0 0 1-1 1h-17a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM8.5 20h7M12 16.5V20',
+        themeLight: 'M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8zM12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4',
+        themeDark: 'M20.8 13.4A8.5 8.5 0 0 1 10.6 3.2a8.5 8.5 0 1 0 10.2 10.2z',
     };
 
     function icon(name, extraClass) {
@@ -509,10 +513,11 @@
         }
     }
 
-    /** Drop-down menu: items = [{ label, action, checked, disabled, separator, href, hidden }] or a function returning them. */
+    /** Drop-down menu: items = [{ label, action, checked, disabled, separator, href, hidden }] or a function returning them.
+        `label` is the text of the button, or a node to use instead of it (an icon). */
     function menu(label, items, props = {}) {
         const button = el('button', Object.assign({ class: 'menu-button', attrs: { 'aria-haspopup': 'menu', 'aria-expanded': 'false' } }, props),
-            el('span', { text: label }), icon('chevron', 'chevron'));
+            label instanceof root.Node ? label : el('span', { text: label }), icon('chevron', 'chevron'));
         const panel = el('div', { class: 'menu-panel', attrs: { role: 'menu' }, hidden: true });
         const wrap = el('div', { class: 'menu' }, button, panel);
 
