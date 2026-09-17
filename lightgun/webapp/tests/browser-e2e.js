@@ -136,6 +136,8 @@ async function installFakeSerial(context, sim) {
     }), 'the User Layouts menu opens inside the window');
     await page.click('#tab-pins .pins-bottom .menu-button');
     ok(await page.locator('.device-bar').count() === 0, 'no device selector on the lightgun page');
+    ok(await page.locator('.link-state.on').count() === 1, 'the lightgun page shows the plug as connected too');
+    ok(await page.locator('.disconnect-button').count() === 0, 'no Disconnect button on the lightgun page');
     ok(await page.locator('.menu-button', { hasText: 'Board Previews' }).count() === 0, 'board previews hidden on the lightgun page');
     ok(sim.firmware.gunMode === 'docked' && sim.firmware.sessionActive, 'firmware docked');
     await shot(page, 'device-docked');
@@ -366,10 +368,14 @@ async function installFakeSerial(context, sim) {
     fw.camNotAvailable = false;
     await dev.keyboard.press('Escape');
 
-    // Theme
-    await dev.getByRole('button', { name: 'View', exact: true }).click();
+    // Theme: its own button beside the language selector, not the View menu any more
+    await dev.click('.theme-menu .menu-button');
     await dev.click('.menu-item:has-text("Dark Theme")');
     ok(await dev.evaluate(() => document.documentElement.dataset.theme === 'dark'), 'dark theme selected');
+    ok(await dev.evaluate(() => document.querySelector('.theme-button').title === 'Dark Theme'), 'the theme button names the theme in use');
+    await dev.getByRole('button', { name: 'View', exact: true }).click();
+    ok(await dev.locator('.menu-panel:not([hidden]) .menu-item:has-text("Theme")').count() === 0, 'no themes left in the View menu');
+    await dev.keyboard.press('Escape');
     await dev.reload();
     ok(await dev.evaluate(() => document.documentElement.dataset.theme === 'dark'), 'theme remembered');
     ok(await waitFor(() => loaded(dev)), 'docked after reload');
@@ -455,11 +461,16 @@ async function installFakeSerial(context, sim) {
     ok(await waitFor(() => loaded(site)), 'site docks over Web Serial');
     ok(sim.firmware.sessionLink === 'serial', 'session on the serial link');
     ok(serial.opens[0] === 9600, 'port opened at 9600 baud');
-    ok((await site.locator('.port-selector option').allInnerTexts()).some((t) => t.includes('OpenFIRE')), 'port listed in the device selector');
+    ok(await site.locator('.device-bar').count() === 0, 'no device selector row on the site either');
+    ok(await site.locator('.disconnect-button').isVisible(), 'Disconnect appears in the status bar while docked');
+    ok(await site.locator('.link-state.on').count() === 1, 'the plug shows the link as connected');
     await shot(site, 'site-docked');
-    await site.selectOption('.port-selector', 'none');
-    ok(await waitFor(async () => !(await loaded(site))), 'selecting [Disconnect Current Device] undocks');
+    await site.click('.disconnect-button');
+    ok(await waitFor(async () => !(await loaded(site))), 'Disconnect undocks');
     ok(await waitFor(() => !sim.firmware.sessionActive && sim.firmware.gunMode === 'run'), 'gun back to Run mode');
+    ok(await site.locator('.disconnect-button').isHidden(), 'Disconnect hidden when no board is docked');
+    ok(await site.locator('.link-state').isVisible() && await site.locator('.link-state.on').count() === 0,
+        'the plug stays in the status bar and shows the link as gone');
 
     serial.busy = true;
     await site.click('.welcome .big-button');
@@ -467,8 +478,8 @@ async function installFakeSerial(context, sim) {
     await site.click('dialog button.primary');
     serial.busy = false;
 
-    await site.click('.device-bar button');
-    ok(await waitFor(() => loaded(site)), 'Add a Device... connects');
+    await site.click('.welcome .big-button');
+    ok(await waitFor(() => loaded(site)), 'Connect docks again after the busy port');
     await tab(site, 'tests');
     await site.click('text=Restart Microcontroller in Firmware Update Mode');
     ok(await waitFor(() => sim.firmware.rebootedToBootloader), 'ESP32 restart command reaches the board');

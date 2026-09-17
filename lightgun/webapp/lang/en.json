@@ -476,5 +476,8 @@
     "The lightgun answered with data this App does not understand: check that its firmware and this App belong to the same version.": "The lightgun answered with data this App does not understand: check that its firmware and this App belong to the same version.",
     "The link to the lightgun closed before the settings were read.": "The link to the lightgun closed before the settings were read.",
     "The settings could not be read (%1): the connection dropped during the transfer.": "The settings could not be read (%1): the connection dropped during the transfer.",
-    "About %1": "About %1"
+    "About %1": "About %1",
+    "Disconnect": "Disconnect",
+    "Connected": "Connected",
+    "Not connected": "Not connected"
 }

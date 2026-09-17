@@ -1,8 +1,9 @@
 /*  OpenFIRE Web App - main window (Qt: appmainwindow.cpp).
 
-    Menu bar, device selector (site), title, the five tabs, status bar with Save; connection
-    and board events. The lightgun page (OF.BUILD.target 'device') connects by itself over
-    WebSocket and has no device selector or board previews.
+    Menu bar, title, the five tabs, status bar with Save and Disconnect; connection and
+    board events. The site connects with the Connect button (Web Serial); the lightgun page
+    (OF.BUILD.target 'device') connects by itself over WebSocket, has no board previews and
+    is never undocked by hand.
 */
 (function (root) {
     'use strict';
@@ -45,7 +46,6 @@
             this.showUnsafe = false;      // like the Qt App, not remembered
             this.theme = storage.get(THEME_KEY) || 'system';
             this.currentTab = 'pins';
-            this.ports = [];
             this.activePort = null;
             this.tabs = {};
             this.titleName = '';
@@ -69,11 +69,6 @@
                 root.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => this.applyTheme());
             }
 
-            if (!this.isDevice && OF.WebSerialTransport.isSupported()) {
-                navigator.serial.addEventListener('connect', () => this.refreshPorts());
-                navigator.serial.addEventListener('disconnect', () => this.refreshPorts());
-                this.refreshPorts();
-            }
             this.status.show(OF.UI.t('Welcome to the OpenFIRE app!'), 3000);
             this.connection.start();
             // Unsaved edits: the browser asks before leaving the page.
@@ -143,20 +138,9 @@
                 el('span', { class: 'spacer' }),
                 this.themeSelector(), this.languageSelector());
 
-            // Device selector (site)
-            let deviceBar = null;
-            if (!this.isDevice) {
-                this.portSelector = el('select', { class: 'port-selector', attrs: { 'aria-label': t('COM Port:') } });
-                this.portSelector.addEventListener('change', () => this.onPortSelected());
-                this.addDeviceButton = el('button', { class: 'icon-text-button', title: t('Add a Device...'), on: { click: () => this.addDevice() } },
-                    icon('usb'), el('span', { text: t('Add a Device...') }));
-                deviceBar = el('div', { class: 'device-bar' },
-                    el('label', { class: 'device-label', text: t('COM Port:') }), this.portSelector, this.addDeviceButton);
-            }
-
             this.titleNode = el('h1', { class: 'board-title' });
             this.versionNode = el('div', { class: 'fw-version' });
-            const header = el('header', { class: 'app-header' }, menubar, deviceBar,
+            const header = el('header', { class: 'app-header' }, menubar,
                 el('div', { class: 'title-block' }, this.titleNode, this.versionNode));
 
             // Welcome (not connected)
@@ -190,11 +174,20 @@
             const previousStatus = this.status;
             this.status = new OF.UI.StatusBar(statusText, progress);
             this.status.adopt(previousStatus);
+            // The docked lightgun does not shoot: this sends it back to Run mode and frees
+            // its port for another App, without closing the page (never on the lightgun page).
+            this.disconnectButton = this.isDevice ? null :
+                el('button', { class: 'disconnect-button', hidden: true, text: t('Disconnect'), on: { click: () => this.disconnect() } });
+            // State of the link with the lightgun, in both builds: plug and socket joined
+            // when a board is docked, pulled apart when not (they blink while connecting).
+            // Last in the bar, so the corner keeps it in the same place with or without the button.
+            this.linkIcon = icon('unplugged');
+            this.linkState = el('span', { class: 'link-state' }, this.linkIcon);
             const footer = el('footer', { class: 'app-footer' }, tabbar,
                 el('div', { class: 'statusbar' },
                     el('div', { class: 'status-side' }, statusText, progress),
                     this.saveButton,
-                    el('div', { class: 'status-side' })));
+                    el('div', { class: 'status-side' }, this.disconnectButton, this.linkState)));
 
             app.append(header, main, footer);
 
@@ -203,7 +196,6 @@
                 this.tabs.tests.resetReadings();
                 this.updateHeader();
             }
-            this.renderPortSelector();
             this.selectTab(this.currentTab, true);
             this.refresh();
         }
@@ -333,14 +325,29 @@
             this.saveButton.disabled = !enabled;
             this.saveButton.classList.toggle('has-changes', enabled);
 
-            if (this.portSelector) {
-                this.portSelector.disabled = this.busy || this.connection.state === 'connecting' || !OF.WebSerialTransport.isSupported();
-                this.addDeviceButton.disabled = this.portSelector.disabled;
+            if (this.disconnectButton) {
+                this.disconnectButton.hidden = !loaded;
+                this.disconnectButton.disabled = this.busy || this.irTestActive;
             }
+            this.updateLinkState();
             if (!loaded) {
                 this.titleNode.textContent = APP_NAME;
                 this.versionNode.textContent = '';
             }
+        }
+
+        /** Plug of the status bar: docked, connecting (blinking) or not connected. */
+        updateLinkState() {
+            if (!this.linkState) return;
+            const t = OF.UI.t;
+            const docked = this.state.loaded;
+            const connecting = !docked && this.connection.state === 'connecting';
+            const next = OF.UI.icon(docked ? 'plugged' : 'unplugged');
+            this.linkIcon.replaceWith(next);
+            this.linkIcon = next;
+            this.linkState.classList.toggle('on', docked);
+            this.linkState.classList.toggle('connecting', connecting);
+            this.linkState.title = docked ? t('Connected') : connecting ? t('Connecting...') : t('Not connected');
         }
 
         updateHeader() {
@@ -359,51 +366,7 @@
             }
         }
 
-        // ----- Device selector (Web Serial) ------------------------------------------------------
-
-        async refreshPorts() {
-            if (this.isDevice || !OF.WebSerialTransport.isSupported()) return;
-            try {
-                this.ports = await OF.WebSerialTransport.getKnownPorts();
-            } catch (error) {
-                this.ports = [];
-            }
-            if (this.activePort && !this.ports.includes(this.activePort) && this.connection.isDocked)
-                this.status.show(OF.UI.t('Current board has been disconnected.'));
-            this.renderPortSelector();
-        }
-
-        renderPortSelector() {
-            const select = this.portSelector;
-            if (!select) return;
-            const { el, t } = OF.UI;
-            select.textContent = '';
-            const docked = this.state.loaded;
-            const first = docked ? t('[Disconnect Current Device]') :
-                this.ports.length ? t('[Select a Device to Configure]') : t('[No devices currently available]');
-            select.append(el('option', { value: 'none', text: first }));
-            const seen = new Map();
-            this.ports.forEach((port, index) => {
-                let { label } = OF.WebSerialTransport.describePort(port);
-                const count = (seen.get(label) || 0) + 1;
-                seen.set(label, count);
-                if (count > 1) label += ` #${count}`;
-                select.append(el('option', { value: String(index), text: label }));
-            });
-            const activeIndex = this.ports.indexOf(this.activePort);
-            select.value = docked && activeIndex >= 0 ? String(activeIndex) : 'none';
-        }
-
-        async onPortSelected() {
-            const value = this.portSelector.value;
-            if (value === 'none') {
-                if (this.connection.isDocked) await this.disconnect();
-                return;
-            }
-            const port = this.ports[Number(value)];
-            if (!port || port === this.activePort && this.connection.isDocked) return;
-            await this.connectPort(port);
-        }
+        // ----- Connection (Web Serial) ------------------------------------------------------
 
         async addDevice() {
             if (!OF.WebSerialTransport.isSupported()) {
@@ -417,24 +380,20 @@
                 return;
             }
             if (!port) return;
-            await this.refreshPorts();
             await this.connectPort(port);
         }
 
         async connectPort(port) {
             if (this.connection.isDocked) await this.disconnect();
             this.activePort = port;
-            this.renderPortSelector();
             const ok = await this.connection.connectSerial(port);
             if (!ok) this.activePort = null;
-            this.renderPortSelector();
         }
 
         async disconnect() {
             this.closeWindows(false);
             await this.connection.disconnect();
             this.activePort = null;
-            this.renderPortSelector();
         }
 
         // ----- Connection ----------------------------------------------------------------------------
@@ -504,7 +463,6 @@
                 if (tab.onLoad) tab.onLoad();
             }
             this.updateHeader();
-            this.renderPortSelector();
             this.selectTab('pins');
             this.status.progressRange(0);
             this.refresh();
@@ -520,7 +478,7 @@
         async offerLostEdits() {
             const snapshot = this.lostEdits;
             this.lostEdits = null;
-            if (!snapshot || (this.portSelector && snapshot.port !== this.activePort)) return;
+            if (!snapshot || (!this.isDevice && snapshot.port !== this.activePort)) return;
             if (!this.state.snapshotDiffers(snapshot)) return;
             const t = OF.UI.t;
             const session = this.session;
@@ -549,10 +507,8 @@
             this.busy = false;
             this.state.reset();
             this.status.progressRange(0);
-            if (!this.connection.isDocked && this.portSelector) {
-                if (this.connection.state !== 'connecting') this.activePort = null;
-                this.renderPortSelector();
-            }
+            if (!this.connection.isDocked && !this.isDevice && this.connection.state !== 'connecting')
+                this.activePort = null;
         }
 
         /** What went wrong, in the words of the App protocol (js/core/protocol.js results). */
@@ -582,7 +538,6 @@
                 return;
             }
             this.activePort = null;
-            this.renderPortSelector();
             switch (detail.error) {
             case 'port_busy':
             case 'open_failed':
