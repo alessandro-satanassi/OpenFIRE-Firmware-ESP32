@@ -675,7 +675,21 @@ CheckBootRequests();
     #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)   // IF WIRELESS / SE WIRELESS
         #define MILLIS_TIMEOUT  1000 //1 second / 1 secondi
         unsigned long lastMillis = millis ();
-        while ((millis () - lastMillis <= MILLIS_TIMEOUT) && (!TinyUSBDevice.mounted())) { yield(); }
+        
+        // FASE 1: Aspettiamo fino a 1 secondo. Se il dispositivo viene montato, o se il bus       
+        // si "sveglia" (suspended diventa false, segno inequivocabile che c'è un host PC), usciamo.
+        while ((millis () - lastMillis <= MILLIS_TIMEOUT) && (!TinyUSBDevice.mounted()) && TinyUSBDevice.suspended()) { yield(); }
+        
+        // FASE 2: Se abbiamo scoperto che c'è un PC attaccato (!suspended), aspettiamo con molta più 
+        // calma che Windows finisca i suoi comodi per l'enumerazione (fino a 4 secondi aggiuntivi).
+        if (!TinyUSBDevice.suspended()) {
+             unsigned long pcWaitMillis = millis();
+             while ((millis() - pcWaitMillis <= 4000) && !TinyUSBDevice.mounted()) { 
+                 yield(); 
+             }
+        }
+
+        // FASE 3: Solo se alla fine di tutto NON siamo montati, avviamo il wireless.
         if (!TinyUSBDevice.mounted()) {
             SerialWireless.init_wireless();
             SerialWireless.begin();
@@ -784,14 +798,14 @@ CheckBootRequests();
     // collegamento ESP-NOW (dongle o pedale wireless) quando e' gia' in uso.
     //OF_WebConfigModeActive = true;
     ///////////////////if (OF_WebConfigModeActive) WebApp_Init();
-    /*
+    
     if (OF_WebConfigModeActive) {
         WebApp_Init();
 
 
     }
-    */
     
+    /*
     // ================== avvia webapp ======================
     if (OF_WebConfigModeActive) {
         WebApp_Init();
@@ -815,7 +829,7 @@ CheckBootRequests();
         // --- FINE BLOCCO ATTESA WINDOWS ---
     }
     // ======================================================
-    
+    */
     // ======================================================
 
 

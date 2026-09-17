@@ -4,7 +4,7 @@
 
 #if defined(ARDUINO_ARCH_ESP32)
 // Included before the Serial redefinition below, as in the original file.
-#include "web_assets.h"
+#include "../../include/web_assets.h"
 //#include <WiFi.h> //
 //#include <esp_wifi.h> //
 #include <esp_http_server.h>
@@ -12,7 +12,7 @@
 #include <ESPmDNS.h>
 #include <unistd.h>
 #include <lwip/sockets.h>
-#include "OpenFIREserial.h"   // http://<gun>/status
+#include "../../src/OpenFIREserial.h"   // http://<gun>/status
 
 #include "../../shared_lib/OpenFIRE_Wireless/ESP32/OpenFIRE_Wireless.h"
 
