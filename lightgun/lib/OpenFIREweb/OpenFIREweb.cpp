@@ -10,6 +10,9 @@
 #include <esp_http_server.h>
 #include <DNSServer.h>
 #include <ESPmDNS.h>
+
+#include <NetBIOS.h>
+
 #include <unistd.h>
 #include <lwip/sockets.h>
 #include "../../src/OpenFIREserial.h"   // http://<gun>/status
@@ -485,9 +488,21 @@ void WebApp_Init() {
         #endif
     }
 
+    NBNS.begin("openfire");
+    
     // 4. DNS server for the captive portal
     dnsServer.start(53, "*", SerialWireless.ipAddressAP());
     //dnsServer.start(53, "*", WiFi.softAPIP());
+    
+
+    /*
+    // 4. DNS server for the captive portal
+    IPAddress dnsIP = SerialWireless.ipAddressAP();
+    if (dnsIP == IPAddress(0, 0, 0, 0)) {
+        dnsIP = IPAddress(192, 168, 7, 1);
+    }
+    dnsServer.start(53, "*", dnsIP);
+    */
 
     // 5. DNS task on Core 0 so it does not interfere with the main loop
     xTaskCreatePinnedToCore(dns_server_task, "dns_task", 2048, NULL, 1, NULL, 0);

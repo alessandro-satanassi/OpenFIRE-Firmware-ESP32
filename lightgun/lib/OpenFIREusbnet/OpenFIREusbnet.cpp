@@ -325,6 +325,7 @@ static bool usb_net_prepare() {
     esp_netif_ip_info_t ip = {};
     esp_netif_set_ip4_addr(&ip.ip, 192, 168, 7, 1);
     esp_netif_set_ip4_addr(&ip.netmask, 255, 255, 255, 0);
+    esp_netif_set_ip4_addr(&ip.gw, 192, 168, 7, 1); // tentativo per windows di usare mDNS
     esp_netif_inherent_config_t base = {};
     base.flags = (esp_netif_flags_t)(ESP_NETIF_DHCP_SERVER | ESP_NETIF_FLAG_AUTOUP);
     base.ip_info = &ip;
@@ -346,11 +347,11 @@ static bool usb_net_prepare() {
     usbNetif = esp_netif_new(&config);
     uint8_t noOffer = 0;
     if (!usbNetif || esp_netif_attach(usbNetif, &usbNetDriver) != ESP_OK ||
-        esp_netif_set_mac(usbNetif, deviceMac) != ESP_OK ||
+        esp_netif_set_mac(usbNetif, deviceMac) != ESP_OK /*||
         esp_netif_dhcps_option(usbNetif, ESP_NETIF_OP_SET, ESP_NETIF_ROUTER_SOLICITATION_ADDRESS,
                                &noOffer, sizeof(noOffer)) != ESP_OK ||
         esp_netif_dhcps_option(usbNetif, ESP_NETIF_OP_SET, ESP_NETIF_DOMAIN_NAME_SERVER,
-                               &noOffer, sizeof(noOffer)) != ESP_OK) {
+                               &noOffer, sizeof(noOffer)) != ESP_OK*/) {
         usb_net_cleanup();
         return false;
     }
