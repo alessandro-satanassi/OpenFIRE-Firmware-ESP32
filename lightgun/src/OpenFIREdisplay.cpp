@@ -34,6 +34,8 @@
 #include "OpenFIREFeedback.h"
 #include "OpenFIREDefines.h"
 
+#include "OpenFIREweb.h"
+
 bool ExtDisplay::Begin()
 {
     if(display != nullptr) {
@@ -109,6 +111,7 @@ void ExtDisplay::Stop()
     }
 }
 
+/*
 void ExtDisplay::TopPanelUpdate(const char *textPrefix, const char *profText)
 {
     if(display != nullptr) {
@@ -120,6 +123,162 @@ void ExtDisplay::TopPanelUpdate(const char *textPrefix, const char *profText)
         display->print(textPrefix);
         if(profText != nullptr)
             display->println(profText);
+        display->display();
+    }
+}
+*/
+/*
+void ExtDisplay::TopPanelUpdate(const char *textPrefix, const char *profText)
+{
+    if(display != nullptr) {
+        bool isWeb = false;
+#ifdef ARDUINO_ARCH_ESP32
+        if (OF_WebConfigModeActive) isWeb = true;
+#endif
+
+        // 1. Sfondo e linea invertiti se siamo in WebApp
+        display->fillRect(0, 0, 128, 16, isWeb ? WHITE : BLACK);
+        display->drawFastHLine(0, 15, 128, isWeb ? BLACK : WHITE);
+        
+        display->setCursor(2, 2);
+        display->setTextSize(1);
+        
+        // 2. Testo invertito se siamo in WebApp
+        display->setTextColor(isWeb ? BLACK : WHITE, isWeb ? WHITE : BLACK);
+        
+        display->print(textPrefix);
+        if(profText != nullptr)
+            display->print(profText); // Usiamo print invece di println per sicurezza
+            
+        // 3. Aggiunta della scritta WEB a destra se la modalità è attiva
+        if (isWeb) {
+            // "Pulisce" gli ultimi 20 pixel a destra con un blocchetto bianco per 
+            // evitare sovrapposizioni nel caso il nome di un profilo fosse lunghissimo
+            display->fillRect(108, 0, 20, 15, WHITE); 
+            display->setCursor(110, 2);
+            display->print("WEB");
+        }
+        
+        display->display();
+    }
+}
+*/
+/*   ///////////// buona
+void ExtDisplay::TopPanelUpdate(const char *textPrefix, const char *profText)
+{
+    if(display != nullptr) {
+        bool isWeb = false;
+#ifdef ARDUINO_ARCH_ESP32
+        if (OF_WebConfigModeActive) isWeb = true;
+#endif
+
+        // 1. Sfondo e linea della barra (bianca se WebApp, altrimenti nera)
+        display->fillRect(0, 0, 128, 16, isWeb ? WHITE : BLACK);
+        display->drawFastHLine(0, 15, 128, isWeb ? BLACK : WHITE);
+        
+        display->setCursor(2, 2);
+        display->setTextSize(1);
+        
+        // 2. Colore del testo (nero se WebApp, altrimenti bianco)
+        display->setTextColor(isWeb ? BLACK : WHITE, isWeb ? WHITE : BLACK);
+        
+        display->print(textPrefix);
+        if(profText != nullptr)
+            display->print(profText); 
+            
+        // 3. L'etichetta "WEB" (Testo bianco su un quadratino nero)
+        if (isWeb) {
+            // Disegna il quadratino nero all'estrema destra (larghezza 22 pixel)
+            display->fillRect(106, 0, 22, 16, BLACK); 
+            
+            // Imposta il colore a Bianco su sfondo Nero solo per questa scritta
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(108, 2);
+            display->print("WEB");
+        }
+        
+        display->display();
+    }
+}
+*/
+
+/*
+// Icona 16x16 "Mappamondo / Web"
+static const unsigned char PROGMEM webGlobeIco[] = {
+  0x07, 0xe0, 0x0c, 0x30, 0x1a, 0x58, 0x32, 0x4c, 
+  0x62, 0x46, 0x5f, 0xfa, 0x42, 0x42, 0xff, 0xff, 
+  0x42, 0x42, 0x5f, 0xfa, 0x62, 0x46, 0x32, 0x4c, 
+  0x1a, 0x58, 0x0c, 0x30, 0x07, 0xe0, 0x00, 0x00
+};
+*/
+/*
+// Icona 16x16 "Ingranaggio (Configurazione)"
+static const unsigned char PROGMEM webGearIco[] = {
+  0x03, 0xc0, 0x03, 0xc0, 0x0f, 0xf0, 0x3f, 0xfc, 
+  0x3c, 0x3c, 0x38, 0x1c, 0xf0, 0x0f, 0xf0, 0x0f, 
+  0xf0, 0x0f, 0xf0, 0x0f, 0x38, 0x1c, 0x3c, 0x3c, 
+  0x3f, 0xfc, 0x0f, 0xf0, 0x03, 0xc0, 0x03, 0xc0
+};
+*/
+/*
+// Icona 16x16 "Ingranaggio V2" (Denti profondi)
+static const unsigned char PROGMEM webGearIco[] = {
+  0x03, 0xc0, 0x03, 0xc0, 0x33, 0xcc, 0x3f, 0xfc, 
+  0x1c, 0x38, 0x18, 0x18, 0xf8, 0x1f, 0xf0, 0x0f, 
+  0xf0, 0x0f, 0xf8, 0x1f, 0x18, 0x18, 0x1c, 0x38, 
+  0x3f, 0xfc, 0x33, 0xcc, 0x03, 0xc0, 0x03, 0xc0
+};
+*/
+/*
+// Icona 16x16 "Impostazioni Windows" (Corpo spesso, buco piccolo 2x2)
+static const unsigned char PROGMEM webGearIco[] = {
+  0x01, 0x80, 0x01, 0x80, 0x33, 0xcc, 0x3f, 0xfc, 
+  0x1f, 0xf8, 0x1f, 0xf8, 0x7f, 0xfe, 0x7e, 0x7e, 
+  0x7e, 0x7e, 0x7f, 0xfe, 0x1f, 0xf8, 0x1f, 0xf8, 
+  0x3f, 0xfc, 0x33, 0xcc, 0x01, 0x80, 0x01, 0x80
+};
+*/
+
+// Icona 16x16 "Impostazioni Windows" (Buco centrale 4x4 smussato)
+static const unsigned char PROGMEM webGearIco[] = {
+  0x01, 0x80, 0x01, 0x80, 0x33, 0xcc, 0x3f, 0xfc, 
+  0x1f, 0xf8, 0x1f, 0xf8, 0x7e, 0x7e, 0x7c, 0x3e, 
+  0x7c, 0x3e, 0x7e, 0x7e, 0x1f, 0xf8, 0x1f, 0xf8, 
+  0x3f, 0xfc, 0x33, 0xcc, 0x01, 0x80, 0x01, 0x80
+};
+
+void ExtDisplay::TopPanelUpdate(const char *textPrefix, const char *profText)
+{
+    if(display != nullptr) {
+        bool isWeb = false;
+#ifdef ARDUINO_ARCH_ESP32
+        if (OF_WebConfigModeActive) isWeb = true;
+#endif
+
+        // 1. Sfondo e linea della barra (bianca se WebApp, altrimenti nera)
+        display->fillRect(0, 0, 128, 16, isWeb ? WHITE : BLACK);
+        display->drawFastHLine(0, 15, 128, isWeb ? BLACK : WHITE);
+        
+        display->setCursor(2, 2);
+        display->setTextSize(1);
+        
+        // 2. Colore del testo (nero se WebApp, altrimenti bianco)
+        display->setTextColor(isWeb ? BLACK : WHITE, isWeb ? WHITE : BLACK);
+        
+        display->print(textPrefix);
+        if(profText != nullptr)
+            display->print(profText); 
+            
+        // 3. Il "Badge" WEB a destra con l'icona
+        if (isWeb) {
+            // Disegna il quadratino nero all'estrema destra (largo 20 pixel, alto 16)
+            display->fillRect(106, 0, 22, 16, BLACK); 
+            
+            // Disegna l'icona del mappamondo in BIANCO sopra allo sfondo nero
+            // (La posizioniamo a X=110, Y=0, grandezza 16x16)
+            display->drawBitmap(110, 0, webGearIco, 16, 16, WHITE);
+        }
+        
         display->display();
     }
 }
@@ -268,7 +427,7 @@ void ExtDisplay::ShowTemp()
 {
     if (OF_FFB::temperatureCurrent == OF_Const::TEMPERATURE_SENSOR_ERROR_VALUE) {
       // Analog read maxed out, likely disconnected/temp sensor fault
-      TopPanelUpdate("Temp sensor: ", "Fault!");
+      TopPanelUpdate("Temp: ", "Fault!");
       return;
     } else if(OF_FFB::temperatureCurrent < 10) {
         tempString[0] = OF_FFB::temperatureCurrent + '0';
@@ -285,7 +444,7 @@ void ExtDisplay::ShowTemp()
         tempString[4] = '\0';
     }
 
-    TopPanelUpdate("Current Temp: ", tempString);
+    TopPanelUpdate("Temp: ", tempString);
     currentTemp = OF_FFB::temperatureCurrent;
 }
 #endif // USES_TEMP
