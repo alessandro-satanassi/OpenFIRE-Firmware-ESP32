@@ -24,7 +24,7 @@ extern "C" {
 }
 
 
-#if !CONFIG_IDF_TARGET_ESP32S3 || ARDUINO_USB_MODE || ARDUINO_USB_ON_BOOT
+#if !CONFIG_IDF_TARGET_ESP32S3 || ARDUINO_USB_MODE || ARDUINO_USB_CDC_ON_BOOT
 #error OpenFIRE USB selection requires ESP32-S3 OTG with automatic USB startup disabled.
 #endif
 #if !CONFIG_TINYUSB_NCM_ENABLED || !CFG_TUD_CDC

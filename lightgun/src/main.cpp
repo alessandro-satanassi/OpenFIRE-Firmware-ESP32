@@ -39,10 +39,13 @@
 #include "OpenFIREweb.h"
 #include "OpenFIREusbnet.h"
 
-#include "class/net/net_device.h"
-extern "C" volatile bool OF_NcmDataInterfaceReady;
+//#include "class/net/net_device.h"
+//extern "C" volatile bool OF_NcmDataInterfaceReady;
 
 #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_USB_NCM)
+    #include "class/net/net_device.h"
+    extern "C" volatile bool OF_NcmDataInterfaceReady;
+
     // CDC is created after the boot choice, not by the Arduino core. Route
     // early diagnostics through the same safe stream used by the firmware.
     #undef Serial
