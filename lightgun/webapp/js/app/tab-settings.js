@@ -147,6 +147,11 @@
             "inputBox": {
                     "title": "Input"
             },
+            "pedalWirelessToggle": {
+                    "whatsThis": "<html><head/><body><p>Enable if you use a <span style=\" font-style:italic;\">wireless pedal.</span></p><p>With no pin mapped to <span style=\" font-style:italic;\">Pedal</span> or <span style=\" font-style:italic;\">Alt Pedal,</span> the only pedal the lightgun can have is a wireless one, and looking for it takes several seconds at every battery start. With this disabled the lightgun does not look for it at all and starts straight away.</p><p><span style=\" font-weight:700;\">This setting does nothing when a pin is mapped to either pedal:</span> a wired pedal is always used, and no wireless one is looked for.</p></body></html>",
+                    "accessibleName": "Wireless Pedal Toggle",
+                    "text": "Wireless pedal"
+            },
             "lowButtonsToggle": {
                     "whatsThis": "<html><head/><body><p>This setting determines how <span style=\" font-style:italic;\">Button A</span> &amp; <span style=\" font-style:italic;\">Button B</span> behaves during normal use.</p><p><span style=\" font-weight:700;\">When Enabled, </span><span style=\" font-style:italic;\">Button A</span> &amp; <span style=\" font-style:italic;\">Button B</span> will perform different functions when aiming off-screen, instead actuating the functions of <span style=\" font-style:italic;\">Start</span> &amp; <span style=\" font-style:italic;\">Select</span> respectively.<br/><span style=\" font-weight:700;\">When Disabled,</span> all buttons will perform the same functions, regardless of aiming off-screen or not.</p><p>Enabled is recommended for lightguns <span style=\" font-weight:700;\">with two or less sub buttons.</span></p></body></html>",
                     "accessibleName": "Low Buttons Mode Toggle",
@@ -366,7 +371,9 @@
             neopixels);
 
         // ----- Input / UI and UX ------------------------------------------------------------
-        const input = fieldset('inputBox', el('div', { class: 'row center' }, toggle('lowButtonsToggle', B.lowButtonsMode)));
+        const input = fieldset('inputBox',
+            el('div', { class: 'row center' }, toggle('lowButtonsToggle', B.lowButtonsMode)),
+            el('div', { class: 'row center' }, toggle('pedalWirelessToggle', B.pedalWireless)));
         const uiux = fieldset('uiuxBox',
             el('div', { class: 'row center' }, toggle('simplePauseToggle', B.simplePause)),
             el('div', { class: 'row center wrap' }, toggle('holdToPauseToggle', B.holdToPause),
@@ -453,7 +460,8 @@
             for (const [name, index] of [['autofireToggle', B.autofire], ['solenoidToggle', B.solenoid], ['rumbleToggle', B.rumble],
                 ['rumbleFFToggle', B.rumbleFF], ['commonAnodeToggle', B.commonAnode], ['invertStaticPixelsBox', B.invertStaticPixels],
                 ['lowButtonsToggle', B.lowButtonsMode], ['simplePauseToggle', B.simplePause], ['holdToPauseToggle', B.holdToPause],
-                ['i2cOLEDtoggle', B.i2cOLED], ['oledAltAddrsToggle', B.i2cOLEDaltAddr]])
+                ['i2cOLEDtoggle', B.i2cOLED], ['oledAltAddrsToggle', B.i2cOLEDaltAddr],
+                ['pedalWirelessToggle', B.pedalWireless]])
                 setChecked(name, index);
 
             rumbleSettings.disabled = !state.toggle(B.rumble);

@@ -923,18 +923,21 @@
                 version: decodeCString(boardInfo.subarray(0, firstSeparator)),
                 type: decodeCString(boardInfo.subarray(firstSeparator + 1, secondSeparator)),
                 arch: '',
-                cameraError: false
+                cameraError: false,
+                pedalWireless: false    // a wireless pedal answered: it works without a pin
             };
             board.arch = boardArch(shared, board.type);
 
             const config = codec.createConfig();
             config.tinyUSB = codec.decodeTinyUSB(boardInfo.subarray(usbOffset, usbOffset + TINYUSB_TABLE_SIZE));
 
-            const tailOffset = usbOffset + TINYUSB_TABLE_SIZE;
-            if (boardInfo.length >= tailOffset + 2 &&
-                boardInfo[tailOffset] === separator &&
-                boardInfo[tailOffset + 1] === c.sError)
-                board.cameraError = true;
+            // What the board adds after the USB table: one (separator, marker) pair each,
+            // in any order. An unknown marker is ignored, so a newer board can add more.
+            for (let at = usbOffset + TINYUSB_TABLE_SIZE;
+                 at + 1 < boardInfo.length && boardInfo[at] === separator; at += 2) {
+                if (boardInfo[at + 1] === c.sError) board.cameraError = true;
+                else if (boardInfo[at + 1] === c.sPedalWireless) board.pedalWireless = true;
+            }
 
             const fail = (error) => ({ ok: false, error, rebootSuggested: false, board });
             const boolTypes = shared.boolTypes_e;

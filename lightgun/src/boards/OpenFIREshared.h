@@ -182,6 +182,7 @@ public:
         invertStaticPixels,
         i2cOLED,
         i2cOLEDaltAddr,
+        pedalWireless,
         // Add here
         boolTypesCount
     } boolTypes_e;
@@ -199,6 +200,7 @@ public:
         {"InvertStaticPixels",  invertStaticPixels  },
         {"I2COLEDEnabled",      i2cOLED             },
         {"I2COLEDAltAddr",      i2cOLEDaltAddr      },
+        {"PedalWireless",       pedalWireless       },
     };
 
     // Variable settings indices
@@ -374,6 +376,12 @@ public:
         sRebootToBootloader = 0xF0, // 245
 
         sError = 0xFA, // 250
+
+        
+        // Trailer of the board information: a wireless pedal is paired (see sDock2).
+        sPedalWireless = 0xFB, // 251
+        
+        
         sSave = 0xFC, // 252
         sClearFlash = 0xFD, // 253
         // Terminates out of any current mode, or undocks

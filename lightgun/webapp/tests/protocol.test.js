@@ -574,3 +574,19 @@ test('unexpected transport loss emits closed and fails pending waits', async () 
         await teardown(ctx);
     }
 });
+
+// A wireless pedal has no pin of its own: the board says so in its presentation, after the
+// camera marker, so an App that does not know this marker still finds the one it knows.
+test('board information: the markers after the USB table are all read', async () => {
+    for (const [camera, pedal] of [[false, false], [true, false], [false, true], [true, true]]) {
+        const ctx = await setup({}, { camNotAvailable: camera, pedalWireless: pedal });
+        try {
+            const result = await ctx.protocol.getSettings();
+            assert.equal(result.ok, true, JSON.stringify(result));
+            assert.equal(result.board.cameraError, camera, `camera ${camera}/${pedal}`);
+            assert.equal(result.board.pedalWireless, pedal, `pedal ${camera}/${pedal}`);
+        } finally {
+            await teardown(ctx);
+        }
+    }
+});

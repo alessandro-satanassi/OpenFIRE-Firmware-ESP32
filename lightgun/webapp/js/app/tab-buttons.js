@@ -124,7 +124,9 @@
             if (!state.loaded) return;
             for (const { row, slots } of rows) {
                 const button = slots[0].button;
-                row.disabled = !state.pinMapped(button);
+                // A wireless pedal has no pin of its own: its row stays usable, or what it
+                // sends to the PC could never be configured.
+                row.disabled = !state.inputAvailable(button);
                 slots.forEach(fillOutputs);
             }
             aStickBox.disabled = !(state.pinMapped(E.analogX) && state.pinMapped(E.analogY));

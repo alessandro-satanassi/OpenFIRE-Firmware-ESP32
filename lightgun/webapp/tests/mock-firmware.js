@@ -162,6 +162,9 @@ class MockFirmware {
         this.running = false;
         this.failNextSave = false;
         this.camNotAvailable = !!options.camNotAvailable;
+        // is_pedal_wireless of the firmware: a wireless pedal answered during the start-up,
+        // so the two pedals work although no pin is mapped to them.
+        this.pedalWireless = !!options.pedalWireless;
         this.pendingEvents = [];
         this.trigger = false;
         this.buttonA = false;
@@ -186,7 +189,9 @@ class MockFirmware {
 
     resetPrefs() {
         const S = this.S;
-        this.toggles = Uint8Array.from([0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0]);
+        // Sized from the shared header, so a toggle added there cannot leave it short.
+        this.toggles = new Uint8Array(S.boolTypes_e.boolTypesCount);
+        this.toggles.set([0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0]);
         this.settings = new Uint8Array(S.settingsTypes_e.settingsTypesCount * 4);
         const defaults = [255, 150, 20, 80, 500, 2500, 1, 0, 0xFF0000, 0x00FF00, 0x0000FF, 38, 45, 0, 1];
         const sv = new DataView(this.settings.buffer);
@@ -1001,6 +1006,8 @@ class MockFirmware {
         bytes.push(...this.usb);
         if (this.camNotAvailable)
             bytes.push(this.C.serialTerminator, this.C.sError);
+        if (this.pedalWireless)
+            bytes.push(this.C.serialTerminator, this.C.sPedalWireless);
         return Uint8Array.from(bytes);
     }
 

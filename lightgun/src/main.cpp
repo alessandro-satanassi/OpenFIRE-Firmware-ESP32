@@ -754,7 +754,10 @@ CheckBootRequests();
         Serial_OpenFIRE_Stream = &SerialWireless;
 
         // ===== WIRELESS PEDAL MANAGEMENT / GESTIONE DEL PEDALE WIRELESS =====
-        if((OF_Prefs::pins[OF_Const::btnPedal] == -1) && (OF_Prefs::pins[OF_Const::btnPedal2] == -1)) {
+        // Without a pin the pedal can only be wireless, and looking for one costs about
+        // nine seconds at every start: it is done only when the user asked for it.
+        if((OF_Prefs::pins[OF_Const::btnPedal] == -1) && (OF_Prefs::pins[OF_Const::btnPedal2] == -1) &&
+           OF_Prefs::toggles[OF_Const::pedalWireless]) {
             if (lastPedalSave && (lastPedalChannel == espnow_wifi_channel)) {
                 if (!SerialWireless.connection_gun_at_last_pedal()) SerialWireless.connection_gun_at_pedal();
             } else SerialWireless.connection_gun_at_pedal();
@@ -1696,6 +1699,15 @@ void ExecGunModeDocked()
                 buf[pos++] = OF_Const::serialTerminator;
                 buf[pos++] = OF_Const::sError;
             }
+            // A wireless pedal answers even though no pin is mapped to it: the App needs to
+            // know, or it would describe a working pedal as not connected. Kept after the
+            // camera marker, which an App that does not know this one still finds first.
+            #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
+                if(TinyUSBDevices.is_pedal_wireless) {
+                    buf[pos++] = OF_Const::serialTerminator;
+                    buf[pos++] = OF_Const::sPedalWireless;
+                }
+            #endif
             const bool boardInfoSent = OF_Serial::AppSerialSendResponse(OF_Const::sDock2, buf, (uint8_t)pos);
         
             sendBoardInfo = false;

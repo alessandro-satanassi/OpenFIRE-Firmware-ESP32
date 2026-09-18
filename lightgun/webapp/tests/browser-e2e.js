@@ -464,6 +464,11 @@ async function installFakeSerial(context, sim) {
     await shot(site, 'site-preview');
     await site.keyboard.press('Escape');
 
+    // A wireless pedal answered at start-up and the user asked for one: it has no pin,
+    // and must be neither described as not connected nor left unconfigurable.
+    sim.firmware.pedalWireless = true;
+    sim.firmware.toggles[sim.firmware.S.boolTypes_e.pedalWireless] = 1;
+
     await site.click('.welcome .big-button');
     ok(await waitFor(() => loaded(site)), 'site docks over Web Serial');
     ok(sim.firmware.sessionLink === 'serial', 'session on the serial link');
@@ -487,6 +492,19 @@ async function installFakeSerial(context, sim) {
 
     await site.click('.welcome .big-button');
     ok(await waitFor(() => loaded(site)), 'Connect docks again after the busy port');
+    await tab(site, 'tests');
+    const pedalText = async () => (await site.locator('.test-button', { hasText: 'Pedal' }).first().innerText()).replace(/\s+/g, ' ');
+    ok((await pedalText()) === 'Pedal (wireless)', 'a paired wireless pedal says so: ' + await pedalText());
+    // The same pedal with nothing answering: it says it is not connected, not '(N/C)'.
+    await site.evaluate(() => { OF.app.state.board.pedalWireless = false; OF.app.tabs.tests.resetReadings(); });
+    ok((await pedalText()) === 'Pedal (wireless, disconnected)', 'an absent wireless pedal says so: ' + await pedalText());
+    await site.evaluate(() => { OF.app.state.board.pedalWireless = true; OF.app.tabs.tests.resetReadings(); });
+    await tab(site, 'buttons');
+    ok(await site.evaluate(() => {
+        const rows = [...document.querySelectorAll('#tab-buttons .btn-row')];
+        const row = rows.find((r) => (r.querySelector('.btn-name') || {}).textContent === 'Pedal');
+        return !!row && !row.disabled;
+    }), 'the wireless pedal can be configured although it has no pin');
     await tab(site, 'tests');
     serial.closes.length = 0;
     await site.click('text=Restart Microcontroller in Firmware Update Mode');

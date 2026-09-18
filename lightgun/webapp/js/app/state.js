@@ -253,6 +253,31 @@
 
         pinMapped(fn) { return this.pinOf(fn) > this.E.btnUnmapped; }
 
+        /** The two pedals, which can also arrive over the air with no pin of their own. */
+        isPedal(fn) { return fn === this.E.btnPedal || fn === this.E.btnPedal2; }
+
+        /** A wireless pedal answered the board: it works although no pin is mapped to it. */
+        get pedalWireless() { return !!this.board && !!this.board.pedalWireless; }
+
+        /** The pedal is wanted over the air, edits included: the Button Mapping tab follows
+            this one, so its rows can be set right after ticking the box. */
+        get pedalWirelessWanted() { return !!this.cur && !!this.cur.toggles[this.B.pedalWireless]; }
+
+        /** Wireless pedal mode as the board itself has it: asked for, and no pin on either
+            pedal. Only then does the board look for one, so this is what Gun Tests describes
+            (like testPins, it follows the last load or save, not the pending edits). */
+        get pedalWirelessMode() {
+            if (!this.orig || !this.orig.toggles[this.B.pedalWireless])
+                return false;
+            const hasPin = (fn) => (this.testPins[fn] ?? -1) >= 0;
+            return !hasPin(this.E.btnPedal) && !hasPin(this.E.btnPedal2);
+        }
+
+        /** A configurable input: it has a pin, or it is a pedal the board can reach over the air. */
+        inputAvailable(fn) {
+            return this.pinMapped(fn) || (this.isPedal(fn) && this.pedalWirelessWanted);
+        }
+
         get customPins() { return !!this.cur && !!this.cur.toggles[this.B.customPins]; }
 
         /** A pin box changed: index = function value + 1 (0 = unmapped). Returns status messages. */

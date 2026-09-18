@@ -171,6 +171,7 @@ public:
         false,          // invert static pixels
         false,          // i2c OLED enabled
         false,          // i2c OLED alt address
+        false,          // wireless pedal: look for one when no pedal pin is set
     };
 
     /// @brief Pin functions array

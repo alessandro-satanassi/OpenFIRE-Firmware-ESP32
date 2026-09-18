@@ -74,12 +74,29 @@
 
         const mapped = (fn) => (state.testPins[fn] ?? -1) >= 0;
 
+        /**
+         * Name of an input box: the plain name when it has a pin; '(N/C)' when it has none.
+         * The two pedals also work without a pin, over the air: when the board is in that mode
+         * they say so, and add that nothing answered when no pedal is paired.
+         */
+        function inputLabel(index) {
+            const name = t(names[index + 1]);
+            if (mapped(index))
+                return { text: name, connected: true };
+            if (state.isPedal(index) && state.pedalWirelessMode)
+                return state.pedalWireless ?
+                    { text: t('%1 (wireless)', name), connected: true } :
+                    { text: t('%1 (wireless, disconnected)', name), connected: false };
+            return { text: `${name} (N/C)`, connected: false };
+        }
+
         /** Qt LabelsUpdate: on load and after a save. */
         function resetReadings() {
             buttonLabels.forEach((label, i) => {
                 label.classList.remove('pressed');
-                label.textContent = mapped(i) ? t(names[i + 1]) : `${t(names[i + 1])} (N/C)`;
-                label.classList.toggle('not-connected', !mapped(i));
+                const { text, connected } = inputLabel(i);
+                label.textContent = text;
+                label.classList.toggle('not-connected', !connected);
             });
             temperature.className = 'temperature';
             if (mapped(E.tempPin)) {
