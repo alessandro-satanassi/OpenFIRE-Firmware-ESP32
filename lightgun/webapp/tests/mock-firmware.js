@@ -168,7 +168,9 @@ class MockFirmware {
         this.rebootedToBootloader = false;
         this.flashCleared = false;
         this.mouse = { x: 1200, y: 90 };
-        this.clientLost = false;          // WebApp_TakeClientLost() source (WebSocket close)
+        this.clientLost = false;          // a new page took over (ws_client_lost)
+        this.clientClosed = false;        // the page closed, nobody replaced it (ws_client_closed)
+        this.clientClosedAt = 0;
         this.sessionCounter = 0;
 
         this.resetPrefs();
@@ -246,7 +248,7 @@ class MockFirmware {
     /// OF_Serial::AppSerialInputPending()
     inputPending() {
         return this.available() > 0 || this.linkAvailable('serial') > 0 || this.linkAvailable('web') > 0 ||
-               (this.webMode && this.clientLost);
+               (this.webMode && (this.clientLost || this.clientClosed));
     }
 
     /// Client lost is meaningful only for a WebSocket session (AppSerialTakeLinkLost).
@@ -331,10 +333,20 @@ class MockFirmware {
         ++this.sessionCounter;
     }
 
+    /// WebApp_TakeClientLost(). A page that simply closed is reported only once what it
+    /// sent has been read: its last request would otherwise die with the session.
     takeClientLost() {
-        const lost = this.clientLost;
-        this.clientLost = false;
-        return lost;
+        if (this.clientLost) {
+            this.clientLost = false;
+            this.clientClosed = false;
+            return true;
+        }
+        if (!this.clientClosed)
+            return false;
+        if (this.linkAvailable('web') > 0 && Date.now() - this.clientClosedAt < MockFirmware.CLOSE_DRAIN_MS)
+            return false;
+        this.clientClosed = false;
+        return true;
     }
 
     calibrating() {
@@ -1096,5 +1108,9 @@ class MockFirmware {
         return { id: v.getUint16(0, true), name: s };
     }
 }
+
+// WS_CLOSE_DRAIN_MS of OpenFIREweb.cpp: at the latest, an unfinished frame cannot
+// keep the session of a page that is gone alive for ever.
+MockFirmware.CLOSE_DRAIN_MS = 250;
 
 module.exports = { MockFirmware, MemoryLink, createMemoryTransport, crc8, mulberry32 };

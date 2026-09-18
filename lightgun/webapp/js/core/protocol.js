@@ -1341,10 +1341,13 @@
         /// Enters the bootloader: RP2040/RP235X use the 1200-baud touch when the
         /// transport supports it (Web Serial); otherwise the framed command is
         /// sent without waiting for an ACK (AppSerial::RebootToBootldr).
+        /// Resolves to false when the request could not be sent, so that the App
+        /// does not report a restart that never left this page.
         rebootToBootloader(arch) {
             return this._exclusive(async () => {
                 const shared = this.shared;
                 const transport = this.transport;
+                let sent = false;
 
                 if (transport && this.isOpen) {
                     const isRP = arch === shared.boardArchs[shared.boardArchs_e.boardRP];
@@ -1353,6 +1356,7 @@
                         this._portOpen = false;
                         try {
                             await transport.touch1200();
+                            sent = true;
                         } catch (error) {
                             console.warn('[AppSerial] 1200-baud bootloader touch failed:', error);
                         } finally {
@@ -1360,14 +1364,20 @@
                         }
                     } else {
                         const frame = buildFrame(TYPE_REQUEST, this.cmd.sRebootToBootloader, this._nextSequence(), null);
-                        if (!frame || !await transport.write(frame))
+                        sent = !!frame && await transport.write(frame);
+                        if (!sent)
                             console.warn('[AppSerial] Incomplete reboot command write.');
+                        // Like clearSaveMemory(): the board reads the request before the link
+                        // goes away. Closing the transport then flushes what was written.
+                        if (sent)
+                            await sleep(50);
                         await this._closeTransport();
                     }
                 }
 
                 this._resetProtocolState();
                 this._notifyWaiters();
+                return sent;
             });
         }
 

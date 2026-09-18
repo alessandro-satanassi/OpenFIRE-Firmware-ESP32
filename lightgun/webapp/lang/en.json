@@ -479,5 +479,6 @@
     "About %1": "About %1",
     "Disconnect": "Disconnect",
     "Connected": "Connected",
-    "Not connected": "Not connected"
+    "Not connected": "Not connected",
+    "The restart command could not be sent: reconnect and try again.": "The restart command could not be sent: reconnect and try again."
 }

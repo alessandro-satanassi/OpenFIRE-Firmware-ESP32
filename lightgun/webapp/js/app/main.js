@@ -858,9 +858,11 @@
             if (!this.connected) return;
             const rp = this.state.isRP;
             this.expectClose = true;
-            await this.protocol.rebootToBootloader(this.state.board.arch);
+            const sent = await this.protocol.rebootToBootloader(this.state.board.arch);
             this.connection.notifyClosed('bootloader');
-            this.status.show(rp ? t('Board reset to bootloader.') : t('Board restarted.'), 5000);
+            // A restart that never left the page used to be reported as done.
+            if (sent) this.status.show(rp ? t('Board reset to bootloader.') : t('Board restarted.'), 5000);
+            else this.status.show(t('The restart command could not be sent: reconnect and try again.'));
         }
 
         async clearSaveMemory() {

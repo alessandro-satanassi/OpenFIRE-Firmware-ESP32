@@ -224,16 +224,23 @@
             if (navigator.serial && navigator.serial.removeEventListener)
                 navigator.serial.removeEventListener('disconnect', this._onDisconnect);
 
+            // The bytes leave first. write() resolves when the chunk is accepted, not when
+            // it has reached the board, and releaseLock() does not flush: closing the port
+            // right after a write would throw the last command away (the reboot request is
+            // written and the port closed immediately afterwards).
+            if (this._writer) {
+                try { await this._writeChain; } catch (e) { /* the write already reported itself */ }
+                try { await this._writer.close(); } catch (e) { /* unplugged or already closed */ }
+                try { this._writer.releaseLock(); } catch (e) { /* already released */ }
+                this._writer = null;
+            }
+
             if (this._reader) {
                 try { await this._reader.cancel(); } catch (e) { /* port already gone */ }
             }
             if (this._readLoop) {
                 try { await this._readLoop; } catch (e) { /* ignored */ }
                 this._readLoop = null;
-            }
-            if (this._writer) {
-                try { this._writer.releaseLock(); } catch (e) { /* ignored */ }
-                this._writer = null;
             }
             try { await this.port.close(); } catch (e) { /* already closed or unplugged */ }
         }

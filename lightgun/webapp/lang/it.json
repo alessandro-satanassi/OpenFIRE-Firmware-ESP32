@@ -479,5 +479,6 @@
     "About %1": "Informazioni su %1",
     "Disconnect": "Disconnetti",
     "Connected": "Connessa",
-    "Not connected": "Non connessa"
+    "Not connected": "Non connessa",
+    "The restart command could not be sent: reconnect and try again.": "Non è stato possibile inviare il comando di riavvio: riconnetti e riprova."
 }

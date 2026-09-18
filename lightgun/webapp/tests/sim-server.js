@@ -124,7 +124,8 @@ function startServer({ port = 8080, root = WEBAPP, board = 'waveshare-esp32-s3-z
             client = ws;
             ws.onMessage = (bytes) => link.appWrite(bytes);
             ws.onClose = () => {
-                if (client === ws) { client = null; firmware.clientLost = true; }
+                // web_close_fn(): the page closed, nobody replaced it.
+                if (client === ws) { client = null; firmware.clientClosed = true; firmware.clientClosedAt = Date.now(); }
             };
         });
     });

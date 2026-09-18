@@ -69,10 +69,11 @@ async function teardown(ctx) {
     await ctx.firmware.stop();
 }
 
-/// Closes a WebSocket page the way OpenFIREweb.cpp reports it.
+/// Closes a WebSocket page the way OpenFIREweb.cpp reports it (web_close_fn).
 function closePage(ctx, app) {
     app.transport.simulateLoss();
-    ctx.firmware.clientLost = true;
+    ctx.firmware.clientClosed = true;
+    ctx.firmware.clientClosedAt = Date.now();
 }
 
 test('a reloaded App docks again over the abandoned session (raw re-dock)', async () => {
@@ -350,4 +351,35 @@ test('web mode: docked with a pending save, an App on the other link is asked to
     } finally {
         await teardown(ctx);
     }
+});
+
+// A page that closes right after writing a request (the App does exactly this for the
+// reboot to the bootloader) used to lose it: the firmware saw the closed socket first,
+// ended the session, and never read the bytes that were already in its buffer.
+test('a request already received survives the page closing', async () => {
+    const serialLink = new MemoryLink();
+    const webLink = new MemoryLink();
+    // No start(): the loop must not consume the bytes while the rule is checked.
+    const firmware = new MockFirmware(S, serialLink, { webLink });
+
+    firmware.rxQueues.web.push(0xF5); // a request on its way, not read yet
+    firmware.clientClosed = true;
+    firmware.clientClosedAt = Date.now();
+    assert.equal(firmware.takeClientLost(), false, 'the session stays alive while its bytes are unread');
+
+    firmware.rxQueues.web.length = 0;
+    assert.equal(firmware.takeClientLost(), true, 'once they are read the session ends');
+    assert.equal(firmware.takeClientLost(), false, 'the notice is consumed only once');
+
+    // An unfinished frame cannot keep a page that is gone alive for ever.
+    firmware.rxQueues.web.push(0xF5);
+    firmware.clientClosed = true;
+    firmware.clientClosedAt = Date.now() - MockFirmware.CLOSE_DRAIN_MS - 1;
+    assert.equal(firmware.takeClientLost(), true, 'after the time limit the session ends anyway');
+
+    // A new page taking over is still reported at once: its predecessor has nothing to say.
+    firmware.rxQueues.web.push(0xF5);
+    firmware.clientLost = true;
+    firmware.clientClosedAt = Date.now();
+    assert.equal(firmware.takeClientLost(), true, 'a page replaced by another is reported at once');
 });

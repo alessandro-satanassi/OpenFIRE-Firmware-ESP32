@@ -110,6 +110,12 @@ static volatile int ws_client_fd = -1;
 
 // Set by the server task, consumed by the firmware loop.
 static volatile bool ws_client_lost = false;     // the page that owned the session is gone
+// A page that simply closed (no new page taking over) is reported only once what it
+// sent has been read: its last request - the reboot to the bootloader, for instance -
+// is still in the buffer, and ending the session first would throw it away.
+static volatile bool ws_client_closed = false;   // the page closed, nobody replaced it
+static volatile uint32_t ws_client_closed_at = 0;
+#define WS_CLOSE_DRAIN_MS 250                    // ...at the latest (an unfinished frame)
 static volatile bool ws_flush_request = false;   // drop bytes left by a previous page
 static volatile uint16_t ws_flush_to = 0;        // ...up to here: what the new page sent is kept
 
@@ -190,13 +196,22 @@ static constexpr OF_WebSerialWrapper::SerialOps websocketOps = {
 };
 
 bool WebApp_TakeClientLost() {
-    if (!ws_client_lost) return false;
-    ws_client_lost = false;
+    // A new page took over: immediate, its predecessor has nothing left to say.
+    if (ws_client_lost) {
+        ws_client_lost = false;
+        ws_client_closed = false;
+        return true;
+    }
+    if (!ws_client_closed) return false;
+    // The page just closed: let the firmware read what it sent before leaving.
+    if (ws_available() > 0 && (uint32_t)(millis() - ws_client_closed_at) < WS_CLOSE_DRAIN_MS)
+        return false;
+    ws_client_closed = false;
     return true;
 }
 
 bool WebApp_ClientLostPending() {
-    return ws_client_lost;
+    return ws_client_lost || ws_client_closed;
 }
 
 void WebApp_RadioState(uint8_t *channel, uint8_t *powerSave) { // DA TOGLIERE
@@ -360,7 +375,8 @@ static esp_err_t ws_handler(httpd_req_t *req) {
 static void web_close_fn(httpd_handle_t hd, int sockfd) {
     if (sockfd == ws_client_fd) {
         ws_client_fd = -1;
-        ws_client_lost = true;
+        ws_client_closed = true;
+        ws_client_closed_at = millis();
     }
     close(sockfd);
 }

@@ -41,8 +41,11 @@ const tab = (page, id) => page.click(`.tab-button[aria-controls="tab-${id}"]`);
 
 /** Simulated Web Serial port bridged to the serial link of the simulated firmware. */
 async function installFakeSerial(context, sim) {
-    const state = { page: null, opens: [], busy: false, granted: false };
+    const state = { page: null, opens: [], busy: false, granted: false, closes: [] };
     await context.exposeBinding('__ofSerialWrite', (source, bytes) => sim.serialLink.appWrite(Uint8Array.from(bytes)));
+    // Order in which the page tears the port down: a real port only guarantees that the
+    // bytes left once the writable stream is closed, so 'flush' must come before 'port'.
+    await context.exposeBinding('__ofSerialClose', (source, what) => { state.closes.push(what); });
     await context.exposeBinding('__ofSerialOpen', (source, baud) => {
         state.page = source.page;
         state.opens.push(baud);
@@ -59,10 +62,14 @@ async function installFakeSerial(context, sim) {
             async open(options) {
                 if (await window.__ofSerialOpen(options.baudRate)) { const e = new Error('busy'); e.name = 'NetworkError'; throw e; }
                 this.readable = new ReadableStream({ start: (controller) => { window.__ofSerialPush = (data) => { try { controller.enqueue(new Uint8Array(data)); } catch (e) { /* closed */ } }; this._controller = controller; } });
-                this.writable = new WritableStream({ write: (chunk) => window.__ofSerialWrite(Array.from(chunk)) });
+                this.writable = new WritableStream({
+                    write: (chunk) => window.__ofSerialWrite(Array.from(chunk)),
+                    close: () => window.__ofSerialClose('flush'),
+                });
             }
             async setSignals() {}
             async close() {
+                window.__ofSerialClose('port');
                 window.__ofSerialPush = null;
                 try { this._controller.close(); } catch (e) { /* already closed */ }
                 this.readable = null;
@@ -481,8 +488,15 @@ async function installFakeSerial(context, sim) {
     await site.click('.welcome .big-button');
     ok(await waitFor(() => loaded(site)), 'Connect docks again after the busy port');
     await tab(site, 'tests');
+    serial.closes.length = 0;
     await site.click('text=Restart Microcontroller in Firmware Update Mode');
     ok(await waitFor(() => sim.firmware.rebootedToBootloader), 'ESP32 restart command reaches the board');
+    // The port used to be closed straight after the write, which on a real board threw the
+    // restart command away every now and then.
+    ok(await waitFor(() => serial.closes.indexOf('flush') >= 0 &&
+        (serial.closes.indexOf('port') < 0 || serial.closes.indexOf('flush') < serial.closes.indexOf('port'))),
+        'the written bytes are flushed before the port is closed (' + serial.closes.join(' -> ') + ')');
+    ok((await site.locator('.status-text').innerText()).length > 0, 'the restart is reported in the status bar');
     ok(await waitFor(async () => !(await loaded(site))), 'page undocked after the restart');
     ok(siteErrors.length === 0, 'no site errors ' + JSON.stringify(siteErrors));
     await site.close();
