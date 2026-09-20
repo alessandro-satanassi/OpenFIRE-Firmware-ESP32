@@ -271,6 +271,26 @@ void FW_Common::CameraSet()
 
 
 
+// Serial command M0xN picks the output at will; this is the value the board
+// starts from, and returns to when the host hands control back with 'E'.
+void FW_Common::ApplyBootOutputMode()
+{
+    switch(OF_Prefs::settings[OF_Const::bootOutputMode]) {
+    case OF_Const::bootOutputGamepadRight:
+        buttons.analogOutput = true;
+        Gamepad16.stickRight = false;   // aim on the right stick, as M0x1 does
+        break;
+    case OF_Const::bootOutputGamepadLeft:
+        buttons.analogOutput = true;
+        Gamepad16.stickRight = true;    // aim on the left stick, as M0x1L does
+        break;
+    default:
+        buttons.analogOutput = false;
+        Gamepad16.stickRight = false;   // the physical stick goes back on the left
+        break;
+    }
+}
+
 void FW_Common::SetMode(const FW_Const::GunMode_e &newMode)
 {
     #ifdef USE_SQUARE_ADVANCED

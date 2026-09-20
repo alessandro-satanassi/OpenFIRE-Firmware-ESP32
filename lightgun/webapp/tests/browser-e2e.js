@@ -505,6 +505,25 @@ async function installFakeSerial(context, sim) {
         const row = rows.find((r) => (r.querySelector('.btn-name') || {}).textContent === 'Pedal');
         return !!row && !row.disabled;
     }), 'the wireless pedal can be configured although it has no pin');
+
+    // Output the board starts from. Value 0 is the absolute mouse, i.e. what every
+    // build did before this setting existed, so that is where it has to start.
+    await tab(site, 'settings');
+    const bootBox = 'select[aria-label="Startup Mode"]';
+    const bootIndex = await site.evaluate(() => OF.Boards.shared.settingsTypes_e.bootOutputMode);
+    ok(await site.locator(bootBox).count() === 1, 'the startup output box is in the Input group');
+    ok((await site.locator(bootBox).inputValue()) === '0', 'it starts on Absolute Mouse');
+    await site.selectOption(bootBox, '2');
+    ok(await waitFor(async () => (await saveLabel(site)) === 'Save and Send Settings'), 'changing the startup output enables Save');
+    await site.click('.save-button');
+    await site.click('dialog button.primary');
+    ok(await waitFor(async () => (await statusText(site)).includes('Sent settings successfully!'), 8000), 'startup output saved');
+    ok(sim.firmware.getSetting(bootIndex) === 2,
+        'firmware received the startup output mode: ' + sim.firmware.getSetting(bootIndex));
+    await site.selectOption(bootBox, '0');
+    await site.click('.save-button');
+    await site.click('dialog button.primary');
+    ok(await waitFor(() => sim.firmware.getSetting(bootIndex) === 0, 8000), 'and back to Absolute Mouse');
     await tab(site, 'tests');
     serial.closes.length = 0;
     await site.click('text=Restart Microcontroller in Firmware Update Mode');

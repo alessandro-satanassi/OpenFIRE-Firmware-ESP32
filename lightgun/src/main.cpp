@@ -495,6 +495,10 @@ void setup() {
     FW_Common::buttons.Begin();
     FW_Common::FeedbackSet();
 
+    // Output the user chose for startup. Set before the first SetMode(), so the
+    // display shows the right one straight away.
+    FW_Common::ApplyBootOutputMode();
+
     #ifdef LED_ENABLE
         OF_RGB::LedInit();
     #endif // LED_ENABLE

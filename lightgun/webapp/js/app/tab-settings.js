@@ -145,7 +145,14 @@
                     "text": "Invert Static Colors"
             },
             "inputBox": {
-                    "title": "Input"
+                    "title": "Input / Output"
+            },
+            "bootOutputModeBox": {
+                    "whatsThis": "<html><head/><body><p>What the lightgun is to the computer <span style=\" font-weight:700;\">the moment you switch it on.</span></p><p><span style=\" font-style:italic;\">Absolute Mouse</span> is the default and what the lightgun has always done: aiming moves the mouse pointer.</p><p>The two <span style=\" font-style:italic;\">Gamepad</span> settings turn it into a controller instead, with the aim riding one of the two analog sticks. That is what MiSTer FPGA, several frontends and two-player setups on Windows expect. If the aim ends up on the wrong stick, pick the other one.</p><p>A game can still switch the lightgun over while it runs, and it stays switched until something changes it again: this only decides where it starts.</p></body></html>",
+                    "accessibleName": "Startup Mode"
+            },
+            "label_bootOutput": {
+                    "text": "Startup mode:"
             },
             "pedalWirelessToggle": {
                     "whatsThis": "<html><head/><body><p>Enable if you use a <span style=\" font-style:italic;\">wireless pedal.</span></p><p>With no pin mapped to <span style=\" font-style:italic;\">Pedal</span> or <span style=\" font-style:italic;\">Alt Pedal,</span> the only pedal the lightgun can have is a wireless one, and looking for it takes several seconds at every battery start. With this disabled the lightgun does not look for it at all and starts straight away.</p><p><span style=\" font-weight:700;\">This setting does nothing when a pin is mapped to either pedal:</span> a wired pedal is always used, and no wireless one is looked for.</p></body></html>",
@@ -269,7 +276,8 @@
     };
 
     function build(app) {
-        const { el, t, spin, checkbox, radio } = OF.UI;
+        const { el, t, spin, checkbox, radio, select } = OF.UI;
+        const M = OF.Maps;
         const state = app.state;
         const B = state.B;
         const T = state.T;
@@ -371,9 +379,19 @@
             neopixels);
 
         // ----- Input / UI and UX ------------------------------------------------------------
+        // The output the board presents when it is switched on. Zero is the absolute
+        // mouse, so a board that never had this setting behaves exactly as before.
+        const bootOutputModeBox = select(M.bootOutputModes.map((label, value) => ({ value, label: t(label) })), 0,
+            (value) => { state.setSetting(T.bootOutputMode, Number(value)); app.refresh(); },
+            { attrs: { 'aria-label': text('bootOutputModeBox', 'accessibleName') } });
+        controls.bootOutputModeBox = bootOutputModeBox;
+        track(bootOutputModeBox, 'bootOutputModeBox');
+
         const input = fieldset('inputBox',
             el('div', { class: 'row center' }, toggle('lowButtonsToggle', B.lowButtonsMode)),
-            el('div', { class: 'row center' }, toggle('pedalWirelessToggle', B.pedalWireless)));
+            el('div', { class: 'row center' }, toggle('pedalWirelessToggle', B.pedalWireless)),
+            el('div', { class: 'row center wrap' },
+                el('label', { class: 'field-label', text: text('label_bootOutput', 'text') }), bootOutputModeBox));
         const uiux = fieldset('uiuxBox',
             el('div', { class: 'row center' }, toggle('simplePauseToggle', B.simplePause)),
             el('div', { class: 'row center wrap' }, toggle('holdToPauseToggle', B.holdToPause),
@@ -476,6 +494,8 @@
                 ['rumbleLengthBox', T.rumbleInterval], ['neopixelStrandLengthBox', T.customLEDcount],
                 ['customLEDstaticSpinbox', T.customLEDstatic], ['holdToPauseLengthBox', T.holdToPauseLength]])
                 controls[name].value = settings[index];
+
+            controls.bootOutputModeBox.value = String(settings[T.bootOutputMode]);
 
             controls.customLEDstaticSpinbox.prefix = t(state.toggle(B.invertStaticPixels) ? 'Last ' : 'First ');
             const staticCount = settings[T.customLEDstatic];

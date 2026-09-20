@@ -202,6 +202,7 @@ public:
         45,                         // temp shutoff
         OF_Const::analogModeStick,  // analog stick mode
         CAMERA_DEFAULT, // OF_Const::PixArt_PAJ7025R2, // camera model
+        OF_Const::bootOutputMouse,  // output mode at boot: unchanged behaviour
     };
 
     typedef struct USBMap_s {

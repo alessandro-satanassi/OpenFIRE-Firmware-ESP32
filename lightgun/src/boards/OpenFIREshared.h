@@ -220,6 +220,7 @@ public:
         tempShutdown,
         analogMode,
         cameraModel, // inserita per CAM
+        bootOutputMode,
         // Add here
         settingsTypesCount
     } settingsTypes_e;
@@ -240,6 +241,7 @@ public:
         {"TempDanger",          tempShutdown        },
         {"AnalogMode",          analogMode          },
         {"CameraModel",         cameraModel         },  // inserira per CAM
+        {"BootOutputMode",      bootOutputMode      },
     };
 
     enum {
@@ -247,6 +249,16 @@ public:
         analogModeDpad,
         analogModeKeys
     } analogModeSettings_e;
+
+    // What the board presents to the host when it starts. Zero is the absolute
+    // mouse, so a board that has never seen this setting behaves as it always did.
+    // In gamepad mode the aim rides one of the two analog sticks and the physical
+    // stick, if any, takes the other one; z/rz are never used.
+    enum {
+        bootOutputMouse = 0,     // absolute mouse (serial M0x0)
+        bootOutputGamepadRight,  // gamepad, aim on the right stick (serial M0x1)
+        bootOutputGamepadLeft    // gamepad, aim on the left stick (serial M0x1L)
+    } bootOutputModeSettings_e;
 
     // Profile data type indices
     // this MUST match the order of ProfileData_s in (FW)OpenFIREprefs

@@ -74,6 +74,7 @@
         layouts: Object.freeze(['Square', 'Diamond']),
         aspectRatios: Object.freeze(['16:9', '16:10', '3:2', '5:4', '4:3']),
         analogModes: Object.freeze(['Gamepad Analog Stick (Left/Right)', 'Gamepad D-Pad', 'Keyboard Arrows']),
+        bootOutputModes: Object.freeze(['Absolute Mouse', 'Gamepad (right stick)', 'Gamepad (left stick)']),
         cameraModels: Object.freeze(['DFRobot SEN0158 / WiiCam', 'PixArt PAJ7025 R2', 'PixArt PAJ7025 R3']),
         i2cTypeLabels: Object.freeze(['SDA', 'SCL']),
         spiTypeLabels: Object.freeze(['RX', 'TX', 'SCK', 'CSn']),
