@@ -646,10 +646,10 @@ async function installFakeSerial(context, sim) {
         'a firmware without a published App is reported: ' + JSON.stringify((await home.locator('#state').innerText()).slice(0, 120)));
     await sleep(700);
     ok(!/\/v\//.test(home.url()), 'nothing is opened by itself: ' + home.url());
-    ok(await home.locator('#versions .item').count() === 2, 'the published versions are offered instead');
+    ok(await home.locator('#versions .card').count() === 2, 'the published versions are offered instead');
     await shot(home, 'site-home-not-published');
     // and one of them can be tried by hand: it is the one that then says the versions differ
-    await home.click('#versions .item >> nth=0');
+    await home.click('#versions .card >> nth=0');
     ok(await home.waitForURL(/\/v\/6\.2\//, { timeout: 15000 }).then(() => true).catch(() => false),
         'choosing one by hand opens it: ' + home.url());
     await home.click('.welcome .big-button');

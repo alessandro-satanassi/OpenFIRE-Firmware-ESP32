@@ -32,7 +32,9 @@
         light:  'M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8zM12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4',
         dark:   'M20.8 13.4A8.5 8.5 0 0 1 10.6 3.2a8.5 8.5 0 1 0 10.2 10.2z',
         check:  'M4.5 12.5 9.5 17.5 19.5 6.5',
-        caret:  'M6 9l6 6 6-6'
+        caret:  'M6 9l6 6 6-6',
+        app:    'M3.5 5h17a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-17a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM2.5 9h19M5.5 7h0.01M8 7h0.01',
+        arrow:  'M5 12h14M13 6l6 6-6 6'
     };
     const JUMP_KEY = 'of_version_jump';     // handed over to the app that is being opened
     const THEME_KEY = 'of_theme';           // the App's own settings, shared with this page
@@ -58,6 +60,7 @@
             allLead: 'Every version of the app stays published. Normally you do not choose: the button above opens the right one.',
             pickOne: 'Choose one to try:',
             showAll: 'See the published versions',
+            open: 'Open this version',
             latest: 'latest',
             footer: 'OpenFIRE ESP32 - free software, GNU General Public License.'
         },
@@ -80,6 +83,7 @@
             allLead: 'Ogni versione dell’app resta pubblicata. Di solito non devi scegliere: il pulsante qui sopra apre quella giusta.',
             pickOne: 'Scegline una da provare:',
             showAll: 'Vedi le versioni pubblicate',
+            open: 'Apri questa versione',
             latest: 'ultima',
             footer: 'OpenFIRE ESP32 - software libero, licenza GNU General Public License.'
         }
@@ -247,19 +251,26 @@
         byId('versions-lead').textContent = lead || t('allLead');
         items.textContent = '';
         list.versions.forEach((entry) => {
+            // Un riquadro come quelli della pagina iniziale del progetto: icona,
+            // numero di versione, l'eventuale etichetta e la freccia in fondo.
             const link = root.document.createElement('a');
-            link.className = 'item';
+            link.className = 'card';
             link.href = 'v/' + encodeURIComponent(entry.id) + '/' + suffix();
-            const num = root.document.createElement('span');
-            num.className = 'num';
-            num.textContent = String(entry.label || entry.id) + (entry.type ? ' ' + entry.type : '');
-            link.appendChild(num);
-            if (String(list.latest || '') === String(entry.id)) {
-                const tag = root.document.createElement('span');
-                tag.className = 'tag';
-                tag.textContent = t('latest');
-                link.appendChild(tag);
-            }
+
+            const top = element('div', 'card-top');
+            const mark = element('span', 'card-icon');
+            mark.appendChild(icon('app'));
+            top.appendChild(mark);
+            top.appendChild(element('h2', null,
+                String(entry.label || entry.id) + (entry.type ? ' ' + entry.type : '')));
+            if (String(list.latest || '') === String(entry.id))
+                top.appendChild(element('span', 'tag', t('latest')));
+            link.appendChild(top);
+
+            const go = element('span', 'card-go', t('open'));
+            go.appendChild(icon('arrow'));
+            link.appendChild(go);
+
             items.appendChild(link);
         });
         box.classList.add('on');
