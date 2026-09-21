@@ -33,6 +33,14 @@
       "path": "../OpenFIRE-ESP32-Tools" 
     },
     {
+      "name": "WEB APP",
+      "path": "../OpenFIRE-ESP32-WebApp" 
+    },
+    {
+      "name": "OPENFIRE ESP32",
+      "path": "../OpenFIRE-ESP32" 
+    },
+    {
       "name": "HOME",
       "path": "."
     },
