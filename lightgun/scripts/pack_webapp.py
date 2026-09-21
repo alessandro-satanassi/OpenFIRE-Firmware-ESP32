@@ -1,16 +1,23 @@
 """PlatformIO pre-script: embeds the reduced web app in the firmware (include/web_assets.h)
-and, when asked, updates the folder of the published site.
+and writes the web app of this firmware next to it.
 
-Site (GitHub Pages / Tauri): every build writes it into dist/site. To keep the folder of
-the site repository up to date instead, set its path in platformio.ini, under [env] (or in
-a single environment):
+Every build writes two folders, which are two different things:
+
+    dist/site      the app of the firmware being built - one version of it. Publishing a
+                   version means copying this folder into v/<version>/ of the site
+                   repository and adding it to versions.json.
+    dist/launcher  the home page of that site: the Connect button, which reads the version
+                   of the lightgun and opens the app published for it.
+
+dist/site can be written somewhere else - a folder you keep for testing, for instance - by
+setting its path in platformio.ini, under [env] (or in a single environment):
 
     custom_webapp_site_dir = ../../OpenFIRE-WebApp
 
 A relative path starts from the lightgun folder; the environment variable
 OPENFIRE_WEBAPP_SITE_DIR has priority over platformio.ini, and the value "off" writes no
-site at all. The folder receives index.html, style.css, app.js, boards/pics/*.js and
-.nojekyll; everything else in it (.git, README, LICENSE, CNAME) is left untouched.
+app folder at all. The folder receives index.html, style.css, app.js and boards/pics/*.js;
+everything else in it (.git, README, LICENSE, CNAME) is left untouched.
 
 Every build re-reads src/boards (OpenFIREshared.h, boardPics/boards.qrc and the board SVGs) and
 webapp/lang/*.json, so changes to boards, pin maps, alternative layouts and pictures are
@@ -56,19 +63,28 @@ def site_dir():
 
 
 def update_site():
-    """Writes the site into the configured folder (a build must not fail because of it)."""
+    """Writes the app of this firmware and the home page of the site (a build must not
+    fail because of either)."""
     target = site_dir()
-    if not target:
-        return
+    if target:
+        try:
+            result = webapp_build.build_site(PROJECT_DIR, target)
+            changed = len(result["changed"])
+            removed = len(result["removed"])
+            state = "unchanged" if not changed and not removed else \
+                f"{changed} file(s) updated" + (f", {removed} removed" if removed else "")
+            print(f"[WebApp] app of version {result['version']['label']} in {target}: {state}.")
+        except Exception as error:
+            print(f"[WebApp] WARNING: the app could not be written in {target}: {error}")
+
+    launcher = os.path.join(PROJECT_DIR, "dist", "launcher")
     try:
-        result = webapp_build.build_site(PROJECT_DIR, target)
+        result = webapp_build.build_launcher(PROJECT_DIR, launcher)
         changed = len(result["changed"])
-        removed = len(result["removed"])
-        state = "unchanged" if not changed and not removed else \
-            f"{changed} file(s) updated" + (f", {removed} removed" if removed else "")
-        print(f"[WebApp] site in {target}: {state}.")
+        print(f"[WebApp] home page in {launcher}: "
+              + ("unchanged" if not changed else f"{changed} file(s) updated") + ".")
     except Exception as error:
-        print(f"[WebApp] WARNING: the site could not be written in {target}: {error}")
+        print(f"[WebApp] WARNING: the home page could not be written in {launcher}: {error}")
 
 
 def _flatten(value):

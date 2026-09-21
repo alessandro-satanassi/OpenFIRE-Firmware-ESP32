@@ -11,6 +11,7 @@
 */
 'use strict';
 
+const fs = require('fs');
 const path = require('path');
 let chromium;
 try {
@@ -77,9 +78,16 @@ async function installFakeSerial(context, sim) {
             }
         }
         const port = new FakePort();
+        // Like a real browser, the permission belongs to the site and not to the page:
+        // after a jump to another page of the same site the port is still there.
         let granted = false;
+        try { granted = localStorage.getItem('__of_fake_serial_granted') === '1'; } catch (e) { /* private mode */ }
         const serial = {
-            requestPort: async () => { granted = true; return port; },
+            requestPort: async () => {
+                granted = true;
+                try { localStorage.setItem('__of_fake_serial_granted', '1'); } catch (e) { /* private mode */ }
+                return port;
+            },
             getPorts: async () => (granted ? [port] : []),
             addEventListener: (name, fn) => listeners.add(fn),
             removeEventListener: (name, fn) => listeners.delete(fn),
@@ -537,6 +545,193 @@ async function installFakeSerial(context, sim) {
     ok(await waitFor(async () => !(await loaded(site))), 'page undocked after the restart');
     ok(siteErrors.length === 0, 'no site errors ' + JSON.stringify(siteErrors));
     await site.close();
+    await sim.close();
+
+    // ===================== the published site: home and versions =====================
+    // What is published is one folder per version of the App (v/<version>/, a copy of what
+    // the build writes in dist/site) and, at the root, the home page with the Connect
+    // button, which reads the version of the firmware and opens the App published for it.
+    // The site is put together here out of the two builds, as publishing does.
+    const SITE = path.join(LIGHTGUN, 'dist', 'test-site');
+    const copyInto = (from, to) => {
+        fs.mkdirSync(to, { recursive: true });
+        for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
+            const source = path.join(from, entry.name);
+            const target = path.join(to, entry.name);
+            if (entry.isDirectory()) copyInto(source, target);
+            else fs.copyFileSync(source, target);
+        }
+    };
+    fs.rmSync(SITE, { recursive: true, force: true });
+    copyInto(path.join(LIGHTGUN, 'dist', 'launcher'), SITE);
+    copyInto(path.join(LIGHTGUN, 'dist', 'site'), path.join(SITE, 'v', '6.2'));
+    // An older version, as it would have been published in its day.
+    copyInto(path.join(LIGHTGUN, 'dist', 'site'), path.join(SITE, 'v', '6.1'));
+    const oldApp = path.join(SITE, 'v', '6.1', 'app.js');
+    fs.writeFileSync(oldApp, fs.readFileSync(oldApp, 'utf8')
+        .replace('"version": "6.2"', '"version": "6.1"')
+        .replace('"versionLabel": "6.2.0"', '"versionLabel": "6.1.0"'));
+    fs.writeFileSync(path.join(SITE, 'versions.json'), JSON.stringify({
+        latest: '6.2',
+        versions: [{ id: '6.2', label: '6.2.0', type: 'stable' },
+                   { id: '6.1', label: '6.1.0', type: 'stable' }]
+    }));
+
+    sim = await startServer({ port: 8126, root: SITE, board: 'esp32-s3-devkitc-1' });
+    const verContext = await browser.newContext({ locale: 'en-US', viewport: { width: 1280, height: 860 } });
+    await installFakeSerial(verContext, sim);
+    const mismatch = (page) => page.locator('dialog', { hasText: 'Versions do not match' });
+    const CMD = globalThis.OpenFIREshared.serialCmdTypes_e;
+    const settingsAsked = () => sim.firmware.log.filter((e) => e.dir === 'app->fw' &&
+        [CMD.sGetToggles, CMD.sGetSettings, CMD.sGetProfile, CMD.sGetBtns].indexOf(e.command) >= 0).length;
+
+    // ----- the home page opens the App of the firmware -----
+    sim.firmware.version = '6.2-abcdef0';
+    sim.firmware.versionFull = '6.2.0-stable';
+    let home = await verContext.newPage();
+    const homeErrors = watchErrors(home);
+    await home.goto('http://localhost:8126/');
+    ok(!(await home.locator('.welcome .big-button').count()), 'the home of the site is not the App');
+    ok(await home.locator('#connect').isVisible(), 'it is a page with the Connect button');
+    ok(await home.locator('#theme-button').isVisible() && await home.locator('#lang-select').isVisible(),
+        'with the theme and the language, like the other pages of the project');
+    await home.selectOption('#lang-select', 'it');
+    ok(await waitFor(async () => (await home.locator('#connect-label').innerText()).includes('Collega')),
+        'the language changes the page there and then');
+    ok(home.url().includes('lang=it'), 'and travels in the address: ' + home.url());
+    await home.click('#theme-button');
+    await home.click('#theme-menu button[data-theme="dark"]');
+    ok(await waitFor(async () => await home.evaluate(() => getComputedStyle(document.body).backgroundColor) === 'rgb(20, 22, 27)'),
+        'the theme too, and it is the App\'s own setting');
+    ok(await home.evaluate(() => localStorage.getItem('of_theme')) === 'dark', 'remembered in of_theme');
+    await home.click('#theme-button');
+    await home.click('#theme-menu button[data-theme="system"]');
+    await home.selectOption('#lang-select', 'en');
+    sim.firmware.log.length = 0;
+    await home.click('#connect');
+    ok(await home.waitForURL(/\/v\/6\.2\//, { timeout: 15000 }).then(() => true).catch(() => false),
+        'Connect opens the App of the firmware: ' + home.url());
+    ok(await waitFor(() => loaded(home), 15000), 'and that App docks by itself, without another click');
+    ok(await home.evaluate(() => OF.BUILD.version) === '6.2', 'it is the App of 6.2');
+    ok(await mismatch(home).count() === 0, 'with nothing to warn about');
+    ok(homeErrors.length === 0, 'no errors on the home ' + JSON.stringify(homeErrors));
+    await home.close();
+
+    // ----- an older firmware gets its own App -----
+    sim.firmware.version = '6.1-abcdef0';
+    sim.firmware.versionFull = '6.1.0-stable';
+    home = await verContext.newPage();
+    await home.goto('http://localhost:8126/');
+    sim.firmware.log.length = 0;
+    await home.click('#connect');
+    ok(await home.waitForURL(/\/v\/6\.1\//, { timeout: 15000 }).then(() => true).catch(() => false),
+        'an older firmware opens the App published for it: ' + home.url());
+    ok(/[?&]lang=/.test(home.url()), 'and the language travels with it: ' + home.url());
+    ok(await waitFor(() => loaded(home), 15000), 'which docks by itself');
+    ok(await home.evaluate(() => OF.BUILD.version) === '6.1', 'it really is the App of 6.1');
+    ok(await mismatch(home).count() === 0, 'and says nothing, because now they match');
+    const notice = await statusText(home);
+    ok(notice.includes('6.1.0') && notice.includes('6.2.0'),
+        'the status bar says which App this is and that a newer firmware exists: ' + JSON.stringify(notice));
+    await shot(home, 'site-home-opened-6.1');
+    await home.close();
+
+    // ----- a firmware nobody published an App for -----
+    sim.firmware.version = '6.9-abcdef0';
+    sim.firmware.versionFull = '6.9.0-beta';
+    home = await verContext.newPage();
+    await home.goto('http://localhost:8126/');
+    await home.click('#connect');
+    ok(await waitFor(async () => (await home.locator('#state').innerText()).includes('6.9.0-beta'), 15000),
+        'a firmware without a published App is reported: ' + JSON.stringify((await home.locator('#state').innerText()).slice(0, 120)));
+    await sleep(700);
+    ok(!/\/v\//.test(home.url()), 'nothing is opened by itself: ' + home.url());
+    ok(await home.locator('#versions .item').count() === 2, 'the published versions are offered instead');
+    await shot(home, 'site-home-not-published');
+    // and one of them can be tried by hand: it is the one that then says the versions differ
+    await home.click('#versions .item >> nth=0');
+    ok(await home.waitForURL(/\/v\/6\.2\//, { timeout: 15000 }).then(() => true).catch(() => false),
+        'choosing one by hand opens it: ' + home.url());
+    await home.click('.welcome .big-button');
+    ok(await waitFor(() => mismatch(home).count().then((n) => n === 1), 15000),
+        'and that App says the versions do not match');
+    await home.close();
+
+    // ----- the question an App of another version asks -----
+    sim.firmware.version = '6.1-abcdef0';
+    sim.firmware.versionFull = '6.1.0-stable';
+    let app = await verContext.newPage();
+    const appErrors = watchErrors(app);
+    await app.goto('http://localhost:8126/v/6.2/');          // opened by its own address
+    ok(await waitFor(() => app.evaluate(() => !!(window.OF && OF.app))), 'a published version opens on its own');
+    await app.click('.welcome .big-button');
+    ok(await waitFor(() => mismatch(app).count().then((n) => n === 1), 15000),
+        'and asks what to do when the firmware is of another version');
+    const question = (await mismatch(app).innerText()).replace(/\s+/g, ' ');
+    ok(question.includes('6.2.0') && question.includes('6.1.0-stable'),
+        'naming both versions: ' + JSON.stringify(question.slice(0, 130)));
+    ok(await mismatch(app).locator('button', { hasText: 'Carry on' }).count() === 1 &&
+       await mismatch(app).locator('button', { hasText: 'Go back' }).count() === 1,
+        'with Carry on and Go back');
+    await shot(app, 'site-version-question');
+    await app.click('dialog button:has-text("Carry on")');
+    ok(await loaded(app), 'Carry on keeps the App and the connection');
+    await sleep(500);
+    ok(/\/v\/6\.2\//.test(app.url()), 'and stays where it was: ' + app.url());
+    // it does not ask again at every reconnection
+    await app.click('.disconnect-button');
+    ok(await waitFor(async () => !(await loaded(app))), 'undocked');
+    await app.click('.welcome .big-button');
+    ok(await waitFor(() => loaded(app)), 'docked again');
+    await sleep(700);
+    ok(await mismatch(app).count() === 0, 'and it is asked once, not at every connection');
+    await app.close();
+
+    // Go back: the lightgun is undocked and the home page is opened again.
+    app = await verContext.newPage();
+    await app.goto('http://localhost:8126/v/6.2/');
+    await app.click('.welcome .big-button');
+    ok(await waitFor(() => mismatch(app).count().then((n) => n === 1), 15000), 'asked again on a new page');
+    await app.click('dialog button:has-text("Go back")');
+    ok(await app.waitForURL(/8126\/($|\?)/, { timeout: 15000 }).then(() => true).catch(() => false),
+        'Go back returns to the home page: ' + app.url());
+    ok(await app.locator('#connect').isVisible(), 'where the Connect button is');
+    await app.close();
+
+    // Closing the window is going back too.
+    app = await verContext.newPage();
+    await app.goto('http://localhost:8126/v/6.2/');
+    await app.click('.welcome .big-button');
+    ok(await waitFor(() => mismatch(app).count().then((n) => n === 1), 15000), 'asked again');
+    await app.click("dialog .dialog-close");
+    ok(await app.waitForURL(/8126\/($|\?)/, { timeout: 15000 }).then(() => true).catch(() => false),
+        'the X of the window goes back as well: ' + app.url());
+    ok(appErrors.length === 0, 'no errors in the published App ' + JSON.stringify(appErrors));
+    await app.close();
+
+    // ----- when the versions match, nothing is asked -----
+    sim.firmware.version = '6.2-abcdef0';
+    sim.firmware.versionFull = '6.2.0-stable';
+    app = await verContext.newPage();
+    await app.goto('http://localhost:8126/v/6.2/');
+    await app.click('.welcome .big-button');
+    ok(await waitFor(() => loaded(app)), 'the App of the same version docks');
+    await sleep(700);
+    ok(await mismatch(app).count() === 0, 'and nothing is asked');
+    ok(settingsAsked() > 0, 'the settings are read, as always');
+    await app.close();
+    await verContext.close();
+
+    // The language chosen on the other pages of the project travels in the address.
+    for (const [query, label, expected] of [['?lang=it', 'italian', 'Collega una lightgun'],
+                                            ['', 'the browser language', 'Connect a Lightgun']]) {
+        const langContext = await browser.newContext({ locale: 'en-US', viewport: { width: 1000, height: 800 } });
+        const langPage = await langContext.newPage();
+        await langPage.goto('http://localhost:8126/' + query);
+        ok(await waitFor(async () => (await langPage.locator('#connect').innerText()).includes(expected)),
+            `?lang: the home opens in ${label} (${JSON.stringify(query)})`);
+        await langContext.close();
+    }
     await sim.close();
 
     // ===================== opened as local files (file://) =====================

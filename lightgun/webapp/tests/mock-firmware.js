@@ -151,6 +151,8 @@ class MockFirmware {
         this.sessionLink = 'serial';        // WebAppSerial::link
         this.boardType = options.boardType || 'esp32-s3-devkitc-1';
         this.version = options.version || '6.2-abcdef0';
+        this.versionFull = options.versionFull !== undefined ? options.versionFull : '6.2.0-stable';
+        this.unknownTrailer = options.unknownTrailer || '';   // a marker from a future firmware
         this.log = [];
 
         this.rxQueues = { serial: [], web: [] };
@@ -1004,10 +1006,23 @@ class MockFirmware {
         for (const ch of this.boardType) bytes.push(ch.charCodeAt(0));
         bytes.push(this.C.serialTerminator);
         bytes.push(...this.usb);
+        // A marker a firmware of the years to come might add: it is put first on purpose,
+        // so the test proves that an App which does not know it skips it whole and still
+        // finds every marker that follows.
+        if (this.unknownTrailer) {
+            bytes.push(this.C.serialTerminator, 0xE0, this.unknownTrailer.length);
+            for (const ch of this.unknownTrailer) bytes.push(ch.charCodeAt(0));
+        }
         if (this.camNotAvailable)
             bytes.push(this.C.serialTerminator, this.C.sError);
         if (this.pedalWireless)
             bytes.push(this.C.serialTerminator, this.C.sPedalWireless);
+        // Complete version, last as in main.cpp: a marker that carries data, so it also
+        // carries its length.
+        if (this.versionFull) {
+            bytes.push(this.C.serialTerminator, this.C.sVersionFull, this.versionFull.length);
+            for (const ch of this.versionFull) bytes.push(ch.charCodeAt(0));
+        }
         return Uint8Array.from(bytes);
     }
 

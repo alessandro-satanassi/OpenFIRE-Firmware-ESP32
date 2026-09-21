@@ -590,3 +590,56 @@ test('board information: the markers after the USB table are all read', async ()
         }
     }
 });
+
+// Rule of the trailer: the two flags are two bytes, every other marker carries its length.
+// It is what lets the App of today read a board of the years to come, and the other way
+// round, so it is checked from both ends.
+test('board information: a marker carrying data is skipped by an App that does not know it', async () => {
+    const ctx = await setup({}, { camNotAvailable: true, pedalWireless: true,
+                                  unknownTrailer: 'something a later firmware adds',
+                                  versionFull: '6.2.0-stable' });
+    try {
+        const result = await ctx.protocol.getSettings();
+        assert.equal(result.ok, true, JSON.stringify(result));
+        // The unknown marker comes first: the flags after it must still be found.
+        assert.equal(result.board.cameraError, true, 'camera marker after an unknown one');
+        assert.equal(result.board.pedalWireless, true, 'pedal marker after an unknown one');
+        assert.equal(result.board.versionFull, '6.2.0-stable', 'complete version read');
+    } finally {
+        await teardown(ctx);
+    }
+});
+
+test('board information: without the complete version nothing else changes', async () => {
+    const ctx = await setup({}, { versionFull: '', pedalWireless: true });
+    try {
+        const result = await ctx.protocol.getSettings();
+        assert.equal(result.ok, true, JSON.stringify(result));
+        assert.equal(result.board.versionFull, '', 'no marker, no complete version');
+        assert.equal(result.board.version, '6.2-abcdef0', 'the short version is always there');
+        assert.equal(result.board.pedalWireless, true);
+    } finally {
+        await teardown(ctx);
+    }
+});
+
+// The version is the first field of the first answer so that it can be read even when the
+// rest cannot: it is what tells the App which published version to open.
+test('board information: the version is read even when the rest of the payload is unusable', async () => {
+    const ctx = await setup({}, {});
+    try {
+        // A board of another generation: after the version, nothing this App can make
+        // sense of (the USB table is not there at all).
+        ctx.firmware.boardInfo = () => Uint8Array.from([
+            ...'6.1'.split('').map((ch) => ch.charCodeAt(0)), S.serialCmdTypes_e.serialTerminator,
+            ...'a-board-from-the-future'.split('').map((ch) => ch.charCodeAt(0)),
+            S.serialCmdTypes_e.serialTerminator, 1, 2, 3]);
+        const result = await ctx.protocol.getSettings();
+        assert.equal(result.ok, false);
+        assert.equal(result.error, 'bad_board_info');
+        assert.equal(result.board && result.board.version, '6.1',
+                     'the version comes back anyway, to open the App published for it');
+    } finally {
+        await teardown(ctx);
+    }
+});

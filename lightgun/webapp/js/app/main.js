@@ -27,6 +27,10 @@
     /** Menu texts of the Qt App carry '&' accelerators. */
     const menuText = (key) => OF.UI.t(key).replace(/&(?=[^&\s])/, '');
 
+    // Whether this App is the one of the lightgun that is connected is checked in
+    // js/app/version.js (OF.Version), which the App embedded in the lightgun does not
+    // include at all: every call here is guarded accordingly.
+
     class App {
         constructor() {
             this.S = OF.Boards.shared;
@@ -49,6 +53,7 @@
             this.activePort = null;
             this.tabs = {};
             this.titleName = '';
+            this.versionNotice = '';      // why this page opened, said again once docked
         }
 
         get isDevice() { return OF.Boards.isDevice; }
@@ -71,6 +76,7 @@
 
             this.status.show(OF.UI.t('Welcome to the OpenFIRE app!'), 3000);
             this.connection.start();
+            if (OF.Version) OF.Version.resume(this);
             // Unsaved edits: the browser asks before leaving the page.
             root.addEventListener('beforeunload', (event) => {
                 if (this.state.isDirty() || this.commitNeedsRetry && this.state.loaded) {
@@ -472,7 +478,16 @@
                 if (this.commitNeedsRetry) this.showSaveNotConfirmed();
             }
             this.offerLostEdits();
+            if (OF.Version) OF.Version.afterDock(this, board);
+            // Shown again here: the messages of the docking would have covered the one
+            // that explains why this page opened, which is the only one that needs saying.
+            if (this.versionNotice) {
+                const notice = this.versionNotice;
+                this.versionNotice = '';
+                this.status.show(notice, 12000);
+            }
         }
+
 
         /** The gun docked again after a lost session with unsaved edits: offer them back. */
         async offerLostEdits() {
@@ -559,6 +574,15 @@
         /** Qt AppSerial::GetSettings failure paths: stale dock warning and RequestToReboot. */
         async onDockFailure(result, protocol, kind) {
             if (kind !== 'serial' || !protocol.isOpen) return; // unplugged: nothing to ask
+            // The rest of the answer could not be read, but the version was: it is the
+            // first field, precisely so that this case can still be recognised. If the
+            // site has the App published for that firmware, open it instead of telling
+            // the user that the board is broken.
+            // A version that does not match explains everything: no point in going on to
+            // offer a reboot of a board that is not broken at all.
+            if (result.error === 'bad_board_info' && result.board &&
+                OF.Version && await OF.Version.afterDock(this, result.board))
+                return;
             const t = OF.UI.t;
             if (result.error === 'dock_timeout') {
                 await OF.UI.alert(t("Data hasn't arrived! (Stale state?)"), OF.UI.escape(t("Device was detected, but initial settings request wasn't received in time!\nThis can happen if the app was unexpectedly closed and the gun is in a stale docked state.\n\nTry selecting the device again.")), 'warning');

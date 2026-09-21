@@ -387,6 +387,17 @@ public:
         // for non-RP2040 boards that don't have a magic number-type reset
         sRebootToBootloader = 0xF0, // 245
 
+        // Trailer of the board information (see sDock2): the complete version of the
+        // firmware, 6.2.0-stable. It carries text, so a length byte follows the marker.
+        //
+        // Rule of the trailer, fixed once and for all: after the USB table come items,
+        // each one a separator and a marker. The two markers below that are only a flag
+        // (sError, sPedalWireless) are two bytes; EVERY OTHER MARKER carries a length
+        // byte and then that many bytes of data. An App that does not know a marker can
+        // therefore always skip it and keep reading the ones after it, however many are
+        // added in the years to come.
+        sVersionFull = 0xF9, // 249
+
         sError = 0xFA, // 250
 
         

@@ -893,6 +893,78 @@
             return this._exclusive(() => this._getSettings());
         }
 
+        /** Docks and reads only the presentation of the board: who it is, not what it is
+            set to. It is the first answer the lightgun gives, so it costs one exchange and
+            no setting is asked for.
+
+            The site uses it before loading anything: the version tells it which published
+            App belongs to this firmware, and a page that is about to be left behind must
+            not spend six exchanges reading settings it will throw away.
+
+            Returns { ok, board, boardInfo, usbOffset } or { ok: false, error, board }:
+            the version comes back even when the rest of the payload cannot be read, since
+            it is the first field and that is exactly the case where it is needed. */
+        getBoardInfo() {
+            return this._exclusive(() => this._getBoardInfo());
+        }
+
+        async _getBoardInfo() {
+            if (!this.isOpen)
+                return { ok: false, error: 'not_open', rebootSuggested: false };
+
+            const boardInfo = await this._beginDock();
+            if (!boardInfo)
+                return { ok: false, error: 'dock_timeout', rebootSuggested: this.isOpen };
+
+            const c = this.cmd;
+            const separator = c.serialTerminator;
+            const firstSeparator = boardInfo.indexOf(separator);
+
+            // The version is the first field of the very first answer, and it is read
+            // before anything else is checked. Whatever a firmware of another generation
+            // may put after it, the App can still tell which version it is talking to.
+            const version = firstSeparator > 0 ? decodeCString(boardInfo.subarray(0, firstSeparator)) : '';
+
+            const secondSeparator = firstSeparator >= 0 ? boardInfo.indexOf(separator, firstSeparator + 1) : -1;
+            const usbOffset = secondSeparator + 1;
+
+            if (firstSeparator <= 0 || secondSeparator <= firstSeparator + 1 ||
+                boardInfo.length < usbOffset + TINYUSB_TABLE_SIZE) {
+                console.warn('[AppSerial] Port did not respond with a valid board-information payload.');
+                return { ok: false, error: 'bad_board_info', rebootSuggested: true, board: { version } };
+            }
+
+            const board = {
+                version,
+                versionFull: '',        // 6.2.0-stable, when the firmware sends it
+                type: decodeCString(boardInfo.subarray(firstSeparator + 1, secondSeparator)),
+                arch: '',
+                cameraError: false,
+                pedalWireless: false    // a wireless pedal answered: it works without a pin
+            };
+            board.arch = boardArch(this.shared, board.type);
+
+            // What the board adds after the USB table: items of a separator and a marker,
+            // in any order. The two markers that are only a flag are two bytes; every
+            // other marker carries a length byte and then its data, so a marker added in
+            // a later firmware is skipped whole and the ones after it are still read
+            // (see sVersionFull in src/boards/OpenFIREshared.h).
+            for (let at = usbOffset + TINYUSB_TABLE_SIZE;
+                 at + 1 < boardInfo.length && boardInfo[at] === separator;) {
+                const marker = boardInfo[at + 1];
+                if (marker === c.sError) { board.cameraError = true; at += 2; continue; }
+                if (marker === c.sPedalWireless) { board.pedalWireless = true; at += 2; continue; }
+                if (at + 2 >= boardInfo.length) break;              // its length is missing
+                const length = boardInfo[at + 2];
+                const data = boardInfo.subarray(at + 3, at + 3 + length);
+                if (data.length < length) break;                    // cut short: stop here
+                if (marker === c.sVersionFull) board.versionFull = decodeCString(data);
+                at += 3 + length;
+            }
+
+            return { ok: true, board, boardInfo, usbOffset };
+        }
+
         async _getSettings() {
             const c = this.cmd;
             const shared = this.shared;
@@ -901,43 +973,17 @@
             if (!this.isOpen)
                 return { ok: false, error: 'not_open', rebootSuggested: false };
 
-            const boardInfo = await this._beginDock();
-            if (!boardInfo)
-                return { ok: false, error: 'dock_timeout', rebootSuggested: this.isOpen };
+            const info = await this._getBoardInfo();   // already holding the lock
+            if (!info.ok)
+                return info;
 
-            const separator = c.serialTerminator;
-            const firstSeparator = boardInfo.indexOf(separator);
-            const secondSeparator = firstSeparator >= 0 ? boardInfo.indexOf(separator, firstSeparator + 1) : -1;
-            const usbOffset = secondSeparator + 1;
-
-            if (firstSeparator <= 0 || secondSeparator <= firstSeparator + 1 ||
-                boardInfo.length < usbOffset + TINYUSB_TABLE_SIZE) {
-                console.warn('[AppSerial] Port did not respond with a valid board-information payload.');
-                return { ok: false, error: 'bad_board_info', rebootSuggested: true };
-            }
+            const { board, boardInfo, usbOffset } = info;
 
             this._progressRange(6);
             this._progress(1, 'Getting Board Info');
 
-            const board = {
-                version: decodeCString(boardInfo.subarray(0, firstSeparator)),
-                type: decodeCString(boardInfo.subarray(firstSeparator + 1, secondSeparator)),
-                arch: '',
-                cameraError: false,
-                pedalWireless: false    // a wireless pedal answered: it works without a pin
-            };
-            board.arch = boardArch(shared, board.type);
-
             const config = codec.createConfig();
             config.tinyUSB = codec.decodeTinyUSB(boardInfo.subarray(usbOffset, usbOffset + TINYUSB_TABLE_SIZE));
-
-            // What the board adds after the USB table: one (separator, marker) pair each,
-            // in any order. An unknown marker is ignored, so a newer board can add more.
-            for (let at = usbOffset + TINYUSB_TABLE_SIZE;
-                 at + 1 < boardInfo.length && boardInfo[at] === separator; at += 2) {
-                if (boardInfo[at + 1] === c.sError) board.cameraError = true;
-                else if (boardInfo[at + 1] === c.sPedalWireless) board.pedalWireless = true;
-            }
 
             const fail = (error) => ({ ok: false, error, rebootSuggested: false, board });
             const boolTypes = shared.boolTypes_e;

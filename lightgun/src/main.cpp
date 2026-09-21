@@ -1681,7 +1681,9 @@ void ExecGunModeDocked()
     unsigned long aStickChecked = millis();
     unsigned long currentMillis = millis();
 
-    char buf[64];
+    // Board information: version, board name, USB table and the trailer markers, the
+    // longest of which is the complete version. 64 bytes were already nearly all used.
+    char buf[96];
     bool sendBoardInfo = true;
     for(;;) {
         if(sendBoardInfo) {
@@ -1712,6 +1714,27 @@ void ExecGunModeDocked()
                     buf[pos++] = OF_Const::sPedalWireless;
                 }
             #endif
+
+            // Complete version of the firmware, 6.2.0-stable (the same numbers as
+            // OPENFIRE_VERSION_STRING, without going through String): the web App uses it
+            // to open the page published for this firmware. Like every marker that is not
+            // just a flag it carries its own length, so an App that does not know it skips
+            // it and still reads what comes after (see sVersionFull in OpenFIREshared.h).
+            {
+                char version[32];
+                const int length = snprintf(version, sizeof(version), "%d.%d.%d-%s",
+                                            OPENFIRE_VERSION_MAJOR, OPENFIRE_VERSION_MINOR,
+                                            OPENFIRE_VERSION_PATCH, OPENFIRE_VERSION_TYPE);
+                if(length > 0 && length < (int)sizeof(version) &&
+                   pos + 3 + length <= (int)sizeof(buf)) {
+                    buf[pos++] = OF_Const::serialTerminator;
+                    buf[pos++] = OF_Const::sVersionFull;
+                    buf[pos++] = (char)length;
+                    memcpy(&buf[pos], version, length);
+                    pos += length;
+                }
+            }
+
             const bool boardInfoSent = OF_Serial::AppSerialSendResponse(OF_Const::sDock2, buf, (uint8_t)pos);
         
             sendBoardInfo = false;

@@ -26,6 +26,13 @@
         try { if (root.localStorage) root.localStorage.setItem(key, value); } catch (e) { /* private mode */ }
     }
 
+    /** ?lang=it in the address: the other pages of the project pass on the language the
+        user chose there, so following a link does not land in another language. It is not
+        remembered: a link opened once does not change what this browser usually shows. */
+    function urlLanguage() {
+        try { return new URLSearchParams(root.location.search).get('lang'); } catch (e) { return null; }
+    }
+
     class I18n {
         constructor(translations) {
             this.translations = translations || {};
@@ -35,7 +42,7 @@
         }
 
         pickLanguage() {
-            const candidates = [storageGet(STORAGE_KEY)];
+            const candidates = [urlLanguage(), storageGet(STORAGE_KEY)];
             const nav = root.navigator;
             if (nav) candidates.push(...(nav.languages || []), nav.language);
             for (const candidate of candidates) {
