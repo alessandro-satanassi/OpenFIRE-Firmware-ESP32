@@ -44,6 +44,17 @@ on:
           - "true"
           - "false"  
 
+      update_webflasher:
+        description: "Vuoi aggiornare anche il repository del Web Flasher?"
+        required: true
+        type: boolean
+        default: false
+      update_webapp:
+        description: "Vuoi aggiornare anche il repository della WebApp?"
+        required: true
+        type: boolean
+        default: false
+
 permissions:
   contents: write
 
@@ -114,6 +125,41 @@ jobs:
         with:
           name: OpenFIRE-LIGHTGUN-${{ matrix.boards }}
           path: lightgun/OpenFIRE-LIGHTGUN-${{ matrix.boards }}.bin
+          if-no-files-found: error
+
+      # The site contains all boards: publish it from one matrix entry only.
+      # Unlike the optional PlatformIO export, errors here must fail the release.
+      - name: Prepare WebApp publication
+        if: ${{ matrix.boards == 'ESP32_S3_WROOM1_DevKitC_1_N16R8' && github.event.inputs.update_webapp == 'true' && github.event.inputs.release == 'yes' && github.event.inputs.tag_name != '' && github.event.inputs.sistemi_operativi == 'yes' }}
+        run: |
+          python - <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          sys.path.insert(0, str(Path('lightgun/scripts').resolve()))
+          import webapp_build
+
+          project = str(Path('lightgun').resolve())
+          dist = Path('lightgun/dist')
+          result = webapp_build.build_site(project, str(dist / 'site'))
+          webapp_build.build_launcher(project, str(dist / 'launcher'))
+          (dist / 'version.json').write_text(
+              json.dumps(result['version'], indent=2) + '\n', encoding='utf-8')
+          print('WebApp ready for v/' + result['version']['id'] + '/')
+          PY
+
+      - name: Upload WebApp publication
+        if: ${{ matrix.boards == 'ESP32_S3_WROOM1_DevKitC_1_N16R8' && github.event.inputs.update_webapp == 'true' && github.event.inputs.release == 'yes' && github.event.inputs.tag_name != '' && github.event.inputs.sistemi_operativi == 'yes' }}
+        uses: actions/upload-artifact@v7
+        with:
+          # Separate from OpenFIRE-* artifacts: these files are not release assets.
+          name: webapp-publication
+          path: |
+            lightgun/dist/site/
+            lightgun/dist/launcher/
+            lightgun/dist/version.json
+          include-hidden-files: true # Preserve launcher/.nojekyll.
           if-no-files-found: error
 
   build_dongle:
@@ -465,7 +511,7 @@ jobs:
       group: sync-flasher-${{ github.ref }}
       cancel-in-progress: false
       
-    if: ${{ github.event.inputs.release == 'yes' && github.event.inputs.tag_name != '' }}
+    if: ${{ github.event.inputs.update_webflasher == 'true' && github.event.inputs.release == 'yes' && github.event.inputs.tag_name != '' }}
     
     env:
       TAG_NAME: ${{ github.event.inputs.tag_name }}
@@ -473,10 +519,10 @@ jobs:
       TARGET_REPO: "alessandro-satanassi/OpenFIRE-ESP32-WebFlasher"
       
     steps:
-      - name: 🛡️ Verify Execution Branch
+      - name: Verify Execution Branch
         run: |
           if [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            echo "❌ ERRORE FATALE: Stai eseguendo la Action da un Tag Storico."
+            echo "ERRORE FATALE: Stai eseguendo la Action da un Tag Storico."
             exit 1
           fi
 
@@ -492,6 +538,7 @@ jobs:
       - name: Download ALL compiled binaries
         uses: actions/download-artifact@v8
         with:
+          pattern: OpenFIRE-*
           path: ./all_binaries
 
 # 3. COPIA I FILE E GENERA IL MANIFEST.JSON
@@ -572,24 +619,24 @@ jobs:
               echo "--- Tentativo $i di 3 ---"
               
               if ! git pull origin main --rebase -X theirs; then
-                echo "⚠️ Rete instabile o conflitto durante il pull."
+                echo "Rete instabile o conflitto durante il pull."
                 git rebase --abort >/dev/null 2>&1 || true
                 [ $i -lt 3 ] && sleep 5
                 continue
               fi
               
               if git push origin main; then
-                echo "✅ Sincronizzazione completata! I file sono online su OpenFIRE-ESP32-WebFlasher."
+                echo "Sincronizzazione completata! I file sono online su OpenFIRE-ESP32-WebFlasher."
                 SYNC_SUCCESS="true"
                 break
               fi
               
-              echo "⚠️ Rete instabile durante il push."
+              echo "Rete instabile durante il push."
               [ $i -lt 3 ] && sleep 5
             done
             
             if [ "$SYNC_SUCCESS" = "false" ]; then
-              echo "❌ ERRORE FATALE: Impossibile trasferire i file nel Web Flasher dopo 3 tentativi."
+              echo "ERRORE FATALE: Impossibile trasferire i file nel Web Flasher dopo 3 tentativi."
               exit 1
             fi
             
@@ -598,13 +645,148 @@ jobs:
           fi
           
   # ==========================================
-  # 4. CREAZIONE DELLA RELEASE GLOBALE (Eseguita DOPO il Web Flasher)
+  # 4. SYNC WEBAPP TO GITHUB PAGES REPOSITORY
+  # ==========================================
+  sync_webapp:
+    needs: [package_lightgun, package_dongle, package_pedal]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      # Every source branch writes the same destination branch and versions.json.
+      group: sync-openfire-webapp-main
+      cancel-in-progress: false
+    if: ${{ github.event.inputs.update_webapp == 'true' && github.event.inputs.release == 'yes' && github.event.inputs.tag_name != '' && github.event.inputs.sistemi_operativi == 'yes' }}
+    env:
+      TAG_NAME: ${{ github.event.inputs.tag_name }}
+    steps:
+      - name: Verify Execution Branch
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            echo "ERRORE FATALE: Stai eseguendo la Action da un Tag Storico."
+            exit 1
+          fi
+
+      - name: Checkout WebApp Repository
+        uses: actions/checkout@v6
+        with:
+          repository: alessandro-satanassi/OpenFIRE-ESP32-WebApp
+          ref: main
+          token: ${{ secrets.WEBAPP_TOKEN }}
+          path: webapp_repo
+
+      - name: Download generated WebApp
+        uses: actions/download-artifact@v8
+        with:
+          name: webapp-publication
+          path: webapp_dist
+
+      - name: Update versioned site, launcher and versions.json
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import shutil
+          from pathlib import Path
+
+          source = Path('webapp_dist')
+          repo = Path('webapp_repo')
+          version = json.loads((source / 'version.json').read_text(encoding='utf-8-sig'))
+          if not isinstance(version, dict) or any(
+              not isinstance(version.get(key), str) for key in ('id', 'label', 'type')
+          ) or not re.fullmatch(r'[0-9]+\.[0-9]', version['id']):
+              raise RuntimeError('Invalid WebApp version metadata')
+
+          # The folder ID is OPENFIRE_VERSION, not the release tag or full semver.
+          version_id = version['id']
+          required = ('site/index.html', 'site/style.css', 'site/app.js',
+                      'launcher/index.html', 'launcher/launcher.js', 'launcher/.nojekyll')
+          for name in required:
+              path = source / name
+              if not path.is_file() or (path.name != '.nojekyll' and path.stat().st_size == 0):
+                  raise RuntimeError('Missing or empty WebApp file: ' + name)
+          if not any((source / 'site/boards/pics').glob('*.js')):
+              raise RuntimeError('WebApp board pictures are missing')
+
+          index_path = repo / 'versions.json'
+          index = json.loads(index_path.read_text(encoding='utf-8-sig')) if index_path.exists() else {'versions': []}
+          if not isinstance(index, dict) or not isinstance(index.get('versions'), list):
+              raise RuntimeError('Invalid versions.json: publication aborted')
+          entries = index['versions']
+          ids = set()
+          for entry in entries:
+              if not isinstance(entry, dict) or not isinstance(entry.get('id'), str) or not entry['id'] or entry['id'] in ids:
+                  raise RuntimeError('Invalid or duplicate entry in versions.json')
+              ids.add(entry['id'])
+
+          # Keep all other versions and any extra metadata already in the index.
+          current = next((entry for entry in entries if entry['id'] == version_id), {})
+          current.update(version)
+          index['versions'] = [current] + [entry for entry in entries if entry['id'] != version_id]
+          index['latest'] = version_id
+
+          target = repo / 'v' / version_id
+          # Only replace this generated version, never the repository or all of v/.
+          if (repo / 'v').is_symlink() or target.is_symlink():
+              raise RuntimeError('Refusing to replace a symlinked version directory')
+          if target.exists():
+              shutil.rmtree(target)
+          shutil.copytree(source / 'site', target)
+          for name in ('index.html', 'launcher.js', '.nojekyll'):
+              shutil.copyfile(source / 'launcher' / name, repo / name)
+          index_path.write_text(json.dumps(index, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as env:
+              env.write('WEBAPP_VERSION=' + version_id + '\n')
+          print('WebApp updated in v/' + version_id + '/; other versions preserved.')
+          PY
+
+      - name: Commit and Push to WebApp Repo
+        working-directory: webapp_repo
+        run: |
+          export GIT_TERMINAL_PROMPT=0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config core.autocrlf false
+          git config http.lowSpeedLimit 1000
+          git config http.lowSpeedTime 20
+
+          git add -f -- "v/${WEBAPP_VERSION}" index.html launcher.js .nojekyll versions.json
+          if git diff --staged --quiet; then
+            echo "WebApp gia' aggiornata: nessun commit necessario."
+            exit 0
+          fi
+          printf 'Auto-sync WebApp %s (%s)\n' "$WEBAPP_VERSION" "$TAG_NAME" | git commit -F -
+
+          # Retry transport errors, but never force or auto-resolve concurrent edits.
+          # A conflicting remote update must fail the sync and block this release.
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              echo "Repository WebApp sincronizzato; GitHub Pages pubblichera' il sito."
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then sleep 5; fi
+          done
+          echo "ERRORE FATALE: Sincronizzazione WebApp non riuscita. Release bloccata."
+          exit 1
+
+  # ==========================================
+  # 5. CREAZIONE DELLA RELEASE GLOBALE (DOPO le sincronizzazioni richieste)
   # ==========================================
   create_global_release:
-    # BLOCCO DI SICUREZZA: Questa release si avvia SOLO se sync_web_firmware ha finito con successo (spunta verde)
-    needs: [package_lightgun, package_dongle, package_pedal, sync_web_firmware]
+    # A disabled sync may be skipped; every requested sync must explicitly succeed.
+    needs: [package_lightgun, package_dongle, package_pedal, sync_web_firmware, sync_webapp]
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.release == 'yes' && github.event.inputs.sistemi_operativi == 'yes' }}
+    if: >-
+      ${{ !failure() && !cancelled() &&
+          github.event.inputs.release == 'yes' &&
+          github.event.inputs.sistemi_operativi == 'yes' &&
+          github.event.inputs.tag_name != '' &&
+          needs.package_lightgun.result == 'success' &&
+          needs.package_dongle.result == 'success' &&
+          needs.package_pedal.result == 'success' &&
+          (github.event.inputs.update_webflasher != 'true' || needs.sync_web_firmware.result == 'success') &&
+          (github.event.inputs.update_webapp != 'true' || needs.sync_webapp.result == 'success') }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6 # Fondamentale per leggere GLOBAL_template.md
@@ -625,6 +807,7 @@ jobs:
       - name: Download ALL artifacts
         uses: actions/download-artifact@v8
         with:
+          pattern: OpenFIRE-* # Exclude the internal WebApp publication artifact.
           path: ./release_assets
 
       - name: Create GitHub Release
@@ -646,3 +829,6 @@ jobs:
           done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
+
+
+
