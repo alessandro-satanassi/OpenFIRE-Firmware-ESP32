@@ -85,19 +85,16 @@ This option is for those who wish to flash the firmware manually using the offic
 
 #### ***Lightgun:***
 
-- **1. Base Version (NoFS):** Updates only the application part. **Does not overwrite** existing calibrations or configurations. If the filesystem is missing, it will still be created on first boot.
-  - [OpenFIRE-LIGHTGUN-NoFS-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
-  - [OpenFIRE-LIGHTGUN-NoFS-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)
-  - [OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_PICO.bin)
-  - [OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_ZERO_N8R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_ZERO_N8R8.bin)
-  - [OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
+A single firmware file is provided for each board. 
 
-- **2. Full Version (Full):** Installs both firmware and factory filesystem. **Warning:** this procedure formats the microcontroller and deletes all previous data or settings.
-  - [OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
-  - [OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)
-  - [OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_PICO.bin)
-  - [OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N8R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N8R8.bin)
-  - [OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
+- **Normal Update:** Flash the selected `.bin` file to address `0x0000`. This will not overwrite your existing calibrations or configurations. If the filesystem is missing, it will be automatically created on the first boot using default settings.
+- **Clean Install:** if you want a 'clean' installation, use the `--erase-all` option alongside the esptool `write_flash` command to erase the entire flash memory before writing the firmware. **Warning: with a 'clean' installation, all previous data on the flash memory, including settings and calibrations, will be permanently deleted.**
+
+- [OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
+- [OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)
+- [OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_PICO.bin)
+- [OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N8R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N8R8.bin)
+- [OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
 
 #### ***Dongle:***
 
@@ -125,7 +122,7 @@ Extract the entire contents of the ZIP into a folder on your PC. Then, run the *
 *Note for Windows users: the esptool.exe file might trigger an antivirus false positive; the file is safe and is extracted from official Espressif sources.*
 
 #### ***Lightgun:***
-The script will guide you through the installation, allowing you to choose between Base or Full versions, and will automatically search for the serial port.
+The script will guide you through the installation and automatically search for the serial port. During the guided installation, press **Enter** for a normal update, or type **1** for a 'clean' install which **deletes all data on the flash memory, including settings and calibrations**.
 * **Windows (64bit)**
   - [Download for ESP32_S3_WROOM1_DevKitC_1_N16R8](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8-windows-64bit.zip)
   - [Download for ESP32_S3_WROOM1_DevKitC_1_N8R2](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N8R2-windows-64bit.zip)
@@ -295,19 +292,16 @@ Questa opzione è dedicata a chi vuole caricare il firmware manualmente utilizza
 
 #### ***Lightgun:***
 
-- **1. Versione Base (NoFS):** Aggiorna solo la parte applicativa. **Non sovrascrive** calibrazioni o configurazioni esistenti. Se il filesystem è assente, verrà comunque creato al primo avvio.
-  - [OpenFIRE-LIGHTGUN-NoFS-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
-  - [OpenFIRE-LIGHTGUN-NoFS-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)
-  - [OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_PICO.bin)
-  - [OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_ZERO_N8R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_ZERO_N8R8.bin)
-  - [OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-NoFS-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
+Viene fornito un singolo file firmware per ogni scheda. 
 
-- **2. Versione Completa (Full):** Installa firmware e filesystem di fabbrica. **Attenzione:** questa procedura formatta il microcontrollore e cancella ogni dato o impostazione precedente.
-  - [OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
-  - [OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)
-  - [OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_PICO.bin)
-  - [OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N8R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N8R8.bin)
-  - [OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
+- **Aggiornamento normale:** Scrivi il file `.bin` scelto all'indirizzo `0x0000`. Non sovrascriverà calibrazioni o configurazioni esistenti. Se il filesystem è assente, verrà creato automaticamente al primo avvio utilizzando le impostazioni predefinite.
+- **Installazione pulita:** se vuoi un'installazione 'pulita', usa l'opzione `--erase-all` assieme al comando `write_flash` di esptool per cancellare l'intera flash prima di scrivere il firmware. **Attenzione: con l'installazione 'pulita' tutti i dati precedenti nella flash, comprese impostazioni e calibrazioni, verranno eliminati definitivamente.**
+
+- [OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
+- [OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)
+- [OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_PICO.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_PICO.bin)
+- [OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N8R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N8R8.bin)
+- [OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N4R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-WAVESHARE_ESP32_S3_ZERO_N4R2.bin)
 
 #### ***Dongle:***
 
@@ -335,7 +329,7 @@ Estrai l'intero contenuto dello ZIP in una cartella sul tuo PC. Successivamente,
 *Nota per utenti Windows: il file esptool.exe potrebbe generare un falso positivo dell'antivirus; il file è sicuro ed è estratto dai sorgenti originali Espressif.*
 
 #### ***Lightgun:***
-Lo script ti guiderà nell'installazione permettendoti di scegliere tra versione Base o Full e cercherà automaticamente la porta seriale.
+Lo script ti guiderà nell'installazione e cercherà automaticamente la porta seriale. Durante l'installazione guidata premi **Invio** per un aggiornamento normale, oppure digita **1** per un'installazione 'pulita' che **cancella tutti i dati nella flash, comprese impostazioni e calibrazioni**.
 * **Windows (64bit)**
   - [Download per ESP32_S3_WROOM1_DevKitC_1_N16R8](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8-windows-64bit.zip)
   - [Download per ESP32_S3_WROOM1_DevKitC_1_N8R2](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N8R2-windows-64bit.zip)
