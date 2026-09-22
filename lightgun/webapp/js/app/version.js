@@ -103,9 +103,9 @@
             root.location.href = siteHome(here()) + langSuffix();
         },
 
-        /** Opened by the home page: take the port back without asking - the browser gives
-            a page the ports already allowed on this site - and say why we are here, once
-            the messages of the docking are over. */
+        /** Opened by the home page: take the port back if there is one matching candidate
+            among the ports already allowed on this site. Otherwise the user selects it
+            with Connect. Say why we are here once the messages of the docking are over. */
         async resume(app) {
             let jump = null;
             try {
@@ -132,11 +132,12 @@
             }
             if (!ports.length) return;
             const wanted = jump.port || {};
-            const port = ports.find((item) => {
+            const matches = ports.filter((item) => {
                 const info = OF.WebSerialTransport.describePort(item);
                 return info.productId === wanted.productId && info.vendorId === wanted.vendorId;
-            }) || (ports.length === 1 ? ports[0] : null);
-            if (port) await app.connectPort(port);
+            });
+            // VID/PID identify a USB type, not an individual lightgun: do not guess.
+            if (matches.length === 1) await app.connectPort(matches[0]);
         },
     };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
