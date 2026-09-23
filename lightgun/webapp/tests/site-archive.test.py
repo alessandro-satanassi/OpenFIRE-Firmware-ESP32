@@ -1,145 +1,169 @@
-"""The published site keeps its older versions: checks of scripts/webapp_build.py.
+"""Offline test of the WebApp publication step, not of an obsolete build layout.
 
     python tests/site-archive.test.py        (from lightgun/webapp)
 
-Nothing is built for real twice: the version of the firmware is replaced between the two
-builds, which is exactly what raising the number in src/OpenFIREversion.h does.
+build_site() and build_launcher() produce the publication inputs. The actual
+Python step in GLOBAL-build-package-release.yml creates v/<id> and versions.json.
+Only disposable directories are changed. No Git, network, PyYAML or hardware.
 """
 import json
 import os
-import shutil
+from pathlib import Path
+import re
+import subprocess
 import sys
 import tempfile
+import textwrap
+import unittest
+from unittest.mock import patch
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-LIGHTGUN = os.path.abspath(os.path.join(HERE, "..", ".."))
-sys.path.insert(0, os.path.join(LIGHTGUN, "scripts"))
+LIGHTGUN = Path(__file__).resolve().parents[2]
+WORKFLOW = LIGHTGUN.parent / ".github/workflows/GLOBAL-build-package-release.yml"
+sys.path.insert(0, str(LIGHTGUN / "scripts"))
 
 import webapp_build  # noqa: E402
 
-passed = failed = 0
+
+def publication_script():
+    """Extract the real Python heredoc; do not duplicate the publication logic."""
+    text = WORKFLOW.read_text(encoding="utf-8-sig")
+    blocks = re.findall(
+        r"^      - name: Update versioned site, launcher and versions\.json\n"
+        r"        run: \|\n"
+        r"          python3 - <<'PY'\n(.*?)^          PY[ \t]*$",
+        text, re.MULTILINE | re.DOTALL)
+    if len(blocks) != 1:
+        raise RuntimeError("Expected one WebApp publication step in " + str(WORKFLOW))
+    return textwrap.dedent(blocks[0])
 
 
-def ok(condition, message):
-    global passed, failed
-    if condition:
-        passed += 1
-        print("PASS " + message)
-    else:
-        failed += 1
-        print("FAIL " + message)
+def files(folder):
+    return {path.relative_to(folder).as_posix(): path.read_bytes()
+            for path in folder.rglob("*") if path.is_file()}
 
 
-def read(path):
-    with open(path, "rb") as f:
-        return f.read()
+class SiteArchiveTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.script = publication_script()
+        compile(cls.script, str(WORKFLOW), "exec")
 
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory(prefix="of-site-archive-")
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.source = self.root / "webapp_dist"
+        self.repo = self.root / "webapp_repo"
+        self.repo.mkdir()
+        (self.repo / "README.md").write_text("Preserve this documentation.\n", encoding="utf-8")
+        (self.repo / "CNAME").write_text("example.invalid\n", encoding="utf-8")
+        self.prepare()
 
-def build(out, version_id, label, kind="stable"):
-    """One build of the site, as if OpenFIREversion.h said that version."""
-    original = webapp_build.read_version
-    webapp_build.read_version = lambda project_dir: {"id": version_id, "label": label, "type": kind}
-    try:
-        return webapp_build.build_site(LIGHTGUN, out)
-    finally:
-        webapp_build.read_version = original
+    def prepare(self, version_id="6.2", label="6.2.0", kind="stable"):
+        self.version = {"id": version_id, "label": label, "type": kind}
+        with patch.object(webapp_build, "read_version", return_value=self.version):
+            result = webapp_build.build_site(str(LIGHTGUN), str(self.source / "site"))
+            webapp_build.build_launcher(str(LIGHTGUN), str(self.source / "launcher"))
+        (self.source / "version.json").write_text(
+            json.dumps(result["version"]), encoding="utf-8")
 
+    def publish(self, success=True):
+        result = subprocess.run(
+            [sys.executable, "-c", self.script], cwd=self.root,
+            env={**os.environ, "PYTHONUTF8": "1",
+                 "GITHUB_ENV": str(self.root / "github-env.txt")},
+            capture_output=True, encoding="utf-8", timeout=30)
+        self.assertEqual(result.returncode == 0, success, result.stdout + result.stderr)
 
-def main():
-    # The version really written in the firmware, before anything is replaced.
-    real = webapp_build.read_version(LIGHTGUN)
-    ok(real["id"] == "%.1f" % float(real["id"]),
-       "the version names the folder as the firmware sends it: " + real["id"])
-    ok(real["label"].count(".") == 2, "the complete number is shown in the list: " + real["label"])
+    def index(self):
+        return json.loads((self.repo / "versions.json").read_text(encoding="utf-8"))
 
-    out = tempfile.mkdtemp(prefix="of-site-")
-    try:
-        # ----- first version -----
-        first = build(out, "6.2", "6.2.0")
-        root_app = os.path.join(out, "app.js")
-        archived_app = os.path.join(out, "v", "6.2", "app.js")
-        ok(os.path.isfile(root_app), "the current version is in the root, where everybody goes")
-        ok(os.path.isfile(archived_app), "the same app is in v/6.2/")
-        ok(read(root_app) == read(archived_app), "root and archive are the same app")
-        ok(os.path.isfile(os.path.join(out, ".nojekyll")), "GitHub Pages serves the files as they are")
-        ok(not os.path.exists(os.path.join(out, "v", "6.2", ".nojekyll")),
-           ".nojekyll only in the root, where GitHub Pages reads it")
-        ok(os.path.isfile(os.path.join(out, "v", "6.2", "boards", "pics", "generic.js")),
-           "an archived version carries its own board pictures: it does not depend on the others")
-        ok(first["version"]["id"] == "6.2", "the build says which version it wrote")
+    def test_first_publication_matches_build_outputs(self):
+        self.publish()
+        self.assertEqual(files(self.repo / "v/6.2"), files(self.source / "site"))
+        for name in ("index.html", "launcher.js", ".nojekyll"):
+            self.assertEqual((self.repo / name).read_bytes(),
+                             (self.source / "launcher" / name).read_bytes())
+        self.assertFalse((self.repo / "app.js").exists())  # Root is the launcher.
+        self.assertFalse((self.repo / "v/versions.json").exists())
+        self.assertEqual(self.index(), {"versions": [self.version], "latest": "6.2"})
+        self.assertEqual((self.repo / "README.md").read_text(), "Preserve this documentation.\n")
+        self.assertEqual((self.repo / "CNAME").read_text(), "example.invalid\n")
+        self.assertIn("WEBAPP_VERSION=6.2", (self.root / "github-env.txt").read_text())
 
-        info = json.loads(read(os.path.join(out, "v", "versions.json")).decode("utf-8"))
-        ok(info["latest"] == "6.2", "versions.json: the root is 6.2")
-        ok([v["id"] for v in info["versions"]] == ["6.2"], "versions.json: one version")
-        ok(info["versions"][0]["label"] == "6.2.0" and info["versions"][0]["type"] == "stable",
-           "versions.json: complete number and type")
+    def test_same_version_is_idempotent_and_removes_stale_files(self):
+        self.publish()
+        before = files(self.repo)
+        self.prepare()
+        self.publish()
+        self.assertEqual(files(self.repo), before)
+        (self.repo / "v/6.2/obsolete.js").write_text("// stale", encoding="utf-8")
+        self.publish()
+        self.assertEqual(files(self.repo), before)
 
-        page = read(os.path.join(out, "v", "index.html")).decode("utf-8")
-        ok('"latest": "6.2"' in page or '"latest":"6.2"' in page, "v/index.html carries the list inside it")
-        ok("/*OF:VERSIONS*/" not in page, "v/index.html: the marker was replaced")
+    def test_new_version_preserves_previous_folder(self):
+        self.publish()
+        (self.repo / "v/6.2/kept.txt").write_text("Keep me.", encoding="utf-8")
+        previous = files(self.repo / "v/6.2")
+        self.prepare("6.3", "6.3.0", "beta")
+        self.publish()
+        self.assertEqual(files(self.repo / "v/6.2"), previous)
+        self.assertEqual(files(self.repo / "v/6.3"), files(self.source / "site"))
+        self.assertEqual(self.index()["latest"], "6.3")
+        self.assertEqual([v["id"] for v in self.index()["versions"]], ["6.3", "6.2"])
+        self.assertEqual(self.index()["versions"][0], self.version)
 
-        app = read(root_app).decode("utf-8")
-        ok('"version": "6.2"' in app, "the app of the site knows its own version")
-        ok('"versionLabel": "6.2.0"' in app, "and the complete number, to show it")
+    def test_republish_updates_one_entry_and_preserves_extra_metadata(self):
+        self.publish()
+        self.prepare("6.3", "6.3.0", "beta")
+        self.publish()
+        previous = files(self.repo / "v/6.3")
+        index = self.index()
+        index["note"] = "Keep root metadata."
+        index["versions"][1]["note"] = "Keep version metadata."
+        (self.repo / "versions.json").write_text(json.dumps(index), encoding="utf-8")
+        self.prepare("6.2", "6.2.1", "stable")  # Same ID: replace, do not create v/6.2.1.
+        self.publish()
+        self.assertEqual(files(self.repo / "v/6.3"), previous)
+        self.assertEqual(files(self.repo / "v/6.2"), files(self.source / "site"))
+        self.assertFalse((self.repo / "v/6.2.1").exists())
+        self.assertEqual(self.index()["latest"], "6.2")
+        self.assertEqual([v["id"] for v in self.index()["versions"]], ["6.2", "6.3"])
+        self.assertEqual(self.index()["versions"][0],
+                         {**self.version, "note": "Keep version metadata."})
+        self.assertEqual(self.index()["note"], "Keep root metadata.")
 
-        # ----- building again changes nothing -----
-        again = build(out, "6.2", "6.2.0")
-        ok(again["changed"] == [] and again["removed"] == [],
-           "a second identical build writes nothing: the repository keeps a clean history")
+    def test_missing_inputs_leave_published_files_untouched(self):
+        self.publish()
+        before = files(self.repo)
+        for name in ("site/app.js", "launcher/.nojekyll", "version.json"):
+            with self.subTest(name=name):
+                path = self.source / name
+                original = path.read_bytes()
+                path.unlink()
+                self.publish(success=False)
+                self.assertEqual(files(self.repo), before)
+                path.write_bytes(original)
 
-        # Something of ours that no longer belongs to the app is cleaned up...
-        stale = os.path.join(out, "v", "6.2", "boards", "pics", "gone.js")
-        with open(stale, "wb") as f:
-            f.write(b"// a board that no longer exists")
-        build(out, "6.2", "6.2.0")
-        ok(not os.path.exists(stale), "the folder of the version being built is kept tidy")
+    def test_invalid_catalog_is_not_overwritten(self):
+        self.publish()
+        for value in ("{bad", '{"versions":[{"id":"6.2"},{"id":"6.2"}]}'):
+            with self.subTest(value=value):
+                (self.repo / "versions.json").write_text(value, encoding="utf-8")
+                before = files(self.repo)
+                self.publish(success=False)
+                self.assertEqual(files(self.repo), before)
 
-        # ----- the version number is raised -----
-        marker = os.path.join(out, "v", "6.2", "app.js")
-        before = read(marker)
-        with open(os.path.join(out, "v", "6.2", "LEGGIMI.txt"), "wb") as f:
-            f.write(b"kept")
-        third = build(out, "6.3", "6.3.0", "beta")
-
-        ok(read(marker) == before, "the previous version stays exactly as it was")
-        ok(os.path.exists(os.path.join(out, "v", "6.2", "LEGGIMI.txt")),
-           "and nothing of it is removed")
-        ok(os.path.isfile(os.path.join(out, "v", "6.3", "app.js")), "the new version has its folder")
-        ok(read(os.path.join(out, "app.js")) == read(os.path.join(out, "v", "6.3", "app.js")),
-           "the root is now the new version")
-        ok('"version": "6.3"' in read(os.path.join(out, "v", "6.3", "app.js")).decode("utf-8"),
-           "the archived app carries the version it was built as")
-        ok("v/6.3/app.js" in third["changed"], "the report names the folder of the archive")
-
-        info = json.loads(read(os.path.join(out, "v", "versions.json")).decode("utf-8"))
-        ok(info["latest"] == "6.3", "versions.json: the root is the new version")
-        ok([v["id"] for v in info["versions"]] == ["6.3", "6.2"], "versions.json: newest first")
-        ok(info["versions"][1]["label"] == "6.2.0",
-           "the old version keeps the number it was published with")
-        ok(info["versions"][0]["type"] == "beta", "and the new one says what it is")
-
-        # ----- a version deleted by hand disappears from the list -----
-        shutil.rmtree(os.path.join(out, "v", "6.2"))
-        build(out, "6.3", "6.3.0", "beta")
-        info = json.loads(read(os.path.join(out, "v", "versions.json")).decode("utf-8"))
-        ok([v["id"] for v in info["versions"]] == ["6.3"],
-           "a version removed from the folder is removed from the list")
-
-        # ----- order of numbers -----
-        ok(sorted(["6.9", "6.10", "7.0", "6.2"], key=webapp_build._version_key) == ["7.0", "6.10", "6.9", "6.2"],
-           "6.10 is newer than 6.9: the list is ordered by number, not by text")
-
-        # ----- the firmware is not touched -----
-        device = webapp_build.bundle(LIGHTGUN, "device", "waveshare-esp32-s3-zero")
-        head = device["app.js"].decode("utf-8")[:400]
-        ok('"version"' not in head and '"target": "device"' in head,
-           "the app embedded in the lightgun has no version added: include/web_assets.h does not change")
-    finally:
-        shutil.rmtree(out, ignore_errors=True)
-
-    print(f"\n{passed} passed, {failed} failed")
-    return 1 if failed else 0
+    def test_invalid_version_metadata_is_rejected_before_copy(self):
+        self.publish()
+        before = files(self.repo)
+        for version in ({"id": "../outside", "label": "bad", "type": "stable"},
+                        {"id": "6.2", "label": None, "type": "stable"}):
+            with self.subTest(version=version):
+                (self.source / "version.json").write_text(json.dumps(version), encoding="utf-8")
+                self.publish(success=False)
+                self.assertEqual(files(self.repo), before)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    unittest.main(verbosity=2)

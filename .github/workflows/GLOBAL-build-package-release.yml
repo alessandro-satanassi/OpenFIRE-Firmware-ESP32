@@ -508,13 +508,15 @@ jobs:
     runs-on: ubuntu-latest
     
     concurrency:
-      group: sync-flasher-${{ github.ref }}
+      # All source branches update the same destination catalog.
+      group: sync-openfire-webflasher-main
       cancel-in-progress: false
       
     if: ${{ github.event.inputs.update_webflasher == 'true' && github.event.inputs.release == 'yes' && github.event.inputs.tag_name != '' }}
     
     env:
       TAG_NAME: ${{ github.event.inputs.tag_name }}
+      PRERELEASE: ${{ github.event.inputs.prerelease }}
       # URL FISSO DEL TUO SECONDO REPOSITORY
       TARGET_REPO: "alessandro-satanassi/OpenFIRE-ESP32-WebFlasher"
       
@@ -532,6 +534,7 @@ jobs:
         with:
           repository: ${{ env.TARGET_REPO }}
           token: ${{ secrets.WEBFLASHER_TOKEN }}
+          ref: main
           path: web_repo # Salva il repo web in una cartella temporanea
 
       # 2. SCARICA I BINARI APPENA COMPILATI DAL REPO 1
@@ -541,53 +544,135 @@ jobs:
           pattern: OpenFIRE-*
           path: ./all_binaries
 
-# 3. COPIA I FILE E GENERA IL MANIFEST.JSON
-      - name: Copy .bin files and Generate manifest.json
+      # Use the same source revision as the binaries, not the current main branch.
+      # This is independent of the optional WebApp publication.
+      - name: Checkout matching board illustrations
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          path: firmware_source
+          persist-credentials: false
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install board image optimizer dependency
+        run: python -m pip install Pillow
+
+# 3. SOSTITUISCE SOLO LA VERSIONE SELEZIONATA E AGGIORNA IL CATALOGO
+      - name: Replace version files and update local catalog
         run: |
-          export TARGET_DIR="web_repo/firmware/${TAG_NAME}"
-          export TAG_NAME
-          
-          mkdir -p -- "$TARGET_DIR"
-          find ./all_binaries -name "*.bin" -type f -exec cp -- "{}" "$TARGET_DIR/" \;
-          
-          # Script Python integrato per generare il manifest.json analizzando i nomi dei file
-          python3 -c "
-          import os, json
-          
-          target_dir = os.environ.get('TARGET_DIR')
-          tag_name = os.environ.get('TAG_NAME')
-          
-          files = sorted([f for f in os.listdir(target_dir) if f.endswith('.bin')])
-          
+          python3 - <<'PY'
+          import json, os, re, shutil, sys, tempfile
+          from pathlib import Path
+          from xml.etree import ElementTree
+
+          # Reuse the WebApp optimizer without changing its sources or caches.
+          source_repo = Path('firmware_source').resolve()
+          sys.path.insert(0, str(source_repo / 'lightgun/scripts'))
+          import build_board_pics
+          if not build_board_pics.load_pillow():
+              raise RuntimeError('Pillow is required to optimize board illustrations')
+
+          tag_name = os.environ['TAG_NAME']
+          if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]*', tag_name):
+              raise RuntimeError('Invalid tag: expected one safe directory name')
+          prerelease = os.environ['PRERELEASE']
+          if prerelease not in ('true', 'false'):
+              raise RuntimeError('Invalid prerelease flag')
+
+          repo = Path('web_repo').resolve()
+          firmware_dir = repo / 'firmware'
+          target_dir = firmware_dir / tag_name
+          index_path = firmware_dir / 'versions.json'
+          # Never recursively replace a root, an external path or a symlink.
+          if firmware_dir.is_symlink() or not firmware_dir.is_dir():
+              raise RuntimeError('Missing or symlinked firmware directory')
+          if target_dir.is_symlink() or target_dir.resolve().parent != firmware_dir.resolve():
+              raise RuntimeError('Unsafe version directory')
+          if target_dir.exists() and not target_dir.is_dir():
+              raise RuntimeError('Version path is not a directory')
+          if index_path.is_symlink() or not index_path.is_file():
+              raise RuntimeError('Deploy firmware/versions.json before running this sync')
+
+          # The index is authoritative: do not rediscover manually hidden versions.
+          index = json.loads(index_path.read_text(encoding='utf-8-sig'))
+          if not isinstance(index, dict) or not isinstance(index.get('versions'), list):
+              raise RuntimeError('Invalid versions.json')
+          entries = index['versions']
+          tags = set()
+          for entry in entries:
+              if (not isinstance(entry, dict) or
+                  not isinstance(entry.get('tag_name'), str) or
+                  not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]*', entry['tag_name']) or
+                  not isinstance(entry.get('prerelease'), bool) or entry['tag_name'] in tags):
+                  raise RuntimeError('Invalid or duplicate versions.json entry')
+              tags.add(entry['tag_name'])
+
+          # Validate all downloaded binaries before touching the previous version.
+          binaries = {}
           manifest = {
               'version': tag_name,
-              'files': files,
-              'supported_boards': {
-                  'LIGHTGUN': [],
-                  'DONGLE': [],
-                  'PEDAL': []
-              }
+              'files': [],
+              'supported_boards': {'LIGHTGUN': [], 'DONGLE': [], 'PEDAL': []}
           }
-          
-          for f in files:
-              name = f.replace('.bin', '')
-              parts = name.split('-')
-              
-              if len(parts) >= 3:
-                  device = parts[1] # Estrae LIGHTGUN, DONGLE o PEDAL
-                  board = '-'.join(parts[2:])
-                  
-                  # Aggiunge la board alla lista se non è già presente
-                  if device in manifest['supported_boards'] and board and board not in manifest['supported_boards'][device]:
-                      manifest['supported_boards'][device].append(board)
-                      
-          with open(os.path.join(target_dir, 'manifest.json'), 'w') as out:
-              json.dump(manifest, out, indent=2)
-          "
-          
-          echo "File binari e manifest.json pronti per il trasferimento:"
-          ls -lh -- "$TARGET_DIR"
-          cat "$TARGET_DIR/manifest.json"
+          for source in sorted(Path('all_binaries').rglob('*.bin')):
+              match = re.fullmatch(r'OpenFIRE-(LIGHTGUN|DONGLE|PEDAL)-([A-Za-z0-9_]+)\.bin', source.name)
+              if (not match or source.is_symlink() or not source.is_file() or
+                  source.stat().st_size == 0 or source.name in binaries):
+                  raise RuntimeError(f'Invalid, empty or duplicate binary: {source}')
+              device, board = match.groups()
+              binaries[source.name] = source
+              manifest['supported_boards'][device].append(board)
+          if not all(manifest['supported_boards'].values()):
+              raise RuntimeError('Missing Lightgun, Dongle or Pedal binaries')
+          manifest['files'] = sorted(binaries)
+
+          # Only the previews used by the WebFlasher's board table (img fields).
+          # These five shared files cover all Lightgun, Dongle and Pedal entries.
+          pictures_dir = source_repo / 'docs/board_scheme'
+          required_pictures = {
+              'ESP32S3-Devkit-C.svg', 'esp32-s3-pico.svg', 'esp32-s3-zero.svg',
+              'LILYGO-T-Dongle-S3-ESP32-S3.svg', 'esp32-s3-pocket-dongle-s3.svg'
+          }
+          pictures = [pictures_dir / name for name in sorted(required_pictures)]
+          if (pictures_dir.is_symlink() or not pictures_dir.is_dir() or
+              any(p.is_symlink() or not p.is_file() for p in pictures)):
+              raise RuntimeError('Missing board illustrations for the WebFlasher')
+
+          current = next((entry for entry in entries if entry['tag_name'] == tag_name), None)
+          if current is None:
+              entries.insert(0, {'tag_name': tag_name, 'prerelease': prerelease == 'true'})
+          else:
+              # Keep this version's position and all unrelated manual metadata.
+              current['prerelease'] = prerelease == 'true'
+
+          # Prepare everything first. A failure here leaves the old version intact.
+          # The repository is published only by the following commit/push step.
+          with tempfile.TemporaryDirectory(prefix='webflasher-', dir=repo.parent) as temporary:
+              staged = Path(temporary) / 'version'
+              staged.mkdir()
+              for name, source in binaries.items():
+                  shutil.copyfile(source, staged / name)
+              staged_pictures = staged / 'board_pics'
+              staged_pictures.mkdir()
+              for source in pictures:
+                  if source.is_symlink() or not source.is_file():
+                      raise RuntimeError(f'Invalid board illustration: {source}')
+                  svg, raster_done = build_board_pics.optimize_svg(source.read_bytes())
+                  if not raster_done or ElementTree.fromstring(svg).tag != '{http://www.w3.org/2000/svg}svg':
+                      raise RuntimeError(f'Invalid or unoptimized SVG: {source}')
+                  (staged_pictures / source.name).write_text(svg, encoding='utf-8')
+              (staged / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+              staged_index = Path(temporary) / 'versions.json'
+              staged_index.write_text(json.dumps(index, indent=2) + '\n', encoding='utf-8')
+              if target_dir.exists():
+                  shutil.rmtree(target_dir)
+              staged.rename(target_dir)
+              staged_index.replace(index_path)
+          print(f'Prepared {tag_name}: {len(binaries)} binaries, {len(pictures)} board illustrations; other versions preserved.')
+          PY
 
       # 4. TRASFERIMENTO SUL SERVER (SISTEMA BLINDATO)
       - name: Commit and Push to Web Flasher Repo
@@ -605,7 +690,8 @@ jobs:
           git config http.lowSpeedTime 20
           git config http.postBuffer 524288000
           
-          git add -f -- "firmware/${TAG_NAME}"
+          # Include removed legacy files and the catalog in the same commit.
+          git add -A -f -- "firmware/${TAG_NAME}" firmware/versions.json
           
           if ! git diff --staged --quiet; then
             echo "Modifiche rilevate nel Repo Web. Preparazione del commit..."
@@ -618,8 +704,9 @@ jobs:
             for i in 1 2 3; do
               echo "--- Tentativo $i di 3 ---"
               
-              if ! git pull origin main --rebase -X theirs; then
-                echo "Rete instabile o conflitto durante il pull."
+              # Do not silently overwrite a concurrent manual catalog edit.
+              if ! git pull origin main --rebase; then
+                echo "Errore di rete o conflitto con modifiche concorrenti. Nessuna sovrascrittura forzata."
                 git rebase --abort >/dev/null 2>&1 || true
                 [ $i -lt 3 ] && sleep 5
                 continue
@@ -814,6 +901,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event.inputs.tag_name }}
+          target_commitish: ${{ github.sha }} # New tags must identify the commit actually built.
           name: ${{ github.event.inputs.release_name }}
           body: ${{ env.RELEASE_BODY }} # <--- Usa il corpo generato dal template globale
           draft: ${{ github.event.inputs.draft }}
@@ -829,6 +917,3 @@ jobs:
           done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
-
-
-
