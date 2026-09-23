@@ -46,6 +46,9 @@
     --shadow: 0 1px 2px rgba(20, 28, 45, 0.06), 0 2px 6px rgba(20, 28, 45, 0.06);
     --shadow-pop: 0 10px 30px rgba(20, 28, 45, 0.22);
     --card-lift: 0 10px 26px rgba(20, 28, 45, 0.14);
+    /* Il vetro del pannello: la superficie del tema, ma semitrasparente, come
+       sui pannelli della pagina degli strumenti. */
+    --panel-glass: rgba(255, 255, 255, 0.72);
     --radius: 8px;
     --control-h: 32px;
     --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -73,6 +76,7 @@
         --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.25);
         --shadow-pop: 0 12px 34px rgba(0, 0, 0, 0.55);
         --card-lift: 0 12px 30px rgba(0, 0, 0, 0.5);
+        --panel-glass: rgba(29, 32, 39, 0.72);
     }
 }
 :root[data-theme="dark"] {
@@ -94,6 +98,7 @@
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.25);
     --shadow-pop: 0 12px 34px rgba(0, 0, 0, 0.55);
     --card-lift: 0 12px 30px rgba(0, 0, 0, 0.5);
+    --panel-glass: rgba(29, 32, 39, 0.72);
 }
 
 /* ----- Base --------------------------------------------------------------------- */
@@ -107,6 +112,17 @@ body {
     -webkit-text-size-adjust: 100%;
     display: flex;
     flex-direction: column;
+}
+/* Il bagliore sta sulla pagina, non dentro al pannello: cosi' resta dietro al
+   vetro e ci si intravede attraverso. Lo stesso del flasher e degli strumenti. */
+body::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 320px;
+    background: radial-gradient(85% 75% at 50% 0%, var(--accent-soft), transparent 72%);
+    pointer-events: none;
+    z-index: 0;
 }
 a { color: var(--link); }
 button, select { font: inherit; color: inherit; }
@@ -176,17 +192,23 @@ select.control { padding-right: 4px; min-height: 30px; font-size: 13px; }
 .theme-menu button[aria-checked="true"] .tick { opacity: 1; }
 
 /* ----- Impaginazione ------------------------------------------------------------- */
-main { flex: 1; width: 100%; max-width: 920px; margin: 0 auto; padding: 0 16px 48px; }
+main { flex: 1; width: 100%; max-width: 920px; margin: 0 auto; padding: 30px 16px 48px; }
+
+/* Il pannello di vetro che raccoglie tutta la pagina. E' posizionato perche'
+   deve stare sopra al bagliore, non sotto. */
+.panel {
+    position: relative;
+    background: var(--panel-glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--card-lift);
+    padding: 0 28px 24px;
+}
 
 /* ----- Apertura ------------------------------------------------------------------ */
-.hero { padding: 44px 0 34px; text-align: center; position: relative; }
-/* Il bagliore resta dentro la pagina: allargarlo oltre i bordi farebbe
-   comparire la barra di scorrimento orizzontale. */
-.hero::before {
-    content: ""; position: absolute; inset: -40px 0 auto; height: 260px;
-    background: radial-gradient(85% 75% at 50% 0%, var(--accent-soft), transparent 72%);
-    pointer-events: none;
-}
+.hero { padding: 40px 0 30px; text-align: center; position: relative; }
 .hero-mark {
     position: relative;
     width: 64px; height: 64px; margin: 0 auto 16px;
@@ -282,7 +304,9 @@ footer a:hover { text-decoration: underline; }
 @media (max-width: 560px) {
     .topbar { padding: 6px 10px; gap: 6px; }
     .brand-name { font-size: 0.88rem; }
-    .hero { padding: 32px 0 26px; }
+    .hero { padding: 32px 0 24px; }
+    main { padding: 20px 12px 36px; }
+    .panel { padding: 0 16px 18px; }
 }
 @media (max-width: 420px) {
     .brand-name { display: none; }
@@ -305,6 +329,7 @@ footer a:hover { text-decoration: underline; }
 </header>
 
 <main>
+<div class="panel">
     <section class="hero">
         <div class="hero-mark">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90.691 90.691" aria-hidden="true"><rect width="90.691" height="90.691" ry="9.6" fill="#2a2a2a"/><g transform="translate(2,2)"><path fill="#fff" d="M86.6 40H81.3C79.6 22.2 65.4 7.9 47.6 6.3V0h-7V6.1C22.8 7.9 8.5 22.1 6.9 40h-7v7h7c1.7 17.8 15.9 32.1 33.7 33.7v5.6h7V80.7C65.4 79 79.7 64.8 81.3 47h5.3zm-72.9 3.5c0-16.8 13.6-30.4 30.4-30.4 16.8 0 28.4 11.8 30.2 26.9H40.6V73.7C25.5 72 13.7 59.1 13.7 43.5ZM47.6 73.6V60.9H59.8V55.2H47.6V46.9H74.3C72.7 60.9 61.6 72 47.6 73.6Z"/><g fill="#ed1a3b"><circle cx="24.9" cy="49" r="3.1"/><circle cx="34" cy="49" r="3.1"/><circle cx="24.9" cy="57.8" r="3.1"/><circle cx="34" cy="57.8" r="3.1"/></g><path fill="#00b3f0" d="M44.3 20.2C33 20.2 23.6 28.7 22.2 39.7h4.7c1.3-8.4 8.6-14.9 17.4-14.9 8.8 0 9.1 1.8 12.5 5.2l3.3-3.3C55.9 22.5 50.3 20.2 44.4 20.2Z"/></g></svg>
@@ -328,6 +353,7 @@ footer a:hover { text-decoration: underline; }
         <p id="versions-lead"></p>
         <div class="cards" id="versions-list"></div>
     </section>
+</div>
 </main>
 
 <footer><div id="footer"></div></footer>
