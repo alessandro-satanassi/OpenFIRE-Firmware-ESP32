@@ -133,6 +133,9 @@ button, select { font: inherit; color: inherit; }
 .brand { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .brand svg { width: 24px; height: 24px; display: block; border-radius: 5px; }
 .brand-name { font-weight: 600; font-size: 0.95rem; white-space: nowrap; }
+/* Il marchio in alto a sinistra riporta alla pagina iniziale del progetto. */
+a.brand { text-decoration: none; color: inherit; border-radius: 6px; }
+a.brand:hover .brand-name { color: var(--accent); }
 
 .control {
     height: var(--control-h);
@@ -293,10 +296,10 @@ footer a:hover { text-decoration: underline; }
 <body>
 
 <header class="topbar">
-    <span class="brand">
+    <a class="brand" id="brand-link" href="https://alessandro-satanassi.github.io/OpenFIRE-ESP32/">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90.691 90.691" aria-hidden="true"><rect width="90.691" height="90.691" ry="9.6" fill="#2a2a2a"/><g transform="translate(2,2)"><path fill="#fff" d="M86.6 40H81.3C79.6 22.2 65.4 7.9 47.6 6.3V0h-7V6.1C22.8 7.9 8.5 22.1 6.9 40h-7v7h7c1.7 17.8 15.9 32.1 33.7 33.7v5.6h7V80.7C65.4 79 79.7 64.8 81.3 47h5.3zm-72.9 3.5c0-16.8 13.6-30.4 30.4-30.4 16.8 0 28.4 11.8 30.2 26.9H40.6V73.7C25.5 72 13.7 59.1 13.7 43.5ZM47.6 73.6V60.9H59.8V55.2H47.6V46.9H74.3C72.7 60.9 61.6 72 47.6 73.6Z"/><g fill="#ed1a3b"><circle cx="24.9" cy="49" r="3.1"/><circle cx="34" cy="49" r="3.1"/><circle cx="24.9" cy="57.8" r="3.1"/><circle cx="34" cy="57.8" r="3.1"/></g><path fill="#00b3f0" d="M44.3 20.2C33 20.2 23.6 28.7 22.2 39.7h4.7c1.3-8.4 8.6-14.9 17.4-14.9 8.8 0 9.1 1.8 12.5 5.2l3.3-3.3C55.9 22.5 50.3 20.2 44.4 20.2Z"/></g></svg>
         <span class="brand-name">OpenFIRE ESP32</span>
-    </span>
+    </a>
     <span class="spacer"></span>
     <span class="controls"></span>
 </header>
