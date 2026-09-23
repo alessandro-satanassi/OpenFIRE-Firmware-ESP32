@@ -159,7 +159,7 @@
         const logo = el('div', { class: 'about-logo', html: OF.LOGO_SVG });
         const content = el('div', { class: 'about' },
             el('div', { class: 'about-head' }, logo,
-                el('div', null, el('div', { class: 'wordmark', text: OF.APP_NAME || 'OpenFIRE Esp32' }), el('div', { class: 'about-sub', text: t('Web App') }))),
+                el('div', null, el('div', { class: 'wordmark', text: OF.APP_NAME || 'OpenFIRE ESP32' }), el('div', { class: 'about-sub', text: t('Web App') }))),
             el('div', { class: 'rich center', html: t('<html><head/><body><p>Primary OpenFIRE Firmware maintainership and Desktop App developed by <a href="https://github.com/SeongGino"><span style=" text-decoration: underline; color:#8ab4f8;">That One Seong</span></a>.<br/>If this software has given you any value,</p></body></html>') }),
             el('p', { class: 'center' }, el('a', { class: 'kofi', href: 'https://ko-fi.com/thatoneseong', target: '_blank', rel: 'noopener', text: t('Support on Ko-fi') })),
             el('p', { class: 'rich center', html: t('ESP-IDF fork and this WebApp by <b>Alessandro Satanassi</b>.') }),
@@ -168,7 +168,7 @@
                 .replace('href="discord.com/', 'href="https://discord.com/') }),
             el('p', { class: 'rich center', html: '<a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32">OpenFIRE Firmware ESP32</a>' }));
         for (const link of content.querySelectorAll('a')) { link.target = '_blank'; link.rel = 'noopener'; }
-        return OF.UI.dialog({ title: t('About %1', OF.APP_NAME || 'OpenFIRE Esp32'), content, className: 'about-dialog', cancelValue: null, buttons: [{ label: t('Close'), value: null, primary: true }] });
+        return OF.UI.dialog({ title: t('About %1', OF.APP_NAME || 'OpenFIRE ESP32'), content, className: 'about-dialog', cancelValue: null, buttons: [{ label: t('Close'), value: null, primary: true }] });
     }
 
     OF.Windows = { openPreviewer, openAbout, capabilityMarks };

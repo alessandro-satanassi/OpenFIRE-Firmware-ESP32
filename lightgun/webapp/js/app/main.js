@@ -11,7 +11,7 @@
     const OF = root.OF = root.OF || {};
     const doc = root.document;
 
-    const APP_NAME = 'OpenFIRE Esp32';   // shown where the App names itself (title, welcome, About)
+    const APP_NAME = 'OpenFIRE ESP32';   // shown where the App names itself (title, welcome, About)
     const THEME_KEY = 'of_theme';
     const TAB_ORDER = ['pins', 'buttons', 'settings', 'profiles', 'tests'];
     const THEME_ICONS = { system: 'themeSystem', light: 'themeLight', dark: 'themeDark' };
