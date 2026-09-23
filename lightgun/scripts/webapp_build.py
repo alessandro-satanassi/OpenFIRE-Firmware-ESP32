@@ -320,10 +320,14 @@ def launcher_bundle(project_dir):
     # The home page reads the version with Protocol.getBoardInfo(): built against a
     # protocol.js that does not have it, it would look perfectly fine and never send the
     # dock request at all. Better a build that stops here than a page that fails silently.
-    for needed in ("_getBoardInfo", "WebSerialTransport", "serialCmdTypes_e"):
+    # Each marker must be written in one source only, or the check cannot fail: launcher.js
+    # also names WebSerialTransport and the generated board data also names serialCmdTypes_e,
+    # so those bare names are always found whatever transport.js or protocol.js is joined.
+    for needed in ("_getBoardInfo", "class WebSerialTransport", '"serialCmdTypes_e":'):
         if needed not in code:
             raise RuntimeError(f"launcher: the joined scripts do not contain {needed}. "
-                               f"webapp/js/core/protocol.js and transport.js must be the "
+                               f"webapp/js/core/protocol.js, transport.js and the data "
+                               f"generated from src/boards/OpenFIREshared.h must be the "
                                f"ones of this source tree - an old copy breaks the home page.")
 
     page = html[:block.start()] + '<script src="launcher.js"></script>' + html[block.end():]
