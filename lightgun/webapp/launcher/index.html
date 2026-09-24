@@ -226,6 +226,11 @@ main { flex: 1; width: 100%; max-width: 920px; margin: 0 auto; padding: 30px 16p
     margin: 0 auto; max-width: 58ch; position: relative;
     color: var(--muted); font-size: clamp(1rem, 2.2vw, 1.12rem); line-height: 1.55;
 }
+/* Con quale firmware funziona: detto piano, in corsivo, sotto al sottotitolo. */
+.hero p.compat {
+    margin: 10px auto 0; max-width: 52ch;
+    font-style: italic; font-size: 0.92rem; line-height: 1.5;
+}
 
 /* ----- Il pulsante, e quel che ha da dire ---------------------------------------- */
 .actions { position: relative; padding-top: 28px; }
@@ -336,6 +341,7 @@ footer a:hover { text-decoration: underline; }
         </div>
         <h1>OpenFIRE ESP32 <span class="accent">Web App</span></h1>
         <p id="lead"></p>
+        <p class="compat" id="compat"></p>
 
         <div class="actions">
             <button class="connect" id="connect" type="button">

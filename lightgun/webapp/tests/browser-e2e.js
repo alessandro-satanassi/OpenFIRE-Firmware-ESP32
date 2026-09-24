@@ -667,6 +667,18 @@ async function installFakeSerial(context, sim) {
     ok(await home.locator('#connect').isVisible(), 'it is a page with the Connect button');
     ok(await home.locator('#theme-button').isVisible() && await home.locator('#lang-select').isVisible(),
         'with the theme and the language, like the other pages of the project');
+    // Con quale firmware funziona, detto prima di collegare qualcosa. Se la riga
+    // sparisce la prova lo dice, invece di morire aspettando un elemento che non c'e'.
+    const compatBox = home.locator('#compat');
+    ok(await compatBox.count() === 1, 'the page says which firmware it works with');
+    const compat = await compatBox.count() ? (await compatBox.innerText()) : '';
+    ok(/7\.x/.test(compat) && /6\.x/.test(compat), 'both series are named: ' + JSON.stringify(compat));
+    ok(await home.evaluate(() => {
+        const node = document.getElementById('compat');
+        return node ? getComputedStyle(node).fontStyle : '';
+    }) === 'italic', 'in italics, quietly');
+    const verso = await compatBox.locator('a').count() ? await compatBox.locator('a').getAttribute('href') : '';
+    ok(/OpenFIRE-ESP32-Tools/.test(verso), 'and points at the desktop App: ' + verso);
     await home.selectOption('#lang-select', 'it');
     ok(await waitFor(async () => (await home.locator('#connect-label').innerText()).includes('Collega')),
         'the language changes the page there and then');
@@ -770,6 +782,25 @@ async function installFakeSerial(context, sim) {
     await home.click('.welcome .big-button');
     ok(await waitFor(() => mismatch(home).count().then((n) => n === 1), 15000),
         'and that App says the versions do not match');
+    await home.close();
+
+    // ----- a lightgun of the 6.x series, which does not answer this page at all -----
+    // Il protocollo della 6 e' un altro: il dock non riceve risposta. Quello che si vede
+    // non deve mandare a controllare solo il cavo, ma dire che per quella serie serve la
+    // App per computer, con il collegamento per andarla a prendere.
+    const rispondi = sim.serialLink.appWrite;
+    sim.serialLink.appWrite = () => {};                 // la lightgun non risponde
+    home = await verContext.newPage();
+    await home.goto('http://localhost:8126/?lang=it');
+    await home.click('#connect');
+    ok(await waitFor(async () => (await home.locator('#state').innerText()).includes('6.x'), 20000),
+        'chi ha la serie 6.x lo legge, invece di cercare un guasto al cavo: '
+        + JSON.stringify((await home.locator('#state').innerText()).slice(0, 200)));
+    const rimando = home.locator('#state a');
+    ok(await rimando.count() === 1 && /OpenFIRE-ESP32-Tools/.test(await rimando.getAttribute('href')),
+        'con il collegamento alla App per computer: ' + await rimando.getAttribute('href'));
+    ok(/lang=it/.test(await rimando.getAttribute('href')), 'nella lingua della pagina');
+    sim.serialLink.appWrite = rispondi;
     await home.close();
 
     // ----- the question an App of another version asks -----

@@ -44,6 +44,11 @@
         en: {
             name: 'English',
             lead: 'Connect the lightgun: this page opens the version of the app that belongs to the firmware it runs.',
+            compatBefore: 'Works only with lightguns running firmware 7.x or newer. For the 6.x series use the ',
+            toolsLink: 'desktop App',
+            compatAfter: '.',
+            sixBefore: 'If the lightgun runs firmware of the 6.x series it cannot answer this page: that series needs the ',
+            sixAfter: '.',
             connect: 'Connect a Lightgun',
             reading: 'Reading the lightgun...',
             opening: 'Firmware %1: opening the app of that version...',
@@ -68,6 +73,11 @@
         it: {
             name: 'Italiano',
             lead: 'Collega la lightgun: questa pagina apre la versione dell’app che corrisponde al firmware che ha dentro.',
+            compatBefore: 'Funziona solo con lightgun che hanno il firmware 7.x o superiore. Per la serie 6.x serve l’',
+            toolsLink: 'App per computer',
+            compatAfter: '.',
+            sixBefore: 'Se la lightgun ha un firmware della serie 6.x non può rispondere a questa pagina: per quella serie serve l’',
+            sixAfter: '.',
             connect: 'Collega una lightgun',
             reading: 'Leggo la lightgun...',
             opening: 'Firmware %1: apro l’app di quella versione...',
@@ -94,6 +104,9 @@
     /* Il marchio in alto a sinistra riporta alla pagina iniziale del progetto,
        portandosi dietro la lingua in uso, come fa quella pagina quando manda qui. */
     const HUB_URL = 'https://alessandro-satanassi.github.io/OpenFIRE-ESP32/';
+    /* La App per computer, per chi ha ancora un firmware della serie 6.x: il suo
+       protocollo e' diverso e questa pagina non riesce nemmeno a leggerlo. */
+    const TOOLS_URL = 'https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/';
 
     let lang = 'en';
     const t = (key, ...args) => {
@@ -231,11 +244,26 @@
 
     const suffix = () => '?lang=' + encodeURIComponent(lang);
 
-    function say(text, bad) {
+    /** La riga sotto al pulsante. `extra`, se c'e', aggiunge una frase che contiene
+        un collegamento: { before, link, href, after }. Niente innerHTML: il testo
+        tradotto resta testo, il collegamento e' un nodo costruito qui. */
+    function say(text, bad, extra) {
         const node = byId('state');
         node.textContent = text || '';
         node.classList.toggle('bad', !!bad);
+        if (!extra) return;
+        node.appendChild(root.document.createTextNode(' ' + extra.before));
+        const link = element('a', null, extra.link);
+        link.href = extra.href;
+        node.appendChild(link);
+        node.appendChild(root.document.createTextNode(extra.after || ''));
     }
+
+    /** La frase sulla serie 6.x, con il rimando alla pagina degli strumenti. */
+    const sixSeries = () => ({
+        before: t('sixBefore'), link: t('toolsLink'),
+        href: TOOLS_URL + suffix(), after: t('sixAfter')
+    });
 
     /** The versions published beside this page. */
     async function published() {
@@ -356,7 +384,9 @@
         try {
             const answer = await readVersion(port);
             if (answer.error) {
-                say(t(answer.error), true);
+                // Chi ha ancora la serie 6.x arriva qui: la lightgun c'e' e il cavo pure,
+                // ma parla un protocollo che questa pagina non sa leggere.
+                say(t(answer.error), true, answer.error === 'noAnswer' ? sixSeries() : null);
                 return;
             }
             const board = answer.board;
@@ -391,6 +421,14 @@
     function render() {
         root.document.documentElement.lang = lang;
         byId('lead').textContent = t('lead');
+        const compat = byId('compat');
+        if (compat) {
+            compat.textContent = t('compatBefore');
+            const link = element('a', null, t('toolsLink'));
+            link.href = TOOLS_URL + suffix();
+            compat.appendChild(link);
+            compat.appendChild(root.document.createTextNode(t('compatAfter')));
+        }
         byId('connect-label').textContent = t('connect');
         byId('show-versions').textContent = t('showAll');
         byId('footer').textContent = t('footer');
