@@ -74,6 +74,36 @@ def main():
         ok('"versionLabel": "%s"' % version["label"] in app, "and the complete number, to show it")
         ok("OF.Version = {" in app, "and carries the check of the version")
 
+        # Ogni rimando al progetto originale, tranne i due dei crediti, manderebbe chi usa
+        # la App altrove: a scaricare un firmware che non e' questo, o su una wiki che
+        # documenta un altro firmware. Il bundle comprende anche le traduzioni, quindi
+        # questo controllo copre sia il codice sia lang/*.json.
+        upstream = sorted(set(re.findall(r"https://github\.com/TeamOpenFIRE/[A-Za-z0-9./#_-]*", app)))
+        ok(upstream == ["https://github.com/TeamOpenFIRE/OpenFIRE-App",
+                        "https://github.com/TeamOpenFIRE/OpenFIRE-Firmware"],
+           "only the two credit links still name the original project: " + str(upstream))
+        mine = "https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32"
+        # Tutte le voci qui sotto sono scritte come REPO + "/qualcosa": senza questa riga
+        # cambiare REPO le porterebbe tutte altrove senza che nessun controllo se ne accorga.
+        ok("const REPO = '" + mine + "';" in app, "every link is built on this repository")
+        for name, url in (("the firmware to download", mine + "/releases/latest"),
+                                                    ("the documentation in English",
+                           "en: REPO + '/blob/main/lightgun/src/README.md#english-version'"),
+                          ("the documentation in Italian",
+                           "it: REPO + '/blob/main/lightgun/src/README.md#versione-italiana'"),
+                          ("the serial commands page in English",
+                           "en: REPO + '/wiki/Serial_Commands_OpenFIRE_EN'"),
+                          ("the serial commands page in Italian", "it: REPO + '/wiki/Serial_Commands_OpenFIRE_IT'"),
+                          ("where to report issues", mine + "/issues")):
+            ok(url in app, "and " + name + " is this project's")
+        # E le descrizioni che rimandano ai comandi seriali: l'inglese nelle chiavi, la
+        # pagina italiana nelle traduzioni italiane. Nessuna deve piu' citare MAMEHOOKER,
+        # che era il nome della pagina sulla wiki del progetto originale.
+        ok("MAMEHOOKER" not in app, "nothing points at the page of the original wiki any more")
+        ok(app.count("Serial_Commands_OpenFIRE_EN") == 6 and app.count("Serial_Commands_OpenFIRE_IT") == 4,
+           "the serial page is named in both languages everywhere it is mentioned: "
+           + str((app.count("Serial_Commands_OpenFIRE_EN"), app.count("Serial_Commands_OpenFIRE_IT"))))
+
         again = webapp_build.build_site(LIGHTGUN, site)
         ok(again["changed"] == [] and again["removed"] == [],
            "building it again writes nothing: a published folder keeps a clean history")

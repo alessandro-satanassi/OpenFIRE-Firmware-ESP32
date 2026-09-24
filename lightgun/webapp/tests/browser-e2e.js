@@ -408,6 +408,44 @@ async function installFakeSerial(context, sim) {
     await dev.getByRole('button', { name: 'View', exact: true }).click();
     ok(await dev.locator('.menu-panel:not([hidden]) .menu-item:has-text("Theme")').count() === 0, 'no themes left in the View menu');
     await dev.keyboard.press('Escape');
+
+    // Menu Aiuto: nomina questo progetto e porta a questo repository, non a quello originale.
+    await dev.getByRole('button', { name: 'Help', exact: true }).click();
+    const aiuto = await dev.locator('.menu-panel:not([hidden]) .menu-item').evaluateAll(
+        (items) => items.map((i) => ({ testo: i.textContent.replace(/\s+/g, ' ').trim(), href: i.getAttribute('href') })));
+    const voce = (parte) => aiuto.find((i) => i.testo.indexOf(parte) >= 0) || {};
+    ok(voce('Documentation on the Repo').testo.indexOf('OpenFIRE ESP32') === 0,
+        'the Help menu names OpenFIRE ESP32: ' + JSON.stringify(voce('Documentation on the Repo').testo));
+    ok(voce('Documentation on the Repo').href ===
+        'https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/lightgun/src/README.md#english-version',
+        'and the documentation is this project\'s: ' + voce('Documentation on the Repo').href);
+    ok(voce('Serial Usage Docs').testo.indexOf('OpenFIRE ESP32') === 0,
+        'the wiki entry too: ' + JSON.stringify(voce('Serial Usage Docs').testo));
+    ok(voce('Serial Usage Docs').href === 'https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/wiki/Serial_Commands_OpenFIRE_EN',
+        'and it points to this project\'s wiki: ' + voce('Serial Usage Docs').href);
+    ok(!aiuto.some((i) => (i.href || '').indexOf('TeamOpenFIRE') >= 0),
+        'nothing in the Help menu goes to the original project any more');
+    await dev.keyboard.press('Escape');
+
+    // La pagina dei comandi seriali esiste in due lingue: il menu apre quella giusta.
+    await dev.selectOption('.lang-selector', 'it');
+    await dev.getByRole('button', { name: 'Aiuto', exact: true }).click();
+    const indirizzi = (page) => page.locator('.menu-panel:not([hidden]) a.menu-item').evaluateAll(
+        (items) => items.map((i) => i.getAttribute('href')).filter(Boolean));
+    const italiani = await indirizzi(dev);
+    ok(italiani.length === 2 &&
+       italiani.some((h) => h.endsWith('/wiki/Serial_Commands_OpenFIRE_IT')) &&
+       italiani.some((h) => h.endsWith('/README.md#versione-italiana')),
+        'in Italian both entries open the Italian pages: ' + JSON.stringify(italiani));
+    await dev.keyboard.press('Escape');
+    await dev.selectOption('.lang-selector', 'en');
+    await dev.getByRole('button', { name: 'Help', exact: true }).click();
+    const inglesi = await indirizzi(dev);
+    ok(inglesi.length === 2 &&
+       inglesi.some((h) => h.endsWith('/wiki/Serial_Commands_OpenFIRE_EN')) &&
+       inglesi.some((h) => h.endsWith('/README.md#english-version')),
+        'and back in English the English ones: ' + JSON.stringify(inglesi));
+    await dev.keyboard.press('Escape');
     await dev.reload();
     ok(await dev.evaluate(() => document.documentElement.dataset.theme === 'dark'), 'theme remembered');
     ok(await waitFor(() => loaded(dev)), 'docked after reload');

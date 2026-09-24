@@ -10,7 +10,7 @@
     const OF = root.OF = root.OF || {};
 
     const TAB_HELP = '<html><head/><body><p>This tab shows information and settings to tweak about your current calibration profiles.</p><p>The table above represents the amount of profiles the current board can store, including currently selected profile, names shown for each profile when using a compatible <span style=" font-style:italic;">I2C Display,</span> and colors used for lighting devices when switching to them from <span style=" font-style:italic;">Pause Mode.</span></p><p>Hover over an option to view detailed info about it here.</p></body></html>';
-    const SERIAL_LINK = "<a href='https://github.com/TeamOpenFIRE/OpenFIRE-Firmware/wiki/MAMEHOOKER-Documentation#m---mode-commands'><span style=' text-decoration: underline; color:#8ab4f8;'>Serial command</span></a> ";
+    const SERIAL_LINK = "<a href='https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/wiki/Serial_Commands_OpenFIRE_EN'><span style=' text-decoration: underline; color:#8ab4f8;'>Serial command</span></a> ";
 
     const HELP = {
         rename: ['Rename Profile %1',

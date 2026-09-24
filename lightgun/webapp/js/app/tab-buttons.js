@@ -8,7 +8,7 @@
 
     const OF = root.OF = root.OF || {};
 
-    const SERIAL_LINK = "<a href='https://github.com/TeamOpenFIRE/OpenFIRE-Firmware/wiki/MAMEHOOKER-Documentation#m---mode-commands'><span style=' text-decoration: underline; color:#8ab4f8;'>Serial command</span></a> ";
+    const SERIAL_LINK = "<a href='https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/wiki/Serial_Commands_OpenFIRE_EN'><span style=' text-decoration: underline; color:#8ab4f8;'>Serial command</span></a> ";
 
     const TEXTS = [
         {

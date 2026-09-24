@@ -16,11 +16,26 @@
     const TAB_ORDER = ['pins', 'buttons', 'settings', 'profiles', 'tests'];
     const THEME_ICONS = { system: 'themeSystem', light: 'themeLight', dark: 'themeDark' };
     const THEME_LABELS = { system: 'System Theme', light: 'Light Theme', dark: 'Dark Theme' };
-    const DOCS_URL = 'https://github.com/TeamOpenFIRE/OpenFIRE-Firmware/blob/OpenFIRE-dev/OpenFIREmain/README.md';
-    const WIKI_URL = 'https://github.com/TeamOpenFIRE/OpenFIRE-Firmware/wiki';
     // Il firmware di ogni lightgun che parla con questa App viene da qui, RP2040 comprese:
-    // e' questo il repository che ha il commit che la lightgun dichiara con GIT_HASH.
-    const FIRMWARE_REPO = 'https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32';
+    // e' questo il repository che ha la documentazione, la wiki e il commit che la
+    // lightgun dichiara quando e' compilata con GIT_HASH.
+    const REPO = 'https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32';
+
+    // Le due voci del menu Aiuto esistono in due lingue: la documentazione e' un solo
+    // README con un'ancora per lingua, i comandi seriali sono due pagine della wiki. Si
+    // apre quella della lingua scelta nella App; ogni altra lingua che si aggiungera'
+    // ricade sull'inglese finche' non avra' la sua.
+    const DOCS_PAGES = {
+        en: REPO + '/blob/main/lightgun/src/README.md#english-version',
+        it: REPO + '/blob/main/lightgun/src/README.md#versione-italiana',
+    };
+    const WIKI_PAGES = {
+        en: REPO + '/wiki/Serial_Commands_OpenFIRE_EN',
+        it: REPO + '/wiki/Serial_Commands_OpenFIRE_IT',
+    };
+    const inLingua = (pagine) => pagine[(OF.i18n && OF.i18n.currentLang) || 'en'] || pagine.en;
+    const docsUrl = () => inLingua(DOCS_PAGES);
+    const wikiUrl = () => inLingua(WIKI_PAGES);
 
     const storage = {
         get(key) { try { return root.localStorage.getItem(key); } catch (e) { return null; } },
@@ -95,7 +110,7 @@
             doc.addEventListener('keydown', (event) => {
                 if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
                 if (this.window) return; // the fullscreen windows have no menu
-                const url = event.code === 'KeyD' ? DOCS_URL : event.code === 'KeyS' ? WIKI_URL : null;
+                const url = event.code === 'KeyD' ? docsUrl() : event.code === 'KeyS' ? wikiUrl() : null;
                 if (!url) return;
                 event.preventDefault();
                 root.open(url, '_blank', 'noopener');
@@ -139,8 +154,8 @@
                     { label: t('View Compatible Boards'), action: () => OF.Windows.openPreviewer(this.state.board && this.state.board.type), hidden: this.isDevice },
                     { label: menuText('Open &IR Emitter Alignment Assistant'), action: () => this.openAlignment() },
                     { separator: true },
-                    { label: menuText('&OpenFIRE Documentation on the Repo...'), href: DOCS_URL, shortcut: 'Alt+D' },
-                    { label: menuText('OpenFIRE &Serial Usage Docs on the Wiki...'), href: WIKI_URL, shortcut: 'Alt+S' },
+                    { label: menuText('&OpenFIRE ESP32 Documentation on the Repo...'), href: docsUrl(), shortcut: 'Alt+D' },
+                    { label: menuText('OpenFIRE ESP32 &Serial Usage Docs on the Wiki...'), href: wikiUrl(), shortcut: 'Alt+S' },
                     { separator: true },
                     { label: t('About'), action: () => OF.Windows.openAbout() },
                 ]),
@@ -378,7 +393,7 @@
             if (!number) return;
             if (hash) {
                 this.versionNode.append('FW ', OF.UI.el('tt', null, `v${number}-`,
-                    OF.UI.el('a', { href: `${FIRMWARE_REPO}/commit/${hash}`, target: '_blank', rel: 'noopener', text: hash })));
+                    OF.UI.el('a', { href: `${REPO}/commit/${hash}`, target: '_blank', rel: 'noopener', text: hash })));
             } else {
                 this.versionNode.append('FW ', OF.UI.el('tt', { text: `v${number}` }));
             }
@@ -604,8 +619,8 @@
                 const isRP = arch === this.S.boardArchs[this.S.boardArchs_e.boardRP];
                 const title = isRP ? t('Reset Board to Bootloader?') : t('Reboot Microcontroller?');
                 const text = isRP ?
-                    t("<p>The board you selected did not respond to the app properly.</p><p>This can usually be resolved by rebooting the microcontroller to its bootloader, and then updating the board to the latest firmware, which can be found at:</p><p><a href='https://github.com/TeamOpenFIRE/OpenFIRE-Firmware/releases/latest'><span style=' text-decoration: underline; color:#8ab4f8;'>https://github.com/TeamOpenFIRE/OpenFIRE-Firmware/releases/latest</span></a></p><p>Would you like to reboot this board to apply an update?</p>") :
-                    t("<p>The board you selected did not respond to the app properly.</p><p>This can usually be resolved by rebooting the microcontroller, and then updating the board to the latest firmware, which can be found at:</p><p><a href='https://github.com/TeamOpenFIRE/OpenFIRE-Firmware/releases/latest'><span style=' text-decoration: underline; color:#8ab4f8;'>https://github.com/TeamOpenFIRE/OpenFIRE-Firmware/releases/latest</span></a></p><p>Would you like to reboot this board to apply an update?</p>");
+                    t("<p>The board you selected did not respond to the app properly.</p><p>This can usually be resolved by rebooting the microcontroller to its bootloader, and then updating the board to the latest firmware, which can be found at:</p><p><a href='https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/latest'><span style=' text-decoration: underline; color:#8ab4f8;'>https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/latest</span></a></p><p>Would you like to reboot this board to apply an update?</p>") :
+                    t("<p>The board you selected did not respond to the app properly.</p><p>This can usually be resolved by rebooting the microcontroller, and then updating the board to the latest firmware, which can be found at:</p><p><a href='https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/latest'><span style=' text-decoration: underline; color:#8ab4f8;'>https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/latest</span></a></p><p>Would you like to reboot this board to apply an update?</p>");
                 if (await OF.UI.confirm(title, null, null, { html: text, icon: 'error' }) && protocol.isOpen)
                     await protocol.rebootToBootloader(arch);
             }
