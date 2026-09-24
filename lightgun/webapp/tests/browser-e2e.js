@@ -27,6 +27,8 @@ const { startServer } = require('./sim-server.js');
 const NOW = JSON.parse(fs.readFileSync(path.join(LIGHTGUN, 'dist', 'site', 'app.js'), 'utf8')
     .match(/\.BUILD = (\{.*?\});/)[1]).version;
 // La regola per riconoscere la cartella di una versione in un indirizzo.
+// La stessa versione senza il suffisso: 7.0.0-rc1 -> 7.0.0.
+const NUMBERS = NOW.split('-')[0];
 const folderOf = (version) => new RegExp('/v/' + version.replace(/[.\\-]/g, '\\$&') + '/');
 const SHOTS = process.env.OF_E2E_SCREENSHOTS || null;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -597,9 +599,14 @@ async function installFakeSerial(context, sim) {
     };
     older('6.2', '6.2', '6.2.0');
     older('7.0.0-beta1', '7.0.0-beta1', '7.0.0-beta1');
+    // La versione dei soli tre numeri di questa build: quando la build ha un suffisso
+    // (7.0.0-rc1) e' una cartella a parte, ed e' quella su cui ripiega una versione
+    // vicina che non ha una App propria. Se la build non ha suffisso, e' gia' la sua.
+    if (NUMBERS !== NOW) older(NUMBERS, NUMBERS, NUMBERS);
     fs.writeFileSync(path.join(SITE, 'versions.json'), JSON.stringify({
         latest: NOW,
         versions: [{ id: NOW, label: NOW, type: 'stable' },
+                   ...(NUMBERS !== NOW ? [{ id: NUMBERS, label: NUMBERS, type: 'stable' }] : []),
                    { id: '7.0.0-beta1', label: '7.0.0-beta1', type: 'beta' },
                    { id: '6.2', label: '6.2.0', type: 'stable' }]
     }));
@@ -687,13 +694,13 @@ async function installFakeSerial(context, sim) {
     home = await verContext.newPage();
     await home.goto('http://localhost:8126/');
     await home.click('#connect');
-    ok(await home.waitForURL(folderOf(NOW), { timeout: 15000 })
+    ok(await home.waitForURL(folderOf(NUMBERS), { timeout: 15000 })
         .then(() => true).catch(() => false),
         'without an App of its own it opens the one of its three numbers: ' + home.url());
     ok(await waitFor(() => mismatch(home).count().then((n) => n === 1), 15000),
         'and that App says at once that the versions do not match');
     const fallback = (await mismatch(home).innerText()).replace(/\s+/g, ' ');
-    ok(fallback.includes('7.0.0-beta2') && fallback.includes(NOW),
+    ok(fallback.includes('7.0.0-beta2') && fallback.includes(NUMBERS),
         'naming both: ' + JSON.stringify(fallback.slice(0, 130)));
     await home.close();
 
@@ -707,9 +714,14 @@ async function installFakeSerial(context, sim) {
         'a firmware without a published App is reported: ' + JSON.stringify((await home.locator('#state').innerText()).slice(0, 120)));
     await sleep(700);
     ok(!/\/v\//.test(home.url()), 'nothing is opened by itself: ' + home.url());
-    ok(await home.locator('#versions .card').count() === 3, 'the published versions are offered instead');
+    // Le stesse voci di versions.json, nello stesso ordine. Il tipo si aggiunge solo
+    // quando l'etichetta non ha gia' un suffisso che lo dice.
+    const attese = [NOW, ...(NUMBERS !== NOW ? [NUMBERS] : []), '7.0.0-beta1', '6.2.0']
+        .map((label) => label + (label.indexOf('-') < 0 ? ' stable' : ''));
+    ok(await home.locator('#versions .card').count() === attese.length,
+        'the published versions are offered instead');
     const cards = (await home.locator('#versions .card h2').allInnerTexts()).map((s) => s.trim());
-    ok(cards[0] === NOW + ' stable' && cards[1] === '7.0.0-beta1' && cards[2] === '6.2.0 stable',
+    ok(JSON.stringify(cards) === JSON.stringify(attese),
         'a suffix already says what it is, so the type is not repeated: ' + JSON.stringify(cards));
     await shot(home, 'site-home-not-published');
     // and one of them can be tried by hand: it is the one that then says the versions differ
