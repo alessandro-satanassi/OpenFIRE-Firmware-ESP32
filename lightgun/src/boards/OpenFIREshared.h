@@ -507,7 +507,7 @@ public:
         // Board Type: ESP32
         {"esp32-s3-devkitc-1",      {/*00*/ unavailable,    btnTrigger,     btnGunRight,    btnUnmapped,    analogX,
                                      /*05*/ analogY,        tempPin,        btnUnmapped,    camSDA,         camSCL,
-                                     /*10*/ btnUnmapped,    btnUnmapped,    btnUnmapped,    btnUnmapped,    neoPixel,
+                                     /*10*/ cam_SPI_CS,     cam_SPI_MOSI,   cam_SPI_SCK,    cam_SPI_MISO,   neoPixel,
                                      /*15*/ periphSCL,      rumblePin,      solenoidPin,    periphSDA,      unavailable,
                                      /*20*/ unavailable,    btnGunC,        unavailable,    unavailable,    unavailable,
                                      /*25*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
