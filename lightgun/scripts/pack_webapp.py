@@ -145,6 +145,13 @@ def ensure_pillow():
 
 
 def main():
+    # Prima di tutto: un header della versione che si contraddice ferma la build qui,
+    # non a meta' strada. La parte device non passa da read_version(), quindi senza
+    # questa riga un OPENFIRE_VERSION disallineato dai tre numeri arriverebbe nel
+    # firmware senza che nessuno se ne accorga.
+    version = webapp_build.read_version(PROJECT_DIR)
+    print(f"[WebApp] firmware version {version['label']} (tag {version['tag']}"
+          + (", pre-release)" if version["prerelease"] else ")"))
     platform = env.get("PIOPLATFORM", "")  # noqa: F821
     board = build_shared_js.detect_board(PROJECT_DIR, build_defines())
     ensure_pillow()

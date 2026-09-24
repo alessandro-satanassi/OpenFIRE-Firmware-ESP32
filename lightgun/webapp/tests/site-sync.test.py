@@ -97,13 +97,15 @@ class SyncTests(unittest.TestCase):
 
     # ---- the two steps, run as the action runs them -------------------------
     def run_publish(self):
-        env = dict(os.environ, GITHUB_ENV=str(self.root / "github_env"))
+        # Il tag della release e' la versione con una "v" davanti, e il passo lo verifica.
+        env = dict(os.environ, GITHUB_ENV=str(self.root / "github_env"),
+                   TAG_NAME="v" + self.version_id)
         (self.root / "github_env").write_text("", encoding="utf-8")
         return subprocess.run([sys.executable, "-c", self.publish],
                               cwd=str(self.root), env=env, capture_output=True, text=True)
 
     def run_push(self):
-        env = dict(os.environ, TAG_NAME="v6.2.1", WEBAPP_VERSION=self.version_id,
+        env = dict(os.environ, TAG_NAME="v" + self.version_id, WEBAPP_VERSION=self.version_id,
                    GIT_AUTHOR_NAME="a", GIT_AUTHOR_EMAIL="a@a",
                    GIT_COMMITTER_NAME="a", GIT_COMMITTER_EMAIL="a@a")
         return subprocess.run(["bash", "-e", "-c", self.push], cwd=str(self.repo),
@@ -144,7 +146,8 @@ class SyncTests(unittest.TestCase):
         rotto = ("import shutil\n"
                  "shutil.copytree = lambda *a, **k: (_ for _ in ()).throw(OSError('disco pieno'))\n")
         esito = subprocess.run([sys.executable, "-c", rotto + self.publish], cwd=str(self.root),
-                               env=dict(os.environ, GITHUB_ENV=str(self.root / "github_env")),
+                               env=dict(os.environ, GITHUB_ENV=str(self.root / "github_env"),
+                                        TAG_NAME="v" + self.version_id),
                                capture_output=True, text=True)
         self.assertNotEqual(esito.returncode, 0, "il passo deve fallire")
         self.assertIn("disco pieno", esito.stderr)

@@ -19,12 +19,11 @@ on:
         options:
           - "no"
           - "yes"
-      tag_name:
-        description: "Tag della release (es. v1.2.0 - es. v6.0-RC6) (usato solo se release=yes)"
-        required: false
-        default: ""
+      # Il tag non si chiede piu': e' "v" seguito dalla versione dichiarata in
+      # lightgun/src/OpenFIREversion.h (v7.0.0, v7.0.0-beta1...), cosi' non puo'
+      # discordare dal firmware che viene compilato. Lo calcola il job "version".
       release_name:
-        description: "Nome leggibile della release (es. v6.0-RC6 OpenFIRE Firmware ESP32 - GLOBAL Release)"
+        description: "Nome leggibile della release (vuoto = 'v7.0.0 OpenFIRE Firmware ESP32 - GLOBAL Release')"
         required: false
         default: ""
       draft:
@@ -35,14 +34,11 @@ on:
         options:
           - "true"
           - "false"  
-      prerelease:
-        description: "E' una pre-release ? (false = NO  - true = SI, imposta il flag pre-release)"
+      force_prerelease:
+        description: "Forza il flag pre-release anche per una versione senza suffisso (un suffisso come beta1 o rc1 la imposta gia' da sola)"
         required: true
-        default: "true"
-        type: choice
-        options:
-          - "true"
-          - "false"  
+        type: boolean
+        default: false
 
       update_webflasher:
         description: "Vuoi aggiornare anche il repository del Web Flasher?"
@@ -59,6 +55,59 @@ permissions:
   contents: write
 
 jobs:
+  # ==========================================
+  # 0. LA VERSIONE, LETTA UNA VOLTA SOLA
+  # ==========================================
+  # Tag, flag di pre-release e titolo della release vengono tutti da
+  # lightgun/src/OpenFIREversion.h: chi li usa li legge da qui, e nessuno li riscrive
+  # a mano. Se l'header si contraddice (per esempio OPENFIRE_VERSION non corrisponde a
+  # MAJOR.MINOR) read_version() solleva e questo job fallisce prima di ogni altra cosa.
+  version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    name: Version
+    outputs:
+      version: ${{ steps.read.outputs.version }}
+      tag: ${{ steps.read.outputs.tag }}
+      prerelease: ${{ steps.read.outputs.prerelease }}
+      release_name: ${{ steps.read.outputs.release_name }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Read the version of the firmware
+        id: read
+        env:
+          FORCE_PRERELEASE: ${{ github.event.inputs.force_prerelease }}
+          RELEASE_NAME: ${{ github.event.inputs.release_name }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import sys
+          from pathlib import Path
+
+          # Una sola implementazione: la stessa che costruisce la WebApp e che il
+          # firmware usa per dire chi e'.
+          sys.path.insert(0, str(Path('lightgun/scripts').resolve()))
+          import webapp_build
+
+          version = webapp_build.read_version(str(Path('lightgun').resolve()))
+          prerelease = version['prerelease'] or os.environ.get('FORCE_PRERELEASE') == 'true'
+          name = os.environ.get('RELEASE_NAME', '').strip() or \
+              version['tag'] + ' OpenFIRE Firmware ESP32 - GLOBAL Release'
+          if '\n' in name or '\r' in name:
+              raise RuntimeError('Release name must be one line')
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as out:
+              out.write('version=' + version['label'] + '\n')
+              out.write('tag=' + version['tag'] + '\n')
+              out.write('prerelease=' + ('true' if prerelease else 'false') + '\n')
+              out.write('release_name=' + name + '\n')
+          print('Version ' + version['label'] + ', tag ' + version['tag']
+                + (', pre-release' if prerelease else ', final') + ', titled "' + name + '"')
+          PY
+
   # ==========================================
   # 1. BUILD FIRMWARE (PARALLELO)
   # ==========================================
@@ -130,7 +179,7 @@ jobs:
       # The site contains all boards: publish it from one matrix entry only.
       # Unlike the optional PlatformIO export, errors here must fail the release.
       - name: Prepare WebApp publication
-        if: ${{ matrix.boards == 'ESP32_S3_WROOM1_DevKitC_1_N16R8' && github.event.inputs.update_webapp == 'true' && github.event.inputs.release == 'yes' && github.event.inputs.tag_name != '' && github.event.inputs.sistemi_operativi == 'yes' }}
+        if: ${{ matrix.boards == 'ESP32_S3_WROOM1_DevKitC_1_N16R8' && github.event.inputs.update_webapp == 'true' && github.event.inputs.release == 'yes' && github.event.inputs.sistemi_operativi == 'yes' }}
         run: |
           python - <<'PY'
           import json
@@ -150,7 +199,7 @@ jobs:
           PY
 
       - name: Upload WebApp publication
-        if: ${{ matrix.boards == 'ESP32_S3_WROOM1_DevKitC_1_N16R8' && github.event.inputs.update_webapp == 'true' && github.event.inputs.release == 'yes' && github.event.inputs.tag_name != '' && github.event.inputs.sistemi_operativi == 'yes' }}
+        if: ${{ matrix.boards == 'ESP32_S3_WROOM1_DevKitC_1_N16R8' && github.event.inputs.update_webapp == 'true' && github.event.inputs.release == 'yes' && github.event.inputs.sistemi_operativi == 'yes' }}
         uses: actions/upload-artifact@v7
         with:
           # Separate from OpenFIRE-* artifacts: these files are not release assets.
@@ -504,19 +553,22 @@ jobs:
   # ==========================================
   sync_web_firmware:
     #needs: [build_lightgun, build_dongle, build_pedal]
-    needs: [package_lightgun, package_dongle, package_pedal]
+    needs: [version, package_lightgun, package_dongle, package_pedal]
     runs-on: ubuntu-latest
-    
+
     concurrency:
       # All source branches update the same destination catalog.
       group: sync-openfire-webflasher-main
       cancel-in-progress: false
-      
-    if: ${{ github.event.inputs.update_webflasher == 'true' && github.event.inputs.release == 'yes' && github.event.inputs.tag_name != '' }}
-    
+
+    if: ${{ github.event.inputs.update_webflasher == 'true' && github.event.inputs.release == 'yes' }}
+
     env:
-      TAG_NAME: ${{ github.event.inputs.tag_name }}
-      PRERELEASE: ${{ github.event.inputs.prerelease }}
+      # Il tag e il flag di pre-release vengono dalla versione del firmware, non dalla
+      # maschera: la cartella firmware/<tag>/ del Web Flasher non puo' piu' portare un
+      # nome che il firmware dentro non riconosce.
+      TAG_NAME: ${{ needs.version.outputs.tag }}
+      PRERELEASE: ${{ needs.version.outputs.prerelease }}
       # URL FISSO DEL TUO SECONDO REPOSITORY
       TARGET_REPO: "alessandro-satanassi/OpenFIRE-ESP32-WebFlasher"
       
@@ -735,16 +787,16 @@ jobs:
   # 4. SYNC WEBAPP TO GITHUB PAGES REPOSITORY
   # ==========================================
   sync_webapp:
-    needs: [package_lightgun, package_dongle, package_pedal]
+    needs: [version, package_lightgun, package_dongle, package_pedal]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     concurrency:
       # Every source branch writes the same destination branch and versions.json.
       group: sync-openfire-webapp-main
       cancel-in-progress: false
-    if: ${{ github.event.inputs.update_webapp == 'true' && github.event.inputs.release == 'yes' && github.event.inputs.tag_name != '' && github.event.inputs.sistemi_operativi == 'yes' }}
+    if: ${{ github.event.inputs.update_webapp == 'true' && github.event.inputs.release == 'yes' && github.event.inputs.sistemi_operativi == 'yes' }}
     env:
-      TAG_NAME: ${{ github.event.inputs.tag_name }}
+      TAG_NAME: ${{ needs.version.outputs.tag }}
     steps:
       - name: Verify Execution Branch
         run: |
@@ -781,11 +833,17 @@ jobs:
           version = json.loads((source / 'version.json').read_text(encoding='utf-8-sig'))
           if not isinstance(version, dict) or any(
               not isinstance(version.get(key), str) for key in ('id', 'label', 'type')
-          ) or not re.fullmatch(r'[0-9]+\.[0-9]', version['id']):
+          ) or not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z][A-Za-z0-9]*)?', version['id']):
               raise RuntimeError('Invalid WebApp version metadata')
 
-          # The folder ID is OPENFIRE_VERSION, not the release tag or full semver.
+          # The folder ID is the complete version of the firmware - 7.0.0, or 7.0.0-beta1 -
+          # which is exactly the string the lightgun sends when it docks. The release tag is
+          # that same version with a "v" in front, and both come from OpenFIREversion.h: if
+          # they disagree here, something rewrote one of them on the way.
           version_id = version['id']
+          tag = os.environ['TAG_NAME']
+          if tag != 'v' + version_id:
+              raise RuntimeError('Release tag ' + tag + ' does not match the app version ' + version_id)
           required = ('site/index.html', 'site/style.css', 'site/app.js',
                       'launcher/index.html', 'launcher/launcher.js', 'launcher/.nojekyll')
           for name in required:
@@ -862,13 +920,16 @@ jobs:
   # ==========================================
   create_global_release:
     # A disabled sync may be skipped; every requested sync must explicitly succeed.
-    needs: [package_lightgun, package_dongle, package_pedal, sync_web_firmware, sync_webapp]
+    needs: [version, package_lightgun, package_dongle, package_pedal, sync_web_firmware, sync_webapp]
     runs-on: ubuntu-latest
+    env:
+      # Tag, titolo e flag di pre-release della versione compilata: vedi il job "version".
+      TAG_NAME: ${{ needs.version.outputs.tag }}
     if: >-
       ${{ !failure() && !cancelled() &&
           github.event.inputs.release == 'yes' &&
           github.event.inputs.sistemi_operativi == 'yes' &&
-          github.event.inputs.tag_name != '' &&
+          needs.version.result == 'success' &&
           needs.package_lightgun.result == 'success' &&
           needs.package_dongle.result == 'success' &&
           needs.package_pedal.result == 'success' &&
@@ -882,10 +943,15 @@ jobs:
         id: prepare_body
         run: |
           TEMPLATE_PATH=".github/release_templates/GLOBAL_template.md"
-          
-          # Sostituisce <TAG> con il valore inserito nel trigger
-          sed "s/<TAG>/${{ github.event.inputs.tag_name }}/g" "$TEMPLATE_PATH" > final_body.md
-          
+
+          # Sostituisce <TAG> con il tag ricavato dalla versione del firmware. Passa per
+          # una variabile d'ambiente e per python invece che per sed, cosi' il valore non
+          # finisce mai dentro il testo del comando.
+          TAG_NAME="$TAG_NAME" python3 - "$TEMPLATE_PATH" > final_body.md <<'PY'
+          import os, sys
+          sys.stdout.write(open(sys.argv[1], encoding='utf-8').read().replace('<TAG>', os.environ['TAG_NAME']))
+          PY
+
           # Carica il contenuto in GITHUB_ENV gestendo correttamente i ritorni a capo
           echo "RELEASE_BODY<<EOF" >> $GITHUB_ENV
           cat final_body.md >> $GITHUB_ENV
@@ -900,12 +966,12 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ github.event.inputs.tag_name }}
+          tag_name: ${{ needs.version.outputs.tag }}
           target_commitish: ${{ github.sha }} # New tags must identify the commit actually built.
-          name: ${{ github.event.inputs.release_name }}
+          name: ${{ needs.version.outputs.release_name }}
           body: ${{ env.RELEASE_BODY }} # <--- Usa il corpo generato dal template globale
           draft: ${{ github.event.inputs.draft }}
-          prerelease: ${{ github.event.inputs.prerelease }}
+          prerelease: ${{ needs.version.outputs.prerelease }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -913,7 +979,7 @@ jobs:
         run: |
           find ./release_assets -type f -print0 | while IFS= read -r -d '' file; do
             echo "Uploading $file"
-            gh release upload ${{ github.event.inputs.tag_name }} "$file" --clobber --repo ${{ github.repository }}
+            gh release upload "$TAG_NAME" "$file" --clobber --repo "$GITHUB_REPOSITORY"
           done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  

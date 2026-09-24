@@ -267,8 +267,11 @@
             const mark = element('span', 'card-icon');
             mark.appendChild(icon('app'));
             top.appendChild(mark);
+            // 7.0.0-beta1 dice gia' di che versione si tratta: il tipo si aggiunge solo
+            // quando l'etichetta non ha un suffisso, cioe' "7.0.0 stable".
+            const label = String(entry.label || entry.id);
             top.appendChild(element('h2', null,
-                String(entry.label || entry.id) + (entry.type ? ' ' + entry.type : '')));
+                label + (entry.type && label.indexOf('-') < 0 ? ' ' + entry.type : '')));
             if (String(list.latest || '') === String(entry.id))
                 top.appendChild(element('span', 'tag', t('latest')));
             link.appendChild(top);
@@ -314,13 +317,21 @@
         return board && String(board.version || '').trim() ? { board } : { error: 'noAnswer' };
     }
 
-    /** The published app for this firmware: the complete version first, so the day the
-        archive is kept by patch as well, 6.2.1 finds its own instead of every 6.2. */
+    /** The published app for this firmware, from the most precise name to the least:
+
+          7.0.0-beta1   the complete version, the one the app is published under;
+          7.0.0         the same without the suffix, so a beta that has no app of its
+                        own opens the one of its three numbers;
+          7.0           the old short version, which is all a firmware before 7.0 sends.
+
+        Falling back opens a neighbouring app, not a wrong one silently: that app compares
+        the versions as soon as the lightgun docks and says they do not match. */
     function entryFor(list, board) {
         const short = String((board && board.version) || '').split('-')[0].trim();
         const full = String((board && board.versionFull) || '').trim();
+        const numbers = full.split('-')[0].trim();
         const find = (id) => id && list.versions.find((item) => item && String(item.id) === id);
-        return find(full) || find(short) || null;
+        return find(full) || find(numbers) || find(short) || null;
     }
 
     async function connect() {

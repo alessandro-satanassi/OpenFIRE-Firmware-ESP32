@@ -9,6 +9,7 @@ Two outputs, and they are different things:
                  the lightgun and opens the app published for it.
 """
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -39,9 +40,18 @@ def read(path):
 
 def main():
     version = webapp_build.read_version(LIGHTGUN)
-    ok(version["id"] == "%.1f" % float(version["id"]),
-       "the version is the one the firmware sends, and names the folder: " + version["id"])
-    ok(version["label"].count(".") == 2, "the complete number is the one shown: " + version["label"])
+    ok(re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z][A-Za-z0-9]*)?", version["id"]) is not None,
+       "the version is three numbers and an optional suffix, and names the folder: " + version["id"])
+    ok(version["label"] == version["id"], "shown as it is: " + version["label"])
+    ok(version["numbers"].count(".") == 2 and "-" not in version["numbers"],
+       "the three numbers alone, for the home page to fall back to: " + version["numbers"])
+    ok(version["id"] == version["numbers"] + ("-" + version["suffix"] if version["suffix"] else ""),
+       "which is the version without the suffix: " + repr(version["suffix"]))
+    ok(version["tag"] == "v" + version["id"], "the Git tag is the version with a v in front: " + version["tag"])
+    ok(version["prerelease"] is bool(version["suffix"]),
+       "a suffix makes it a pre-release: " + str(version["prerelease"]))
+    ok(version["type"] == (version["suffix"].rstrip("0123456789") or "stable"),
+       "and the type is the letters of the suffix: " + version["type"])
 
     out = tempfile.mkdtemp(prefix="of-build-")
     try:

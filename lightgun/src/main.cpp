@@ -1715,16 +1715,16 @@ void ExecGunModeDocked()
                 }
             #endif
 
-            // Complete version of the firmware, 6.2.0-stable (the same numbers as
+            // Complete version of the firmware, 7.0.0 or 7.0.0-beta1 (the same numbers as
             // OPENFIRE_VERSION_STRING, without going through String): the web App uses it
             // to open the page published for this firmware. Like every marker that is not
             // just a flag it carries its own length, so an App that does not know it skips
             // it and still reads what comes after (see sVersionFull in OpenFIREshared.h).
             {
                 char version[32];
-                const int length = snprintf(version, sizeof(version), "%d.%d.%d-%s",
+                const int length = snprintf(version, sizeof(version), "%d.%d.%d%s",
                                             OPENFIRE_VERSION_MAJOR, OPENFIRE_VERSION_MINOR,
-                                            OPENFIRE_VERSION_PATCH, OPENFIRE_VERSION_TYPE);
+                                            OPENFIRE_VERSION_PATCH, OPENFIRE_VERSION_TAIL);
                 if(length > 0 && length < (int)sizeof(version) &&
                    pos + 3 + length <= (int)sizeof(buf)) {
                     buf[pos++] = OF_Const::serialTerminator;

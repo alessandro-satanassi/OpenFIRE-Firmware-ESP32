@@ -53,8 +53,19 @@
         return lang ? '?lang=' + encodeURIComponent(lang) : '';
     };
 
-    /** The version of a firmware as it names a folder: "6.2" out of "6.2-<git hash>". */
+    /** The short version of a firmware: "6.2" out of "6.2-<git hash>". It is all a
+        firmware before 7.0 says about itself. */
     const shortOf = (board) => String((board && board.version) || '').split('-')[0].trim();
+
+    /** How this firmware names itself: the complete version, 7.0.0 or 7.0.0-beta1. */
+    const idOf = (board) => String((board && board.versionFull) || '').trim() || shortOf(board);
+
+    /** The names under which this same firmware may have been published: its complete
+        version, and the short one - all a firmware before 7.0 could say about itself, and
+        how those apps were archived (v/6.2/). Both mean "this very firmware", so neither
+        is a mismatch. What is NOT in here is the version without the suffix: 7.0.0 and
+        7.0.0-beta1 are two different firmwares, and the app of one says so to the other. */
+    const namesOf = (board) => [idOf(board), shortOf(board)].filter(Boolean);
 
     OF.Version = {
         isPublished, siteHome,
@@ -64,13 +75,12 @@
         async afterDock(app, board) {
             if (!isSite()) return false;
             const mine = myVersion();
-            const short = shortOf(board);
-            if (!mine || !short || short === mine) return false;
-            if (this.asked === short) return false;   // once per version, not at every dock
-            this.asked = short;
+            const theirs = idOf(board);
+            if (!mine || !theirs || namesOf(board).indexOf(mine) >= 0) return false;
+            if (this.asked === theirs) return false;  // once per version, not at every dock
+            this.asked = theirs;
 
             const t = OF.UI.t;
-            const theirs = String((board && board.versionFull) || '').trim() || short;
             const text = t('This is the App of version %1, while the lightgun runs firmware %2.', myLabel(), theirs);
 
             // Nowhere to go back to: this copy is not part of a published site.

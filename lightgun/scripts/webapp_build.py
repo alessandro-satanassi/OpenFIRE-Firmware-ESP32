@@ -80,31 +80,77 @@ def _define(text, name):
     return match.group(1).strip() if match else None
 
 
-def read_version(project_dir):
-    """Version of the firmware, from src/OpenFIREversion.h.
+VERSION_SUFFIX = re.compile(r"[A-Za-z][A-Za-z0-9]*")
+VERSION_KIND = re.compile(r"[A-Za-z]+")   # beta1 -> beta, rc2 -> rc
 
-    id     the string the firmware sends when the app docks ("%.1f" of OPENFIRE_VERSION,
-           so "6.2"): it names the folder of the archived site, because it is the only
-           version an already installed lightgun can tell the app about.
-    label  the complete number, 6.2.0, shown in the list of versions.
-    type   stable, beta, rc... as written in the header.
+
+def _string_define(text, name):
+    """Body of a #define holding a C string literal ("" gives "")."""
+    raw = _define(text, name)
+    if raw is None:
+        raise RuntimeError(f"src/OpenFIREversion.h: #define {name} is missing")
+    raw = raw.strip()
+    if len(raw) < 2 or raw[0] != '"' or raw[-1] != '"':
+        raise RuntimeError(f"src/OpenFIREversion.h: {name} must be a string in quotes ({raw!r})")
+    return raw[1:-1]
+
+
+def read_version(project_dir):
+    """Version of the firmware, from src/OpenFIREversion.h - and the only place that
+    reads it. MAJOR, MINOR, PATCH and SUFFIX are the source; everything else here is
+    derived from them, so the folder of the published app, the Git tag and the title of
+    the release cannot drift apart from what the firmware actually sends.
+
+    id        the complete version, 7.0.0 or 7.0.0-beta1: it names the folder of the
+              archived app (v/<id>/) and it is exactly the string the firmware sends
+              when it docks (sVersionFull, see src/main.cpp).
+    label     the same, shown in the list of versions.
+    numbers   7.0.0, without the suffix: what the home page falls back to.
+    suffix    beta1, rc2... empty for a final version.
+    type      stable, beta, rc, prerelease...: the letters of the suffix, for the badge.
+    tag       v7.0.0-beta1, the Git tag of the release.
+    prerelease  True as soon as there is a suffix.
+
+    It also refuses a header that contradicts itself: OPENFIRE_VERSION is still the
+    first field the lightgun sends and the only one the desktop App reads, so it has to
+    keep saying MAJOR.MINOR - and "%.1f" cannot tell 7.10 from 7.1.
     """
     text = _read_text(os.path.join(project_dir, "src", "OpenFIREversion.h"))
-    raw = _define(text, "OPENFIRE_VERSION")
-    if raw is None:
-        raise RuntimeError("src/OpenFIREversion.h: #define OPENFIRE_VERSION is missing")
-    try:
-        version_id = "%.1f" % float(raw)  # exactly what the firmware prints when docking
-    except ValueError:
-        raise RuntimeError(f"src/OpenFIREversion.h: OPENFIRE_VERSION is not a number ({raw!r})")
 
     parts = []
     for name in ("OPENFIRE_VERSION_MAJOR", "OPENFIRE_VERSION_MINOR", "OPENFIRE_VERSION_PATCH"):
         value = _define(text, name)
-        if value is not None and value.isdigit():
-            parts.append(value)
-    kind = (_define(text, "OPENFIRE_VERSION_TYPE") or "").strip().strip('"').strip()
-    return {"id": version_id, "label": ".".join(parts) if len(parts) == 3 else version_id, "type": kind}
+        if value is None or not value.isdigit():
+            raise RuntimeError(f"src/OpenFIREversion.h: {name} is missing or not a whole number ({value!r})")
+        parts.append(str(int(value)))
+    numbers = ".".join(parts)
+
+    suffix = _string_define(text, "OPENFIRE_VERSION_SUFFIX").strip()
+    if suffix and not VERSION_SUFFIX.fullmatch(suffix):
+        raise RuntimeError(f"src/OpenFIREversion.h: OPENFIRE_VERSION_SUFFIX must be a letter followed "
+                           f"by letters and digits, like beta1 or rc2 ({suffix!r}): it becomes a folder "
+                           f"name, a web address and a Git tag.")
+    full = numbers + ("-" + suffix if suffix else "")
+
+    raw = _define(text, "OPENFIRE_VERSION")
+    if raw is None:
+        raise RuntimeError("src/OpenFIREversion.h: #define OPENFIRE_VERSION is missing")
+    try:
+        short = "%.1f" % float(raw)  # exactly what the firmware prints when docking
+    except ValueError:
+        raise RuntimeError(f"src/OpenFIREversion.h: OPENFIRE_VERSION is not a number ({raw!r})")
+    if int(parts[1]) > 9:
+        raise RuntimeError(f"src/OpenFIREversion.h: OPENFIRE_VERSION_MINOR is {parts[1]}: the \"%.1f\" "
+                           f"field sent to the desktop App cannot tell {parts[0]}.{parts[1]} from "
+                           f"{parts[0]}.{parts[1][0]}.")
+    if short != f"{parts[0]}.{parts[1]}":
+        raise RuntimeError(f"src/OpenFIREversion.h: OPENFIRE_VERSION is {raw} ({short}) but the version "
+                           f"is {full}: it must be {parts[0]}.{parts[1]}, because it is the field the "
+                           f"desktop App reads.")
+
+    return {"id": full, "label": full, "numbers": numbers, "suffix": suffix,
+            "type": VERSION_KIND.match(suffix).group(0).lower() if suffix else "stable",
+            "tag": "v" + full, "prerelease": bool(suffix)}
 
 
 def script_list(webapp_dir):

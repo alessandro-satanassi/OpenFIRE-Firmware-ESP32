@@ -22,6 +22,12 @@ try {
 }
 const LIGHTGUN = path.join(__dirname, '..', '..');
 const { startServer } = require('./sim-server.js');
+// La versione che dichiara questa build (7.0.0, oppure 7.0.0-beta1): le prove non la
+// scrivono a mano, cosi' restano giuste quando l'header passa alla prossima.
+const NOW = JSON.parse(fs.readFileSync(path.join(LIGHTGUN, 'dist', 'site', 'app.js'), 'utf8')
+    .match(/\.BUILD = (\{.*?\});/)[1]).version;
+// La regola per riconoscere la cartella di una versione in un indirizzo.
+const folderOf = (version) => new RegExp('/v/' + version.replace(/[.\\-]/g, '\\$&') + '/');
 const SHOTS = process.env.OF_E2E_SCREENSHOTS || null;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function waitFor(fn, ms = 8000) { const t = Date.now(); while (!(await fn())) { if (Date.now() - t > ms) return false; await sleep(50); } return true; }
@@ -416,6 +422,11 @@ async function installFakeSerial(context, sim) {
 
     // ===================== site (Web Serial) =====================
     sim = await startServer({ port: 8124, root: LIGHTGUN + '/dist/site', board: 'esp32-s3-devkitc-1' });
+    // Questo e' il sito della versione che stiamo costruendo: la lightgun simulata ha il
+    // firmware di quella stessa versione, altrimenti la App avvisa - giustamente - che
+    // non coincidono, e l'avviso si mette in mezzo a tutte le prove che vengono dopo.
+    sim.firmware.versionFull = NOW;
+    sim.firmware.version = NOW.split('.').slice(0, 2).join('.') + '-abcdef0';
     const siteContext = await browser.newContext({ locale: 'en-US', viewport: { width: 1280, height: 860 } });
     const serial = await installFakeSerial(siteContext, sim);
     const site = await siteContext.newPage();
@@ -564,17 +575,24 @@ async function installFakeSerial(context, sim) {
     };
     fs.rmSync(SITE, { recursive: true, force: true });
     copyInto(path.join(LIGHTGUN, 'dist', 'launcher'), SITE);
-    copyInto(path.join(LIGHTGUN, 'dist', 'site'), path.join(SITE, 'v', '6.2'));
-    // An older version, as it would have been published in its day.
-    copyInto(path.join(LIGHTGUN, 'dist', 'site'), path.join(SITE, 'v', '6.1'));
-    const oldApp = path.join(SITE, 'v', '6.1', 'app.js');
-    fs.writeFileSync(oldApp, fs.readFileSync(oldApp, 'utf8')
-        .replace('"version": "6.2"', '"version": "6.1"')
-        .replace('"versionLabel": "6.2.0"', '"versionLabel": "6.1.0"'));
+    copyInto(path.join(LIGHTGUN, 'dist', 'site'), path.join(SITE, 'v', NOW));
+    // Due versioni precedenti, come sarebbero state pubblicate ai loro tempi: una col
+    // nome corto di prima della 7.0 (v/6.2/, che esiste davvero sul sito) e una con lo
+    // schema nuovo, cosi' si prova sia il passato sia il presente.
+    const older = (folder, version, label) => {
+        copyInto(path.join(LIGHTGUN, 'dist', 'site'), path.join(SITE, 'v', folder));
+        const app = path.join(SITE, 'v', folder, 'app.js');
+        fs.writeFileSync(app, fs.readFileSync(app, 'utf8')
+            .replace('"version": "' + NOW + '"', '"version": "' + version + '"')
+            .replace('"versionLabel": "' + NOW + '"', '"versionLabel": "' + label + '"'));
+    };
+    older('6.2', '6.2', '6.2.0');
+    older('7.0.0-beta1', '7.0.0-beta1', '7.0.0-beta1');
     fs.writeFileSync(path.join(SITE, 'versions.json'), JSON.stringify({
-        latest: '6.2',
-        versions: [{ id: '6.2', label: '6.2.0', type: 'stable' },
-                   { id: '6.1', label: '6.1.0', type: 'stable' }]
+        latest: NOW,
+        versions: [{ id: NOW, label: NOW, type: 'stable' },
+                   { id: '7.0.0-beta1', label: '7.0.0-beta1', type: 'beta' },
+                   { id: '6.2', label: '6.2.0', type: 'stable' }]
     }));
 
     sim = await startServer({ port: 8126, root: SITE, board: 'esp32-s3-devkitc-1' });
@@ -586,8 +604,8 @@ async function installFakeSerial(context, sim) {
         [CMD.sGetToggles, CMD.sGetSettings, CMD.sGetProfile, CMD.sGetBtns].indexOf(e.command) >= 0).length;
 
     // ----- the home page opens the App of the firmware -----
-    sim.firmware.version = '6.2-abcdef0';
-    sim.firmware.versionFull = '6.2.0-stable';
+    sim.firmware.version = '7.0-abcdef0';
+    sim.firmware.versionFull = NOW;
     let home = await verContext.newPage();
     const homeErrors = watchErrors(home);
     await home.goto('http://localhost:8126/');
@@ -609,48 +627,86 @@ async function installFakeSerial(context, sim) {
     await home.selectOption('#lang-select', 'en');
     sim.firmware.log.length = 0;
     await home.click('#connect');
-    ok(await home.waitForURL(/\/v\/6\.2\//, { timeout: 15000 }).then(() => true).catch(() => false),
+    ok(await home.waitForURL(folderOf(NOW), { timeout: 15000 })
+        .then(() => true).catch(() => false),
         'Connect opens the App of the firmware: ' + home.url());
     ok(await waitFor(() => loaded(home), 15000), 'and that App docks by itself, without another click');
-    ok(await home.evaluate(() => OF.BUILD.version) === '6.2', 'it is the App of 6.2');
+    ok(await home.evaluate(() => OF.BUILD.version) === NOW, 'it is the App of ' + NOW);
     ok(await mismatch(home).count() === 0, 'with nothing to warn about');
     ok(homeErrors.length === 0, 'no errors on the home ' + JSON.stringify(homeErrors));
     await home.close();
 
-    // ----- an older firmware gets its own App -----
-    sim.firmware.version = '6.1-abcdef0';
-    sim.firmware.versionFull = '6.1.0-stable';
+    // ----- a firmware from before 7.0, whose App was archived under its short name -----
+    // 6.2.0-stable is not in the list; 6.2 is, because that is how it was published.
+    sim.firmware.version = '6.2-abcdef0';
+    sim.firmware.versionFull = '6.2.0-stable';
     home = await verContext.newPage();
     await home.goto('http://localhost:8126/');
     sim.firmware.log.length = 0;
     await home.click('#connect');
-    ok(await home.waitForURL(/\/v\/6\.1\//, { timeout: 15000 }).then(() => true).catch(() => false),
+    ok(await home.waitForURL(/\/v\/6\.2\//, { timeout: 15000 }).then(() => true).catch(() => false),
         'an older firmware opens the App published for it: ' + home.url());
     ok(/[?&]lang=/.test(home.url()), 'and the language travels with it: ' + home.url());
     ok(await waitFor(() => loaded(home), 15000), 'which docks by itself');
-    ok(await home.evaluate(() => OF.BUILD.version) === '6.1', 'it really is the App of 6.1');
-    ok(await mismatch(home).count() === 0, 'and says nothing, because now they match');
+    ok(await home.evaluate(() => OF.BUILD.version) === '6.2', 'it really is the App of 6.2');
+    await sleep(700);
+    ok(await mismatch(home).count() === 0,
+        'and says nothing: 6.2 is what that very firmware called itself, not another version');
     const notice = await statusText(home);
-    ok(notice.includes('6.1.0') && notice.includes('6.2.0'),
+    ok(notice.includes('6.2.0') && notice.includes(NOW),
         'the status bar says which App this is and that a newer firmware exists: ' + JSON.stringify(notice));
-    await shot(home, 'site-home-opened-6.1');
+    await shot(home, 'site-home-opened-6.2');
     await home.close();
 
-    // ----- a firmware nobody published an App for -----
-    sim.firmware.version = '6.9-abcdef0';
-    sim.firmware.versionFull = '6.9.0-beta';
+    // ----- a beta has its own App, it does not share the one of the final version -----
+    sim.firmware.version = '7.0-abcdef0';
+    sim.firmware.versionFull = '7.0.0-beta1';
     home = await verContext.newPage();
     await home.goto('http://localhost:8126/');
     await home.click('#connect');
-    ok(await waitFor(async () => (await home.locator('#state').innerText()).includes('6.9.0-beta'), 15000),
+    ok(await home.waitForURL(/\/v\/7\.0\.0-beta1\//, { timeout: 15000 }).then(() => true).catch(() => false),
+        'the complete version is looked up first: ' + home.url());
+    ok(await waitFor(() => loaded(home), 15000), 'and that App docks');
+    ok(await home.evaluate(() => OF.BUILD.version) === '7.0.0-beta1', 'it is the App of the beta');
+    await sleep(700);
+    ok(await mismatch(home).count() === 0, 'with nothing to warn about');
+    await home.close();
+
+    // ----- a beta nobody published falls back on its three numbers, and is told -----
+    sim.firmware.version = '7.0-abcdef0';
+    sim.firmware.versionFull = '7.0.0-beta2';
+    home = await verContext.newPage();
+    await home.goto('http://localhost:8126/');
+    await home.click('#connect');
+    ok(await home.waitForURL(folderOf(NOW), { timeout: 15000 })
+        .then(() => true).catch(() => false),
+        'without an App of its own it opens the one of its three numbers: ' + home.url());
+    ok(await waitFor(() => mismatch(home).count().then((n) => n === 1), 15000),
+        'and that App says at once that the versions do not match');
+    const fallback = (await mismatch(home).innerText()).replace(/\s+/g, ' ');
+    ok(fallback.includes('7.0.0-beta2') && fallback.includes(NOW),
+        'naming both: ' + JSON.stringify(fallback.slice(0, 130)));
+    await home.close();
+
+    // ----- a firmware nobody published an App for -----
+    sim.firmware.version = '7.9-abcdef0';
+    sim.firmware.versionFull = '7.9.0-rc1';
+    home = await verContext.newPage();
+    await home.goto('http://localhost:8126/');
+    await home.click('#connect');
+    ok(await waitFor(async () => (await home.locator('#state').innerText()).includes('7.9.0-rc1'), 15000),
         'a firmware without a published App is reported: ' + JSON.stringify((await home.locator('#state').innerText()).slice(0, 120)));
     await sleep(700);
     ok(!/\/v\//.test(home.url()), 'nothing is opened by itself: ' + home.url());
-    ok(await home.locator('#versions .card').count() === 2, 'the published versions are offered instead');
+    ok(await home.locator('#versions .card').count() === 3, 'the published versions are offered instead');
+    const cards = (await home.locator('#versions .card h2').allInnerTexts()).map((s) => s.trim());
+    ok(cards[0] === NOW + ' stable' && cards[1] === '7.0.0-beta1' && cards[2] === '6.2.0 stable',
+        'a suffix already says what it is, so the type is not repeated: ' + JSON.stringify(cards));
     await shot(home, 'site-home-not-published');
     // and one of them can be tried by hand: it is the one that then says the versions differ
     await home.click('#versions .card >> nth=0');
-    ok(await home.waitForURL(/\/v\/6\.2\//, { timeout: 15000 }).then(() => true).catch(() => false),
+    ok(await home.waitForURL(folderOf(NOW), { timeout: 15000 })
+        .then(() => true).catch(() => false),
         'choosing one by hand opens it: ' + home.url());
     await home.click('.welcome .big-button');
     ok(await waitFor(() => mismatch(home).count().then((n) => n === 1), 15000),
@@ -658,17 +714,17 @@ async function installFakeSerial(context, sim) {
     await home.close();
 
     // ----- the question an App of another version asks -----
-    sim.firmware.version = '6.1-abcdef0';
-    sim.firmware.versionFull = '6.1.0-stable';
+    sim.firmware.version = '6.2-abcdef0';
+    sim.firmware.versionFull = '6.2.0-stable';
     let app = await verContext.newPage();
     const appErrors = watchErrors(app);
-    await app.goto('http://localhost:8126/v/6.2/');          // opened by its own address
+    await app.goto('http://localhost:8126/v/' + NOW + '/');   // opened by its own address
     ok(await waitFor(() => app.evaluate(() => !!(window.OF && OF.app))), 'a published version opens on its own');
     await app.click('.welcome .big-button');
     ok(await waitFor(() => mismatch(app).count().then((n) => n === 1), 15000),
         'and asks what to do when the firmware is of another version');
     const question = (await mismatch(app).innerText()).replace(/\s+/g, ' ');
-    ok(question.includes('6.2.0') && question.includes('6.1.0-stable'),
+    ok(question.includes(NOW) && question.includes('6.2.0-stable'),
         'naming both versions: ' + JSON.stringify(question.slice(0, 130)));
     ok(await mismatch(app).locator('button', { hasText: 'Carry on' }).count() === 1 &&
        await mismatch(app).locator('button', { hasText: 'Go back' }).count() === 1,
@@ -677,7 +733,7 @@ async function installFakeSerial(context, sim) {
     await app.click('dialog button:has-text("Carry on")');
     ok(await loaded(app), 'Carry on keeps the App and the connection');
     await sleep(500);
-    ok(/\/v\/6\.2\//.test(app.url()), 'and stays where it was: ' + app.url());
+    ok(app.url().includes('/v/' + NOW + '/'), 'and stays where it was: ' + app.url());
     // it does not ask again at every reconnection
     await app.click('.disconnect-button');
     ok(await waitFor(async () => !(await loaded(app))), 'undocked');
@@ -689,7 +745,7 @@ async function installFakeSerial(context, sim) {
 
     // Go back: the lightgun is undocked and the home page is opened again.
     app = await verContext.newPage();
-    await app.goto('http://localhost:8126/v/6.2/');
+    await app.goto('http://localhost:8126/v/' + NOW + '/');
     await app.click('.welcome .big-button');
     ok(await waitFor(() => mismatch(app).count().then((n) => n === 1), 15000), 'asked again on a new page');
     await app.click('dialog button:has-text("Go back")');
@@ -700,7 +756,7 @@ async function installFakeSerial(context, sim) {
 
     // Closing the window is going back too.
     app = await verContext.newPage();
-    await app.goto('http://localhost:8126/v/6.2/');
+    await app.goto('http://localhost:8126/v/' + NOW + '/');
     await app.click('.welcome .big-button');
     ok(await waitFor(() => mismatch(app).count().then((n) => n === 1), 15000), 'asked again');
     await app.click("dialog .dialog-close");
@@ -710,10 +766,10 @@ async function installFakeSerial(context, sim) {
     await app.close();
 
     // ----- when the versions match, nothing is asked -----
-    sim.firmware.version = '6.2-abcdef0';
-    sim.firmware.versionFull = '6.2.0-stable';
+    sim.firmware.version = '7.0-abcdef0';
+    sim.firmware.versionFull = NOW;
     app = await verContext.newPage();
-    await app.goto('http://localhost:8126/v/6.2/');
+    await app.goto('http://localhost:8126/v/' + NOW + '/');
     await app.click('.welcome .big-button');
     ok(await waitFor(() => loaded(app)), 'the App of the same version docks');
     await sleep(700);
