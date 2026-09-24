@@ -18,6 +18,9 @@
     const THEME_LABELS = { system: 'System Theme', light: 'Light Theme', dark: 'Dark Theme' };
     const DOCS_URL = 'https://github.com/TeamOpenFIRE/OpenFIRE-Firmware/blob/OpenFIRE-dev/OpenFIREmain/README.md';
     const WIKI_URL = 'https://github.com/TeamOpenFIRE/OpenFIRE-Firmware/wiki';
+    // Il firmware di ogni lightgun che parla con questa App viene da qui, RP2040 comprese:
+    // e' questo il repository che ha il commit che la lightgun dichiara con GIT_HASH.
+    const FIRMWARE_REPO = 'https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32';
 
     const storage = {
         get(key) { try { return root.localStorage.getItem(key); } catch (e) { return null; } },
@@ -359,16 +362,25 @@
         updateHeader() {
             const board = this.state.board;
             this.titleNode.textContent = this.state.prettyName(this.titleName, OF.UI.t('Unnamed Device'));
-            const version = board.version || '';
-            const dash = version.indexOf('-');
+            // Due campi, due cose diverse: board.version e' quello corto che la lightgun
+            // manda per primo ("7.0", oppure "7.0-<commit>" quando il firmware e' compilato
+            // con GIT_HASH), board.versionFull e' il numero completo ("7.0.0", "7.0.0-rc1").
+            // Si mostra quello completo; un firmware prima della 7.0 non lo manda e allora
+            // resta il corto, come e' sempre stato.
+            // Il "-stable" dei firmware fino alla 6.2 non si mostra: dalla 7.0 una versione
+            // definitiva e' semplicemente senza suffisso, e cosi' le due si leggono uguali.
+            const short = String(board.version || '');
+            const dash = short.indexOf('-');            // dopo il trattino c'e' il commit
+            const hash = dash > -1 ? short.slice(dash + 1) : '';
+            const number = String(board.versionFull || '').trim().replace(/-stable$/i, '') ||
+                           (dash > -1 ? short.slice(0, dash) : short);
             this.versionNode.textContent = '';
-            if (dash > -1) {
-                const org = this.state.isRP ? 'TeamOpenFIRE' : 'alessandro-satanassi';
-                const hash = version.slice(dash + 1);
-                this.versionNode.append('FW ', OF.UI.el('tt', null, `v${version.slice(0, dash + 1)}`,
-                    OF.UI.el('a', { href: `https://github.com/${org}/OpenFIRE-Firmware/commit/${hash}`, target: '_blank', rel: 'noopener', text: hash })));
-            } else if (version) {
-                this.versionNode.append('FW ', OF.UI.el('tt', { text: `v${version}` }));
+            if (!number) return;
+            if (hash) {
+                this.versionNode.append('FW ', OF.UI.el('tt', null, `v${number}-`,
+                    OF.UI.el('a', { href: `${FIRMWARE_REPO}/commit/${hash}`, target: '_blank', rel: 'noopener', text: hash })));
+            } else {
+                this.versionNode.append('FW ', OF.UI.el('tt', { text: `v${number}` }));
             }
         }
 

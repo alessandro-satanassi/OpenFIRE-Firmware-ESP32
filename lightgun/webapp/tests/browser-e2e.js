@@ -217,6 +217,15 @@ async function installFakeSerial(context, sim) {
     ok(await waitFor(() => loaded(dev)), 'unbundled webapp docks with ?ws');
     ok((await saveLabel(dev)) === '[Nothing To Save]', 'nothing to save after loading');
 
+    // Questa e' una scheda RP2040, ma il firmware e' sempre quello di questo progetto:
+    // il commit deve portare a questo repository, non a quello del progetto originale.
+    ok((await dev.locator('.fw-version').innerText()).replace(/\s+/g, ' ').trim() === 'FW v6.2.0-abcdef0',
+        'RP2040: the header names the complete version too');
+    ok(await dev.locator('.fw-version a').getAttribute('href') ===
+        'https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/commit/abcdef0',
+        'and an RP2040 board links to this very firmware: '
+        + await dev.locator('.fw-version a').getAttribute('href'));
+
     // Board Layout
     ok(await dev.locator('.pin-box[aria-label="GPIO0"]').isDisabled(), 'pin boxes locked while custom pins are off');
     await dev.click('text=Use Custom Pins');
@@ -775,6 +784,45 @@ async function installFakeSerial(context, sim) {
     await sleep(700);
     ok(await mismatch(app).count() === 0, 'and nothing is asked');
     ok(settingsAsked() > 0, 'the settings are read, as always');
+
+    // ----- the header names the complete version, not the short one -----
+    const fwLine = async (page) => (await page.locator('.fw-version').innerText()).replace(/\s+/g, ' ').trim();
+    // La lightgun simulata dichiara "7.0-abcdef0": il numero completo piu' il commit.
+    ok(await fwLine(app) === 'FW v' + NOW + '-abcdef0',
+        'under the board, the version the firmware really is: ' + JSON.stringify(await fwLine(app)));
+
+    // Built with GIT_HASH the commit follows the version, and it is a link.
+    const redock = async () => {
+        // Una finestra aperta (per esempio la discordanza fra versioni) coprirebbe i pulsanti.
+        if (await mismatch(app).count()) await app.click('dialog button:has-text("Carry on")');
+        await waitFor(async () => await mismatch(app).count() === 0);
+        await app.click('.disconnect-button');
+        await waitFor(async () => !(await loaded(app)));
+        await app.click('.welcome .big-button');
+    };
+    sim.firmware.version = '7.0-abc1234';
+    await redock();
+    ok(await waitFor(async () => await fwLine(app) === 'FW v' + NOW + '-abc1234', 15000),
+        'with GIT_HASH the commit goes after the version: ' + JSON.stringify(await fwLine(app)));
+    ok(await app.locator('.fw-version a').getAttribute('href') ===
+        'https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/commit/abc1234',
+        'and the commit links to the repository this firmware comes from: '
+        + await app.locator('.fw-version a').getAttribute('href'));
+
+    // A firmware from before 7.0 says 6.2.0-stable: "stable" is now the absence of a
+    // suffix, so it is not shown - 6.2.0 and 7.0.0 read the same way.
+    sim.firmware.version = '6.2-abcdef0';
+    sim.firmware.versionFull = '6.2.0-stable';
+    await redock();
+    ok(await waitFor(async () => await fwLine(app) === 'FW v6.2.0-abcdef0', 15000),
+        'an older firmware, without the "-stable": ' + JSON.stringify(await fwLine(app)));
+
+    // And one that does not send the complete version at all keeps the short one.
+    sim.firmware.versionFull = '';
+    sim.firmware.version = '6.2';
+    await redock();
+    ok(await waitFor(async () => await fwLine(app) === 'FW v6.2', 15000),
+        'a firmware that does not send it at all: ' + JSON.stringify(await fwLine(app)));
     await app.close();
     await verContext.close();
 
