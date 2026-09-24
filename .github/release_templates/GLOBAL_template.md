@@ -194,8 +194,8 @@ The script will guide you through the installation and automatically search for 
 #### Compatibility
 Compatibility between **lightgun**, **dongle**, and **pedal** is guaranteed using the firmware listed above.
 
-To configure the lightgun (pins, buttons, calibration, name, player, etc.) the **[OpenFIRE App](https://github.com/TeamOpenFIRE/OpenFIRE-App)** is required. 
-You can easily download the most recent pre-compiled binaries for your operating system (Windows, Linux, ARM) directly from our Tools portal:
+To configure the lightgun (pins, buttons, calibration, name, player, etc.) the OpenFIRE App is required. 
+You can easily download the most recent pre-compiled binaries for your operating system (Windows, Linux, ARM, MacOS) directly from our Tools portal:
 👉 **[Download OpenFIRE App from ESP32 Ecosystem](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=en)**
 
 ---
@@ -400,8 +400,8 @@ Lo script ti guiderà nell'installazione e cercherà automaticamente la porta se
 #### Compatibilità
 La compatibilità tra **lightgun**, **dongle** e **pedal** è garantita utilizzando i firmware sopra elencati.
 
-Per configurare la lightgun (pin, pulsanti, calibrazione, nome, player, ecc.) è necessaria l'**[App OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-App)**. 
-Puoi scaricare facilmente gli eseguibili precompilati più recenti per il tuo sistema operativo (Windows, Linux, ARM) direttamente dal nostro portale Tools:
+Per configurare la lightgun (pin, pulsanti, calibrazione, nome, player, ecc.) è necessaria l'App OpenFIRE. 
+Puoi scaricare facilmente gli eseguibili precompilati più recenti per il tuo sistema operativo (Windows, Linux, ARM, MacOS) direttamente dal nostro portale Tools:
 👉 **[Scarica OpenFIRE App dall'Ecosistema ESP32](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=it)**
 
 ---
