@@ -26,7 +26,7 @@
 #define OPENFIRE_VERSION_MAJOR 7
 #define OPENFIRE_VERSION_MINOR 0
 #define OPENFIRE_VERSION_PATCH 0
-#define OPENFIRE_VERSION_SUFFIX ""
+#define OPENFIRE_VERSION_SUFFIX "rc1"
 
 // Deve valere MAJOR.MINOR. E' il primo campo della prima risposta della lightgun,
 // l'unico che la App desktop sa leggere, e per questo resta: non identifica piu'
