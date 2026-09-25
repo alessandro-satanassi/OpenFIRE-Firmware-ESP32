@@ -101,6 +101,11 @@
 html, body {
     height: 100%;
     margin: 0;
+    /* No pull-to-refresh and no overscroll bounce. The App never scrolls the page itself -
+       it scrolls inside .tab-scroll - so the page is always at its top, and on a phone a
+       quick flick downwards makes the browser reload it. Here that means fetching the App
+       again from the lightgun and losing the open session. */
+    overscroll-behavior: none;
 }
 
 body {
