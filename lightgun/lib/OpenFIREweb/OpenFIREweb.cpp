@@ -102,26 +102,92 @@ static DNSServer dnsServer;
 #define WS_RX_BUFFER_SIZE 1024   // a few App frames (max 207 bytes each)
 #define WS_MAX_MESSAGE    512    // larger WebSocket messages are refused
 static uint8_t ws_rx_buffer[WS_RX_BUFFER_SIZE];
-static volatile uint16_t ws_rx_head = 0;   // written by the HTTP server task only
-static volatile uint16_t ws_rx_tail = 0;   // written by the firmware loop only
+// Counters of bytes, not positions: they never wrap back to the start of the buffer,
+// so "is this mark still ahead of what has been read?" is a plain comparison and stays
+// right even when the 32-bit counters roll over (the difference is always < the buffer).
+// The slot in the buffer is the counter modulo its size.
+//
+// Everything the two tasks share goes through the two functions below, and nothing else:
+// that is the whole rule. `volatile` would not be enough. What matters here is that the
+// byte reaches the buffer BEFORE the counter that announces it, and that the byte is read
+// BEFORE its slot is released - and the buffer is an ordinary array, which the compiler is
+// free to move around a volatile access. GCC says so in as many words: a volatile object
+// cannot be used as a memory barrier to order writes to non-volatile memory. It is not a
+// theoretical freedom: with volatile counters, GCC 13 on x86-64 at -O2 emits the store to
+// the counter BEFORE the store of the byte, and the load of the byte AFTER the slot has
+// been released - and nothing in the language stops the compiler for this target from
+// doing the same. A publish/read pair with release/acquire says what is meant, and the
+// compiler keeps it.
+//
+// Only whole aligned words are published, and only with plain loads and stores: never a
+// read-modify-write, which on this target could turn into a library call with a lock
+// inside. To check that none is left:
+//   xtensa-esp32s3-elf-nm <build>/OpenFIREweb.cpp.o | grep __atomic
+// Nothing listed means the compiler inlined them all. (Do not assert it with
+// __atomic_always_lock_free(4, 0): with a null pointer it answers for the target's typical
+// alignment, and it answers about lock-free atomic operations in general - not only the
+// plain loads and stores used here. On this toolchain it answers no, so the assertion just
+// breaks the build without saying anything about this code: read the object file instead.)
 
-// Socket of the current App page (-1 = none). Changed only in the server task.
-static volatile int ws_client_fd = -1;
+// Widths are spelled out on purpose: int32_t and uint32_t, never a bare int.
+// On this target int is already 32 bits wide, so int32_t is its exact equivalent and
+// nothing here was narrowed; the explicit spelling only says out loud how wide the
+// value is, which matters for the shared counters above. Where a type is imposed from
+// outside - SerialOps, an ESP-IDF callback, a printf format - it is left as it is and
+// the conversion is written on the spot, so it is visible instead of implied.
 
-// Set by the server task, consumed by the firmware loop.
-static volatile bool ws_client_lost = false;     // the page that owned the session is gone
+// Read a value the other task may be publishing right now.
+static inline uint32_t sharedGet(const uint32_t *value) {
+    return __atomic_load_n(value, __ATOMIC_ACQUIRE);
+}
+static inline int32_t sharedGet(const int32_t *value) {
+    return __atomic_load_n(value, __ATOMIC_ACQUIRE);
+}
+// Publish a value for the other task, after whatever it announces is already in place.
+// Two plain overloads and not one template: the type the pointer points at picks the
+// function, and the value converts to it. A template would have to deduce the same type
+// from both, and uint32_t is not spelled the same everywhere - unsigned long here,
+// unsigned int elsewhere - so a literal written one way would stop matching.
+static inline void sharedPublish(uint32_t *value, uint32_t now) {
+    __atomic_store_n(value, now, __ATOMIC_RELEASE);
+}
+static inline void sharedPublish(int32_t *value, int32_t now) {
+    __atomic_store_n(value, now, __ATOMIC_RELEASE);
+}
+
+static uint32_t ws_rx_written = 0;   // written by the HTTP server task only
+static uint32_t ws_rx_read = 0;      // written by the firmware loop only
+
+// Socket of the current App page (-1 = none). Changed in the server task, read by the
+// sender in the firmware loop as well, so it follows the same rule as everything else.
+// The server takes it as a plain int, so it is converted back where it is handed over.
+static int32_t ws_client_fd = -1;
+
+// Set by the server task, consumed by the firmware loop (0 = no, 1 = yes).
+static uint32_t ws_client_lost = 0;     // the page that owned the session is gone
 // A page that simply closed (no new page taking over) is reported only once what it
 // sent has been read: its last request - the reboot to the bootloader, for instance -
 // is still in the buffer, and ending the session first would throw it away.
-static volatile bool ws_client_closed = false;   // the page closed, nobody replaced it
-static volatile uint32_t ws_client_closed_at = 0;
+static uint32_t ws_client_closed = 0;   // the page closed, nobody replaced it
+static uint32_t ws_client_closed_at = 0;
 #define WS_CLOSE_DRAIN_MS 250                    // ...at the latest (an unfinished frame)
-static volatile bool ws_flush_request = false;   // drop bytes left by a previous page
-static volatile uint16_t ws_flush_to = 0;        // ...up to here: what the new page sent is kept
+// A new page asks for the bytes left by the previous one to be dropped. The request
+// carries its own number instead of a flag to be cleared: reading the number means the
+// mark published with it is in place too, and a request arriving while this one is being
+// handled keeps a number of its own, so it cannot be swallowed. A flag would have to be
+// cleared, and the clear can land after a newer request without ever having seen it -
+// leaving the flag down and that request lost.
+static uint32_t ws_flush_seq = 0;       // published by the HTTP server task
+static uint32_t ws_flush_to = 0;        // ...up to here: what the new page sent is kept
+static uint32_t ws_flush_done = 0;      // what the firmware loop has already applied (its own)
 
 // Counters of http://<gun>/status (diagnosis of the link with the App page).
 // Plain counters: only read for the diagnosis, an exact count is not needed
 // (C++20 deprecates ++ on a volatile).
+// The first three are written and read in the server task alone. The last three are
+// written in the firmware loop and read by /status in the server task, so they are
+// published like everything else: an exact count is not needed, but the accesses still
+// have to be proper ones.
 static uint32_t ws_stat_handshakes = 0;  // pages that opened the WebSocket
 static uint32_t ws_stat_rx = 0;          // bytes received from the page
 static uint32_t ws_stat_dropped = 0;     // bytes discarded (buffer full, or not the current page)
@@ -129,30 +195,49 @@ static uint32_t ws_stat_tx = 0;          // bytes sent to the page
 static uint32_t ws_stat_tx_failed = 0;   // sends the server refused
 static uint32_t ws_stat_flushed = 0;     // bytes dropped when a new page arrived
 
+// The request is published by the server task in two steps (the mark, then its number) and
+// consumed here in several more: the two tasks can interleave, so this must not rely on the
+// number and the mark being written together. It does not. The number is read first, and it
+// is published after the mark, so the mark that belongs to it is already in place. The mark
+// is then applied only while it is still ahead of what has been read, so an older request
+// can only ask to drop bytes that are already gone, which is nothing at all. A request
+// arriving while this runs carries a number of its own, so the next call sees it rather
+// than losing it - which is what a flag to be cleared could not guarantee.
+// Moving the read counter backwards would hand the same byte to the protocol twice.
 static void ws_handle_flush() {
-    if (ws_flush_request) {
-        ws_flush_request = false;
-        const uint16_t mark = ws_flush_to;
-        ws_stat_flushed += (WS_RX_BUFFER_SIZE + mark - ws_rx_tail) % WS_RX_BUFFER_SIZE;
-        ws_rx_tail = mark;
+    const uint32_t seq = sharedGet(&ws_flush_seq);
+    if (seq == ws_flush_done) return;
+    // The number is published after the mark, so reading it means the mark is in place.
+    const uint32_t mark = sharedGet(&ws_flush_to);
+    ws_flush_done = seq;
+    const uint32_t alreadyRead = sharedGet(&ws_rx_read);
+    if ((int32_t)(mark - alreadyRead) > 0) {
+        sharedPublish(&ws_stat_flushed, sharedGet(&ws_stat_flushed) + (mark - alreadyRead));
+        sharedPublish(&ws_rx_read, mark);
     }
 }
 
+// available() and read() answer with a plain int because that is what SerialOps declares,
+// following the Arduino Stream convention (-1 = nothing there). Not our choice to make.
 static int ws_available() {
     ws_handle_flush();
-    return (WS_RX_BUFFER_SIZE + ws_rx_head - ws_rx_tail) % WS_RX_BUFFER_SIZE;
+    const uint32_t alreadyRead = sharedGet(&ws_rx_read);
+    return (int)(sharedGet(&ws_rx_written) - alreadyRead);
 }
 
 static int ws_read() {
     ws_handle_flush();
-    if (ws_rx_head == ws_rx_tail) return -1;
-    uint8_t c = ws_rx_buffer[ws_rx_tail];
-    ws_rx_tail = (ws_rx_tail + 1) % WS_RX_BUFFER_SIZE;
+    // Snapshot the counter: this task is its only writer. The slot is released only
+    // after the byte has been taken out of it.
+    const uint32_t alreadyRead = sharedGet(&ws_rx_read);
+    if (sharedGet(&ws_rx_written) == alreadyRead) return -1;
+    uint8_t c = ws_rx_buffer[alreadyRead % WS_RX_BUFFER_SIZE];
+    sharedPublish(&ws_rx_read, alreadyRead + 1);
     return c;
 }
 
 static size_t ws_writeBuf(const uint8_t* buf, size_t size) {
-    const int fd = ws_client_fd;
+    const int32_t fd = sharedGet(&ws_client_fd);
     if (!web_server || fd < 0) return 0;
 
     httpd_ws_frame_t ws_pkt;
@@ -161,11 +246,11 @@ static size_t ws_writeBuf(const uint8_t* buf, size_t size) {
     ws_pkt.payload = (uint8_t*)buf;
     ws_pkt.len = size;
 
-    if (httpd_ws_send_data(web_server, fd, &ws_pkt) != ESP_OK) {
-        ws_stat_tx_failed++;
+    if (httpd_ws_send_data(web_server, (int)fd, &ws_pkt) != ESP_OK) {
+        sharedPublish(&ws_stat_tx_failed, sharedGet(&ws_stat_tx_failed) + 1u);
         return 0;
     }
-    ws_stat_tx += size;
+    sharedPublish(&ws_stat_tx, sharedGet(&ws_stat_tx) + (uint32_t)size);
     return size;
 }
 
@@ -179,11 +264,16 @@ static void ws_flush() {
 
 static size_t ws_readBytes(char* buf, size_t size) {
     size_t count = 0;
-    unsigned long startMillis = millis();
+    const uint32_t startMillis = (uint32_t)millis();
     // 1000 ms timeout, emulating the standard Arduino Serial behaviour.
-    while (count < size && (millis() - startMillis < 1000)) {
+    while (count < size && ((uint32_t)millis() - startMillis < 1000u)) {
         if (ws_available() > 0) {
-            buf[count++] = (char)ws_read();
+            // A byte counted a moment ago can still fail to arrive: ws_read() handles a
+            // pending flush first, and a page that has just taken over can carry the read
+            // counter past it. Storing that -1 would invent a 0xFF that nobody sent.
+            const int32_t incoming = ws_read();
+            if (incoming >= 0)
+                buf[count++] = (char)incoming;
         } else {
             vTaskDelay(pdMS_TO_TICKS(1));
         }
@@ -197,21 +287,23 @@ static constexpr OF_WebSerialWrapper::SerialOps websocketOps = {
 
 bool WebApp_TakeClientLost() {
     // A new page took over: immediate, its predecessor has nothing left to say.
-    if (ws_client_lost) {
-        ws_client_lost = false;
-        ws_client_closed = false;
+    if (sharedGet(&ws_client_lost)) {
+        sharedPublish(&ws_client_lost, 0u);
+        sharedPublish(&ws_client_closed, 0u);
         return true;
     }
-    if (!ws_client_closed) return false;
-    // The page just closed: let the firmware read what it sent before leaving.
-    if (ws_available() > 0 && (uint32_t)(millis() - ws_client_closed_at) < WS_CLOSE_DRAIN_MS)
+    if (!sharedGet(&ws_client_closed)) return false;
+    // The page just closed: let the firmware read what it sent before leaving. Reading the
+    // flag set means the time of that close is in place too.
+    if (ws_available() > 0 &&
+        (uint32_t)(millis() - sharedGet(&ws_client_closed_at)) < WS_CLOSE_DRAIN_MS)
         return false;
-    ws_client_closed = false;
+    sharedPublish(&ws_client_closed, 0u);
     return true;
 }
 
 bool WebApp_ClientLostPending() {
-    return ws_client_lost || ws_client_closed;
+    return sharedGet(&ws_client_lost) || sharedGet(&ws_client_closed);
 }
 
 void WebApp_RadioState(uint8_t *channel, uint8_t *powerSave) { // DA TOGLIERE
@@ -291,7 +383,7 @@ static esp_err_t status_get_handler(httpd_req_t *req) {
     char body[400];
     uint8_t radioChannel = 0, radioPowerSave = 0;
     WebApp_RadioState(&radioChannel, &radioPowerSave); // DA TOGLIERE
-    const int length = snprintf(body, sizeof(body),
+    const int32_t length = snprintf(body, sizeof(body),
         "{\"webConfig\":%d,\"docked\":%d,\"link\":\"%s\",\"wsClient\":%d,"
         "\"handshakes\":%u,\"rx\":%u,\"tx\":%u,\"txFailed\":%u,\"dropped\":%u,\"flushed\":%u,"
         "\"pending\":%d,"
@@ -301,33 +393,42 @@ static esp_err_t status_get_handler(httpd_req_t *req) {
         OF_WebConfigModeActive ? 1 : 0,
         OF_Serial::AppSerialSessionIsActive() ? 1 : 0,
         WebAppSerial::IsWebSocket() ? "ws" : "serial",
-        ws_client_fd,
-        (unsigned)ws_stat_handshakes, (unsigned)ws_stat_rx, (unsigned)ws_stat_tx,
-        (unsigned)ws_stat_tx_failed, (unsigned)ws_stat_dropped, (unsigned)ws_stat_flushed,
-        (int)((WS_RX_BUFFER_SIZE + ws_rx_head - ws_rx_tail) % WS_RX_BUFFER_SIZE), // without consuming a pending flush
+        (int)sharedGet(&ws_client_fd),
+        (unsigned)ws_stat_handshakes, (unsigned)ws_stat_rx, (unsigned)sharedGet(&ws_stat_tx),
+        (unsigned)sharedGet(&ws_stat_tx_failed), (unsigned)ws_stat_dropped,
+        (unsigned)sharedGet(&ws_stat_flushed),
+        (int)(sharedGet(&ws_rx_written) - sharedGet(&ws_rx_read)), // without consuming a pending flush
         (unsigned)radioChannel, (unsigned)radioPowerSave,
         (unsigned long)millis());
+    // snprintf returns the length the text WOULD have had: should the diagnosis ever
+    // outgrow the buffer, sending that number would read past it and put whatever the
+    // stack holds on the wire. Send what was actually written. Nothing changes as long
+    // as it fits, which today it does with room to spare.
+    const size_t sent = (length > 0)
+        ? ((size_t)length < sizeof(body) ? (size_t)length : sizeof(body) - 1)
+        : 0;
     httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Cache-Control", "no-store");
-    return httpd_resp_send(req, body, length > 0 ? length : 0);
+    return httpd_resp_send(req, body, sent);
 }
 
 // A new App page owns the link: the previous one (if any) is closed and its
 // session abandoned, and the bytes received so far are dropped (not the ones of
 // this page, which arrive after the mark).
-static void ws_adopt_client(int fd) {
-    const int previous = ws_client_fd;
+static void ws_adopt_client(int32_t fd) {
+    const int32_t previous = sharedGet(&ws_client_fd);
     ws_stat_handshakes++;
-    ws_client_fd = fd;
+    sharedPublish(&ws_client_fd, fd);
     if (previous >= 0 && previous != fd)
-        httpd_sess_trigger_close(web_server, previous);
-    ws_flush_to = ws_rx_head;
-    ws_flush_request = true;
-    ws_client_lost = true;
+        httpd_sess_trigger_close(web_server, (int)previous);
+    // The mark first, its number after: the loop reads the number and knows the mark is there.
+    sharedPublish(&ws_flush_to, sharedGet(&ws_rx_written));
+    sharedPublish(&ws_flush_seq, sharedGet(&ws_flush_seq) + 1u);
+    sharedPublish(&ws_client_lost, 1u);
 }
 
 static esp_err_t ws_handler(httpd_req_t *req) {
-    const int fd = httpd_req_to_sockfd(req);
+    const int32_t fd = httpd_req_to_sockfd(req);
 
     // Handshake of a new page. Some esp_http_server versions do not report it
     // here: the first message of an unknown socket (below) does the same.
@@ -353,14 +454,16 @@ static esp_err_t ws_handler(httpd_req_t *req) {
 
     // 2. Receive the data, 3. queue it: a message from another socket is a new page
     ret = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);
-    if (ret == ESP_OK && fd != ws_client_fd)
+    if (ret == ESP_OK && fd != sharedGet(&ws_client_fd))
         ws_adopt_client(fd);
-    if (ret == ESP_OK && fd == ws_client_fd) {
+    if (ret == ESP_OK && fd == sharedGet(&ws_client_fd)) {
         for (size_t i = 0; i < ws_pkt.len; i++) {
-            uint16_t next_head = (ws_rx_head + 1) % WS_RX_BUFFER_SIZE;
-            if (next_head != ws_rx_tail) { // if there is room / se c'è spazio
-                ws_rx_buffer[ws_rx_head] = buf[i];
-                ws_rx_head = next_head;
+            // Snapshot the counter: this task is its only writer. The byte is announced
+            // only after it is in the buffer.
+            const uint32_t alreadyWritten = sharedGet(&ws_rx_written);
+            if (alreadyWritten - sharedGet(&ws_rx_read) < WS_RX_BUFFER_SIZE) { // if there is room / se c'è spazio
+                ws_rx_buffer[alreadyWritten % WS_RX_BUFFER_SIZE] = buf[i];
+                sharedPublish(&ws_rx_written, alreadyWritten + 1);
                 ws_stat_rx++;
             } else ws_stat_dropped++;
         }
@@ -373,10 +476,15 @@ static esp_err_t ws_handler(httpd_req_t *req) {
 
 // Called by the server for every closed socket; it must close the socket itself.
 static void web_close_fn(httpd_handle_t hd, int sockfd) {
-    if (sockfd == ws_client_fd) {
-        ws_client_fd = -1;
-        ws_client_closed = true;
-        ws_client_closed_at = millis();
+    if ((int32_t)sockfd == sharedGet(&ws_client_fd)) {
+        sharedPublish(&ws_client_fd, -1);
+        // The time first, the flag second. The firmware loop reads the time as soon as
+        // it sees the flag, to decide how long to wait for the last bytes of the page;
+        // catching the flag before the time was written, it would use the time of some
+        // earlier close, find the wait long over, and drop what the page just sent -
+        // its request to reboot into flashing mode, for instance.
+        sharedPublish(&ws_client_closed_at, (uint32_t)millis());
+        sharedPublish(&ws_client_closed, 1u);
     }
     close(sockfd);
 }
