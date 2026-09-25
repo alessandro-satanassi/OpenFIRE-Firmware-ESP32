@@ -71,7 +71,7 @@
 
 #endif // USES_DISPLAY
 
-#include "OpenFIRE-DONGLE-version.h"
+//#include "OpenFIRE-DONGLE-version.h"
 
 bool display_init = false;
 

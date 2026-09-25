@@ -16,7 +16,7 @@
 
 #include "TinyUSB_Devices.h"
 
-#include "OpenFIRE-PEDAL-version.h"
+//#include "OpenFIRE-PEDAL-version.h"
 
 // ===================================================================================
 // HARDWARE STATE & CONFIGURATION
