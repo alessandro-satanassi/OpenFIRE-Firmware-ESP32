@@ -379,6 +379,18 @@ static esp_err_t app_js_get_handler(httpd_req_t *req) {
 }
 
 // http://<gun>/status: state of the link with the App page (diagnosis, no secrets).
+//
+// "docked" and "link" are the only two values here that are not published: they are read
+// straight from the firmware loop's own variables (appSerialSessionActive, and the link
+// WebAppSerial::Use() selects), which it writes without synchronising. That is left as it
+// is, on purpose. Both are a single byte, so a read can never see anything but one of
+// their valid values - but they are read one after the other, so this page can show a
+// combination that never existed in one instant, such as docked=1 with link="serial"
+// while a page is docking. Nothing else follows from it: the two values are printed here
+// and nowhere else, and everything that the protocol actually acts on is published
+// properly. Making them agree would mean publishing a snapshot from the firmware loop,
+// which is a new path between tasks - more machinery, and more to get wrong, than two
+// diagnostic fields being a step apart during a handover are worth.
 static esp_err_t status_get_handler(httpd_req_t *req) {
     char body[400];
     uint8_t radioChannel = 0, radioPowerSave = 0;
