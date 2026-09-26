@@ -325,12 +325,15 @@ void WebApp_RadioState(uint8_t *channel, uint8_t *powerSave) { // DA TOGLIERE
 // =================================================================================================
 // --- HTTP SERVER / SERVER HTTP ---
 
-// Captive portal: every unknown URL (OS connectivity checks included) goes to the App page.
+// Wi-Fi captive portal: send connectivity checks to a small welcome page, not the App.
+// Some captive-portal windows reload the App while scrolling. Keep the App itself
+// unchanged and recommend opening it in a normal browser. USB keeps its old target.
 // The socket is closed right after the redirect: phones repeat these checks every few
 // seconds and their idle connections would otherwise use up the server's sockets
 // (and the App WebSocket would be the one closed to make room).
 static esp_err_t captive_portal_handler(httpd_req_t *req, httpd_err_code_t error) {
-    const char *location = "http://192.168.4.1/";
+    const char *location = "http://192.168.4.1/welcome";
+    // Previous Wi-Fi target: "http://192.168.4.1/" (App inside the captive window).
     #ifdef OPENFIRE_USB_NCM
     // A request received over USB must not be redirected to the Wi-Fi address.
     struct sockaddr_storage local = {};
@@ -356,6 +359,55 @@ static esp_err_t captive_portal_handler(httpd_req_t *req, httpd_err_code_t error
     if (web_server)
         httpd_sess_trigger_close(web_server, httpd_req_to_sockfd(req));
     return ESP_OK;
+}
+
+// A self-contained Wi-Fi welcome page: no App assets, JavaScript or WebSocket.
+// The user accepts the network in the phone's menu, then opens a normal browser.
+// No link: captive windows may keep navigation inside their limited browser.
+static esp_err_t welcome_get_handler(httpd_req_t *req) {
+    static const char page[] = R"HTML(<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenFIRE ESP32</title>
+<link rel="icon" href="data:,">
+<style>
+body{margin:0;padding:20px 16px;font:16px/1.5 system-ui,sans-serif;text-align:center;color:#c5ccd6;background:#14161b}
+main{max-width:28rem;margin:auto}
+.logo{display:block;width:52px;height:52px;margin:0 auto 12px}
+h1{font-size:1.5rem;line-height:1.25;margin:0 0 18px;color:#fff}
+.accent{color:#2fa6e4}
+p{margin:0}
+p+p{margin-top:16px;padding-top:16px;border-top:1px solid #343b46}
+strong{color:#fff}
+</style>
+</head>
+<body><main>
+<svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90.691 90.691" aria-hidden="true" focusable="false">
+<rect width="90.691" height="90.691" ry="9.6" fill="#2a2a2a"/>
+<g transform="translate(2,2)">
+<path fill="#fff" d="M86.6 40H81.3C79.6 22.2 65.4 7.9 47.6 6.3V0h-7V6.1C22.8 7.9 8.5 22.1 6.9 40h-7v7h7c1.7 17.8 15.9 32.1 33.7 33.7v5.6h7V80.7C65.4 79 79.7 64.8 81.3 47h5.3zm-72.9 3.5c0-16.8 13.6-30.4 30.4-30.4 16.8 0 28.4 11.8 30.2 26.9H40.6V73.7C25.5 72 13.7 59.1 13.7 43.5ZM47.6 73.6V60.9H59.8V55.2H47.6V46.9H74.3C72.7 60.9 61.6 72 47.6 73.6Z"/>
+<g fill="#ed1a3b">
+<circle cx="24.9" cy="49" r="3.1"/><circle cx="34" cy="49" r="3.1"/>
+<circle cx="24.9" cy="57.8" r="3.1"/><circle cx="34" cy="57.8" r="3.1"/>
+</g>
+<path fill="#00b3f0" d="M44.3 20.2C33 20.2 23.6 28.7 22.2 39.7h4.7c1.3-8.4 8.6-14.9 17.4-14.9 8.8 0 9.1 1.8 12.5 5.2l3.3-3.3C55.9 22.5 50.3 20.2 44.4 20.2Z"/>
+</g>
+</svg>
+<h1>OpenFIRE <span class="accent">ESP32</span></h1>
+<p lang="en">Accept this network, then open your browser and enter <strong>openfire.local</strong> or <strong>192.168.4.1</strong></p>
+<p lang="it">Accetta questa rete, poi apri il browser e digita <strong>openfire.local</strong> oppure <strong>192.168.4.1</strong></p>
+</main></body>
+</html>)HTML";
+
+    httpd_resp_set_type(req, "text/html; charset=utf-8");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+    httpd_resp_set_hdr(req, "Connection", "close");
+    const esp_err_t result = httpd_resp_send(req, page, sizeof(page) - 1);
+    if (web_server)
+        httpd_sess_trigger_close(web_server, httpd_req_to_sockfd(req));
+    return result;
 }
 
 static esp_err_t send_gzip(httpd_req_t *req, const char *type, const uint8_t *data, size_t len) {
@@ -502,6 +554,7 @@ static void web_close_fn(httpd_handle_t hd, int sockfd) {
 }
 
 static const httpd_uri_t uri_index = { .uri = "/", .method = HTTP_GET, .handler = index_get_handler, .user_ctx = NULL };
+static const httpd_uri_t uri_welcome = { .uri = "/welcome", .method = HTTP_GET, .handler = welcome_get_handler, .user_ctx = NULL };
 static const httpd_uri_t uri_style = { .uri = "/style.css", .method = HTTP_GET, .handler = style_get_handler, .user_ctx = NULL };
 static const httpd_uri_t uri_app   = { .uri = "/app.js", .method = HTTP_GET, .handler = app_js_get_handler, .user_ctx = NULL };
 static const httpd_uri_t uri_status = { .uri = "/status", .method = HTTP_GET, .handler = status_get_handler, .user_ctx = NULL };
@@ -607,6 +660,7 @@ void WebApp_Init() {
 
     if (httpd_start(&web_server, &config) == ESP_OK) {
         httpd_register_uri_handler(web_server, &uri_index);
+        httpd_register_uri_handler(web_server, &uri_welcome);
         httpd_register_uri_handler(web_server, &uri_style);
         httpd_register_uri_handler(web_server, &uri_app);
         httpd_register_uri_handler(web_server, &uri_status);
