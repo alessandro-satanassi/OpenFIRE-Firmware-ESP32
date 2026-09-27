@@ -152,7 +152,8 @@ private:
     static int ReadPAJ7025Basic();
     static int ReadPAJ7025Extended();
     static void DataFormatPAJ7025(DataFormat_e format);
-    static void SensitivityPAJ7025(uint8_t sensitivity);
+    static void SensitivityPAJ7025R2(uint8_t sensitivity);
+    static void SensitivityPAJ7025R3(uint8_t sensitivity);
     static void EndPAJ7025();
 };
 

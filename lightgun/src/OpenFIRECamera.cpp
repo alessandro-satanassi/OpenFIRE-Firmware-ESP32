@@ -81,12 +81,23 @@ bool OpenFIRECamera::Select() {
         DFRobotExtendedCapabilities
     };
 
-    static const CameraOps PAJ7025Ops = {
+    // R2 and R3 share the same backend; only the sensitivity presets differ.
+    static const CameraOps PAJ7025R2Ops = {
         &OpenFIRECamera::BeginPAJ7025,
         &OpenFIRECamera::ReadPAJ7025Basic,
         &OpenFIRECamera::ReadPAJ7025Extended,
         &OpenFIRECamera::DataFormatPAJ7025,
-        &OpenFIRECamera::SensitivityPAJ7025,
+        &OpenFIRECamera::SensitivityPAJ7025R2,
+        &OpenFIRECamera::EndPAJ7025,
+        PAJ7025ExtendedCapabilities
+    };
+
+    static const CameraOps PAJ7025R3Ops = {
+        &OpenFIRECamera::BeginPAJ7025,
+        &OpenFIRECamera::ReadPAJ7025Basic,
+        &OpenFIRECamera::ReadPAJ7025Extended,
+        &OpenFIRECamera::DataFormatPAJ7025,
+        &OpenFIRECamera::SensitivityPAJ7025R3,
         &OpenFIRECamera::EndPAJ7025,
         PAJ7025ExtendedCapabilities
     };
@@ -110,11 +121,11 @@ bool OpenFIRECamera::Select() {
             break;
         case OF_Const::PixArt_PAJ7025R2:
             activeProfile = &OpenFIRE_CameraProfiles::PixArt_PAJ7025R2;
-            activeOps = &PAJ7025Ops;
+            activeOps = &PAJ7025R2Ops;
             break;
         case OF_Const::PixArt_PAJ7025R3:
             activeProfile = &OpenFIRE_CameraProfiles::PixArt_PAJ7025R3;
-            activeOps = &PAJ7025Ops;
+            activeOps = &PAJ7025R3Ops;
             break;
         default:
             activeProfile = nullptr;
@@ -484,7 +495,8 @@ bool OpenFIRECamera::BeginPAJ7025(uint8_t sensitivity) {
 
     pajCamera->setFrameRate(activeProfile->fps);
     pajCamera->setExposure(300);
-    SensitivityPAJ7025(sensitivity);
+    // Use the selected model's preset also at startup, before ready is set.
+    activeOps->sensitivity(sensitivity);
     pajCamera->setResolution((uint16_t)activeProfile->camMaxX, (uint16_t)activeProfile->camMaxY);
 
     activeX = pajX;
@@ -554,7 +566,7 @@ void OpenFIRECamera::DataFormatPAJ7025(DataFormat_e format) {
     // PAJ7025 format is selected directly by the bound read function.
 }
 
-void OpenFIRECamera::SensitivityPAJ7025(uint8_t sensitivity) {
+void OpenFIRECamera::SensitivityPAJ7025R2(uint8_t sensitivity) {
     if (pajCamera == nullptr) return;
     
     if (sensitivity == 0U) {
@@ -568,6 +580,25 @@ void OpenFIRECamera::SensitivityPAJ7025(uint8_t sensitivity) {
     else {
         pajCamera->setGain(0x10, 0x03);
         pajCamera->setDSP(1, 150, 300, 60);
+    }
+}
+
+void OpenFIRECamera::SensitivityPAJ7025R3(uint8_t sensitivity) {
+    if (pajCamera == nullptr) return;
+
+    // Initial R3 presets to validate on hardware, keeping 300 us exposure.
+    // setDSP arguments: minimum area, brightness threshold, maximum area, noise threshold.
+    if (sensitivity == 0U) {
+        pajCamera->setGain(0x10, 0x02); // 4x
+        pajCamera->setDSP(1, 130, 150, 40);
+    }
+    else if (sensitivity == 1U) {
+        pajCamera->setGain(0x08, 0x03); // 6x
+        pajCamera->setDSP(1, 130, 200, 50);
+    }
+    else {
+        pajCamera->setGain(0x10, 0x03); // 8x
+        pajCamera->setDSP(1, 130, 300, 60);
     }
 }
 
