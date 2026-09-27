@@ -6,9 +6,9 @@
 
 # Lightgun Firmware (ESP32-S3) - NEWS
 
-## OpenFIRE ESP32 - ver 7.0.0 Release Candidate 1 (RC1)
+## OpenFIRE ESP32 - ver 7.0.0 Release Candidate 2 (RC2)
 
-The OpenFIRE core remains practically unchanged and guarantees total compatibility (100%), however, the surrounding ecosystem has undergone a profound technical revision. This 7.0.0 RC1 replaces the current stable version 6.2.1. 
+The OpenFIRE core remains practically unchanged and guarantees total compatibility (100%), however, the surrounding ecosystem has undergone a profound technical revision. This 7.0.0 RC2 replaces the current stable version 6.2.1. 
 
 The new features introduced are detailed below.
 
@@ -22,12 +22,12 @@ The new features introduced are detailed below.
 
 > **WARNING - IR LED Selection:** 
 > For DFRobot / Wii Cam cameras, it is necessary to use 940nm IR LEDs. 
-> For PixArt PAJ7025R2 and R3 sensors, the use of 850nm IR LEDs is strictly required. Although PixArt sensors can detect 940nm LEDs if they have high power, they are components specifically designed for the 850nm wavelength. Using different frequencies will significantly degrade the tracking quality and the maximum operational distance.
+> For PixArt PAJ7025R2 and R3 sensors, the use of 850nm IR LEDs is required. Although PixArt sensors can detect 940nm LEDs if they have high power, they are components specifically designed for the 850nm wavelength. Using different frequencies will significantly degrade the tracking quality and the maximum operational distance.
 
 *   **Realistic visualization:** The camera test and calibration interface (both on the microcontroller display and on the App) has been slightly modified. The image is now more proportioned and faithful to the real geometry.
 
 ### Transition to the Integrated WebApp
-This release introduces a structural change in the configuration interface. The Qt-based desktop configuration App has been updated (implementing the new protocol, multi-cam support, and the wireless pedal), but for the OpenFIRE ESP32 project, it is now to be considered "Legacy". 
+This release introduces a structural change in the configuration interface. The Qt-based desktop configuration App has been updated (implementing the new protocol, multi-cam support, and the wireless pedal https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/), but for the OpenFIRE ESP32 project, it is now to be considered "Legacy". 
 
 The new official configuration tool is a **WebApp** built from scratch. The interface replicates the Qt App 1:1 in layout and functionality, eliminating the need to download or install any software on the PC.
 *   **Online Configuration:** By accessing the dedicated web portal, the system automatically identifies the firmware version installed on the lightgun and launches the correct instance of the WebApp (https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/).
@@ -45,7 +45,7 @@ The new official configuration tool is a **WebApp** built from scratch. The inte
 *   Various minor bugfixes and source code optimizations have been implemented.
 *   **Central Hub:** A unified web portal has been published that gathers the entire OpenFIRE ESP32 ecosystem, available at: https://alessandro-satanassi.github.io/OpenFIRE-ESP32/
 
-Given the extent and depth of the modifications made to the code, we kindly ask you to thoroughly test this RC1 and report any anomalies or suggestions before the release of the stable version ("Stable"). 
+Given the extent and depth of the modifications made to the code, we kindly ask you to thoroughly test this RC2 and report any anomalies or suggestions before the release of the stable version ("Stable"). 
 
 **A clean installation (Erase Flash) is highly recommended**. Although the configuration files of previous versions are theoretically compatible and tend to align after the first saves, starting from a clean memory prevents potential conflicts.
 
@@ -63,7 +63,7 @@ System behavior varies depending on how the lightgun is connected:
 
 **1. Connection via DONGLE (Wireless)**
 *   If booted in this mode without a USB cable, the lightgun will scan the network channels waiting to pair with an available Dongle. This is essential to test "in-game" tracking even in *undocked* mode.
-*   **WebApp Access:** Done via the Wi-Fi Access Point exposed directly by the microcontroller, named `"OpenFIRE_Config"` (IP: `192.168.4.1`). By connecting to this network (even from a smartphone), the WebApp should open automatically in your browser.
+*   **WebApp Access:** Done via the Wi-Fi Access Point exposed directly by the microcontroller, named `"OpenFIRE_Config"` (IP: `192.168.4.1`). Connecting to this network (even from a smartphone) automatically opens a welcome page with instructions for connecting to the WebApp.
 *   **Functionality:** The system is fully operational. Since the virtual serial port remains active, the use of Mamehooker is also supported.
 *   *Technical note:* With the serial port active, you could also use the online WebApp via Web Serial API at [OpenFIRE-ESP32-WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/). However, the "Button B" mode is specifically designed to provide an alternative when no internet connection is available.
 
@@ -90,9 +90,9 @@ Once the parameters are configured and saved, it is highly recommended to reboot
 
 # Lightgun Firmware (ESP32-S3) - NOVITÀ
 
-## OpenFIRE ESP32 - ver 7.0.0 Release Candidate 1 (RC1)
+## OpenFIRE ESP32 - ver 7.0.0 Release Candidate 2 (RC2)
 
-Il core di OpenFIRE rimane praticamente invariato e garantisce una compatibilità totale (100%), tuttavia l'ecosistema circostante è stato sottoposto a una profonda revisione tecnica. Questa 7.0.0 RC1 va a sostituire l'attuale versione stabile 6.2.1. 
+Il core di OpenFIRE rimane praticamente invariato e garantisce una compatibilità totale (100%), tuttavia l'ecosistema circostante è stato sottoposto a una profonda revisione tecnica. Questa 7.0.0 RC2 va a sostituire l'attuale versione stabile 6.2.1. 
 
 Di seguito vengono dettagliate le novità introdotte.
 
@@ -106,12 +106,12 @@ Di seguito vengono dettagliate le novità introdotte.
 
 > **ATTENZIONE - Scelta dei LED IR:** 
 > Per le telecamere DFRobot / Wii Cam è necessario utilizzare LED IR da 940nm. 
-> Per i sensori PixArt PAJ7025R2 e R3 è tassativo l'uso di LED IR da 850nm. Sebbene i sensori PixArt riescano a rilevare LED da 940nm se dotati di potenza elevata, si tratta di componenti progettati specificamente per la lunghezza d'onda di 850nm. L'utilizzo di frequenze diverse degraderà in modo significativo la qualità del tracking e la massima distanza operativa.
+> Per i sensori PixArt PAJ7025R2 e R3 è necessario l'uso di LED IR da 850nm. Sebbene i sensori PixArt riescano a rilevare LED da 940nm se dotati di potenza elevata, si tratta di componenti progettati specificamente per la lunghezza d'onda di 850nm. L'utilizzo di frequenze diverse degraderà in modo significativo la qualità del tracking e la massima distanza operativa.
 
 *   **Visualizzazione realistica:** L'interfaccia di test della telecamera e della calibrazione (sia sul display del microcontrollore che sull'App) è stata leggermente modificata. L'immagine risulta ora più proporzionata e fedele alla geometria reale.
 
 ### Transizione alla WebApp Integrata
-Questa release introduce un cambiamento strutturale nell'interfaccia di configurazione. L'App di configurazione desktop basata su Qt è stata aggiornata (implementando il nuovo protocollo, il supporto multi-cam e il pedale wireless), ma per il progetto OpenFIRE ESP32 è ora da considerarsi "Legacy". 
+Questa release introduce un cambiamento strutturale nell'interfaccia di configurazione. L'App di configurazione desktop basata su Qt è stata aggiornata (implementando il nuovo protocollo, il supporto multi-cam e il pedale wireless https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/), ma per il progetto OpenFIRE ESP32 è ora da considerarsi "Legacy". 
 
 Il nuovo strumento ufficiale di configurazione è una **WebApp** sviluppata ex novo. L'interfaccia riprende l'App Qt 1:1 nel layout e nelle funzionalità, eliminando la necessità di scaricare o installare alcun software sul PC.
 *   **Configurazione Online:** Accedendo al portale web dedicato, il sistema identifica automaticamente la versione del firmware installata sulla lightgun e avvia l'istanza corretta della WebApp (https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/).
@@ -129,7 +129,7 @@ Il nuovo strumento ufficiale di configurazione è una **WebApp** sviluppata ex n
 *   Sono stati implementati vari bugfix minori e ottimizzazioni del codice sorgente.
 *   **Hub Centrale:** È stato pubblicato un portale web unificato che raccoglie l'intero ecosistema di OpenFIRE ESP32, disponibile all'indirizzo: https://alessandro-satanassi.github.io/OpenFIRE-ESP32/
 
-Considerata l'entità e la profondità delle modifiche apportate al codice, si richiede la cortesia di testare a fondo questa RC1 e di segnalare eventuali anomalie o suggerimenti prima del rilascio della versione stabile ("Stable"). 
+Considerata l'entità e la profondità delle modifiche apportate al codice, si richiede la cortesia di testare a fondo questa RC2 e di segnalare eventuali anomalie o suggerimenti prima del rilascio della versione stabile ("Stable"). 
 
 **Si raccomanda vivamente di eseguire un'installazione pulita (Erase Flash)**. Sebbene i file di configurazione delle versioni precedenti siano teoricamente compatibili e tendano ad allinearsi dopo i primi salvataggi, partire da una memoria pulita previene potenziali conflitti.
 
@@ -147,7 +147,7 @@ Il comportamento del sistema varia a seconda di come la lightgun è collegata:
 
 **1. Collegamento tramite DONGLE (Wireless)**
 *   Se avviata in questa modalità senza cavo USB, la lightgun scansionerà i canali di rete in attesa di agganciarsi a un Dongle disponibile. Questo è fondamentale per poter testare il puntamento "in game" anche in modalità *undocked*.
-*   **Accesso alla WebApp:** Avviene tramite l'Access Point Wi-Fi esposto direttamente dal microcontrollore, denominato `"OpenFIRE_Config"` (IP: `192.168.4.1`). Collegandosi a questa rete (anche da smartphone), la WebApp dovrebbe aprirsi in automatico nel browser.
+*   **Accesso alla WebApp:** Avviene tramite l'Access Point Wi-Fi esposto direttamente dal microcontrollore, denominato `"OpenFIRE_Config"` (IP: `192.168.4.1`). Collegandosi a questa rete (anche da smartphone), si aprirà una pagina di benvenuto che indica le istruzioni per il collegamento alla WebApp.
 *   **Funzionalità:** Il sistema è pienamente operativo. Poiché la porta seriale virtuale rimane attiva, è supportato anche l'uso di Mamehooker.
 *   *Nota tecnica:* Essendo la seriale attiva, potresti usare anche la WebApp online tramite Web Serial API all'indirizzo [OpenFIRE-ESP32-WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/). Tuttavia, la modalità "Tasto B" è pensata proprio per offrire un'alternativa quando non si ha internet a disposizione.
 
