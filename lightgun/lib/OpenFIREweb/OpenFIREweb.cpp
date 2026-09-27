@@ -326,22 +326,6 @@ bool WebApp_ClientLostPending() {
     return sharedGet(&ws_client_lost) || sharedGet(&ws_client_closed);
 }
 
-void WebApp_RadioState(uint8_t *channel, uint8_t *powerSave) { // DA TOGLIERE
-    if (channel) *channel = 0;
-    if (powerSave) *powerSave = 0;
-    /*
-    if (channel) {
-        uint8_t primary = 0;
-        wifi_second_chan_t second = WIFI_SECOND_CHAN_NONE;
-        *channel = esp_wifi_get_channel(&primary, &second) == ESP_OK ? primary : 0;
-    }
-    if (powerSave) {
-        wifi_ps_type_t ps = WIFI_PS_NONE;
-        *powerSave = esp_wifi_get_ps(&ps) == ESP_OK ? (uint8_t)ps : 0;
-    }
-    */
-}
-
 // =================================================================================================
 // --- HTTP SERVER / SERVER HTTP ---
 
@@ -465,14 +449,10 @@ static esp_err_t app_js_get_handler(httpd_req_t *req) {
 // diagnostic fields being a step apart during a handover are worth.
 static esp_err_t status_get_handler(httpd_req_t *req) {
     char body[400];
-    uint8_t radioChannel = 0, radioPowerSave = 0;
-    WebApp_RadioState(&radioChannel, &radioPowerSave); // DA TOGLIERE
     const int32_t length = snprintf(body, sizeof(body),
         "{\"webConfig\":%d,\"docked\":%d,\"link\":\"%s\",\"wsClient\":%d,"
         "\"handshakes\":%u,\"rx\":%u,\"tx\":%u,\"txFailed\":%u,\"dropped\":%u,\"flushed\":%u,"
         "\"pending\":%d,"
-        // Radio: channel in use and power saving (0 = none, as ESP-NOW needs).
-        "\"channel\":%u,\"powerSave\":%u,"
         "\"uptimeMs\":%lu}",
         OF_WebConfigModeActive ? 1 : 0,
         OF_Serial::AppSerialSessionIsActive() ? 1 : 0,
@@ -482,7 +462,6 @@ static esp_err_t status_get_handler(httpd_req_t *req) {
         (unsigned)sharedGet(&ws_stat_tx_failed), (unsigned)ws_stat_dropped,
         (unsigned)sharedGet(&ws_stat_flushed),
         (int)(sharedGet(&ws_rx_written) - sharedGet(&ws_rx_read)), // without consuming a pending flush
-        (unsigned)radioChannel, (unsigned)radioPowerSave,
         (unsigned long)millis());
     // snprintf returns the length the text WOULD have had: should the diagnosis ever
     // outgrow the buffer, sending that number would read past it and put whatever the
@@ -737,10 +716,6 @@ void WebApp_Init() {}
 void WebApp_Loop() {}
 bool WebApp_TakeClientLost() { return false; }
 bool WebApp_ClientLostPending() { return false; }
-void WebApp_RadioState(uint8_t *channel, uint8_t *powerSave) { //DA TOGLIERE
-    if (channel) *channel = 0;
-    if (powerSave) *powerSave = 0;
-}
 
 static int none_available() { return 0; }
 static int none_read() { return -1; }
