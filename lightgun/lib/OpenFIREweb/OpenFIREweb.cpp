@@ -236,6 +236,26 @@ static int ws_read() {
     return c;
 }
 
+// The socket of the App page is read here and handed to the server a few instructions
+// later. In between, in theory, that page could close and the server could give the same
+// number to a new connection, so these bytes would go to a stranger. Left as it is, on
+// purpose, and it is not a real problem.
+//
+// It practically cannot happen. This task would have to be interrupted exactly between
+// those two lines, and in that gap the server task would have to close the page, accept
+// another connection and hand it the very same number. web_close_fn also sets the socket
+// to -1 the moment the server closes it, so a value that is out of date only lives inside
+// that gap.
+//
+// And it repairs itself. A frame that went astray is never acknowledged, so the App
+// protocol sends it again after its timeout (500 ms, up to 3 retries): the next attempt
+// reads the socket afresh and finds either -1 or the right one. On the other side the
+// stranger sees one spoiled answer, and the browser simply asks again.
+//
+// Closing the hole for good would mean sending from the server task through
+// httpd_queue_work. That turns this call from one that answers how many bytes it wrote
+// into one that cannot, needs a copy of every buffer, and adds a queue that can fill up:
+// new ways to fail, in exchange for a race that has never been seen.
 static size_t ws_writeBuf(const uint8_t* buf, size_t size) {
     const int32_t fd = sharedGet(&ws_client_fd);
     if (!web_server || fd < 0) return 0;
