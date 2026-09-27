@@ -131,6 +131,8 @@ void OpenFIRE_Perspective::configure(const CameraProfile& profile) {
   srcY = cy;
   k1 = profile.lensRadialK1;
   k2 = profile.lensRadialK2;
+  lensCorrectionMax = profile.lensCorrectionMax;
+  lensCorrectionMin = profile.lensCorrectionMin;
 }
 
 inline void OpenFIRE_Perspective::applyLensCorrection(float &x, float &y) {
@@ -151,8 +153,8 @@ inline void OpenFIRE_Perspective::applyLensCorrection(float &x, float &y) {
   
   // Limiti di sicurezza intrinseci per evitare deformazioni distruttive del quadrilatero
   // nel caso in cui i parametri di distorsione sfuggano al controllo dell'utente.
-  if (distortion > 1.2f) distortion = 1.2f;
-  if (distortion < 0.8f) distortion = 0.8f;
+  if (distortion > lensCorrectionMax) distortion = lensCorrectionMax;
+  if (distortion < lensCorrectionMin) distortion = lensCorrectionMin;
   
   x = cx + (dx * distortion); 
   y = cy + (dy * distortion);
@@ -238,7 +240,11 @@ void OpenFIRE_Perspective::warp(float x0, float y0, float x1, float y1, float x2
   }
   multMats(srcmatrix, dstmatrix, warpmatrix);
   
-  float normSrcX = srcX * INV_NORM_SCALE;
+  float correctedSrcX = srcX;
+  // LEDs and aim point must use the same corrected coordinate space on every
+  // camera. Work on local copies so correction never accumulates between frames.
+  applyLensCorrection(correctedSrcX, dynamicSrcY);
+  float normSrcX = correctedSrcX * INV_NORM_SCALE;
   float normSrcY = dynamicSrcY * INV_NORM_SCALE;
 
   // Moltiplicazione del vettore proiettile [X, Y, 1] contro la matrice di trasformazione fusa.

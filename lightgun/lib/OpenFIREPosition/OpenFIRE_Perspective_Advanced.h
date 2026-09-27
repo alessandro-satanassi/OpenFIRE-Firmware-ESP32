@@ -72,9 +72,11 @@ private:
   float invCy = 0.0f;
   float minQuadArea = 0.0f;
 
-  // Coefficienti di distorsione radiale definiti dalla camera in OpenFIREConst.h.
+  // Lens correction parameters supplied by OpenFIRECameraProfile.h.
   float k1 = 0.0f;
   float k2 = 0.0f;
+  float lensCorrectionMax = 1.2f;
+  float lensCorrectionMin = 0.8f;
   float parallaxFactor = DEFAULT_PARALLAX_FACTOR;
   
   // Tracciamento dell'area per il parallasse. L'area calcolata viene usata come proxy 

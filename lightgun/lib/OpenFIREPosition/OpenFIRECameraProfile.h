@@ -94,6 +94,8 @@ struct CameraProfile {
     // Lens correction
     float lensRadialK1;
     float lensRadialK2;
+    float lensCorrectionMax;
+    float lensCorrectionMin;
 
     // Default Square geometry - automatically calculated
     int squareTLX;
@@ -142,7 +144,9 @@ constexpr CameraProfile MakeProfile(CameraModel model,
                                     uint16_t fps,
                                     uint32_t busClock,
                                     float lensRadialK1,
-                                    float lensRadialK2) {
+                                    float lensRadialK2,
+                                    float lensCorrectionMax = 1.2f,
+                                    float lensCorrectionMin = 0.8f) {
     // OpenFIRE internal coordinate space
     const int camToMouseMult = 1 << camToMouseShift;
     const int mouseResX = camResX * camToMouseMult;
@@ -220,6 +224,8 @@ constexpr CameraProfile MakeProfile(CameraModel model,
         // Lens correction
         lensRadialK1,
         lensRadialK2,
+        lensCorrectionMax,
+        lensCorrectionMin,
 
         // Default Square geometry
         squareTLX,
@@ -263,6 +269,9 @@ constexpr CameraProfile MakeProfile(CameraModel model,
 //   fps                 Camera frame rate
 //   busClock            I2C/SPI communication clock
 //   lensRadialK1/K2     Radial lens correction coefficients
+//   lensCorrectionMax  Upper correction-factor limit (default: legacy 1.2)
+//   lensCorrectionMin  Lower correction-factor limit (default: legacy 0.8)
+//   Max precedes Min to preserve existing MakeProfile calls.
 // ============================================================================
 
 // ---------------------------------------------------------------------------
@@ -279,7 +288,9 @@ static constexpr CameraProfile DFRobot_SEN0158 = MakeProfile(
     209,                          // Camera FPS
     DFROBOT_I2C_CLOCK,            // Camera bus clock
     0.006f,                       // Lens radial correction K1
-    0.0f                          // Lens radial correction K2
+    0.0f,                         // Lens radial correction K2
+    1.2f,                         // Lens correction upper limit
+    0.8f                          // Lens correction lower limit
 );
 
 // ---------------------------------------------------------------------------
@@ -296,11 +307,19 @@ static constexpr CameraProfile PixArt_PAJ7025R2 = MakeProfile(
     209,                          // Camera FPS
     PAJ7025_SPI_CLOCK,            // Camera bus clock
     0.0f,                         // Lens radial correction K1
-    0.0f                          // Lens radial correction K2
+    0.0f,                         // Lens radial correction K2
+    1.2f,                         // Lens correction upper limit
+    0.8f                          // Lens correction lower limit
 );
 
 // ---------------------------------------------------------------------------
 // PixArt PAJ7025R3
+// Theoretical starting point, NOT a measured lens calibration.
+// Inverse radial map: 1 + K1*r^2 + K2*r^4, r=1 at a side midpoint.
+// Nominal EFL=0.378 mm, half sensor width=0.539 mm,
+// half FOV=55.65 deg at r=1 and 70 deg at r=sqrt(2).
+// These anchors require factors 1.0261407 and 1.3624550 respectively.
+// The 1.5 limit bounds extrapolation for reconstructed off-sensor points.
 // ---------------------------------------------------------------------------
 static constexpr CameraProfile PixArt_PAJ7025R3 = MakeProfile(
     OF_Const::PixArt_PAJ7025R3,   // Camera model
@@ -312,8 +331,10 @@ static constexpr CameraProfile PixArt_PAJ7025R3 = MakeProfile(
     1.0f,                         // Sensor noise factor
     209,                          // Camera FPS
     PAJ7025_SPI_CLOCK,            // Camera bus clock
-    0.0f,                         // Lens radial correction K1
-    0.0f                          // Lens radial correction K2
+    -0.128946f,                   // Lens radial correction K1 (nominal fit)
+    0.155087f,                    // Lens radial correction K2 (nominal fit)
+    1.5f,                         // Lens correction upper limit
+    0.8f                          // Lens correction lower limit
 );
 
 /*
