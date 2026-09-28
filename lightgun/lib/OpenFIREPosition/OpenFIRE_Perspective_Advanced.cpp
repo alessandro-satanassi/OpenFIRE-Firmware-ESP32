@@ -43,9 +43,11 @@ inline bool computeSquareToQuad(float* mat, float x0, float y0, float x1, float 
   float det = (dx1 * dy2 - dx2 * dy1);
   float g = 0.0f, h = 0.0f;
   
-  // Limite di degenerazione matematica (1e-8 è adatto alla scala normalizzata).
-  // Un quadrilatero realmente degenere non deve produrre una matrice parziale.
-  if (fabsf(det) <= 1e-8f && (sx != 0.0f || sy != 0.0f)) return false;
+  // Validazione della destinazione, eseguita solo durante l'inizializzazione.
+  // Rifiuta anche il caso affine collassato; conserva la soglia precedente
+  // per tutti gli altri casi, senza modificare le trasformazioni valide.
+  if (!isfinite(det) || det == 0.0f ||
+      (fabsf(det) <= 1e-8f && (sx != 0.0f || sy != 0.0f))) return false;
 
   if (fabsf(det) > 1e-8f) {
     float invDet = 1.0f / det;
@@ -56,6 +58,11 @@ inline bool computeSquareToQuad(float* mat, float x0, float y0, float x1, float 
   mat[0] = x1 - x0 + g * x1; mat[1] = y1 - y0 + g * y1; mat[2] = g;
   mat[3] = x3 - x0 + h * x3; mat[4] = y3 - y0 + h * y3; mat[5] = h;
   mat[6] = x0;               mat[7] = y0;               mat[8] = 1.0f;
+
+  // Non memorizzare una matrice contenente NaN o infinito come inizializzata.
+  for (unsigned i = 0; i < 9; ++i) {
+    if (!isfinite(mat[i])) return false;
+  }
   return true;
 }
 
@@ -258,9 +265,13 @@ void OpenFIRE_Perspective::warp(float x0, float y0, float x1, float y1, float x2
     float dstX_float = roundf((r0 * invR3) * NORM_SCALE);
     float dstY_float = roundf((r1 * invR3) * NORM_SCALE);
 
+    // I confronti del clamp non intercettano NaN: in caso di risultato non
+    // finito conserva entrambe le coordinate dell'ultimo output valido.
+    if (!isfinite(dstX_float) || !isfinite(dstY_float)) return;
+
     // Clamp fisico Assoluto: blocca le coordinate finali prima del casting ad intero.
     // Se spariamo parallelamente allo schermo, la proiezione prospettica tende all'infinito.
-    // Questo clamp previene l'overflow int32 che causerebbe il crash UB (Undefined Behavior) del core ESP32.
+    // Mantiene i risultati finiti nel range int32 prima della conversione.
     if (dstX_float > 2000000000.0f) dstX_float = 2000000000.0f;
     if (dstX_float < -2000000000.0f) dstX_float = -2000000000.0f;
     if (dstY_float > 2000000000.0f) dstY_float = 2000000000.0f;
