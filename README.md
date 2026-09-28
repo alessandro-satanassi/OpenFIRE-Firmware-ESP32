@@ -199,6 +199,7 @@ A special thanks to the original authors and the OpenFIRE community, without who
 A massive thank you to those who personally supported the development and testing of this specific ESP32 port:
 * **Reverse Cosmos**: For his invaluable help and time spent testing the OpenFIRE ESP32 firmware.
 * **VINNY!**: For designing the mechanical parts and providing the .stl files for the wireless pedal.
+* **Alextrical**: For designing the PCBs on which to mount the PixArt PAJ7025R2 and PixArt PAJ7025R3 cameras.
 
 ## ⚖️ License, Commercial Use, and Forks
 
@@ -422,6 +423,7 @@ Un ringraziamento speciale agli autori originali e alla community del progetto O
 Un enorme grazie a chi ha supportato personalmente lo sviluppo e i test di questo specifico porting per ESP32:
 * **Reverse Cosmos**: Per il prezioso aiuto e il tempo dedicato ai test del firmware OpenFIRE ESP32.
 * **VINNY!**: Per aver progettato la parte meccanica e i file .stl del pedale wireless.
+* **Alextrical**: Per aver progettato i PCB su cui montare le cam pixart PAJ7025R2 e pixart PAJ7025R3.
 
 ## ⚖️ Licenza, Uso Commerciale e Fork
 
