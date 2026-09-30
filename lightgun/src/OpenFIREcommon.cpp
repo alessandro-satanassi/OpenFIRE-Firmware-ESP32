@@ -768,6 +768,130 @@ calibration_cancelled:
     }
 }
 
+// IR test view only (sTestBlobs): area and brightness of the camera blob
+// drawn at each vertex. Called in RunMode_Processing, where GetPosition()
+// keeps the camera in Extended format, right before sTestCoords (which
+// makes the App redraw). Apps that do not know sTestBlobs ignore it.
+//
+// The trackers do not expose which camera object became which vertex, so
+// every valid blob is mapped into the same test space as sTestCoords (the
+// transform of the tracker's begin() followed by the sTestCoords mapping)
+// and paired with the nearest vertex: pairs are taken shortest first and
+// each blob and vertex is used once. A vertex estimated by the tracker (LED
+// not seen) stays unpaired, since every real blob is nearer to its own
+// vertex; a pair longer than half the shortest vertex distance is rejected.
+//
+// Payload (21 bytes): [0] format version (1), then for each vertex, in the
+// sTestCoords order: flags (bit 0 = seen by the camera), average brightness,
+// max brightness, area (uint16, little endian; 0 when not seen).
+static void SendTestBlobs(const int (&vertexX)[4], const int (&vertexY)[4],
+                          bool diamond, const CameraProfile& profile)
+{
+    constexpr uint8_t TEST_BLOBS_VERSION = 1;
+    constexpr uint8_t TEST_BLOB_SEEN = 0x01;
+    constexpr int64_t MIN_PAIR_DISTANCE = 20; // test-space px, lower bound of the pairing limit
+
+    const unsigned int seenFlags = OpenFIRECamera::Seen();
+    const int camMaxY = (profile.mouseResY - 1) >> profile.camToMouseShift;
+
+    int blobX[4];
+    int blobY[4];
+    bool blobValid[4];
+
+    for(uint8_t j = 0; j < 4; ++j) {
+        const OpenFIRECamera::ObjectData& object = OpenFIRECamera::Object(j);
+
+        // Same validity limits as Square Advanced (also keeps the shifts non-negative).
+        blobValid[j] = object.valid && ((seenFlags >> j) & 1U) &&
+                       object.x >= 0 && object.x <= profile.camMaxX &&
+                       object.y >= 0 && object.y <= camMaxY;
+        if(!blobValid[j])
+            continue;
+
+        const int trackerY = object.y << profile.camToMouseShift;
+        blobY[j] = map(trackerY, 0, profile.mouseResY,
+                       profile.testOffsetY, profile.testOffsetY + profile.testHeight);
+
+        if(diamond) {
+            const int trackerX = object.x << profile.camToMouseShift;
+            blobX[j] = map(trackerX, 0, profile.mouseResX,
+                           profile.testOffsetX + profile.testWidth, profile.testOffsetX);
+        } else {
+            #ifdef USE_SQUARE_ADVANCED
+                const int trackerX = (profile.camMaxX - object.x) << profile.camToMouseShift;
+            #else
+                const int trackerX = object.x << profile.camToMouseShift;
+            #endif // USE_SQUARE_ADVANCED
+            blobX[j] = map(trackerX, 0, profile.mouseResX,
+                           profile.testOffsetX, profile.testOffsetX + profile.testWidth);
+        }
+    }
+
+    // Pairing limit: half of the shortest distance between two vertices.
+    int64_t minVertexDist2 = INT64_MAX;
+    for(uint8_t a = 0; a < 3; ++a) {
+        for(uint8_t b = a + 1; b < 4; ++b) {
+            const int64_t dx = (int64_t)vertexX[a] - vertexX[b];
+            const int64_t dy = (int64_t)vertexY[a] - vertexY[b];
+            const int64_t d2 = dx * dx + dy * dy;
+            if(d2 < minVertexDist2)
+                minVertexDist2 = d2;
+        }
+    }
+    int64_t limit2 = minVertexDist2 / 4; // (distance / 2)^2
+    if(limit2 < MIN_PAIR_DISTANCE * MIN_PAIR_DISTANCE)
+        limit2 = MIN_PAIR_DISTANCE * MIN_PAIR_DISTANCE;
+
+    int8_t vertexBlob[4] = {-1, -1, -1, -1};
+    bool blobUsed[4] = {false, false, false, false};
+
+    for(uint8_t pass = 0; pass < 4; ++pass) {
+        int64_t best2 = limit2 + 1;
+        int8_t bestVertex = -1;
+        int8_t bestBlob = -1;
+
+        for(uint8_t i = 0; i < 4; ++i) {
+            if(vertexBlob[i] >= 0)
+                continue;
+            for(uint8_t j = 0; j < 4; ++j) {
+                if(!blobValid[j] || blobUsed[j])
+                    continue;
+                const int64_t dx = (int64_t)vertexX[i] - blobX[j];
+                const int64_t dy = (int64_t)vertexY[i] - blobY[j];
+                const int64_t d2 = dx * dx + dy * dy;
+                if(d2 < best2) {
+                    best2 = d2;
+                    bestVertex = (int8_t)i;
+                    bestBlob = (int8_t)j;
+                }
+            }
+        }
+
+        if(bestVertex < 0)
+            break;
+        vertexBlob[bestVertex] = bestBlob;
+        blobUsed[bestBlob] = true;
+    }
+
+    uint8_t payload[1 + 4 * 5] = {0};
+    payload[0] = TEST_BLOBS_VERSION;
+
+    for(uint8_t i = 0; i < 4; ++i) {
+        uint8_t* entry = &payload[1 + i * 5];
+        if(vertexBlob[i] < 0)
+            continue; // not seen: all zero
+
+        const OpenFIRECamera::ObjectData& object = OpenFIRECamera::Object((uint8_t)vertexBlob[i]);
+        entry[0] = TEST_BLOB_SEEN;
+        entry[1] = object.averageBrightness;
+        entry[2] = object.maxBrightness;
+        entry[3] = (uint8_t)(object.area & 0xFF);
+        entry[4] = (uint8_t)(object.area >> 8);
+    }
+
+    OF_Serial::AppSerialSendEvent(OF_Const::sTestBlobs, payload, sizeof(payload));
+}
+
 void FW_Common::GetPosition()
 {
     const CameraProfile& cameraProfile = OpenFIRECamera::Profile();
@@ -788,6 +912,15 @@ void FW_Common::GetPosition()
     constexpr int AR_CORRECTION_H = 3;
 
     if(OpenFIRECamera::IsReady()) {
+        // The IR test view (RunMode_Processing) also shows blob area and brightness,
+        // which need the Extended data format; every other mode keeps Basic.
+        // Switched here, right before Read(), so it happens in the camera read context.
+        const OpenFIRECamera::DataFormat_e wantedFormat =
+            (runMode == FW_Const::RunMode_Processing) ? OpenFIRECamera::DataFormat_Extended
+                                                      : OpenFIRECamera::DataFormat_Basic;
+        if(OpenFIRECamera::DataFormat() != wantedFormat)
+            OpenFIRECamera::SetDataFormat(wantedFormat);
+
         int error = OpenFIRECamera::Read();
         if(error == OpenFIRECamera::Error_Success) {
            
@@ -1080,6 +1213,10 @@ void FW_Common::GetPosition()
                         memcpy(&payload[36], &mouseYscaled, sizeof(int));
                         memcpy(&payload[40], &testMedianX,  sizeof(int));
                         memcpy(&payload[44], &testMedianY,  sizeof(int));
+
+                        // Blob data first: sTestCoords makes the App redraw.
+                        if(OpenFIRECamera::DataFormat() == OpenFIRECamera::DataFormat_Extended)
+                            SendTestBlobs(rawX, rawY, OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout != 0, cameraProfile);
 
                         OF_Serial::AppSerialSendEvent(
                             OF_Const::sTestCoords, payload, sizeof(payload));

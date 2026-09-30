@@ -164,6 +164,7 @@ class MockFirmware {
         this.running = false;
         this.failNextSave = false;
         this.camNotAvailable = !!options.camNotAvailable;
+        this.testBlobs = options.testBlobs !== false;  // false: firmware without sTestBlobs (classic IR test view)
         // is_pedal_wireless of the firmware: a wireless pedal answered during the start-up,
         // so the two pedals work although no pin is mapped to them.
         this.pedalWireless = !!options.pedalWireless;
@@ -1102,6 +1103,15 @@ class MockFirmware {
                 const v = new DataView(coords.buffer);
                 const values = [600 * 2, 300, 1320 * 2 + 1, 300, 600 * 2, 780, 1320 * 2, 780, 960, 540, 955, 545];
                 values.forEach((value, i) => v.setInt32(i * 4, value, true));
+                if (this.testBlobs) {
+                    // Like FW_Common::GetPosition(): blob data first, then the coordinates.
+                    // TL large and bright, TR not seen (outside FOV), BL small and dim, BR medium.
+                    const blobs = [[1, 220, 250, 260], [0, 0, 0, 0], [1, 140, 170, 18], [1, 190, 235, 110]];
+                    const payload = new Uint8Array(21);
+                    payload[0] = 1;
+                    blobs.forEach(([flags, avg, max, area], i) => payload.set([flags, avg, max, area & 255, area >> 8], 1 + i * 5));
+                    this.sendEvent(this.C.sTestBlobs, payload);
+                }
                 this.sendEvent(this.C.sTestCoords, coords);
             }
             await tick();

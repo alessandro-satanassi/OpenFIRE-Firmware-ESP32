@@ -484,11 +484,18 @@ test('IR test mode streams coordinates until disabled', async () => {
         assert.ok(await waitUntil(() => ctx.events.filter((e) => e.command === C.sTestCoords).length >= 3));
         const coords = ctx.events.find((e) => e.command === C.sTestCoords);
         assert.equal(coords.payload.length, 48);
+        // sTestBlobs (area/brightness per emitter) precedes each sTestCoords.
+        const blobs = ctx.events.find((e) => e.command === C.sTestBlobs);
+        assert.equal(blobs.payload.length, 21);
+        assert.equal(blobs.payload[0], 1);
+        assert.ok(ctx.events.indexOf(blobs) < ctx.events.indexOf(coords));
         assert.equal(await ctx.protocol.sendCommand(C.sIRTest, Uint8Array.of(0)), true);
         await sleep(150);
         const count = ctx.events.filter((e) => e.command === C.sTestCoords).length;
+        const blobCount = ctx.events.filter((e) => e.command === C.sTestBlobs).length;
         await sleep(200);
         assert.equal(ctx.events.filter((e) => e.command === C.sTestCoords).length, count);
+        assert.equal(ctx.events.filter((e) => e.command === C.sTestBlobs).length, blobCount);
     } finally {
         await teardown(ctx);
     }

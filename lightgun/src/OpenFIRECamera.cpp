@@ -341,6 +341,26 @@ int OpenFIRECamera::ReadDFRobotBasic() {
 }
 
 int OpenFIRECamera::ReadDFRobotExtended() {
+    // The DFRobot Extended format measures only x, y and size (0..15).
+    // The remaining ObjectData fields are filled here, so that consumers
+    // (e.g. the IR test view) handle every camera in the same way.
+    //
+    // Area: size is proportional to the blob diameter, so the equivalent area
+    // grows with size^2. A blob of DFR_REF_SIZE gets DFR_REF_AREA, which the
+    // web app IR test draws with the radius of the former fixed circle
+    // (25 px in 1920x1080 test space, see
+    // IRTEST_BLOB_AREA_MAX and IRTEST_BLOB_RADIUS_MAX in fullscreen.js):
+    // 300 * (25 / 60)^2 = 52. Other sizes scale in proportion.
+    // IRTEST_BLOB_RADIUS_SCALE in fullscreen.js then enlarges every circle of
+    // the IR test view alike, so this reference does not depend on it.
+    // Brightness is not measured: fixed neutral values are used.
+    // Range, radius, boundaries, aspect ratio and velocity are not measured
+    // and not used by any consumer: they stay at zero.
+    static constexpr uint32_t DFR_REF_SIZE = 10U;
+    static constexpr uint32_t DFR_REF_AREA = 52U;
+    static constexpr uint8_t DFR_AVERAGE_BRIGHTNESS = 190U;
+    static constexpr uint8_t DFR_MAX_BRIGHTNESS = 255U;
+
     const int error = dfrCamera->extendedAtomic(DFRobotIRPositionEx::Retry_2);
 
     if (error >= DFRobotIRPositionEx::Error_Success) {
@@ -348,10 +368,20 @@ int OpenFIRECamera::ReadDFRobotExtended() {
 
         for (int i = 0; i < 4; i++) {
             if ((activeSeen & (1U << i)) != 0U) {
+                const int size = dfrCamera->size(i);
+                const uint32_t size2 = (uint32_t)(size & 0x0F) * (uint32_t)(size & 0x0F);
+                // Rounded; a seen blob never reports area 0 (0 = no object on PAJ7025).
+                uint32_t area = (DFR_REF_AREA * size2 + (DFR_REF_SIZE * DFR_REF_SIZE) / 2U) /
+                                (DFR_REF_SIZE * DFR_REF_SIZE);
+                if (area == 0U) area = 1U;
+
                 objectData[i].valid = true;
                 objectData[i].x = dfrCamera->x(i);
                 objectData[i].y = dfrCamera->y(i);
-                objectData[i].size = dfrCamera->size(i);
+                objectData[i].size = size;
+                objectData[i].area = (uint16_t)area;
+                objectData[i].averageBrightness = DFR_AVERAGE_BRIGHTNESS;
+                objectData[i].maxBrightness = DFR_MAX_BRIGHTNESS;
             } else {
                 objectData[i].valid = false;
             }

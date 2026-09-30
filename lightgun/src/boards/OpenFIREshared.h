@@ -367,6 +367,7 @@ public:
         sCaliInfoUpd,
         sTestCoords,
         sCurrentProf,
+        sTestBlobs, // 152: IR test only, blob area/brightness of each vertex
 
         // Push settings to board
         sCommitStart = 0xAA, // 170

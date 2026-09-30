@@ -3,7 +3,7 @@
 
         const win = new OF.FullscreenWindow('calibrate', { onExitRequest, onExit });
         win.open();                      // call it inside the click handler (fullscreen needs a user gesture)
-        win.setStage(stage); win.setInfo(payload); win.drawTest(coords);
+        win.setStage(stage); win.setInfo(payload); win.setTestBlobs(blobs); win.drawTest(coords);
         win.shutdown();
 */
 (function (root) {
@@ -27,6 +27,49 @@
         '<circle cx="30.72" cy="30.72" r="24.42" stroke-width="2.4"/>' +
         '<path stroke-width="1.44" d="M0.72 30.72h11.16M30.72 0.73v11.16M60.71 30.72h-11.16M30.72 60.71v-11.16M26.94 30.72h7.58M30.72 26.94v7.58"/>' +
         '</g></svg>';
+
+    // ----- IR test blobs (sTestBlobs) ---------------------------------------------------
+    // Firmware 'sTestBlobs': area and brightness of the blob seen at each emitter. The camera
+    // drivers already normalise the values, so every camera uses the same scale here.
+    // Radius (1920x1080 test space) grows with sqrt(area): IRTEST_BLOB_RADIUS_MAX at
+    // IRTEST_BLOB_AREA_MAX, the largest blob the PAJ7025 DSP reports. The firmware DFRobot
+    // driver relies on these two values for its equivalent area (ReadDFRobotExtended).
+    const IRTEST_BLOB_AREA_MAX = 300;
+    const IRTEST_BLOB_RADIUS_MAX = 60;
+    const IRTEST_BLOB_RADIUS_MIN = 6;
+    // Size of the circles of the emitters seen: multiplies the radius above (min and max
+    // included). Change only this to draw them bigger or smaller.
+    const IRTEST_BLOB_RADIUS_SCALE = 3;
+    const IRTEST_EMITTER_RADIUS = 25; // circle not seen / older firmware (Qt App size), not scaled
+    // Detected blobs are always above the camera brightness threshold (130-150): this
+    // range becomes 0..1 of the fill (radial gradient: centre = max, edge = average).
+    const IRTEST_BRIGHTNESS_MIN = 128;
+    const IRTEST_BRIGHTNESS_MAX = 255;
+    // Exponential average of radius and brightness (not of the position) against flicker:
+    // weight of the new 20 Hz sample.
+    const IRTEST_SMOOTHING = 0.5;
+    // Blob data older than this (ms) is not used: classic view as with older firmware.
+    const IRTEST_BLOBS_MAX_AGE = 250;
+    const IRTEST_BLOBS_VERSION = 1;
+    const IRTEST_BLOBS_LENGTH = 21;
+    const IRTEST_NOT_SEEN_COLOR = '#ff3030';
+
+    /** ?irdebug in the address: shows area and brightness under each emitter circle. */
+    function irTestDebug() {
+        try { return new URLSearchParams(root.location.search).has('irdebug'); } catch (e) { return false; }
+    }
+
+    /** Brightness 0..255 -> 0..1 fill over the range of detected blobs. */
+    function brightnessLevel(value) {
+        const t = (value - IRTEST_BRIGHTNESS_MIN) / (IRTEST_BRIGHTNESS_MAX - IRTEST_BRIGHTNESS_MIN);
+        return Math.min(1, Math.max(0, t));
+    }
+
+    /** '#rrggbb' + alpha -> rgba() */
+    function withAlpha(color, alpha) {
+        const n = parseInt(color.slice(1), 16);
+        return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha.toFixed(3)})`;
+    }
 
     // ----- Bitmap typeface ------------------------------------------------------------
 
@@ -174,6 +217,9 @@
             this.stage = STAGE.init;
             this.values = {};
             this.coords = null;
+            this.blobs = null;       // sTestBlobs: { time, entries[4] }
+            this.blobLevels = [null, null, null, null]; // smoothed { radius, center, edge } per emitter
+            this.irDebug = irTestDebug();
             this.mouse = null;
             this.closed = false;
             this.resetValues();
@@ -324,6 +370,63 @@
             const view = new DataView(payload.buffer, payload.byteOffset, 48);
             this.coords = Array.from({ length: 12 }, (_, i) => view.getInt32(i * 4, true));
             this.render();
+        }
+
+        /**
+         * sTestBlobs (sent just before sTestCoords): version, then for each emitter in the
+         * sTestCoords order: flags (bit 0 seen), average brightness, max brightness, area (uint16 LE).
+         * Unknown versions and lengths are ignored (classic view).
+         */
+        setTestBlobs(payload) {
+            if (this.closed || this.mode !== MODE_IRTEST) return;
+            if (payload.length < IRTEST_BLOBS_LENGTH || payload[0] !== IRTEST_BLOBS_VERSION) return;
+            const entries = [];
+            for (let i = 0; i < 4; ++i) {
+                const o = 1 + i * 5;
+                entries.push({
+                    seen: (payload[o] & 1) !== 0,
+                    avg: payload[o + 1],
+                    max: payload[o + 2],
+                    area: payload[o + 3] | (payload[o + 4] << 8),
+                });
+            }
+            if (!this._freshBlobs()) this.blobLevels = [null, null, null, null]; // after a gap: no stale average
+            this.blobs = { time: Date.now(), entries };
+            this._updateBlobLevels(entries);
+        }
+
+        /** Current blob data, or null when missing or stale (older firmware: classic view). */
+        _freshBlobs() {
+            const b = this.blobs;
+            return b && Date.now() - b.time <= IRTEST_BLOBS_MAX_AGE ? b.entries : null;
+        }
+
+        /** Circle of each emitter from the blob data, smoothed over the 20 Hz updates. */
+        _updateBlobLevels(entries) {
+            for (let i = 0; i < 4; ++i) {
+                const blob = entries[i];
+                if (!blob.seen) {
+                    this.blobLevels[i] = null; // a new sighting starts from its own values
+                    continue;
+                }
+                const k = Math.sqrt(Math.min(blob.area, IRTEST_BLOB_AREA_MAX) / IRTEST_BLOB_AREA_MAX);
+                const target = {
+                    radius: Math.max(IRTEST_BLOB_RADIUS_MIN, IRTEST_BLOB_RADIUS_MAX * k) * IRTEST_BLOB_RADIUS_SCALE,
+                    center: brightnessLevel(blob.max),
+                    edge: brightnessLevel(blob.avg),
+                };
+                const prev = this.blobLevels[i];
+                if (!prev) {
+                    this.blobLevels[i] = target;
+                } else {
+                    const a = IRTEST_SMOOTHING;
+                    this.blobLevels[i] = {
+                        radius: prev.radius + a * (target.radius - prev.radius),
+                        center: prev.center + a * (target.center - prev.center),
+                        edge: prev.edge + a * (target.edge - prev.edge),
+                    };
+                }
+            }
         }
 
         // ----- Rendering ----------------------------------------------------------------------
@@ -598,13 +701,73 @@
                 ctx.restore();
             };
             const colors = ['#00ff00', '#00ff00', '#00ffff', '#00ffff'];
-            points.forEach((p, i) => circle(offsetX, offsetY, scale, scale, p.x, p.y, colors[i], p.outside));
+            const blobs = this._freshBlobs();
+            if (blobs) {
+                points.forEach((p, i) => this._drawEmitter(ctx, px(p.x), py(p.y), scale, colors[i], blobs[i], this.blobLevels[i]));
+            } else {
+                points.forEach((p, i) => circle(offsetX, offsetY, scale, scale, p.x, p.y, colors[i], p.outside));
+            }
             circle(0, 0, scaleX, scaleY, c[8], c[9], '#a0a0a4', false);
             circle(offsetX, offsetY, scale, scale, c[10], c[11], '#ff0000', false);
 
             // The emitters box is added last to the Qt scene: drawn over the circles.
             const [tl, tr, bl, br] = points;
             this._polyline(ctx, [tl, tr, br, bl].map((p) => [px(p.x), py(p.y)]), '#a0a0a4', 2 * scale);
+
+            if (blobs && this.irDebug) {
+                const small = this.textScale('small');
+                points.forEach((p, i) => this._drawBlobInfo(ctx, px(p.x), py(p.y), scale, small, blobs[i], this.blobLevels[i]));
+            }
+        }
+
+        /**
+         * One emitter from the blob data. Seen: filled circle, radius from the blob area, radial
+         * gradient from the max brightness (centre) to the average brightness (edge), outline in
+         * the emitter colour. Not seen: dashed circle in the emitter colour with a red X.
+         */
+        _drawEmitter(ctx, x, y, scale, color, blob, level) {
+            ctx.save();
+            if (blob && blob.seen && level) {
+                const r = level.radius * scale;
+                const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
+                gradient.addColorStop(0, withAlpha(color, level.center));
+                gradient.addColorStop(1, withAlpha(color, level.edge));
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = Math.max(1, 2 * scale);
+                ctx.stroke();
+            } else {
+                const r = IRTEST_EMITTER_RADIUS * scale;
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.setLineDash([6 * scale, 5 * scale]);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 3 * scale;
+                ctx.stroke();
+                ctx.setLineDash([]);
+                const d = r * 0.62;
+                ctx.beginPath();
+                ctx.moveTo(x - d, y - d);
+                ctx.lineTo(x + d, y + d);
+                ctx.moveTo(x + d, y - d);
+                ctx.lineTo(x - d, y + d);
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = IRTEST_NOT_SEEN_COLOR;
+                ctx.lineWidth = 3 * scale;
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        /** ?irdebug: area and brightness (max/average) under the emitter circle. */
+        _drawBlobInfo(ctx, x, y, scale, textScale, blob, level) {
+            const text = blob && blob.seen ? [`A ${blob.area}`, `${blob.max}/${blob.avg}`] : ['--'];
+            const radius = (level ? level.radius : IRTEST_EMITTER_RADIUS) * scale;
+            const size = textSize(text, textScale);
+            drawText(ctx, text, x - size.width / 2, y + radius + 4 * scale, textScale);
         }
     }
 

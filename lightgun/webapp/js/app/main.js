@@ -661,6 +661,10 @@
                     this.window.setInfo(payload);
                 break;
 
+            case C.sTestBlobs:
+                if (this.window) this.window.setTestBlobs(payload);
+                break;
+
             case C.sTestCoords:
                 if (this.window) this.window.drawTest(payload);
                 break;

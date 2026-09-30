@@ -39,7 +39,7 @@ Tests: `tests/*.test.js` (Node) and `tests/browser-e2e.js` (browser, simulated l
 
 | Qt | Web app |
 | --- | --- |
-| `appcali.cpp` (calibration stages, info texts, verify, malformed warning, alignment boxes, IR test points, bitmap text, text scales) | `fullscreen.js` |
+| `appcali.cpp` (calibration stages, info texts, verify, malformed warning, alignment boxes, IR test points, IR test blobs `TestModeBlobs` / `TestModeDrawEmitter`, bitmap text, text scales) | `fullscreen.js` (`setTestBlobs`, `_drawEmitter`) |
 | `apppreviewer.cpp` (board list, default functions, GPIO colours, ADC/I2C/SPI marks, fork/upstream link) | `windows.js` `openPreviewer` |
 | `appabout.ui` | `windows.js` `openAbout` |
 | `appdebug.cpp` (text and hex of received payloads) | `main.js` `openDebugWindow` / `logDebug` |
@@ -57,6 +57,7 @@ Tests: `tests/*.test.js` (Node) and `tests/browser-e2e.js` (browser, simulated l
 - After Clear Save Memory the confirmation is shown as soon as the command is delivered: the firmware restarts without answering.
 - Fullscreen screens: the browser owns fullscreen mode, so leaving it (ESC, F11, browser gesture) closes the screen like ESC; the page behind cannot be used meanwhile. If the browser refuses fullscreen mode, a button asks for it again.
 - Leaving IR test mode without the board confirming it is reported as an unconfirmed operation (reconnect), instead of leaving the tabs locked.
+- IR test blob view (`sTestBlobs`): the area and brightness under each circle are shown with `?irdebug` in the address; the Qt App uses the `--irdebug` command-line argument.
 - The Boards Previewer and the colour chooser are page windows; the previewer, like the Qt window, stays open while the main window is used.
 - About also names the ESP-IDF fork and the web app; the Qt version line is not shown.
 - Colours of the GPIO labels: exact Qt colours in the dark theme, slightly darker ones in the light theme for contrast.

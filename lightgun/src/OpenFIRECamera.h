@@ -39,8 +39,9 @@ public:
         Error_DataMismatch = -2    // Inconsistent frame discarded
     };
 
-    // Fields available through ObjectData when Extended format is active.
-    // Unsupported camera-specific fields are returned as zero.
+    // Fields measured natively by the camera when Extended format is active
+    // (ExtendedCapabilities()). A consumer does not need this mask to use
+    // ObjectData: every driver provides a complete ObjectData, see below.
     enum ExtendedData_e : uint16_t {
         ExtendedData_Size              = 1U << 0,
         ExtendedData_Area              = 1U << 1,
@@ -56,6 +57,12 @@ public:
     // Common extended object data. X/Y/valid/size are normalized to the
     // selected backend's OpenFIRE output slots; the remaining fields retain
     // the native values supplied by cameras that support them.
+    // Camera-independent contract: area is in PAJ7025 sensor-pixel units and
+    // brightness is 0..255. A driver whose camera does not measure a field
+    // fills it with a derived or fixed value (DFRobot: area derived from
+    // size, fixed brightness), so consumers such as the IR test view never
+    // need to know which camera is fitted. Fields that no consumer uses and
+    // the camera does not measure are left at zero.
     struct ObjectData {
         int x;
         int y;
