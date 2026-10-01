@@ -59,7 +59,7 @@ Tests: `tests/*.test.js` (Node) and `tests/browser-e2e.js` (browser, simulated l
 - Leaving IR test mode without the board confirming it is reported as an unconfirmed operation (reconnect), instead of leaving the tabs locked.
 - IR test blob view (`sTestBlobs`): the area and brightness under each circle are shown with `?irdebug` in the address; the Qt App uses the `--irdebug` command-line argument.
 - The Boards Previewer and the colour chooser are page windows; the previewer, like the Qt window, stays open while the main window is used.
-- About also names the ESP-IDF fork and the web app; the Qt version line is not shown.
+- About credits the original OpenFIRE App by That One Seong, names Alessandro Satanassi as the author of this App (based on the original App, extended for OpenFIRE ESP32) and links his Ko-fi, followed by the GPL-3.0 and copyright notices; the Qt version line is not shown.
 - Colours of the GPIO labels: exact Qt colours in the dark theme, slightly darker ones in the light theme for contrast.
 - The rumble and solenoid tests follow the unsaved toggles like the Qt App; the firmware ignores the rumble test while the saved map has no rumble pin.
 

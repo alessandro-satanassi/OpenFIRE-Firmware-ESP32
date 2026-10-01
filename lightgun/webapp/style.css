@@ -981,6 +981,7 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
 .about-head { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
 .about-logo svg { width: 72px; height: 72px; display: block; border-radius: 14px; }
 .about-sub { color: var(--muted); margin-top: 4px; }
+.about-legal { color: var(--muted); font-size: 0.85em; margin-top: 14px; }
 .kofi {
     display: inline-block;
     padding: 6px 14px;
