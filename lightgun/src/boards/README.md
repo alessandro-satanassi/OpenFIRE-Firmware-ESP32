@@ -1,4 +1,6 @@
 # OpenFIRE Shared Resources
+
+**For users / Per gli utenti:** configure the 7.0.0 firmware through the WebApp; see the [English manual](../README.md#configuration-with-the-webapp) / [manuale italiano](../README.md#configurazione-con-la-webapp). The notes below describe shared resources and the legacy Qt workflow; the WebApp also uses these board definitions and generates its pictures during its build. / Le note sotto descrivono le risorse condivise e il flusso Qt legacy; anche la WebApp usa queste definizioni e genera le immagini durante la compilazione.
 This repository contains resources that can be shared between implementations of the microcontroller Firmware and Applications intended to interface with and configure them on a PC device.
 
 ## `OpenFIREshared.h`
@@ -7,7 +9,7 @@ The top half of this file defines the following that are common in both Firmware
  - Enums of pin function types, toggles, settings, I2C devices and their settings, and commands used in serial communication between firmware and app.
  - Presets for defined boards that are loaded on bootup, and referenced by apps that show default board layouts.
 
-Below the preprocessor check for `OF_APP` are 'pretty' strings for supported boards and pin functions, and board layouts that are used only by Desktop Apps to graphically represent GPIO pins for defined boards - showing where they should be rendered relative to a center-bound board vector, and alternative layouts for boards that the app should present as options to the user, if any.
+Below the preprocessor check for `OF_APP` are 'pretty' strings for supported boards and pin functions, and board layouts that are used by configuration Apps, including the ESP32 WebApp to graphically represent GPIO pins for defined boards - showing where they should be rendered relative to a center-bound board vector, and alternative layouts for boards that the app should present as options to the user, if any.
 
 ### `boardPresetsMap`
 Supported boards should have a name that corresponds to the `OPENFIRE_BOARD` definition as defined at the top of the file, followed by a map of what function each GPIO should have as a default (this is loaded when `OF_Prefs::toggles[OF_Const::customPins]` is set as *true* in the board's current prefs). Each GPIO the microcontroller has should be represented here, with unmapped pins given `btnUnmapped` and pins that are either reserved or not exposed to the user to be given `unavailable`. RP2040 and RP235X-A boards should have thirty pins maximum - note that even if the `rpipico` only exposes around 26 pins, it still takes the hidden GPIO into consideration.
@@ -39,7 +41,7 @@ Once this is finished, rebuild the application and test out the board picture; t
 > - If the board picture displays, but highlights do not (or show up to the wrong pins), it's likely that you might need to manually edit some lines in the exported SVG in a text editor, such as Notepad. The technical requirements for vectors to work - and the things to check - are:
 >   - That the `id="OF_pinX"` lines are *above* the `style="` line.
 >   - That the `style="` line has `opacity:0` inside of it (preferably either `0` or `0.0`; whichever one it is doesn't matter, so long as it matches).
-> Refer to the following example below (snippit from [`pico.svg`](boardPics/pico.svg)) for the general ideal formatting of each highlight element:
+> Refer to the following example below (snippit from [`rpipico.svg`](boardPics/rpipico.svg)) for the general ideal formatting of each highlight element:
 > ```html
 >   <g
 >      id="OF">

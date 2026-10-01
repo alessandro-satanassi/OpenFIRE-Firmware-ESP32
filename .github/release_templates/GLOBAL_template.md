@@ -11,22 +11,30 @@
 ### Quick Install
 Update the firmware directly from your browser via the WebFlasher: [Launch WebFlasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher)
 
+New to OpenFIRE? Start from [Getting Started](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32#getting-started) · [Common Problems](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/lightgun/src/README.md#common-problems)
+
 ---
 
 ### New Features
-* *No new features introduced*
 
-### Bug Fixes
-* *No bugs fixed*
+* Configuration with the official [WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=en): online over USB serial, including through the paired dongle; offline over Wi-Fi or USB NCM.
+* DFRobot/Wii, PAJ7025R2 and PAJ7025R3 cameras in the same firmware, selected in the App. Use 940 nm emitters for DFRobot/Wii and 850 nm for PixArt.
+* Hold **B** at lightgun startup for about 2 seconds to open offline configuration. Join **OpenFIRE_Config**, accept the network without Internet, then open **http://openfire.local/** or **http://192.168.4.1/** in your normal browser. USB NCM uses **http://192.168.7.1/** on supported systems.
+* Hold **Trigger + A** at startup for about 2 seconds to enter firmware update mode on a gun already running 7.0.0. For first installation or recovery, use the board's BOOT/RESET procedure. Flash the gun directly through its own USB OTG port, not through the dongle.
+* Saved mouse/gamepad startup mode, wireless pedal option and Up/Down pause-menu navigation.
+* Clearer IR camera test: each emitter circle shows the size and brightness of the light spot seen by the camera; emitters not seen are marked with a red X.
 
-### Documentation
-* *No documentation updates*
+### Improvements and Documentation
 
-### Chores
-* *No minor changes*
+* Refined IR tracking and recovery of temporarily hidden LEDs; Square layout supports vertical and wide rectangles.
+* Updated configuration communication, libraries and bilingual user guides. See the [operating manual](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/lightgun/src/README.md#english-version).
 
-### Known Issues
-* *No known issues*
+### Installation and Usage Notes
+
+* One firmware image per board, with no camera-specific or NoFS/Full variants. A clean installation uses the same image but erases all settings and calibration.
+* A clean installation is recommended when upgrading from 6.2.1: note your settings first, then configure and calibrate again.
+* In the special USB NCM mode, the lightgun's USB serial port is unavailable. Save and restart normally after configuration.
+* The Web Flasher can also restart a lightgun running 7.0.0 into flashing mode by itself. After this software reboot the serial port changes: select the new port and retry.
 
 ---
 
@@ -73,7 +81,7 @@ Update the firmware directly from your browser via the WebFlasher: [Launch WebFl
 The easiest, fastest, and safest way to install or update the firmware. It does not require installing any drivers or external software: it runs entirely within your browser.
 * **Requirements:** PC/Mac with Google Chrome, Microsoft Edge, or Opera.
 
-👉 **[LAUNCH OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?tag=<TAG>&lang=en)**
+**[LAUNCH OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?tag=<TAG>&lang=en)**
 
 ---
 
@@ -87,7 +95,7 @@ This option is for those who wish to flash the firmware manually using the offic
 
 A single firmware file is provided for each board. 
 **Normal Update:** Flash the selected `.bin` file to address `0x0000`. This will not overwrite your existing calibrations or configurations. If the filesystem is missing, it will be automatically created on the first boot using default settings.
-**Clean Install:** if you want a 'clean' installation, use the `--erase-all` option alongside the esptool `write_flash` command to erase the entire flash memory before writing the firmware. **Warning: with a 'clean' installation, all previous data on the flash memory, including settings and calibrations, will be permanently deleted.**
+**Clean Install:** if you want a 'clean' installation, use the `--erase-all` option alongside the esptool `write-flash` command to erase the entire flash memory before writing the firmware. **Warning: with a 'clean' installation, all previous data on the flash memory, including settings and calibrations, will be permanently deleted.**
 
 - [OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
 - [OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)
@@ -194,13 +202,7 @@ The script will guide you through the installation and automatically search for 
 #### Compatibility
 Compatibility between **lightgun**, **dongle**, and **pedal** is guaranteed using the firmware listed above.
 
-To configure the lightgun (pins, buttons, calibration, name, player, etc.) the OpenFIRE App is required. 
-You can easily download the most recent pre-compiled binaries for your operating system (Windows, Linux, ARM, MacOS) directly from our Tools portal:
-👉 **[Download OpenFIRE App from ESP32 Ecosystem](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=en)**
-
----
-
-<p align="center"> 🔸 🔸 🔸 </p>
+Configure the lightgun with the official **[WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=en)** using Chrome or Edge on a computer, or with the integrated offline WebApp. Configuration Apps for earlier firmware are not compatible with the new configuration protocol.
 
 ---
 
@@ -217,22 +219,30 @@ You can easily download the most recent pre-compiled binaries for your operating
 ### Installazione Rapida
 Aggiorna il firmware direttamente dal browser tramite il WebFlasher: [Avvia WebFlasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher)
 
+Nuovo di OpenFIRE? Parti dai [Primi passi](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32#primi-passi) · [Problemi comuni](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/lightgun/src/README.md#problemi-comuni-italiano)
+
 ---
 
 ### Nuove funzionalità
-* *Nessuna nuova funzionalità introdotta*
 
-### Correzione di bug
-* *Nessun bug corretto*
+* Configurazione con la [WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=it) ufficiale: online tramite seriale USB, anche attraverso il dongle associato; offline tramite Wi-Fi o USB NCM.
+* Telecamere DFRobot/Wii, PAJ7025R2 e PAJ7025R3 nello stesso firmware, selezionabili dall'App. Usare emettitori da 940 nm per DFRobot/Wii e da 850 nm per PixArt.
+* Tenere premuto **B** all'avvio della lightgun per circa 2 secondi per la configurazione offline. Collegarsi a **OpenFIRE_Config**, accettare la rete senza Internet, poi aprire **http://openfire.local/** o **http://192.168.4.1/** nel browser normale. USB NCM usa **http://192.168.7.1/** sui sistemi supportati.
+* Tenere premuti **Grilletto + A** all'avvio per circa 2 secondi per la modalità aggiornamento firmware su una pistola che esegue già la 7.0.0. Per prima installazione o recupero usare BOOT/RESET della scheda. Collegare direttamente la porta USB OTG della pistola per il flashing, non il dongle.
+* Modalità mouse/gamepad salvabile per l'avvio, opzione pedale wireless e navigazione Su/Giù nel menu di pausa.
+* Test della telecamera IR più chiaro: ogni cerchio degli emettitori mostra grandezza e luminosità della macchia di luce vista dalla telecamera; gli emettitori non visti sono segnati con una X rossa.
 
-### Documentazione
-* *Nessun aggiornamento alla documentazione*
+### Miglioramenti e documentazione
 
-### Modifiche minori
-* *Nessuna modifica minore*
+* Affinati il tracciamento IR e il recupero dei LED temporaneamente nascosti; il layout Square supporta rettangoli verticali e larghi.
+* Aggiornate la comunicazione di configurazione, le librerie e le guide utente bilingui. Consultare il [manuale operativo](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/lightgun/src/README.md#versione-italiana).
 
-### Problemi noti
-* *Nessun problema noto*
+### Note di installazione e utilizzo
+
+* Un'unica immagine firmware per scheda, senza varianti per telecamera o NoFS/Full. L'installazione pulita usa la stessa immagine ma elimina tutte le impostazioni e calibrazioni.
+* Passando dalla 6.2.1 è consigliata un'installazione pulita: annotare prima le impostazioni, poi configurare e calibrare nuovamente.
+* Nella modalità speciale USB NCM la seriale USB della lightgun non è disponibile. Salvare e riavviare normalmente al termine della configurazione.
+* Il Web Flasher può anche riavviare da solo in modalità flashing una lightgun che esegue la 7.0.0. Dopo questo riavvio software la porta seriale cambia: selezionare la nuova porta e riprovare.
 
 ---
 
@@ -279,7 +289,7 @@ Aggiorna il firmware direttamente dal browser tramite il WebFlasher: [Avvia WebF
 Il modo più semplice, veloce e sicuro per installare o aggiornare il firmware. Non richiede l'installazione di driver o software esterni: viene eseguito interamente dal tuo browser.
 * **Requisiti:** PC/Mac con Google Chrome, Microsoft Edge o Opera.
 
-👉 **[AVVIA OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?tag=<TAG>&lang=it)**
+**[AVVIA OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?tag=<TAG>&lang=it)**
 
 ---
 
@@ -293,7 +303,7 @@ Questa opzione è dedicata a chi vuole caricare il firmware manualmente utilizza
 
 Viene fornito un singolo file firmware per ogni scheda. 
 **Aggiornamento normale:** Scrivi il file `.bin` scelto all'indirizzo `0x0000`. Non sovrascriverà calibrazioni o configurazioni esistenti. Se il filesystem è assente, verrà creato automaticamente al primo avvio utilizzando le impostazioni predefinite.
-**Installazione pulita:** se vuoi un'installazione 'pulita', usa l'opzione `--erase-all` assieme al comando `write_flash` di esptool per cancellare l'intera flash prima di scrivere il firmware. **Attenzione: con l'installazione 'pulita' tutti i dati precedenti nella flash, comprese impostazioni e calibrazioni, verranno eliminati definitivamente.**
+**Installazione pulita:** se vuoi un'installazione 'pulita', usa l'opzione `--erase-all` assieme al comando `write-flash` di esptool per cancellare l'intera flash prima di scrivere il firmware. **Attenzione: con l'installazione 'pulita' tutti i dati precedenti nella flash, comprese impostazioni e calibrazioni, verranno eliminati definitivamente.**
 
 - [OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8.bin)
 - [OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/download/<TAG>/OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N8R2.bin)
@@ -400,8 +410,6 @@ Lo script ti guiderà nell'installazione e cercherà automaticamente la porta se
 #### Compatibilità
 La compatibilità tra **lightgun**, **dongle** e **pedal** è garantita utilizzando i firmware sopra elencati.
 
-Per configurare la lightgun (pin, pulsanti, calibrazione, nome, player, ecc.) è necessaria l'App OpenFIRE. 
-Puoi scaricare facilmente gli eseguibili precompilati più recenti per il tuo sistema operativo (Windows, Linux, ARM, MacOS) direttamente dal nostro portale Tools:
-👉 **[Scarica OpenFIRE App dall'Ecosistema ESP32](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=it)**
+Configura la lightgun con la **[WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=it)** ufficiale usando Chrome o Edge su computer, oppure con la WebApp offline integrata. Le App di configurazione dei firmware precedenti non sono compatibili con il nuovo protocollo di configurazione.
 
 ---

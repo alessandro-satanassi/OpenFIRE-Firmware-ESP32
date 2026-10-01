@@ -1,3 +1,7 @@
+> **ESP32 7.0.0:** this reference includes inherited board layouts and default assignments. For the current ESP32 setup, use the board preview and **Board Layout** in the WebApp, selecting the exact board and installed camera. Do not treat older RP2040 examples or labels such as unused SPI pins as the wiring instructions for PAJ7025R2/R3. See the [hardware guide](../README.md#english-version).
+>
+> **ESP32 7.0.0:** questo riferimento include layout ereditati e assegnazioni predefinite. Per la configurazione ESP32 attuale usare l'anteprima della scheda e il **Layout Scheda** nella WebApp, scegliendo scheda esatta e telecamera installata. Non usare i vecchi esempi RP2040 o indicazioni come pin SPI inutilizzati per cablare PAJ7025R2/R3. Consultare la [guida hardware](../README.md#versione-italiana).
+
 # Supported Boards Layouts:
  - [Waveshare esp32-s3-pico](#waveshare-esp32-s3-pico)
  - [ESP32_S3_WROOM1_DevKitC_1_N16R8](#esp32_s3_wroom1_devkitc_1_n16r8)

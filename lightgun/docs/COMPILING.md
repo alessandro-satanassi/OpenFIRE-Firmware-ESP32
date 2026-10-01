@@ -1,15 +1,19 @@
+> **ESP32 7.0.0 users:** use the [Web Flasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/) or the [installation guide](../README.md#english-version). The inherited Arduino/RP2040 instructions below are not the build procedure for this ESP32-S3 port, which uses PlatformIO and its supplied project configuration.
+>
+> **Utenti ESP32 7.0.0:** usare il [Web Flasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/) o la [guida di installazione](../README.md#versione-italiana). Le istruzioni Arduino/RP2040 ereditate riportate sotto non sono la procedura di compilazione di questo port ESP32-S3, che usa PlatformIO e la configurazione di progetto fornita.
+
 > [!NOTE]
 > If you discover issues with custom builds or are not using the provided binaries in the releases page, **make sure you inform in the issue of what you modified in the code.** If it's a general firmware issue, see if it happens in the precompiled builds first.
 
 ## OpenFIRE Build Manual
- - [Arduino IDE Setup](#arduino--ide-setup)
+ - [Arduino IDE Setup](#arduino-ide-setup)
  - [Arduino (-cli) Setup](#arduino--cli-setup)
  - [Sketch Configuration](#sketch-configuration)
  - [Define Buttons & Timers](#define-buttons--timers)
 
 ### Arduino IDE Setup
 For most people, you may prefer editing, testing and using the Arduino IDE. This applies to Arduino IDE 2.x, though 1.x can also be made to work.
- 1. [Download and install the Arduino IDE for your system]() (or for Linux users, install from your system's package manager).
+ 1. [Download and install the Arduino IDE for your system](https://www.arduino.cc/en/software) (or for Linux users, install from your system's package manager).
  2. After opening the IDE, go to File->Preferences and paste the following into the *Additional boards manager URLs* field:
  ```
  https://github.com/TeamOpenFIRE/arduino-pico/releases/download/global/package_rp2040_index.json

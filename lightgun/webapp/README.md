@@ -1,5 +1,9 @@
 # OpenFIRE Web App
 
+**User guide (English):** for 7.0.0 setup, offline access and startup buttons, see the [operating manual](../src/README.md#configuration-with-the-webapp). The rest of this file is a source/build reference, not a prerequisite for using the WebApp.
+
+**Guida utente (Italiano):** per configurazione della 7.0.0, accesso offline e pulsanti all'avvio, consulta il [manuale operativo](../src/README.md#configurazione-con-la-webapp). Il resto di questo file è un riferimento per sorgenti/compilazione, non necessario per usare la WebApp.
+
 The web version of the OpenFIRE App. One source folder, three outputs:
 
 | Output | Boards | Connection | Built by |
@@ -144,20 +148,17 @@ built**, one version of it. Publishing a version means copying that folder into 
 ```
 /                    the home page: the Connect button, and nothing else (dist/launcher)
 /versions.json       the versions published so far, written when one is published
-/v/6.2/              the App of firmware 6.2, a copy of dist/site as it was then
-/v/6.1/              the App of firmware 6.1, untouched since the day it was published
+/v/7.0.0/            the App of stable firmware 7.0.0
+/v/7.0.0-rc2/        a separately published prerelease, if retained
 /.nojekyll           GitHub Pages serves the files as they are
 ```
 
-The name of the folder is the number the firmware sends when the App docks (`"%.1f"` of
-`OPENFIRE_VERSION` in `src/OpenFIREversion.h`, so `6.2`): it is the only version an already
-installed lightgun can tell the App about. Each folder is a complete copy, board pictures
-included, so a version keeps working on its own for as long as it is there.
+The folder is named after the **full version** derived from `OPENFIRE_VERSION_MAJOR`, `OPENFIRE_VERSION_MINOR`, `OPENFIRE_VERSION_PATCH` and optional `OPENFIRE_VERSION_SUFFIX` in `src/OpenFIREversion.h`: for example `7.0.0` or `7.0.0-rc2`. The release tag is `v` plus that ID. The legacy `"%.1f"` field is not the current publication ID. Each folder contains a complete App, including its board pictures.
 
 ```json
-{ "latest": "6.2",
-  "versions": [ { "id": "6.2", "label": "6.2.0", "type": "stable" },
-                { "id": "6.1", "label": "6.1.0", "type": "stable" } ] }
+{ "latest": "7.0.0",
+  "versions": [ { "id": "7.0.0", "label": "7.0.0", "numbers": "7.0.0", "suffix": "",
+                  "type": "stable", "tag": "v7.0.0", "prerelease": false } ] }
 ```
 
 ### The home page chooses, the App does not
@@ -176,8 +177,7 @@ the home page cannot drift away from it.
 
 When the firmware's version is not published, **nothing is opened by itself**: the versions that
 are there are offered, so a firmware nobody made an App for can still be tried with a neighbouring
-one. Since a version of the App is published together with every firmware, that should not happen;
-it is there so that it fails politely if it ever does.
+one. This can happen when publication was disabled or a version was removed. Trying a neighbouring version does not guarantee compatibility.
 
 ### What a published App checks
 
@@ -216,8 +216,7 @@ After the USB table the answer carries items, each a separator and a marker. The
 the two markers that are only a flag (`sError`, `sPedalWireless`) are two bytes; **every other
 marker carries a length byte and then its data**. An App that does not know a marker therefore
 skips it whole and still reads the ones after it, however many are added in the years to come.
-`sVersionFull` is the first of those: the complete `6.2.0-stable`, which the home page uses to
-look for an exact folder before falling back to the `6.2` one. Both Apps parse the trailer this
+`sVersionFull` carries the complete version, for example `7.0.0` or `7.0.0-rc2`, which the home page prefers for an exact folder match. Legacy fallback handling is retained in the launcher; new publications use the full ID. Both Apps parse the trailer this
 way (web: `protocol.js`; Qt: `appserial.cpp`), and the firmware writes it in `main.cpp`.
 
 ## Opening the page as a local file

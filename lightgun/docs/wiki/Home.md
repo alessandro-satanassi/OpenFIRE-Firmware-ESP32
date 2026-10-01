@@ -1,6 +1,11 @@
 # OpenFIRE-Firmware Wiki Main Page
 
-If all you're looking for is information about MAMEHOOKER integration, [find it here!](MAMEHOOKER-Documentation)
+**OpenFIRE ESP32 7.0.0:** these game/serial commands remain separate from the new configuration App protocol. Disconnect the configuration App before using the same serial port. Start the lightgun normally for direct USB serial: the special offline WebApp USB NCM mode replaces that port with a network interface. The paired dongle retains its serial port.
+
+**OpenFIRE ESP32 7.0.0:** questi comandi di gioco/seriali restano separati dal nuovo protocollo dell'App di configurazione. Disconnetti l'App prima di usare la stessa porta seriale. Per la seriale USB diretta avvia normalmente la lightgun: la modalità speciale WebApp offline USB NCM sostituisce quella porta con una rete. Il dongle associato mantiene la sua porta seriale.
+
+
+If all you're looking for is information about MAMEHOOKER integration, [find it here!](MAMEHOOKER-Documentation.md)
 
 Here is where you'll find related miscellanea regarding OpenFIRE (as it's needed).
 

@@ -6,6 +6,11 @@
  - [Light Gun Serial Commands](#light-gun-serial-commands)
  - [MAMEHOOKER's Pipe & State Modifiers](#mamehookers-pipe--state-modifiers)
 
+**OpenFIRE ESP32 7.0.0:** these game/serial commands remain separate from the new configuration App protocol. Disconnect the configuration App before using the same serial port. Start the lightgun normally for direct USB serial: the special offline WebApp USB NCM mode replaces that port with a network interface. The paired dongle retains its serial port.
+
+**OpenFIRE ESP32 7.0.0:** questi comandi di gioco/seriali restano separati dal nuovo protocollo dell'App di configurazione. Disconnetti l'App prima di usare la stessa porta seriale. Per la seriale USB diretta avvia normalmente la lightgun: la modalità speciale WebApp offline USB NCM sostituisce quella porta con una rete. Il dongle associato mantiene la sua porta seriale.
+
+
 ## MAMEHOOKER Setup Guide
 
 [MAMEHOOKER](http://dragonking.arcadecontrols.com/static.php?page=aboutmamehooker) is... *complicated,* as the force feedback capabilities are all controlled from ini files (herein referred to as "configuration files") in `MAMEHOOKER/ini/MAME`. And rather than keeping plaintext codes a *secret*, we maintain extensive documentation here about all the odds and ends of getting game-controlled force feedback for the currently compatible gun systems--primarily focusing on OpenFIRE, though most of this still applies to certain other systems, unless otherwise noted.
