@@ -1401,11 +1401,17 @@ void loop()
             } else if(FW_Common::buttons.pressedReleased == FW_Const::SaveBtnMask) {
                 FW_Common::SavePreferences();
             #ifdef USES_RUMBLE
-                } else if(FW_Common::buttons.pressedReleased == FW_Const::RumbleToggleBtnMask && OF_Prefs::pins[OF_Const::rumbleSwitch] >= 0) {
+                // Software toggle only without a hardware switch (the switch would override it in
+                // run mode) and with a rumble pin, as in the Simple Pause Menu.
+                } else if(FW_Common::buttons.pressedReleased == FW_Const::RumbleToggleBtnMask &&
+                          OF_Prefs::pins[OF_Const::rumbleSwitch] < 0 && OF_Prefs::pins[OF_Const::rumblePin] >= 0) {
                     RumbleToggle();
             #endif // USES_RUMBLE
             #ifdef USES_SOLENOID
-                } else if(FW_Common::buttons.pressedReleased == FW_Const::SolenoidToggleBtnMask && OF_Prefs::pins[OF_Const::solenoidSwitch] >= 0) {
+                // Software toggle only without a hardware switch (the switch would override it in
+                // run mode) and with a solenoid pin, as in the Simple Pause Menu.
+                } else if(FW_Common::buttons.pressedReleased == FW_Const::SolenoidToggleBtnMask &&
+                          OF_Prefs::pins[OF_Const::solenoidSwitch] < 0 && OF_Prefs::pins[OF_Const::solenoidPin] >= 0) {
                     SolenoidToggle();
             #endif // USES_SOLENOID
             } else SelectCalProfileFromBtnMask(FW_Common::buttons.pressedReleased);
