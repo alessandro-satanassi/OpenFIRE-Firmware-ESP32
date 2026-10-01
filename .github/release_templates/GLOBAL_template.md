@@ -9,7 +9,7 @@
 **[OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) Core:** Aligned to commit `8b651a2` of April 19, 2026 (version 6.2 - Long Bridge)
 
 ### Quick Install
-Update the firmware directly from your browser via the WebFlasher: [Launch WebFlasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher)
+Update the firmware directly from your browser via the Web Flasher: [Launch Web Flasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher)
 
 New to OpenFIRE? Start from [Getting Started](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32#getting-started) · [Common Problems](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/lightgun/src/README.md#common-problems)
 
@@ -217,7 +217,7 @@ Configure the lightgun with the official **[WebApp](https://alessandro-satanassi
 **Core di [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware):** Allineato al commit `8b651a2` del 19 aprile 2026 (versione 6.2 - Long Bridge)
 
 ### Installazione Rapida
-Aggiorna il firmware direttamente dal browser tramite il WebFlasher: [Avvia WebFlasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher)
+Aggiorna il firmware direttamente dal browser tramite il Web Flasher: [Avvia Web Flasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher)
 
 Nuovo di OpenFIRE? Parti dai [Primi passi](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32#primi-passi) · [Problemi comuni](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/lightgun/src/README.md#problemi-comuni-italiano)
 

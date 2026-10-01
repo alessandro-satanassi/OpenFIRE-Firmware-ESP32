@@ -180,7 +180,7 @@ The system intelligently determines how to communicate with the PC:
 
 ### 3. Wireless Pedal Search (Optional)
 Immediately after pairing with the Dongle (with **Wireless pedal** enabled in Gun Settings and neither pedal input assigned to a wired pin), the gun opens a **10-second** window during which it searches for a free wireless Pedal on the newly agreed radio channel.
-* If it finds a Pedal, it pairs it to its profile. The LEDs on the pedal will physically indicate which Player it has been assigned to.
+* If it finds a Pedal, it pairs with it. The LEDs on the pedal will physically indicate which Player it has been assigned to.
 * If you do not use a wireless pedal, disable **Wireless pedal** and save to skip this search.
 * The wireless pedal is searched only when the gun connects through the Dongle. When the gun is connected to the computer by USB cable, use a wired pedal instead.
 * If no Pedal is found after 10 seconds, the boot process concludes normally, and you are ready to play (the pedal is entirely optional).
@@ -406,7 +406,7 @@ Il sistema determina in modo intelligente come comunicare con il PC:
 
 ### 3. Ricerca del Pedale Wireless (Opzionale)
 Subito dopo l'associazione con il Dongle (con **Pedale wireless** abilitato in **Impostazioni Gun** e nessuno dei due ingressi del pedale assegnato a un pin cablato), la pistola avvia una finestra di **10 secondi** in cui cerca un Pedale wireless libero sul canale radio appena concordato.
-* Se trova un Pedale, lo associa al suo profilo. I LED sul pedale indicheranno fisicamente a quale Player è stato assegnato.
+* Se trova un Pedale, si associa a quel pedale. I LED sul pedale indicheranno fisicamente a quale Player è stato assegnato.
 * Se non usi un pedale wireless, disabilita **Pedale wireless** e salva per saltare la ricerca.
 * Il pedale wireless viene cercato solo quando la pistola si collega tramite il Dongle. Se la pistola è collegata al computer con il cavo USB, usa invece un pedale cablato.
 * Se non trova alcun Pedale allo scadere dei 10 secondi, il processo di avvio si conclude regolarmente e si è pronti a giocare (il pedale è del tutto facoltativo).

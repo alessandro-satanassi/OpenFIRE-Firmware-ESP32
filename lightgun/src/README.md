@@ -32,7 +32,7 @@
  - [Known Limitations](#known-limitations)
  - [Technical Details & Assorted Errata](#technical-details--assorted-errata)
    - [Serial Handoff (Mame Hooker) Mode](#serial-handoff-mame-hooker-mode)
-   - [Change USB ID for Multiple Guns](#change-usb-id-for-multiple-guns)
+   - [Multiple Guns and Multiplayer](#multiple-guns-and-multiplayer)
 
 ## IR Emitter setup
 
@@ -71,7 +71,9 @@ The **OpenFIRE ESP32 WebApp** has an alignment assistant that can be used to hel
 
 ## Board Configuration
 
-The official configuration tool for OpenFIRE ESP32 7.0.0 is the **OpenFIRE ESP32 WebApp**. It configures pins, buttons, camera, calibration profiles and force feedback, and provides input and IR tests. If your browser does not support Web Serial (for example Firefox, Safari or phone browsers), use the [offline WebApp](#configuration-with-the-webapp) stored in the gun: it does not need Web Serial and works with current browsers, including on a phone. If you prefer a program to install, or your browser is too old to open either WebApp, a compatible desktop App, derived from the App of the original OpenFIRE project, can be downloaded from the [Tools page](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=en), also reachable from the [project hub](https://alessandro-satanassi.github.io/OpenFIRE-ESP32/?lang=en); it does not depend on the browser, but it does need an operating system supported by the App. Use the **OpenFIRE App CUSTOM for ESP32 7.x firmware** section: the other App builds on that page, including those of the original project, use the previous configuration protocol and are not compatible.
+The official configuration tool for OpenFIRE ESP32 7.0.0 is the **OpenFIRE ESP32 WebApp**. It configures pins, buttons, camera, calibration profiles and force feedback, and provides input and IR tests. The online WebApp needs a browser with Web Serial, such as Chrome or Edge on a computer; with other browsers (for example Firefox, Safari or phone browsers) use the [offline WebApp](#configuration-with-the-webapp) stored in the gun, which does not need Web Serial and works with current browsers, including on a phone.
+
+If you prefer a program to install, or your browser is too old to open either WebApp, a compatible desktop App, derived from the App of the original OpenFIRE project, can be downloaded from the [Tools page](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=en), also reachable from the [project hub](https://alessandro-satanassi.github.io/OpenFIRE-ESP32/?lang=en); it does not depend on the browser, but it does need an operating system supported by the App. Use the **OpenFIRE App CUSTOM for ESP32 7.x firmware** section: the other App builds on that page, including those of the original project, use the previous configuration protocol and are not compatible.
 
 Connecting the App puts the gun into *Docked* configuration mode. Save your changes and wait for confirmation before disconnecting or switching off. If an operation fails, follow the displayed recovery instructions and verify the settings after reconnecting; do not assume an unconfirmed save succeeded.
 
@@ -109,7 +111,7 @@ Press the lightgun buttons **before powering on or resetting**, and keep them he
 | **Trigger + A** | Firmware update mode; the OLED, if fitted, shows **Ready for firmware update**. Connect the lightgun's own USB OTG port and use the [Web Flasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/). |
 | **B** | Starts the integrated offline WebApp over Wi-Fi and, with a USB cable, USB NCM. On the OLED, the top bar is inverted and shows a gear icon. |
 
-Firmware update takes priority if both combinations are held. **A/B are the lightgun's mapped buttons, not the board's physical BOOT button.** On a blank board, an older firmware or when the shortcuts cannot work, use the board's physical BOOT/RESET procedure instead. A software reboot into flashing mode may create a different serial port: select the new port and retry if necessary. On a lightgun running 7.0.0 normally, the Web Flasher can also switch it to flashing mode by itself: the first attempt restarts the gun and its port changes, so start the installation again and select the new port. The firmware cannot be flashed through the wireless dongle or the Wi-Fi configuration page.
+Firmware update takes priority if both combinations are held. **A/B are the lightgun's mapped buttons, not the board's physical BOOT button.** On a blank board, an older firmware or when the shortcuts cannot work, use the board's physical BOOT/RESET procedure instead. On a lightgun running 7.0.0 normally, the Web Flasher can also switch it to flashing mode by itself, and the WebApp can do the same with **Restart Microcontroller in Firmware Update Mode** in the *Gun Tests* tab. After this software restart the serial port changes: start the installation again and select the new port. The firmware cannot be flashed through the wireless dongle or the Wi-Fi configuration page.
 
 For installation, select the image matching the **board and flash/PSRAM variant**, not the camera. A normal update and a clean installation use the same image; a clean installation erases all settings and calibration. When moving from 6.2.1 to 7.0.0, a clean installation is recommended: note your existing settings first, then configure and calibrate again.
 
@@ -121,7 +123,13 @@ For installation, select the image matching the **board and flash/PSRAM variant*
 - **Wireless pedal** (**Gun Settings → Input / Output**): enable this option only if you use that accessory, with both wired pedal inputs unmapped. Otherwise disable it to avoid an unnecessary pedal search at startup. A mapped wired pedal takes precedence. The wireless pedal works only when the gun is connected through the dongle; with the gun connected to the computer by USB cable, use a wired pedal.
 
 ## First-time Setup
-When flashing a new board with OpenFIRE, or after clearing the flash, the first time it's plugged in will prompt for the user to pull the trigger button to start initial calibration - this can be accomplished from the WebApp using any of the *Calibrate Profile* buttons in the *Calibration Profiles* tab, or pressing the trigger for standalone calibration (see the [How to Calibrate](#how-to-calibrate) section for more information). If your build is using custom pins, or you would like to change any settings at this point, the gun can be connected to the WebApp and configured prior to starting initial calibration - at least *Trigger* and *Button A* should be mapped and confirmed working in the *Gun Tests* tab. Until this first calibration is done, the gun waits and does not move the pointer: the board's RGB LED, if present, blinks orange. If the camera is not available (for example because the wrong model is selected), pulling the trigger does not start calibration: connect the WebApp and correct the camera settings first.
+After flashing a new board, or after a clean installation, the gun has no calibration yet. It waits for the first calibration and does not move the pointer; the board's RGB LED, if present, blinks orange.
+
+1. Connect the gun to the WebApp. If you use custom pins, map at least the *Trigger* and *Button A* in *Board Layout*; select your camera and check the buttons in the *Gun Tests* tab, then save.
+2. Start the calibration with any of the *Calibrate Profile* buttons in the *Calibration Profiles* tab, or pull the trigger to run the standalone calibration (see [How to Calibrate](#how-to-calibrate)).
+3. Save the calibration.
+
+If the camera is not available (for example because the wrong model is selected), pulling the trigger does not start the calibration: correct the camera settings in the WebApp first.
 
 ## Operations Manual
 By default, the light gun operates as an absolute positioning mouse (like a stylus!) until the button/combination is pressed to enter pause mode. A different output can be selected with the saved **Startup mode** setting. Alternatively, the gun can be signaled to output using its corresponding HID Gamepad device using a Serial Feedback Distributor program such as MAMEHOOKER - see the [Serial Handoff](#serial-handoff-mame-hooker-mode) section for more info.
@@ -211,7 +219,7 @@ A sign that the IR sensitivity is too low is if the pointer moves in noticeable 
 A sign that the IR sensitivity is too high is if the pointer jumps around erratically. If this happens only while aiming at certain areas of the screen, this is a good indication that a reflection is being detected by the camera. If the sensitivity is at max, step it down to high or minimum. Obviously, the best solution is to eliminate the reflective surface. The WebApp's IR test (see [Test Mode](#test-mode)) can help diagnose this problem: it displays the IR points seen by the camera, including how large and bright each one is.
 
 ### Profiles
-The main OpenFIRE builds are configured with 4 calibration profiles available. Each profile has its own calibration data, run mode, and IR camera sensitivity settings. Each profile can be selected from pause mode by pressing the associated button (A/B/Start/Select), or selecting them via the profiles submenu in simple pause menu.
+The main OpenFIRE builds are configured with 4 calibration profiles available. Each profile has its own calibration data, run mode, and IR camera sensitivity settings. Each profile can be selected from pause mode by pressing the associated button (A/B/Start/Select), or selecting them via the profiles submenu in simple pause menu. In the WebApp, the **Calibration Profiles** tab shows and changes the settings of every profile, including **Sensitivity** and **Run Mode**: this is the easiest way to check them, since in pause mode they are only reported on a serial monitor. Save after changing them.
 
 ### Software Toggles
 Hardware features can be toggled at runtime, even without hardware switches defined!
@@ -275,7 +283,7 @@ The gun will automatically hand off control to an instance of Mame Hooker that's
 
 If you aren't already familiar with Mame Hooker, **you'll need compatible inis for each game you play** and **the gun's COM port should be set to match the player number** (COM1 for P1, COM2 for P2, etc.)! COM port assignment can be done in Windows via the Device Manager, or Linux via settings in the Wine registry of the prefix your game/Mame Hooker is started in. [Consult the wiki page on MAMEHOOKER for more information!](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/wiki/MAMEHOOKER_Documentation_EN) For Linux users wanting to use their gun with native emulators' force feedback (currently MAME, Flycast, or their RetroArch ports), consider trying [QMamehook](https://github.com/SeongGino/QMamehook).
 
-### Change USB ID for Multiple Guns
+### Multiple Guns and Multiplayer
 To play with two (or more) OpenFIRE guns on the same computer, each gun must report a different identity. If several devices share the same name and/or Product/Vendor ID (the **USB Implementer's Forum (USB-IF) identifiers**), applications that read individual mouse devices, such as RetroArch and TeknoParrot, cannot tell them apart.
 
 1. Connect one gun at a time to the WebApp and open **Gun Settings → TinyUSB Identifier**.
@@ -329,7 +337,7 @@ For technical support and to join the discussion, please refer to the [Community
  - [Limiti noti](#limiti-noti-italiano)
  - [Dettagli Tecnici e Note Varie](#dettagli-tecnici-e-note-varie-italiano)
    - [Modalità Serial Handoff (Mame Hooker)](#modalità-serial-handoff-mame-hooker-italiano)
-   - [Modifica dell'ID USB per Pistole Multiple](#modifica-dell-id-usb-per-pistole-multiple-italiano)
+   - [Più pistole e multigiocatore](#modifica-dell-id-usb-per-pistole-multiple-italiano)
 
 
 <a id="configurazione-emettitori-ir-italiano"></a>
@@ -373,7 +381,9 @@ La WebApp OpenFIRE ESP32 dispone di un assistente di allineamento che può aiuta
 
 ## Configurazione della Scheda
 
-Lo strumento ufficiale di configurazione per OpenFIRE ESP32 7.0.0 è la **WebApp OpenFIRE ESP32**. Permette di configurare pin, pulsanti, telecamera, profili di calibrazione e force feedback, e di eseguire i test degli ingressi e dei punti IR. Se il tuo browser non supporta Web Serial (ad esempio Firefox, Safari o i browser dei telefoni), usa la [WebApp offline](#configurazione-con-la-webapp) contenuta nella pistola: non richiede Web Serial e funziona con i browser attuali, anche da telefono. Se preferisci un programma da installare, o il tuo browser è troppo vecchio per aprire entrambe le WebApp, un'App desktop compatibile, derivata dall'App del progetto OpenFIRE originale, si può scaricare dalla [pagina Tools](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=it), raggiungibile anche dal [portale del progetto](https://alessandro-satanassi.github.io/OpenFIRE-ESP32/?lang=it); non dipende dal browser, ma richiede comunque un sistema operativo supportato dall'App. Usa la sezione **OpenFIRE App CUSTOM per firmware ESP32 7.x**: le altre build dell'App presenti in quella pagina, comprese quelle del progetto originale, usano il precedente protocollo di configurazione e non sono compatibili.
+Lo strumento ufficiale di configurazione per OpenFIRE ESP32 7.0.0 è la **WebApp OpenFIRE ESP32**. Permette di configurare pin, pulsanti, telecamera, profili di calibrazione e force feedback, e di eseguire i test degli ingressi e dei punti IR. La WebApp online richiede un browser con Web Serial, come Chrome o Edge su computer; con altri browser (ad esempio Firefox, Safari o i browser dei telefoni) usa la [WebApp offline](#configurazione-con-la-webapp) contenuta nella pistola, che non richiede Web Serial e funziona con i browser attuali, anche da telefono.
+
+Se preferisci un programma da installare, o il tuo browser è troppo vecchio per aprire entrambe le WebApp, un'App desktop compatibile, derivata dall'App del progetto OpenFIRE originale, si può scaricare dalla [pagina Tools](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=it), raggiungibile anche dal [portale del progetto](https://alessandro-satanassi.github.io/OpenFIRE-ESP32/?lang=it); non dipende dal browser, ma richiede comunque un sistema operativo supportato dall'App. Usa la sezione **OpenFIRE App CUSTOM per firmware ESP32 7.x**: le altre build dell'App presenti in quella pagina, comprese quelle del progetto originale, usano il precedente protocollo di configurazione e non sono compatibili.
 
 Collegando l'App, la pistola entra nello stato *Docked* di configurazione. Salva le modifiche e attendi la conferma prima di disconnettere o spegnere. Se un'operazione fallisce, segui le indicazioni di recupero mostrate e verifica le impostazioni dopo la riconnessione: un salvataggio non confermato non va considerato riuscito.
 
@@ -411,7 +421,7 @@ Premi i pulsanti della lightgun **prima di accendere o riavviare** e mantienili 
 | **Grilletto + A** | Modalità aggiornamento firmware; sull'OLED, se presente, compare **Ready for firmware update**. Collega la porta USB OTG della lightgun stessa e usa il [Web Flasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/). |
 | **B** | Avvia la WebApp offline integrata tramite Wi-Fi e, con il cavo USB, tramite USB NCM. Sull'OLED la barra superiore ha i colori invertiti e mostra un ingranaggio. |
 
-L'aggiornamento firmware ha la precedenza se vengono tenute premute entrambe le combinazioni. **A/B sono i pulsanti mappati della lightgun, non il pulsante fisico BOOT della scheda.** Su una scheda vuota, con un firmware precedente o quando le scorciatoie non funzionano, usa invece la procedura BOOT/RESET della scheda. Un riavvio software in modalità flashing può creare una porta seriale diversa: seleziona la nuova porta e riprova se necessario. Su una lightgun che esegue normalmente la 7.0.0, il Web Flasher può anche portarla da solo in modalità flashing: il primo tentativo riavvia la pistola e la sua porta cambia, quindi riavvia l'installazione e seleziona la nuova porta. Non si può installare il firmware attraverso il dongle wireless o la pagina di configurazione Wi-Fi.
+L'aggiornamento firmware ha la precedenza se vengono tenute premute entrambe le combinazioni. **A/B sono i pulsanti mappati della lightgun, non il pulsante fisico BOOT della scheda.** Su una scheda vuota, con un firmware precedente o quando le scorciatoie non funzionano, usa invece la procedura BOOT/RESET della scheda. Su una lightgun che esegue normalmente la 7.0.0, il Web Flasher può anche portarla da solo in modalità flashing, e la WebApp può fare lo stesso con **Riavvia il microcontrollore in modalità aggiornamento firmware** nella scheda *Gun Tests*. Dopo questo riavvio software la porta seriale cambia: riavvia l'installazione e seleziona la nuova porta. Non si può installare il firmware attraverso il dongle wireless o la pagina di configurazione Wi-Fi.
 
 Per l'installazione scegli l'immagine corrispondente alla **scheda e alla variante flash/PSRAM**, non alla telecamera. Aggiornamento normale e installazione pulita usano la stessa immagine; l'installazione pulita elimina tutte le impostazioni e calibrazioni. Passando dalla 6.2.1 alla 7.0.0 è consigliata un'installazione pulita: annota prima le impostazioni esistenti, poi configura e calibra nuovamente.
 
@@ -425,7 +435,13 @@ Per l'installazione scegli l'immagine corrispondente alla **scheda e alla varian
 <a id="prima-configurazione-italiano"></a>
 
 ## Prima Configurazione
-Quando si esegue il flashing di una nuova scheda con OpenFIRE, o dopo aver formattato la memoria flash, la prima volta che la si collega verrà richiesto all'utente di premere il grilletto per avviare la calibrazione iniziale. Questo può essere fatto dalla WebApp utilizzando uno qualsiasi dei pulsanti *Calibra profilo* nella scheda *Profili di calibrazione*, oppure premendo il grilletto fisicamente per la calibrazione autonoma (vedi la sezione [Come Calibrare](#come-calibrare-italiano) per maggiori informazioni). Se la tua build utilizza pin personalizzati, o desideri modificare qualsiasi impostazione a questo punto, la pistola può essere collegata alla WebApp e configurata prima di avviare la calibrazione iniziale - assicurati che almeno il *Grilletto* (Trigger) e il *Pulsante A* siano mappati e confermati come funzionanti nella scheda *Gun Tests*. Finché non viene eseguita questa prima calibrazione la pistola resta in attesa e non muove il puntatore: il LED RGB della scheda, se presente, lampeggia di arancione. Se la telecamera non è disponibile (ad esempio perché è selezionato il modello sbagliato), premendo il grilletto la calibrazione non parte: collega prima la WebApp e correggi le impostazioni della telecamera.
+Dopo l'installazione su una scheda nuova, o dopo un'installazione pulita, la pistola non ha ancora una calibrazione. Resta in attesa della prima calibrazione e non muove il puntatore; il LED RGB della scheda, se presente, lampeggia di arancione.
+
+1. Collega la pistola alla WebApp. Se usi pin personalizzati, assegna almeno il *Grilletto* e il *Pulsante A* nel *Layout Scheda*; scegli la telecamera e prova i pulsanti nella scheda *Gun Tests*, poi salva.
+2. Avvia la calibrazione con uno dei pulsanti *Calibra profilo* nella scheda *Profili di calibrazione*, oppure premi il grilletto per la calibrazione autonoma (vedi [Come Calibrare](#come-calibrare-italiano)).
+3. Salva la calibrazione.
+
+Se la telecamera non è disponibile (ad esempio perché è selezionato il modello sbagliato), premendo il grilletto la calibrazione non parte: correggi prima le impostazioni della telecamera nella WebApp.
 
 <a id="manuale-operativo-italiano"></a>
 
@@ -534,7 +550,7 @@ Un segno che la sensibilità IR è **troppo alta** si verifica quando il puntato
 <a id="profili-italiano"></a>
 
 ### Profili
-Le build principali di OpenFIRE sono configurate con 4 profili di calibrazione disponibili. Ogni profilo ha i propri dati di calibrazione, la modalità operativa (run mode) e le impostazioni di sensibilità della telecamera IR. Ogni profilo può essere richiamato dalla modalità pausa premendo il pulsante associato (A/B/Start/Select) o selezionandolo dal sottomenu dei profili nel menu di pausa semplificato.
+Le build principali di OpenFIRE sono configurate con 4 profili di calibrazione disponibili. Ogni profilo ha i propri dati di calibrazione, la modalità operativa (run mode) e le impostazioni di sensibilità della telecamera IR. Ogni profilo può essere richiamato dalla modalità pausa premendo il pulsante associato (A/B/Start/Select) o selezionandolo dal sottomenu dei profili nel menu di pausa semplificato. Nella WebApp la scheda **Profili di calibrazione** mostra e modifica le impostazioni di ogni profilo, comprese **Sensibilità** e **Modalità**: è il modo più semplice per controllarle, perché in modalità pausa vengono indicate solo su un monitor seriale. Salva dopo averle cambiate.
 
 <a id="interruttori-software-toggle-italiano"></a>
 
@@ -613,7 +629,7 @@ Se non hai familiarità con Mame Hooker, **avrai bisogno dei file `.ini` compati
 
 <a id="modifica-dell-id-usb-per-pistole-multiple-italiano"></a>
 
-### Modifica dell'ID USB per Pistole Multiple
+### Più pistole e multigiocatore
 Per giocare con due (o più) lightgun OpenFIRE sullo stesso computer, ogni pistola deve presentarsi con un'identità diversa. Se più dispositivi condividono lo stesso nome e/o ID Prodotto/Venditore (PID/VID, gli **identificatori USB Implementer's Forum (USB-IF)**), le applicazioni che leggono individualmente i singoli mouse, come RetroArch e TeknoParrot, non riescono a distinguerli.
 
 1. Collega alla WebApp una pistola alla volta e apri **Impostazioni Gun → Identificatore TinyUSB**.

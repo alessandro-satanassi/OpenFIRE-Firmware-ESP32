@@ -127,7 +127,7 @@ Here is what happens when you plug it into the PC's USB port:
 5. **Fast Reconnection:** If for some reason you turn off the gun, but leave the Dongle (already paired) regularly plugged in and powered on the PC, as soon as you turn the lightgun back on, the reconnection will be instantaneous.
 
 > [!TIP]
-> **Recommended power-on order:** 1) plug the Dongle into the PC and wait about 15 seconds, until it is listening; 2) switch on the wireless pedal, if you use one; 3) switch on the Lightgun, without its USB cable connected to the computer. With more guns (up to four), use one Dongle for each gun: see [several guns](../lightgun/src/README.md#change-usb-id-for-multiple-guns).
+> **Recommended power-on order:** 1) plug the Dongle into the PC and wait about 15 seconds, until it is listening; 2) switch on the wireless pedal, if you use one; 3) switch on the Lightgun, without its USB cable connected to the computer. With more guns (up to four), use one Dongle for each gun: see [several guns](../lightgun/src/README.md#multiple-guns-and-multiplayer).
 
 > [!IMPORTANT]
 > **Dongle Restart and New Pairing**

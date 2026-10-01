@@ -49,7 +49,7 @@
 OpenFIRE ESP32 turns an ESP32-S3 board into a complete lightgun for modern TVs and monitors, for wired or wireless play.
 
 - **Accurate aiming:** four IR emitters around the screen and a camera in the gun, with tracking refined for the Square layout, also close to the screen and towards the edges.
-- **Wireless play:** a small USB dongle receives the data from the gun. The computer sees standard mouse, keyboard and gamepad devices, with the same 209 Hz update rate as the USB cable and no drivers to install.
+- **Wireless play:** a small USB dongle receives the data from the gun. The computer sees standard mouse, keyboard and gamepad devices, with the same 209 Hz update rate as the USB cable and no drivers to install. Up to four guns can play together, each with its own dongle.
 - **Nothing to install:** the firmware is installed from the browser with the [Web Flasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=en), and the gun is configured and tested with the [WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=en), online or, without Internet and even from a phone, through the WebApp stored in the gun.
 - **One firmware, three cameras:** Wii Cam / DFRobot SEN0158, PixArt PAJ7025R2 and the wide-angle PixArt PAJ7025R3.
 - **Complete feedback:** solenoid, rumble motor, NeoPixel LEDs and an OLED display for menus, life and ammo, with game-driven force feedback through MAMEHOOKER and similar programs.
@@ -93,7 +93,7 @@ New to OpenFIRE? Follow these steps in order; each one links to the detailed ins
 5. **Mount the four IR emitters** around the screen ([IR emitter setup](lightgun/src/README.md#ir-emitter-setup)).
 6. **Calibrate** each profile you use, then save ([how to calibrate](lightgun/src/README.md#how-to-calibrate)).
 7. **Test** the buttons in **Gun Tests** and the camera with **Open IR Camera Tester...** ([test mode](lightgun/src/README.md#test-mode)).
-8. **Play** with the USB cable, or wirelessly: plug in the [dongle](dongle/README.md#english-version) and wait about 15 seconds, switch on the [wireless pedal](pedal/README.md#english-version) if you use one, then switch on the gun.
+8. **Play** with the USB cable, or wirelessly: plug in the [dongle](dongle/README.md#english-version) and wait about 15 seconds, switch on the [wireless pedal](pedal/README.md#english-version) if you use one, then switch on the gun. For two to four players, see [several guns](lightgun/src/README.md#multiple-guns-and-multiplayer).
 
 If something does not work, see [Common Problems](lightgun/src/README.md#common-problems). The [operational manual](lightgun/src/README.md#english-version) explains buttons, pause mode and profiles.
 
@@ -107,7 +107,7 @@ Version 7.0.0 introduces the **[OpenFIRE ESP32 WebApp](https://alessandro-satana
 
 * **Three camera models in one firmware:** DFRobot SEN0158 / Wii Cam, PixArt PAJ7025R2 and wide-angle PAJ7025R3. Select the installed model in the WebApp; you do not need a different firmware for each camera. The firmware also corrects the distortion of the R3's wide-angle lens.
 * **Online or offline configuration:** use the online WebApp through USB or a paired dongle, or hold **B while powering on for about 2 seconds** to start the WebApp stored in the lightgun, accessible over Wi-Fi or USB networking.
-* **Firmware update without opening the gun:** on a lightgun already running 7.0.0, hold **Trigger + A while powering on for about 2 seconds**, then connect its own USB OTG port to the computer and use the WebFlasher.
+* **Firmware update without opening the gun:** on a lightgun already running 7.0.0, hold **Trigger + A while powering on for about 2 seconds**, then connect its own USB OTG port to the computer and use the Web Flasher.
 * **One firmware file per board:** normal updates and clean installations use the same file; a clean installation erases all settings and calibrations.
 * **Square layout with LEDs at the screen corners:** besides the recommended vertical rectangle, a wider rectangle with the LEDs at the screen corners is now supported. Recalibrate after changing the emitter layout.
 * **Clearer IR camera test:** each emitter circle shows the size and brightness of the light spot seen by the camera, and emitters that are not seen are marked with a red X, so LED placement and camera sensitivity are easier to check.
@@ -162,13 +162,9 @@ A board like the DevKitC-1, PICO, or ZERO can be programmed and used interchange
 ## System Architecture
 The project is divided into three modular components, each with specific technical documentation within their respective folders:
 
-```mermaid
-flowchart LR
-    pedal["Wireless pedal (optional)"] -- ESP-NOW --> gun["Lightgun"]
-    gun -- ESP-NOW --> dongle["Dongle"]
-    dongle -- USB --> pc["PC"]
-    gun -. "USB cable (wired play)" .-> pc
-```
+<p align="center">
+  <img src="docs/img/architecture_en.png" alt="System architecture: the wireless pedal (optional) connects to the lightgun via ESP-NOW, the lightgun connects via ESP-NOW to the dongle, which is plugged into the PC by USB; for wired play the lightgun is connected to the PC directly by USB cable" width="100%">
+</p>
 
 For wireless play the pedal talks to the lightgun, and the lightgun to the dongle plugged into the PC. For wired play the lightgun is connected to the PC directly by USB cable.
 
@@ -346,7 +342,7 @@ In full compliance with the original license and the vision of the OpenFIRE crea
 OpenFIRE ESP32 trasforma una scheda ESP32-S3 in una lightgun completa per TV e monitor moderni, da usare via cavo o senza fili.
 
 - **Mira precisa:** quattro emettitori IR intorno allo schermo e una telecamera nella pistola, con un tracciamento affinato per il layout Square, anche vicino allo schermo e verso i bordi.
-- **Gioco senza fili:** un piccolo dongle USB riceve i dati dalla pistola. Il computer vede normali dispositivi mouse, tastiera e gamepad, con lo stesso aggiornamento a 209 Hz del cavo USB e senza driver da installare.
+- **Gioco senza fili:** un piccolo dongle USB riceve i dati dalla pistola. Il computer vede normali dispositivi mouse, tastiera e gamepad, con lo stesso aggiornamento a 209 Hz del cavo USB e senza driver da installare. Fino a quattro pistole possono giocare insieme, ognuna con il proprio dongle.
 - **Niente da installare:** il firmware si installa dal browser con il [Web Flasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=it) e la pistola si configura e si prova con la [WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=it), online oppure, senza Internet e anche da telefono, con la WebApp contenuta nella pistola.
 - **Un firmware, tre telecamere:** Wii Cam / DFRobot SEN0158, PixArt PAJ7025R2 e PixArt PAJ7025R3 grandangolare.
 - **Feedback completo:** solenoide, motore rumble, LED NeoPixel e display OLED per menu, vite e munizioni, con force feedback guidato dal gioco tramite MAMEHOOKER e programmi simili.
@@ -391,7 +387,7 @@ Sei nuovo di OpenFIRE? Segui questi passi nell'ordine; ognuno rimanda alle istru
 5. **Monta i quattro emettitori IR** intorno allo schermo ([configurazione emettitori IR](lightgun/src/README.md#configurazione-emettitori-ir-italiano)).
 6. **Calibra** ogni profilo che usi, poi salva ([come calibrare](lightgun/src/README.md#come-calibrare-italiano)).
 7. **Prova** i pulsanti in **Gun Tests** e la telecamera con **Apri Tester telecamera IR...** ([modalità di test](lightgun/src/README.md#modalità-di-test-italiano)).
-8. **Gioca** con il cavo USB, oppure senza fili: inserisci il [dongle](dongle/README.md#versione-italiana) e attendi circa 15 secondi, accendi il [pedale wireless](pedal/README.md#versione-italiana) se lo usi, poi accendi la pistola.
+8. **Gioca** con il cavo USB, oppure senza fili: inserisci il [dongle](dongle/README.md#versione-italiana) e attendi circa 15 secondi, accendi il [pedale wireless](pedal/README.md#versione-italiana) se lo usi, poi accendi la pistola. Per giocare da due a quattro giocatori, vedi [più pistole](lightgun/src/README.md#modifica-dell-id-usb-per-pistole-multiple-italiano).
 
 Se qualcosa non funziona, consulta [Problemi comuni](lightgun/src/README.md#problemi-comuni-italiano). Il [manuale operativo](lightgun/src/README.md#versione-italiana) spiega pulsanti, modalità pausa e profili.
 
@@ -405,7 +401,7 @@ La versione 7.0.0 introduce la **[WebApp OpenFIRE ESP32](https://alessandro-sata
 
 * **Tre modelli di telecamera in un solo firmware:** DFRobot SEN0158 / Wii Cam, PixArt PAJ7025R2 e PAJ7025R3 grandangolare. Seleziona nella WebApp il modello installato; non occorre un firmware diverso per ogni telecamera. Il firmware corregge anche la distorsione dell'ottica grandangolare della R3.
 * **Configurazione online oppure offline:** usa la WebApp online tramite USB o dongle associato, oppure tieni premuto **B all'accensione per circa 2 secondi** per avviare la WebApp contenuta nella lightgun, accessibile tramite Wi-Fi o rete USB.
-* **Aggiornamento firmware senza aprire la pistola:** su una lightgun che esegue già la 7.0.0, tieni premuti **Grilletto + A all'accensione per circa 2 secondi**, poi collega al computer la sua porta USB OTG e usa il WebFlasher.
+* **Aggiornamento firmware senza aprire la pistola:** su una lightgun che esegue già la 7.0.0, tieni premuti **Grilletto + A all'accensione per circa 2 secondi**, poi collega al computer la sua porta USB OTG e usa il Web Flasher.
 * **Un solo file firmware per scheda:** aggiornamento normale e installazione pulita usano lo stesso file; l'installazione pulita cancella tutte le impostazioni e le calibrazioni.
 * **Layout Square con LED agli angoli dello schermo:** oltre al rettangolo verticale consigliato, ora è supportato anche un rettangolo più largo con i LED agli angoli dello schermo. Ripeti la calibrazione dopo aver cambiato la disposizione degli emettitori.
 * **Test della telecamera IR più chiaro:** ogni cerchio degli emettitori mostra grandezza e luminosità della macchia di luce vista dalla telecamera, e gli emettitori non visti sono segnati con una X rossa: è più facile verificare la posizione dei LED e la sensibilità della telecamera.
@@ -460,13 +456,9 @@ Una board come la DevKitC-1, la PICO o la ZERO può essere programmata e utilizz
 ## Architettura del Sistema
 Il progetto si articola in tre componenti modulari, ognuno dei quali dispone di documentazione tecnica specifica all'interno delle relative cartelle:
 
-```mermaid
-flowchart LR
-    pedal["Pedale wireless (facoltativo)"] -- ESP-NOW --> gun["Lightgun"]
-    gun -- ESP-NOW --> dongle["Dongle"]
-    dongle -- USB --> pc["PC"]
-    gun -. "Cavo USB (gioco via cavo)" .-> pc
-```
+<p align="center">
+  <img src="docs/img/architecture_it.png" alt="Architettura del sistema: il pedale wireless (facoltativo) si collega alla lightgun via ESP-NOW, la lightgun via ESP-NOW al dongle, inserito nel PC tramite USB; nel gioco via cavo la lightgun è collegata direttamente al PC con il cavo USB" width="100%">
+</p>
 
 Nel gioco senza fili il pedale comunica con la lightgun e la lightgun con il dongle inserito nel PC. Nel gioco via cavo la lightgun è collegata direttamente al PC con il cavo USB.
 
