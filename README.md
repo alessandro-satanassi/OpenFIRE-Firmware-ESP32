@@ -78,7 +78,7 @@ Furthermore, the **tracking system has been refined** specifically for the "squa
 
 ## Getting Started
 
-New to OpenFIRE? Follow these steps in order; each one links to the detailed instructions.
+New to OpenFIRE? Here is what you need and the steps to follow; each step links to the detailed instructions.
 
 **What you need:** a lightgun built around an ESP32-S3 board, with an IR camera, four IR emitters and buttons. To play without cables you also need a [dongle](dongle/README.md#english-version) plugged into the computer and a battery in the gun; the [wireless pedal](pedal/README.md#english-version) is optional.
 
@@ -372,7 +372,7 @@ Inoltre, il **sistema di tracciamento è stato affinato** specificatamente per l
 
 ## Primi passi
 
-Sei nuovo di OpenFIRE? Segui questi passi nell'ordine; ognuno rimanda alle istruzioni dettagliate.
+Sei nuovo di OpenFIRE? Ecco cosa ti serve e i passi da seguire; ogni passo rimanda alle istruzioni dettagliate.
 
 **Cosa ti serve:** una lightgun basata su una scheda ESP32-S3, con una telecamera IR, quattro emettitori IR e i pulsanti. Per giocare senza fili servono anche un [dongle](dongle/README.md#versione-italiana) collegato al computer e una batteria nella pistola; il [pedale wireless](pedal/README.md#versione-italiana) è facoltativo.
 
@@ -387,7 +387,7 @@ Sei nuovo di OpenFIRE? Segui questi passi nell'ordine; ognuno rimanda alle istru
 5. **Monta i quattro emettitori IR** intorno allo schermo ([configurazione emettitori IR](lightgun/src/README.md#configurazione-emettitori-ir-italiano)).
 6. **Calibra** ogni profilo che usi, poi salva ([come calibrare](lightgun/src/README.md#come-calibrare-italiano)).
 7. **Prova** i pulsanti in **Gun Tests** e la telecamera con **Apri Tester telecamera IR...** ([modalità di test](lightgun/src/README.md#modalità-di-test-italiano)).
-8. **Gioca** con il cavo USB, oppure senza fili: inserisci il [dongle](dongle/README.md#versione-italiana) e attendi circa 15 secondi, accendi il [pedale wireless](pedal/README.md#versione-italiana) se lo usi, poi accendi la pistola. Per giocare da due a quattro giocatori, vedi [più pistole](lightgun/src/README.md#modifica-dell-id-usb-per-pistole-multiple-italiano).
+8. **Gioca** con il cavo USB, oppure senza fili: inserisci il [dongle](dongle/README.md#versione-italiana) e attendi circa 15 secondi, accendi il [pedale wireless](pedal/README.md#versione-italiana) se lo usi, poi accendi la pistola. Per giocare in due, tre o quattro, vedi [più pistole](lightgun/src/README.md#modifica-dell-id-usb-per-pistole-multiple-italiano).
 
 Se qualcosa non funziona, consulta [Problemi comuni](lightgun/src/README.md#problemi-comuni-italiano). Il [manuale operativo](lightgun/src/README.md#versione-italiana) spiega pulsanti, modalità pausa e profili.
 
