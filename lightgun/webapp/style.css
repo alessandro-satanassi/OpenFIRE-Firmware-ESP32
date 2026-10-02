@@ -521,9 +521,39 @@ input.invalid { color: var(--danger); border-color: var(--danger); }
     .link-state.connecting { animation: none; opacity: 0.6; }
 }
 
-.save-button { min-height: 36px; padding: 0 16px; min-width: 20rem; }
+.save-button { position: relative; min-height: 36px; padding: 0 16px; min-width: 20rem; }
 .save-button:disabled { background: var(--surface-2); border-color: var(--border); color: var(--muted); font-weight: 500; opacity: 0.85; }
 .save-button:disabled .icon { opacity: 0.5; }
+
+/* Unsaved changes: Save "breathes" (brighter and back) and a ring spreads out
+   from it at the same pace, so it catches the eye and is not forgotten.
+   The ring is a pseudo-element, so the focus ring and hover colours are untouched. */
+.save-button.has-changes { animation: save-breathe 1.6s ease-in-out infinite; }
+.save-button.has-changes::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    pointer-events: none;
+    animation: save-ring 1.6s ease-out infinite;
+}
+
+@keyframes save-breathe {
+    0%, 100% { filter: brightness(1); }
+    50%      { filter: brightness(1.25); }
+}
+
+@keyframes save-ring {
+    0%   { box-shadow: 0 0 0 0 var(--accent); opacity: 0.9; }
+    80%  { box-shadow: 0 0 0 12px var(--accent); opacity: 0; }
+    100% { box-shadow: 0 0 0 12px var(--accent); opacity: 0; }
+}
+
+/* Without animations (system setting): a steady ring instead. */
+@media (prefers-reduced-motion: reduce) {
+    .save-button.has-changes { animation: none; }
+    .save-button.has-changes::after { animation: none; box-shadow: 0 0 0 3px var(--accent-soft); opacity: 1; }
+}
 
 /* ----- Welcome ------------------------------------------------------------------------- */
 
