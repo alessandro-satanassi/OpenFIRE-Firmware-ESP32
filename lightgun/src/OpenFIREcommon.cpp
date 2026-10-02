@@ -17,6 +17,7 @@
 
 #include <Arduino.h>
 #include <Wire.h>
+#include <limits>
 
 
 
@@ -784,18 +785,46 @@ calibration_cancelled:
 // Payload (21 bytes): [0] format version (1), then for each vertex, in the
 // sTestCoords order: flags (bit 0 = seen by the camera), average brightness,
 // max brightness, area (uint16, little endian; 0 when not seen).
-static void SendTestBlobs(const int (&vertexX)[4], const int (&vertexY)[4],
+//
+// The pairing distances are computed in 32 bits. Coordinates are limited to
+// +-TEST_PAIR_COORD_LIMIT first: the largest squared distance is then
+// 2 * (2 * 16383)^2 = 2147221912, below INT32_MAX (2147483647). The limit is
+// not tuned: it is the largest value that keeps that sum within int32_t.
+// Blobs are always inside the test view (0 .. res_x >> 2 = 1920), so only a
+// vertex estimated more than about 8 view widths outside the view is moved,
+// and such a vertex is never near enough to a blob to be paired anyway.
+constexpr int32_t TEST_PAIR_COORD_LIMIT = 16383;
+static_assert(2 * TEST_PAIR_COORD_LIMIT <= 32767, "2 * (2 * limit)^2 must fit in int32_t");
+static_assert((res_x >> 2) <= TEST_PAIR_COORD_LIMIT, "the IR test view must be inside the pairing limit");
+
+static inline int32_t ClampTestCoord(int32_t value)
+{
+    if(value > TEST_PAIR_COORD_LIMIT)
+        return TEST_PAIR_COORD_LIMIT;
+    if(value < -TEST_PAIR_COORD_LIMIT)
+        return -TEST_PAIR_COORD_LIMIT;
+    return value;
+}
+
+static void SendTestBlobs(const int (&vertexXin)[4], const int (&vertexYin)[4],
                           bool diamond, const CameraProfile& profile)
 {
     constexpr uint8_t TEST_BLOBS_VERSION = 1;
     constexpr uint8_t TEST_BLOB_SEEN = 0x01;
-    constexpr int64_t MIN_PAIR_DISTANCE = 20; // test-space px, lower bound of the pairing limit
+    constexpr int32_t MIN_PAIR_DISTANCE = 20; // test-space px, lower bound of the pairing limit
+
+    int32_t vertexX[4];
+    int32_t vertexY[4];
+    for(uint8_t i = 0; i < 4; ++i) {
+        vertexX[i] = ClampTestCoord(vertexXin[i]);
+        vertexY[i] = ClampTestCoord(vertexYin[i]);
+    }
 
     const unsigned int seenFlags = OpenFIRECamera::Seen();
     const int camMaxY = (profile.mouseResY - 1) >> profile.camToMouseShift;
 
-    int blobX[4];
-    int blobY[4];
+    int32_t blobX[4];
+    int32_t blobY[4];
     bool blobValid[4];
 
     for(uint8_t j = 0; j < 4; ++j) {
@@ -809,36 +838,36 @@ static void SendTestBlobs(const int (&vertexX)[4], const int (&vertexY)[4],
             continue;
 
         const int trackerY = object.y << profile.camToMouseShift;
-        blobY[j] = map(trackerY, 0, profile.mouseResY,
-                       profile.testOffsetY, profile.testOffsetY + profile.testHeight);
+        blobY[j] = ClampTestCoord(map(trackerY, 0, profile.mouseResY,
+                                      profile.testOffsetY, profile.testOffsetY + profile.testHeight));
 
         if(diamond) {
             const int trackerX = object.x << profile.camToMouseShift;
-            blobX[j] = map(trackerX, 0, profile.mouseResX,
-                           profile.testOffsetX + profile.testWidth, profile.testOffsetX);
+            blobX[j] = ClampTestCoord(map(trackerX, 0, profile.mouseResX,
+                                          profile.testOffsetX + profile.testWidth, profile.testOffsetX));
         } else {
             #ifdef USE_SQUARE_ADVANCED
                 const int trackerX = (profile.camMaxX - object.x) << profile.camToMouseShift;
             #else
                 const int trackerX = object.x << profile.camToMouseShift;
             #endif // USE_SQUARE_ADVANCED
-            blobX[j] = map(trackerX, 0, profile.mouseResX,
-                           profile.testOffsetX, profile.testOffsetX + profile.testWidth);
+            blobX[j] = ClampTestCoord(map(trackerX, 0, profile.mouseResX,
+                                          profile.testOffsetX, profile.testOffsetX + profile.testWidth));
         }
     }
 
     // Pairing limit: half of the shortest distance between two vertices.
-    int64_t minVertexDist2 = INT64_MAX;
+    int32_t minVertexDist2 = std::numeric_limits<int32_t>::max();
     for(uint8_t a = 0; a < 3; ++a) {
         for(uint8_t b = a + 1; b < 4; ++b) {
-            const int64_t dx = (int64_t)vertexX[a] - vertexX[b];
-            const int64_t dy = (int64_t)vertexY[a] - vertexY[b];
-            const int64_t d2 = dx * dx + dy * dy;
+            const int32_t dx = vertexX[a] - vertexX[b];
+            const int32_t dy = vertexY[a] - vertexY[b];
+            const int32_t d2 = dx * dx + dy * dy;
             if(d2 < minVertexDist2)
                 minVertexDist2 = d2;
         }
     }
-    int64_t limit2 = minVertexDist2 / 4; // (distance / 2)^2
+    int32_t limit2 = minVertexDist2 / 4; // (distance / 2)^2
     if(limit2 < MIN_PAIR_DISTANCE * MIN_PAIR_DISTANCE)
         limit2 = MIN_PAIR_DISTANCE * MIN_PAIR_DISTANCE;
 
@@ -846,7 +875,7 @@ static void SendTestBlobs(const int (&vertexX)[4], const int (&vertexY)[4],
     bool blobUsed[4] = {false, false, false, false};
 
     for(uint8_t pass = 0; pass < 4; ++pass) {
-        int64_t best2 = limit2 + 1;
+        int32_t best2 = limit2 + 1;
         int8_t bestVertex = -1;
         int8_t bestBlob = -1;
 
@@ -856,9 +885,9 @@ static void SendTestBlobs(const int (&vertexX)[4], const int (&vertexY)[4],
             for(uint8_t j = 0; j < 4; ++j) {
                 if(!blobValid[j] || blobUsed[j])
                     continue;
-                const int64_t dx = (int64_t)vertexX[i] - blobX[j];
-                const int64_t dy = (int64_t)vertexY[i] - blobY[j];
-                const int64_t d2 = dx * dx + dy * dy;
+                const int32_t dx = vertexX[i] - blobX[j];
+                const int32_t dy = vertexY[i] - blobY[j];
+                const int32_t d2 = dx * dx + dy * dy;
                 if(d2 < best2) {
                     best2 = d2;
                     bestVertex = (int8_t)i;
@@ -892,6 +921,45 @@ static void SendTestBlobs(const int (&vertexX)[4], const int (&vertexY)[4],
     OF_Serial::AppSerialSendEvent(OF_Const::sTestBlobs, payload, sizeof(payload));
 }
 
+// Largest Perspective value (in absolute terms) mapped exactly by
+// MapCalibratedAxis(). Derived from 32-bit integer arithmetic, not tuned:
+// with |offset| <= res_x, (value - offset) * res stays within int32_t.
+// 271940 is about 35 screen widths: beyond it the gun aims almost parallel
+// to the screen, and the cursor is clamped to the screen edge later anyway.
+constexpr int32_t CALI_MAP_VALUE_LIMIT = (std::numeric_limits<int32_t>::max() / res_x) - res_x;
+static_assert(res_x >= res_y, "CALI_MAP_VALUE_LIMIT assumes res_x is the larger axis");
+static_assert(CALI_MAP_VALUE_LIMIT > 0, "res_x too large for 32-bit calibration mapping");
+
+// Maps one Perspective axis to the screen with the calibration offsets.
+// lowOffset is the reading taken while aiming at the top (or left) edge,
+// highOffset is res minus the reading taken at the bottom (or right) edge:
+// the two readings land exactly on 0 and res, as aimed during calibration.
+// With zero offsets the result is the plain Perspective value, as before.
+// Runs at the camera rate: only 32-bit integer operations, one multiply and
+// one divide, like the previous map().
+static inline int32_t MapCalibratedAxis(int32_t value, int32_t res, int32_t lowOffset, int32_t highOffset)
+{
+    // Limited first, so that every result stays small: the moving averages
+    // that follow add up to four results without overflowing.
+    if(value > CALI_MAP_VALUE_LIMIT)
+        value = CALI_MAP_VALUE_LIMIT;
+    else if(value < -CALI_MAP_VALUE_LIMIT)
+        value = -CALI_MAP_VALUE_LIMIT;
+
+    // A real calibration reads each screen edge within one screen of the LED
+    // range, and leaves at least a quarter of the range to the screen.
+    // Anything else is a damaged calibration: use the profile as uncalibrated.
+    if(lowOffset < -res || lowOffset > res || highOffset < -res || highOffset > res)
+        return value;
+
+    const int32_t span = res - lowOffset - highOffset;   // between -res and 3 * res
+    if(span < res / 4)
+        return value;
+
+    // map(value, lowOffset, res - highOffset, 0, res)
+    return ((value - lowOffset) * res) / span;
+}
+
 void FW_Common::GetPosition()
 {
     const CameraProfile& cameraProfile = OpenFIRECamera::Profile();
@@ -923,10 +991,41 @@ void FW_Common::GetPosition()
 
         int error = OpenFIRECamera::Read();
         if(error == OpenFIRECamera::Error_Success) {
+
+            #ifdef USE_MULTI_ONE_EURO_FILTER
+                // The filter keeps one history per LED slot, and Square and Diamond
+                // use the slots for different LEDs: restart it when the layout changes,
+                // so the two layouts are never blended.
+                static int filterLayout = -1;
+                if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout != filterLayout) {
+                    filterLayout = OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout;
+                    oef_multi.configure(cameraProfile);
+                }
+            #endif // USE_MULTI_ONE_EURO_FILTER
            
             // if diamond layout, or square
             if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout) { // layoutDiamond = 1
                 OpenFIREdiamond.begin(OpenFIRECamera::XPositions(), OpenFIRECamera::YPositions(), OpenFIRECamera::Seen());
+
+                // Diamond slots: 0 top, 1 right, 2 bottom, 3 left (see OpenFIRE_Diamond::configure).
+                #ifdef USE_MULTI_ONE_EURO_FILTER
+                    // Same filter as Square, applied to the four Diamond LEDs.
+                    for(int i = 0; i < 4; ++i) {
+                        X_in[i] = OpenFIREdiamond.X(i);
+                        Y_in[i] = OpenFIREdiamond.Y(i);
+                    }
+
+                    oef_multi.process(X_in, Y_in, X_out, Y_out);
+
+                    const float * const diamondX = X_out;
+                    const float * const diamondY = Y_out;
+                #else
+                    // Without the filter the integer positions are passed unchanged, as before.
+                    const int diamondX[4] = { OpenFIREdiamond.X(0), OpenFIREdiamond.X(1),
+                                              OpenFIREdiamond.X(2), OpenFIREdiamond.X(3) };
+                    const int diamondY[4] = { OpenFIREdiamond.Y(0), OpenFIREdiamond.Y(1),
+                                              OpenFIREdiamond.Y(2), OpenFIREdiamond.Y(3) };
+                #endif // USE_MULTI_ONE_EURO_FILTER
 
                 /*
                 OpenFIREper.warp(OpenFIREdiamond.X(0), OpenFIREdiamond.Y(0),
@@ -941,10 +1040,10 @@ void FW_Common::GetPosition()
     // Adapt Diamond's vertex order to Perspective Advanced.
     // Swap the third and fourth source/destination pairs together.
     OpenFIREper.warp(
-        OpenFIREdiamond.X(0), OpenFIREdiamond.Y(0),
-        OpenFIREdiamond.X(1), OpenFIREdiamond.Y(1),
-        OpenFIREdiamond.X(3), OpenFIREdiamond.Y(3),
-        OpenFIREdiamond.X(2), OpenFIREdiamond.Y(2),
+        diamondX[0], diamondY[0],
+        diamondX[1], diamondY[1],
+        diamondX[3], diamondY[3],
+        diamondX[2], diamondY[2],
 
         res_x / 2, 0,
         0,         res_y / 2,
@@ -953,10 +1052,10 @@ void FW_Common::GetPosition()
 #else
     // Preserve the original order for classic Perspective.
     OpenFIREper.warp(
-        OpenFIREdiamond.X(0), OpenFIREdiamond.Y(0),
-        OpenFIREdiamond.X(1), OpenFIREdiamond.Y(1),
-        OpenFIREdiamond.X(2), OpenFIREdiamond.Y(2),
-        OpenFIREdiamond.X(3), OpenFIREdiamond.Y(3),
+        diamondX[0], diamondY[0],
+        diamondX[1], diamondY[1],
+        diamondX[2], diamondY[2],
+        diamondX[3], diamondY[3],
 
         res_x / 2, 0,
         0,         res_y / 2,
@@ -1001,14 +1100,35 @@ void FW_Common::GetPosition()
 
             }
 
-            // Output mapped to screen resolution because offsets are measured in pixels
-            mouseX = map(OpenFIREper.getX(), 0, res_x, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset), (res_x + OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset));                 
-            mouseY = map(OpenFIREper.getY(), 0, res_y, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset), (res_y + OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset));         
+            // Output mapped to screen resolution because offsets are measured in pixels.
+            //
+            // Previous formula, kept for reference:
+            // mouseX = map(OpenFIREper.getX(), 0, res_x, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset), (res_x + OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset));
+            // mouseY = map(OpenFIREper.getY(), 0, res_y, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset), (res_y + OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset));
+            //
+            // Why it was replaced: the offsets are the readings taken during calibration
+            // while aiming at the screen edges (top/left reading, res minus bottom/right
+            // reading), so those readings must become exactly 0 and res. The previous
+            // formula stretched from 0 and res instead: aiming at an edge it returned
+            // offset * (offset1 + offset2) / res instead of the edge itself, an error of
+            // a few pixels on every calibrated edge (about 3-6 px with typical Square
+            // setups, up to 9-19 px). MapCalibratedAxis() puts the two readings exactly
+            // on the edges, gives the same result as before at the centre and with zero
+            // offsets, and treats a damaged calibration as an uncalibrated profile.
+            mouseX = MapCalibratedAxis(OpenFIREper.getX(), res_x,
+                                       OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset,
+                                       OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset);
+            mouseY = MapCalibratedAxis(OpenFIREper.getY(), res_y,
+                                       OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset,
+                                       OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset);
 
             switch(runMode) {
                 case FW_Const::RunMode_Average:
                     // 2 position moving average
-                    moveIndex ^= 1;
+                    // moveIndex can be 2 when coming from RunMode_Average2: "moveIndex ^= 1"
+                    // would then write past the end of the buffers (index 3) and keep
+                    // alternating 3 and 2, freezing the average on stale samples.
+                    moveIndex = (moveIndex == 0) ? 1 : 0;
                     moveXAxisArr[moveIndex] = mouseX;
                     moveYAxisArr[moveIndex] = mouseY;
                     mouseX = (moveXAxisArr[0] + moveXAxisArr[1]) / 2;
