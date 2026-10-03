@@ -39,7 +39,7 @@ Tests: `tests/*.test.js` (Node) and `tests/browser-e2e.js` (browser, simulated l
 
 | Qt | Web app |
 | --- | --- |
-| `appcali.cpp` (calibration stages, info texts, verify, malformed warning, alignment boxes, IR test points, IR test blobs `TestModeBlobs` / `TestModeDrawEmitter`, bitmap text, text scales) | `fullscreen.js` (`setTestBlobs`, `_drawEmitter`) |
+| `appcali.cpp` (calibration stages, info texts, verify, malformed warning, alignment boxes, IR test points, IR test blobs `TestModeBlobs` / `TestModeDrawEmitter`, calibration IR view `CaliIrRefresh` / `CaliIrDrawPanel` / `CaliIrWarning`, bitmap text, text scales) | `fullscreen.js` (`setTestBlobs`, `_drawEmitter`, `_caliIrColor`, `_drawCaliIrPanel`, `showIrWarning`) |
 | `apppreviewer.cpp` (board list, default functions, GPIO colours, ADC/I2C/SPI marks, fork/upstream link) | `windows.js` `openPreviewer` |
 | `appabout.ui` | `windows.js` `openAbout` |
 | `appdebug.cpp` (text and hex of received payloads) | `main.js` `openDebugWindow` / `logDebug` |
@@ -58,6 +58,7 @@ Tests: `tests/*.test.js` (Node) and `tests/browser-e2e.js` (browser, simulated l
 - Fullscreen screens: the browser owns fullscreen mode, so leaving it (ESC, F11, browser gesture) closes the screen like ESC; the page behind cannot be used meanwhile. If the browser refuses fullscreen mode, a button asks for it again.
 - Leaving IR test mode without the board confirming it is reported as an unconfirmed operation (reconnect), instead of leaving the tabs locked.
 - IR test blob view (`sTestBlobs`): the area and brightness under each circle are shown with `?irdebug` in the address; the Qt App uses the `--irdebug` command-line argument.
+- Calibration IR view, in both Apps: with firmware that sends the IR emitters (the App asks for it with `caliFlagIrView`, fourth byte of `sCaliStart`; older firmware ignores it), the crosshair changes colour with the worst emitter (red when one is missing, red to light orange while weak, light green to full green when good) and a small panel at the bottom right shows each emitter in its layout. The firmware refuses every target shot until the crosshair is green (`sCaliIrWarning`), and the window explains why.
 - The Boards Previewer and the colour chooser are page windows; the previewer, like the Qt window, stays open while the main window is used.
 - About credits the original OpenFIRE App by That One Seong, names Alessandro Satanassi as the author of this App (based on the original App, extended for OpenFIRE ESP32) and links his Ko-fi, followed by the GPL-3.0 and copyright notices; the Qt version line is not shown.
 - Colours of the GPIO labels: exact Qt colours in the dark theme, slightly darker ones in the light theme for contrast.
@@ -69,5 +70,4 @@ Tests: `tests/*.test.js` (Node) and `tests/browser-e2e.js` (browser, simulated l
 - Unsaved edits of a lost link (calibrations kept only in the board RAM included) are offered back when the same gun docks again; the browser asks before leaving a page with unsaved edits.
 - Questions left open when the link is lost (Save, Clear Save Memory, rename, colours, layout import, IR test warning) close by themselves and do nothing.
 - Links of the Qt texts open in a new tab, so the page keeps its board.
-- Calibration window: with firmware that sends the IR emitters (the App asks for it with `caliFlagIrView`, fourth byte of `sCaliStart`; older firmware ignores it), the crosshair changes colour with the worst emitter (red when one is missing, red to light orange while weak, light green to full green when good) and a small panel at the bottom right shows each emitter in its layout. The firmware refuses every target shot until the crosshair is green (`sCaliIrWarning`), and the window explains why. The Qt App does not ask for it and calibrates as before.
 - Save and Send Settings pulses while there are unsaved changes (a steady ring when the system reduces animations).

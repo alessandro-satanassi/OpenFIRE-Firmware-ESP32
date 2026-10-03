@@ -393,8 +393,8 @@ void FW_Common::SetRunMode(const FW_Const::RunMode_e &newMode)
 // PAJ7025 detects a blob from brightness 130 (150 on the R2 at the highest
 // sensitivity), so it is barely above that limit and can flicker in and out.
 // Used by the WebApp IR view (sTestBlobs flag) and by the calibration check below,
-// in the same way for every camera: each driver provides the brightness (the DFRobot,
-// which does not measure it, a fixed value above this limit). Starting value: check it
+// in the same way for every camera: each driver provides the brightness on this scale
+// (the DFRobot converts its intensity, see ReadDFRobotFull). Starting value: check it
 // on the hardware with the IR test view (?irdebug in the WebApp address shows it).
 constexpr uint8_t IR_WEAK_MAX_BRIGHTNESS = 170;
 

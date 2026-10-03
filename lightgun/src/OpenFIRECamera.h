@@ -59,10 +59,11 @@ public:
     // the native values supplied by cameras that support them.
     // Camera-independent contract: area is in PAJ7025 sensor-pixel units and
     // brightness is 0..255. A driver whose camera does not measure a field
-    // fills it with a derived or fixed value (DFRobot: area derived from
-    // size, fixed brightness), so consumers such as the IR test view never
-    // need to know which camera is fitted. Fields that no consumer uses and
-    // the camera does not measure are left at zero.
+    // fills it with a derived or converted value (DFRobot: area from the
+    // blob bounding box, brightness converted from its intensity), so
+    // consumers such as the IR test view never need to know which camera
+    // is fitted. Fields that no consumer uses and the camera does not
+    // measure are left at zero.
     struct ObjectData {
         int x;
         int y;
@@ -150,6 +151,7 @@ private:
     static bool BeginDFRobot(uint8_t sensitivity);
     static int ReadDFRobotBasic();
     static int ReadDFRobotExtended();
+    static int ReadDFRobotFull();
     static void DataFormatDFRobot(DataFormat_e format);
     static void SensitivityDFRobot(uint8_t sensitivity);
     static void EndDFRobot();

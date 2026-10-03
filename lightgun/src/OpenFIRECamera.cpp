@@ -57,8 +57,11 @@ void OpenFIRECamera::ClearObjectData() {
 }
 
 bool OpenFIRECamera::Select() {
+    // The DFRobot Extended format is read with the camera's Full format (ReadDFRobotFull).
     static constexpr uint16_t DFRobotExtendedCapabilities =
-        ExtendedData_Size;
+        ExtendedData_Size |
+        ExtendedData_MaxBrightness |
+        ExtendedData_Boundaries;
 
     static constexpr uint16_t PAJ7025ExtendedCapabilities =
         ExtendedData_Size |
@@ -74,7 +77,7 @@ bool OpenFIRECamera::Select() {
     static const CameraOps DFRobotOps = {
         &OpenFIRECamera::BeginDFRobot,
         &OpenFIRECamera::ReadDFRobotBasic,
-        &OpenFIRECamera::ReadDFRobotExtended,
+        &OpenFIRECamera::ReadDFRobotFull,
         &OpenFIRECamera::DataFormatDFRobot,
         &OpenFIRECamera::SensitivityDFRobot,
         &OpenFIRECamera::EndDFRobot,
@@ -306,7 +309,7 @@ bool OpenFIRECamera::BeginDFRobot(uint8_t sensitivity) {
 
     const DFRobotIRPositionEx::DataFormat_e format =
         (activeFormat == DataFormat_Extended)
-            ? DFRobotIRPositionEx::DataFormat_Extended
+            ? DFRobotIRPositionEx::DataFormat_Full
             : DFRobotIRPositionEx::DataFormat_Basic;
 
     /*
@@ -340,6 +343,10 @@ int OpenFIRECamera::ReadDFRobotBasic() {
     return error;
 }
 
+// Reads the camera's Extended format. Not bound at the moment: the OpenFIRE Extended
+// format is read with the camera's Full format (ReadDFRobotFull), which also gives the
+// intensity. Kept to go back to it by binding it in DFRobotOps (and DataFormat_Extended
+// in BeginDFRobot and DataFormatDFRobot).
 int OpenFIRECamera::ReadDFRobotExtended() {
     // The DFRobot Extended format measures only x, y and size (0..15).
     // The remaining ObjectData fields are filled here, so that consumers
@@ -391,10 +398,68 @@ int OpenFIRECamera::ReadDFRobotExtended() {
     return error;
 }
 
+int OpenFIRECamera::ReadDFRobotFull() {
+    // The DFRobot Full format measures x, y, size (0..15), the bounding box of the blob
+    // in the sensor's 128x96 array and an 8 bit intensity. The fields are converted here
+    // to the common ObjectData scale, so that consumers handle every camera alike.
+    //
+    // Area: pixels of the bounding box, the same unit as the PAJ7025 area (pixels of
+    // the sensor); a box is about 27% larger than a round blob. To check on the hardware.
+    // Boundaries: the bounding box as the camera gives it.
+    //
+    // Brightness, PHASE 1 (measurements): the DFRobot intensity is on a much lower scale
+    // than the PAJ7025 brightness (LEDs about 4..30, 4 at the detection limit, measured by
+    // the LIGHTGUN-STUDIO project). averageBrightness carries the raw intensity, to be read
+    // with the WebApp IR test (?irdebug in its address); maxBrightness a provisional linear
+    // conversion: DFR_INTENSITY_MIN -> PAJ_BRIGHTNESS_MIN (the PAJ7025 detection limit),
+    // DFR_INTENSITY_FULL -> 255. PHASE 2: both get the conversion measured on the hardware.
+    static constexpr int32_t DFR_INTENSITY_MIN = 4;
+    static constexpr int32_t DFR_INTENSITY_FULL = 30;
+    static constexpr int32_t PAJ_BRIGHTNESS_MIN = 130;
+    static constexpr int32_t BRIGHTNESS_MAX = 255;
+
+    const int error = dfrCamera->fullAtomic(DFRobotIRPositionEx::Retry_2);
+
+    if (error >= DFRobotIRPositionEx::Error_Success) {
+        activeSeen = dfrCamera->seen();
+
+        for (int i = 0; i < 4; i++) {
+            if ((activeSeen & (1U << i)) != 0U) {
+                const DFRobotIRPositionEx::Box_t& box = dfrCamera->box(i);
+                const uint32_t width = (box.xMax > box.xMin) ? (uint32_t)(box.xMax - box.xMin) : 0U;
+                const uint32_t height = (box.yMax > box.yMin) ? (uint32_t)(box.yMax - box.yMin) : 0U;
+
+                const int32_t intensity = dfrCamera->intensity(i);
+                int32_t brightness = PAJ_BRIGHTNESS_MIN +
+                    (intensity - DFR_INTENSITY_MIN) * (BRIGHTNESS_MAX - PAJ_BRIGHTNESS_MIN) /
+                    (DFR_INTENSITY_FULL - DFR_INTENSITY_MIN);
+                if (brightness < PAJ_BRIGHTNESS_MIN) brightness = PAJ_BRIGHTNESS_MIN;
+                if (brightness > BRIGHTNESS_MAX) brightness = BRIGHTNESS_MAX;
+
+                objectData[i].valid = true;
+                objectData[i].x = dfrCamera->x(i);
+                objectData[i].y = dfrCamera->y(i);
+                objectData[i].size = dfrCamera->size(i);
+                objectData[i].area = (uint16_t)((width + 1U) * (height + 1U)); // at most 128 * 96
+                objectData[i].averageBrightness = (uint8_t)intensity;            // PHASE 1: raw value
+                objectData[i].maxBrightness = (uint8_t)brightness;
+                objectData[i].boundaryLeft = box.xMin;
+                objectData[i].boundaryRight = box.xMax;
+                objectData[i].boundaryUp = box.yMin;
+                objectData[i].boundaryDown = box.yMax;
+            } else {
+                objectData[i].valid = false;
+            }
+        }
+    }
+
+    return error;
+}
+
 void OpenFIRECamera::DataFormatDFRobot(DataFormat_e format) {
     dfrCamera->dataFormat(
         (format == DataFormat_Extended)
-            ? DFRobotIRPositionEx::DataFormat_Extended
+            ? DFRobotIRPositionEx::DataFormat_Full
             : DFRobotIRPositionEx::DataFormat_Basic
     );
 }

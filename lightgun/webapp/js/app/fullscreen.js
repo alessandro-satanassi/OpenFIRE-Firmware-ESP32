@@ -34,7 +34,8 @@
     // drivers already normalise the values, so every camera uses the same scale here.
     // Radius (1920x1080 test space) grows with sqrt(area): IRTEST_BLOB_RADIUS_MAX at
     // IRTEST_BLOB_AREA_MAX, the largest blob the PAJ7025 DSP reports. The firmware DFRobot
-    // driver relies on these two values for its equivalent area (ReadDFRobotExtended).
+    // driver relies on these two values for its equivalent area when it reads the camera's
+    // Extended format (ReadDFRobotExtended); with the Full format it reports the box area.
     const IRTEST_BLOB_AREA_MAX = 300;
     const IRTEST_BLOB_RADIUS_MAX = 60;
     const IRTEST_BLOB_RADIUS_MIN = 6;

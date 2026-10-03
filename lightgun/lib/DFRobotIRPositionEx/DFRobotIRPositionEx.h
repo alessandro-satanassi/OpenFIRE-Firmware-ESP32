@@ -7,6 +7,7 @@
  * @details Extended functionality comes from http://wiibrew.org/wiki/Wiimote#IR_Camera
  * - Added basic data format, less IIC bytes than Extended
  * - Added size data to extended data format
+ * - Added full data format: size, bounding box and intensity of each object
  * - Added functions to atomically read the position data
  * - Added sensitivity settings
  * - Added IIC clock setting, appears to work up to 1MHz
@@ -42,6 +43,19 @@ class TwoWire;
 *  @brief DFRobot IR positioning camera with extended functionality.
 */
 class DFRobotIRPositionEx {
+public:
+    /*!
+    * @brief Bounding box of an object (full data format): 7 bit values in the sensor's
+    * native 128x96 array, not in the 1024x768 range of the positions.
+    */
+    typedef struct Box_s {
+        uint8_t xMin;
+        uint8_t yMin;
+        uint8_t xMax;
+        uint8_t yMax;
+    } Box_t;
+
+private:
     const int IRAddress = 0xB0 >> 1; ///< IIC address of the sensor
 
     /*!
@@ -83,12 +97,13 @@ class DFRobotIRPositionEx {
     * @brief Position data structure to be filled from IIC data.
     */
     typedef union PositionData_u {
-        uint8_t receivedBuffer[13]; ///< received buffer for IIC read
+        uint8_t receivedBuffer[37]; ///< received buffer for IIC read: header + 4 full frames (the largest format)
         struct {
             uint8_t header;
             union {
                 ExtendedFrame_t rawExtended[4]; ///< 4 raw extended positions/frames.
                 BasicFrame_t rawBasic[2];       ///< 2 raw basic frames.
+                FullFrame_t rawFull[4];         ///< 4 raw full frames.
             } __attribute__ ((packed)) format;
         } __attribute__ ((packed)) frame;
     }__attribute__ ((packed)) PositionData_t;  
@@ -128,6 +143,12 @@ class DFRobotIRPositionEx {
    void unpackExtendedFrameSeen(unsigned int posData);
 
     /*!
+    * @brief Unpack full frame from positionData and update position, size, box and intensity if seen.
+    * Seen flags are updated.
+    */
+   void unpackFullFrameSeen(unsigned int posData);
+
+    /*!
     * @brief Wire object to use.
     */
     TwoWire& wire;
@@ -153,19 +174,29 @@ class DFRobotIRPositionEx {
     int unpackedSizes[4];
 
     /*!
+    * @brief Unpacked bounding boxes (when full data format is used).
+    */
+    Box_t unpackedBoxes[4];
+
+    /*!
+    * @brief Unpacked intensities (when full data format is used).
+    */
+    uint8_t unpackedIntensities[4];
+
+    /*!
     * @brief Bit mask of seen positions.
     */
     unsigned int seenFlags;
 
 public:
-  
+
     /*!
     * @brief Data format
     */
     enum DataFormat_e {
         DataFormat_Basic = 0,       ///< Basic data format.
-        DataFormat_Extended = 1     ///< Extended data format that includes sizes.
-        //DataFormat_Full = 3       ///< Full data format
+        DataFormat_Extended = 1,    ///< Extended data format that includes sizes.
+        DataFormat_Full = 2         ///< Full data format that includes sizes, bounding boxes and intensities.
     };
 
     /*!
@@ -246,6 +277,12 @@ public:
     void requestPositionBasic();
 
     /*!
+    * @brief Request the full position data that includes sizes, bounding boxes and intensities.
+    * @details You must set the format to DataFormat_Full.
+    */
+    void requestPositionFull();
+
+    /*!
     * @brief After requesting the extended position, and the data read from the sensor is ready, True will be returned.
     *
     * @return Whether data reading is ready.
@@ -304,6 +341,14 @@ public:
     int extendedAtomic(DFRobotIRPositionEx::Retry_e retries = DFRobotIRPositionEx::Retry_1s);
 
     /*!
+    * @brief Atomically update full position data that includes sizes, bounding boxes and intensities.
+    * @details Same workaround as extendedAtomic(). You must set the format to DataFormat_Full.
+    * @param[in] retries Number of extra times to retry getting and matching the position.
+    * @return An error code from Errors_e.
+    */
+    int fullAtomic(DFRobotIRPositionEx::Retry_e retries = DFRobotIRPositionEx::Retry_1s);
+
+    /*!
     * @brief Get the X position of a point.
     *
     * @param index The index of the 4 light objects ranging from 0 to 3.
@@ -329,6 +374,24 @@ public:
     * @return The size corresponing to the index.
     */
     int size(int index) const { return unpackedSizes[index]; }
+
+    /*!
+    * @brief Get the bounding box of a point. Must use Full data format.
+    *
+    * @param index The index of the 4 light objects ranging from 0 to 3.
+    *
+    * @return The bounding box corresponing to the index (7 bit values, sensor 128x96 array).
+    */
+    const Box_t& box(int index) const { return unpackedBoxes[index]; }
+
+    /*!
+    * @brief Get the intensity of a point. Must use Full data format.
+    *
+    * @param index The index of the 4 light objects ranging from 0 to 3.
+    *
+    * @return The 8 bit intensity corresponing to the index.
+    */
+    uint8_t intensity(int index) const { return unpackedIntensities[index]; }
 
     /*!
     * @brief Get the 4 X positions.

@@ -7,6 +7,7 @@
  * @details Extended functionality comes from http://wiibrew.org/wiki/Wiimote#IR_Camera
  * - Added basic data format, less IIC bytes than Extended
  * - Added size data to extended data format
+ * - Added full data format: size, bounding box and intensity of each object
  * - Added functions to atomically read the position data
  * - Added sensitivity settings
  * - Added IIC clock setting, appears to work up to at least 1MHz
@@ -73,7 +74,9 @@ bool DFRobotIRPositionEx::writeTwoIICByte(uint8_t first, uint8_t second)
 
 void DFRobotIRPositionEx::dataFormat(DataFormat_e format)
 {
-    uint8_t mode = format ? DFRIRdata_ModeExtended : DFRIRdata_ModeBasic;
+    const uint8_t mode = (format == DataFormat_Full)     ? DFRIRdata_ModeFull :
+                         (format == DataFormat_Extended) ? DFRIRdata_ModeExtended :
+                                                           DFRIRdata_ModeBasic;
     writeTwoIICByte(0x33, mode);
     delay(DFRIRdata_IICdelay);
 }
@@ -139,6 +142,14 @@ void DFRobotIRPositionEx::requestPositionBasic()
     wire.write(0x36);
     wire.endTransmission();
     wire.requestFrom(IRAddress, DFRIRdata_LengthBasic);
+}
+
+void DFRobotIRPositionEx::requestPositionFull()
+{
+    wire.beginTransmission(IRAddress);
+    wire.write(0x36);
+    wire.endTransmission();
+    wire.requestFrom(IRAddress, DFRIRdata_LengthFull);
 }
 
 bool DFRobotIRPositionEx::availableExtended()
@@ -342,6 +353,65 @@ int DFRobotIRPositionEx::extendedAtomic(DFRobotIRPositionEx::Retry_e retry)
 
     if(retry & 1) {
         unpackExtendedFrameSeen(index);
+        return Error_SuccessMismatch;
+    }
+
+    return Error_DataMismatch;
+}
+
+void DFRobotIRPositionEx::unpackFullFrameSeen(unsigned int posData)
+{
+    // The first three bytes of a full frame are laid out as in the extended frame.
+    // The bounding box is 7 bit (sensor 128x96 array): the top bit is masked off.
+    seenFlags = 0;
+    for(int i = 0; i < 4; ++i) {
+        FullFrame_t& frame = positionData[posData].frame.format.rawFull[i];
+        int y = (int)frame.yLow | ((int)(frame.xyHighSize & 0xC0U) << 2);
+        if(y <= DFRIRdata_MaxY) {
+            positionY[i] = y;
+            positionX[i] = (int)frame.xLow | ((int)(frame.xyHighSize & 0x30U) << 4);
+            unpackedSizes[i] = frame.xyHighSize & 0xF;
+            unpackedBoxes[i].xMin = frame.xMin & 0x7FU;
+            unpackedBoxes[i].yMin = frame.yMin & 0x7FU;
+            unpackedBoxes[i].xMax = frame.xMax & 0x7FU;
+            unpackedBoxes[i].yMax = frame.yMax & 0x7FU;
+            unpackedIntensities[i] = frame.intensity;
+            seenFlags |= 1 << i;
+        }
+    }
+}
+
+int DFRobotIRPositionEx::fullAtomic(DFRobotIRPositionEx::Retry_e retry)
+{
+    // initial index for positiondata[1]
+    unsigned int index = 0;
+
+    // initial read in positiondata[0]
+    requestPositionFull();
+    if(!readPosition(positionData[0], DFRIRdata_LengthFull)) {
+        return Error_IICerror;
+    }
+
+    for(unsigned int i = 0, retries = retry >> 1; i <= retries; ++i) {
+        requestPositionFull();
+
+        // switch to other buffer for next read
+        index ^= 1;
+
+        if(!readPosition(positionData[index], DFRIRdata_LengthFull)) {
+            return Error_IICerror;
+        }
+
+        // compare but ignore the header byte
+        if(!memcmp(&positionData[0].receivedBuffer[1], &positionData[1].receivedBuffer[1], DFRIRdata_LengthFull - 1)) {
+            // position data is identical so unpack the data
+            unpackFullFrameSeen(index);
+            return Error_Success;
+        }
+    }
+
+    if(retry & 1) {
+        unpackFullFrameSeen(index);
         return Error_SuccessMismatch;
     }
 
