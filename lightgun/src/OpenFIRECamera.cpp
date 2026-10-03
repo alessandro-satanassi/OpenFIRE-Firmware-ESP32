@@ -440,7 +440,7 @@ int OpenFIRECamera::ReadDFRobotFull() {
                 objectData[i].x = dfrCamera->x(i);
                 objectData[i].y = dfrCamera->y(i);
                 objectData[i].size = dfrCamera->size(i);
-                objectData[i].area = (uint16_t)((width + 1U) * (height + 1U)); // at most 128 * 96
+                objectData[i].area = (uint16_t)((width + 1U) * (height + 1U)); // 7 bit box: fits 16 bits (the sensor gives at most 128 * 96)
                 objectData[i].averageBrightness = (uint8_t)intensity;            // PHASE 1: raw value
                 objectData[i].maxBrightness = (uint8_t)brightness;
                 objectData[i].boundaryLeft = box.xMin;

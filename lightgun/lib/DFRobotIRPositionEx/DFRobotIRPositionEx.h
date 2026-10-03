@@ -189,7 +189,7 @@ private:
     unsigned int seenFlags;
 
 public:
-
+  
     /*!
     * @brief Data format
     */
