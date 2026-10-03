@@ -59,6 +59,7 @@ Tests: `tests/*.test.js` (Node) and `tests/browser-e2e.js` (browser, simulated l
 - Leaving IR test mode without the board confirming it is reported as an unconfirmed operation (reconnect), instead of leaving the tabs locked.
 - IR test blob view (`sTestBlobs`): the area and brightness under each circle are shown with `?irdebug` in the address; the Qt App uses the `--irdebug` command-line argument.
 - Calibration IR view, in both Apps: with firmware that sends the IR emitters (the App asks for it with `caliFlagIrView`, fourth byte of `sCaliStart`; older firmware ignores it), the crosshair changes colour with the worst emitter (red when one is missing, red to light orange while weak, light green to full green when good) and a small panel at the bottom right shows each emitter in its layout. The firmware refuses every target shot until the crosshair is green (`sCaliIrWarning`), and the window explains why.
+- Save and Send Settings pulses while there are unsaved changes, in both Apps (in the browser a steady ring when the system reduces animations; Qt has no such setting).
 - The Boards Previewer and the colour chooser are page windows; the previewer, like the Qt window, stays open while the main window is used.
 - About credits the original OpenFIRE App by That One Seong, names Alessandro Satanassi as the author of this App (based on the original App, extended for OpenFIRE ESP32) and links his Ko-fi, followed by the GPL-3.0 and copyright notices; the Qt version line is not shown.
 - Colours of the GPIO labels: exact Qt colours in the dark theme, slightly darker ones in the light theme for contrast.
@@ -70,4 +71,3 @@ Tests: `tests/*.test.js` (Node) and `tests/browser-e2e.js` (browser, simulated l
 - Unsaved edits of a lost link (calibrations kept only in the board RAM included) are offered back when the same gun docks again; the browser asks before leaving a page with unsaved edits.
 - Questions left open when the link is lost (Save, Clear Save Memory, rename, colours, layout import, IR test warning) close by themselves and do nothing.
 - Links of the Qt texts open in a new tab, so the page keeps its board.
-- Save and Send Settings pulses while there are unsaved changes (a steady ring when the system reduces animations).

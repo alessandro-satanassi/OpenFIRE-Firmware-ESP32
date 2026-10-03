@@ -4,6 +4,7 @@ A modified version of the DFRobotIRPosition library with extended functionality.
 ## New features
 - Added Basic data format which has less IIC bytes than Extended format.
 - Added unpacking the object size data from the Extended data format.
+- Added Full data format: object size, bounding box and intensity.
 - added object seen flags to know when positions update and are visible or aren't seen.
 - Added functions to atomically read the position data.
 - Added sensitivity settings from the WiiBrew wiki.

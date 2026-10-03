@@ -113,8 +113,6 @@ Press the lightgun buttons **before powering on or resetting**, and keep them he
 
 Firmware update takes priority if both combinations are held. **A/B are the lightgun's mapped buttons, not the board's physical BOOT button.** On a blank board, an older firmware or when the shortcuts cannot work, use the board's physical BOOT/RESET procedure instead. On a lightgun running 7.0.0 normally, the Web Flasher can also switch it to flashing mode by itself, and the WebApp can do the same with **Restart Microcontroller in Firmware Update Mode** in the *Gun Tests* tab. After this software restart the serial port changes: start the installation again and select the new port. The firmware cannot be flashed through the wireless dongle or the Wi-Fi configuration page.
 
-To enter download mode manually with the board connected by USB: **hold BOOT, press and release RESET/EN, then release BOOT**. Use the physical buttons on the board.
-
 For installation, select the image matching the **board and flash/PSRAM variant**, not the camera. A normal update and a clean installation use the same image; a clean installation erases all settings and calibration. When moving from 6.2.1 to 7.0.0, a clean installation is recommended: note your existing settings first, then configure and calibrate again.
 
 ### Camera, display and startup settings
@@ -128,7 +126,7 @@ For installation, select the image matching the **board and flash/PSRAM variant*
 After flashing a new board, or after a clean installation, the gun has no calibration yet. It waits for the first calibration and does not move the pointer; the board's RGB LED, if present, blinks orange.
 
 1. Connect the gun to the WebApp. If you use custom pins, map at least the *Trigger* and *Button A* in *Board Layout*; select your camera and check the buttons in the *Gun Tests* tab, then save.
-2. Start the calibration with any of the *Calibrate Profile* buttons in the *Calibration Profiles* tab, or save and disconnect the WebApp, then pull the trigger to run the standalone calibration (see [How to Calibrate](#how-to-calibrate)).
+2. Start the calibration with any of the *Calibrate Profile* buttons in the *Calibration Profiles* tab, or pull the trigger to run the standalone calibration (see [How to Calibrate](#how-to-calibrate)).
 3. Save the calibration.
 
 If the camera is not available (for example because the wrong model is selected), pulling the trigger does not start the calibration: correct the camera settings in the WebApp first.
@@ -191,7 +189,7 @@ Pause mode can be entered by either pressing C + Select by default, pressing the
 - B or Down: Navigate Cursor Down
 - Trigger: Select option
 - C: Exit pause mode
-  - Holding A or B for half the configured hold-to-pause time (about 1.25 seconds with the default 2.5-second setting) will also exit the simple pause menu.
+  - Holding A or B for half the duration of the hold-to-pause time (so ~2s by default) will also exit the simple pause menu.
 Available options in simple pause menu are as follows, from first option to last before rolling back:
 * Calibrate current profile (always the initial option)
 * Switch profiles (submenu)
@@ -211,6 +209,18 @@ Available options in simple pause menu are as follows, from first option to last
    - If the calibration is good, pull the trigger to confirm.
    - If you want to start calibration over, press the A or B button in cali verification to restart from the center point in Step 2.
    - Calibration can be canceled outright by pressing C/Reload at any time, or the A/B buttons any time before cali verification.
+
+**Calibration from the WebApp or the desktop App.** With firmware 7.0.0, the calibration window started from the WebApp (or from the compatible desktop App) also checks the IR emitters before every target shot:
+- **Crosshair colour:** red when the camera does not see all four emitters, from red to light orange while one of them is weak, from light green to full green when all four are seen well.
+- **Emitters panel:** in the bottom right corner, the four emitters in their layout (Square or Diamond) with the number of emitters seen. Size and fill of each circle follow the camera as in the [IR test](#test-mode); an emitter that is not seen is a dashed circle with a red X, a weak one is shown in amber.
+- **Shots refused:** every target shot (centre, the four edges and the final centre) is accepted only with a green crosshair. Otherwise calibration does not move on and the window explains why: check the emitters, your distance and the [camera sensitivity](#ir-camera-sensitivity), then shoot again. The final confirmation in the verification step is not checked.
+
+The calibration started from the gun itself (pause mode) works as before, without these checks.
+
+<p align="center">
+  <img src="../docs/img/webapp_calibration_ir.png" alt="Calibration in the WebApp: orange crosshair, panel with the four emitters, one of them weak, and the message that the shot was refused because an IR emitter is too weak" width="70%">
+</p>
+
 Remember to save your calibration and current profile afterwards, either by saving from the WebApp, pressing Start+Select in Hotkey Pause Mode, or selecting the third "Save Settings" option in the Simple Pause Menu.
 
 ### IR Camera Sensitivity
@@ -234,7 +244,7 @@ These can also be done from the respective setting in the Simple Pause Menu.
 The current state of these settings is saved when committed to, and pulled from flash storage space at boot.
 
 #### Saving Settings to Flash
-The calibration data, profile settings, and extended gun options like custom pins mapping and rumble intensity, can be saved in non-volatile memory by pressing Start + Select while the gun is in Hotkey Pause Mode (or using Save Settings in the Simple Pause Menu), or by saving and receiving confirmation in the WebApp. The currently selected calibration profile is saved as the default for when the light gun is plugged in - gun settings (pins mapping, force feedback, etc.) applies to *all profiles.*
+The calibration data, profile settings, and extended gun options like custom pins mapping and rumble intensity, can be saved in non-volatile memory by pressing Start + Select while the gun is in Hotkey Pause Mode (or using Save Settings in the Simple Pause Menu), or by saving and receiving confirmation in the WebApp. The currently selected calibration profile is saved as the default for when the light gun is plugged in - gun settings (pins mapping, force feedback, etc.) applies to *all profiles.* In the WebApp and in the desktop App, **Save and Send Settings** pulses while there are unsaved changes, as a reminder to save.
 
 #### Test Mode
 Test Mode shows the IR points as seen by the camera. Open it from the WebApp's *Gun Tests* tab with **Open IR Camera Tester...**. It is very useful for aligning the camera when building your light gun, for testing that the camera tracks all 4 points properly, and for spotting possible reflections. The validity of the test points shape (rectangle in Square layout, diamond in Diamond layout) depends on the current profile used and its IR layout setting. Save any change to the IR layout or camera sensitivity before opening the test: the test uses the settings stored in the gun.
@@ -244,7 +254,7 @@ With firmware 7.0.0, each emitter circle also shows what the camera measures:
 - **Fill:** brightest at the centre (peak brightness of the spot) and fading towards the edge (average brightness). A full circle means a bright, well detected LED; an almost empty circle means a weak LED close to the detection limit.
 - **Dashed circle with a red X:** that emitter is not seen by the camera; its position is only estimated.
 
-The gray circle shows where the gun is aiming and the red circle marks the centre of the four emitters. With the DFRobot/Wii camera, which does not measure brightness, only the circle size changes. With older firmware the classic circles are shown.
+The gray circle shows where the gun is aiming and the red circle marks the centre of the four emitters. With the DFRobot/Wii camera, size and brightness come from the camera's full data format and are converted to the same scale. With older firmware the classic circles are shown.
 
 <p align="center">
   <img src="../docs/img/webapp_ir_test.png" alt="IR camera test in the WebApp: three emitters seen, with circles of different size and brightness, and one emitter not seen, marked with a red X" width="70%">
@@ -256,6 +266,7 @@ The gray circle shows where the gun is aiming and the red circle marks the centr
 - **The WebApp does not find the gun's port:** use a USB **data** cable (some cables only charge) and a computer browser with Web Serial, such as Chrome or Edge. Browsers without Web Serial (for example Firefox, Safari or phone browsers) can use the [offline WebApp](#configuration-with-the-webapp) stored in the gun; for a browser too old for both, see the desktop App in [Board Configuration](#board-configuration). On boards with two USB connectors, use the one connected to the ESP32-S3's own USB (OTG): on the DevKitC-1, seen from above with the connectors pointing forward, it is the one on the right, in front of the built-in NeoPixel LED (the board picture in the WebApp's **Board Layout** tab labels it **USB OTG**). Close other WebApp pages, serial monitors and MAMEHOOKER, which can keep the port busy. If the gun was started holding **B**, its serial port is replaced by the offline WebApp network: restart without holding any buttons.
 - **WebApp message "Device Error: Camera not available!":** after a clean installation the camera model is **DFRobot SEN0158 / Wii**. With a PAJ7025R2 or R3, select it in **Gun Settings → CAMERA Model**, set its SPI pins in **Board Layout**, then save and restart. Otherwise check the camera power and that its wires are not swapped or assigned to other functions.
 - **No IR points in the test, or some are missing:** check that the emitters are on and suit the camera (940 nm for DFRobot/Wii, 850 nm for PAJ7025R2/R3), that the camera can see the whole emitter layout, and that the camera sensitivity is not too low. Save the sensitivity before opening the test.
+- **Calibration does not move on to the next target:** in a calibration started from the WebApp or the desktop App, a target shot is accepted only with a green crosshair. Look at the emitters panel in the bottom right corner: an emitter marked with a red X must come back into the camera view (step back if it leaves the view at the screen edges); for a weak one, shown in amber, check the emitter, the distance and the [camera sensitivity](#ir-camera-sensitivity). See [How to calibrate](#how-to-calibrate).
 - **The pointer jumps or shakes:** usually a reflection or another light source (window, lamp, shiny surface) seen as an extra IR point. Look for it in the [IR test](#test-mode), remove or cover it, or lower the [camera sensitivity](#ir-camera-sensitivity). Recalibrate after moving the emitters.
 - **The gun does not pair with the dongle:** plug in the dongle first and wait about 15 seconds, then switch on the gun while it is not connected to the computer by USB (with USB it works wired). After unplugging or restarting the dongle, restart the gun as well. Use one dongle for each gun, and lightgun and dongle firmware from the same release ([dongle guide](../../dongle/README.md#english-version)).
 - **The wireless pedal is not found:** it works only with a gun connected through the dongle. Enable **Wireless pedal**, leave both wired pedal inputs unmapped and save; switch on the pedal before the gun. After restarting the pedal, restart the gun as well.
@@ -273,7 +284,6 @@ Some behaviours are limitations of the system rather than faults: see [Known Lim
 - The firmware is installed through each device's own USB port, not through the dongle or the Wi-Fi configuration page.
 - In the offline WebApp mode over USB, the gun's USB serial port, and therefore MAMEHOOKER, is unavailable until a normal restart.
 - Configuration Apps for firmware older than 7.0.0, including those of the original OpenFIRE project, are not compatible; use the WebApp or the compatible desktop App (see [Board Configuration](#board-configuration)).
-- The DFRobot/Wii camera does not report the brightness of the IR points, so the IR test shows only their size.
 
 ## Technical Details & Assorted Errata
 
@@ -295,7 +305,7 @@ The player number also changes the Start and Select keys (P1: 1 and 5, P2: 2 and
 
 **Wireless play with several guns:** up to four guns can be used wirelessly, each with **its own dongle** and, if you want, its own wireless pedal; each dongle pairs with one gun only. It does not matter which dongle a gun pairs with: the dongle takes on the identity of the gun (name, player number and USB serial number), so the computer always sees P1 as P1. Pairing and the choice of radio channel are automatic, and the dongles may end up on the same channel or on different ones: there is nothing to set.
 
-If you like, set up one gun at a time: plug in the first dongle, wait about 15 seconds, switch on its wireless pedal first, if used, and then the gun; repeat for the next gun. Each dongle then chooses its channel taking into account any interference, including that produced by the dongles and guns already in use, and each wireless pedal pairs with the intended gun, because a pedal pairs with the first gun that searches for it. This is a recommendation, not a requirement.
+If you like, set up one gun at a time: plug in the first dongle, wait about 15 seconds, switch on the first gun and its pedal, then do the same for the next one. Each dongle then chooses its channel taking into account any interference, including that produced by the dongles and guns already in use, and each wireless pedal pairs with the intended gun, because a pedal pairs with the first gun that searches for it. This is a recommendation, not a requirement.
 
 ---
 ### Questions or Issues?
@@ -424,8 +434,6 @@ Premi i pulsanti della lightgun **prima di accendere o riavviare** e mantienili 
 
 L'aggiornamento firmware ha la precedenza se vengono tenute premute entrambe le combinazioni. **A/B sono i pulsanti mappati della lightgun, non il pulsante fisico BOOT della scheda.** Su una scheda vuota, con un firmware precedente o quando le scorciatoie non funzionano, usa invece la procedura BOOT/RESET della scheda. Su una lightgun che esegue normalmente la 7.0.0, il Web Flasher può anche portarla da solo in modalità flashing, e la WebApp può fare lo stesso con **Riavvia il microcontrollore in modalità aggiornamento firmware** nella scheda *Gun Tests*. Dopo questo riavvio software la porta seriale cambia: riavvia l'installazione e seleziona la nuova porta. Non si può installare il firmware attraverso il dongle wireless o la pagina di configurazione Wi-Fi.
 
-Per entrare manualmente in modalità download con la scheda collegata via USB: **tieni premuto BOOT, premi e rilascia RESET/EN, quindi rilascia BOOT**. Usa i pulsanti fisici sulla scheda.
-
 Per l'installazione scegli l'immagine corrispondente alla **scheda e alla variante flash/PSRAM**, non alla telecamera. Aggiornamento normale e installazione pulita usano la stessa immagine; l'installazione pulita elimina tutte le impostazioni e calibrazioni. Passando dalla 6.2.1 alla 7.0.0 è consigliata un'installazione pulita: annota prima le impostazioni esistenti, poi configura e calibra nuovamente.
 
 ### Telecamera, display e impostazioni di avvio
@@ -441,7 +449,7 @@ Per l'installazione scegli l'immagine corrispondente alla **scheda e alla varian
 Dopo l'installazione su una scheda nuova, o dopo un'installazione pulita, la pistola non ha ancora una calibrazione. Resta in attesa della prima calibrazione e non muove il puntatore; il LED RGB della scheda, se presente, lampeggia di arancione.
 
 1. Collega la pistola alla WebApp. Se usi pin personalizzati, assegna almeno il *Grilletto* e il *Pulsante A* nel *Layout Scheda*; scegli la telecamera e prova i pulsanti nella scheda *Gun Tests*, poi salva.
-2. Avvia la calibrazione con uno dei pulsanti *Calibra profilo* nella scheda *Profili di calibrazione*, oppure salva e disconnetti la WebApp, quindi premi il grilletto per avviare la calibrazione autonoma (vedi [Come Calibrare](#come-calibrare-italiano)).
+2. Avvia la calibrazione con uno dei pulsanti *Calibra profilo* nella scheda *Profili di calibrazione*, oppure premi il grilletto per la calibrazione autonoma (vedi [Come Calibrare](#come-calibrare-italiano)).
 3. Salva la calibrazione.
 
 Se la telecamera non è disponibile (ad esempio perché è selezionato il modello sbagliato), premendo il grilletto la calibrazione non parte: correggi prima le impostazioni della telecamera nella WebApp.
@@ -514,7 +522,7 @@ Si può entrare in modalità Pausa premendo **C + Select** (impostazione predefi
 - **B o Giù:** Muovi il cursore Giù
 - **Grilletto:** Seleziona l'opzione
 - **C:** Esci dal menu di pausa
-  - *Tenendo premuto A o B per metà del tempo configurato per la pausa con pressione prolungata (circa 1,25 secondi con l'impostazione predefinita di 2,5 secondi) si uscirà anche dal menu di pausa semplice.*
+  - *Tenendo premuto A o B per metà della durata del tempo di hold-to-pause (circa ~2 secondi di default) si uscirà anche dal menu di pausa semplice.*
   
 Le opzioni disponibili nel menu di pausa semplificato sono le seguenti (dalla prima all'ultima, per poi ricominciare):
 * Calibra il profilo corrente (sempre la prima opzione iniziale)
@@ -538,6 +546,17 @@ Le opzioni disponibili nel menu di pausa semplificato sono le seguenti (dalla pr
    - Se la calibrazione è buona, premi il grilletto per confermare.
    - Se desideri ricominciare la calibrazione, premi il pulsante A o B nella schermata di verifica per ripartire dal punto centrale (Passo 2).
    - La calibrazione può essere annullata del tutto premendo C/Reload in qualsiasi momento, o i pulsanti A/B in qualsiasi momento prima della verifica finale.
+
+**Calibrazione dalla WebApp o dall'App desktop.** Con il firmware 7.0.0 la finestra di calibrazione avviata dalla WebApp (o dall'App desktop compatibile) controlla anche gli emettitori IR prima di ogni tiro sui bersagli:
+- **Colore del mirino:** rosso quando la telecamera non vede tutti e quattro gli emettitori, da rosso ad arancione chiaro mentre uno di essi è debole, da verde chiaro a verde pieno quando tutti e quattro sono visti bene.
+- **Riquadro degli emettitori:** in basso a destra, i quattro emettitori nella loro disposizione (Square o Diamond) con il numero di emettitori visti. Dimensione e riempimento di ogni cerchio seguono la telecamera come nel [test IR](#modalità-di-test-italiano); un emettitore non visto è un cerchio tratteggiato con una X rossa, uno debole è mostrato in ambra.
+- **Tiri rifiutati:** ogni tiro sui bersagli (centro, i quattro bordi e il centro finale) viene accettato solo con il mirino verde. Altrimenti la calibrazione non va avanti e la finestra spiega il motivo: controlla gli emettitori, la distanza e la [sensibilità della telecamera](#sensibilità-della-telecamera-ir-italiano), poi spara di nuovo. La conferma finale nella fase di verifica non viene controllata.
+
+La calibrazione avviata dalla pistola stessa (modalità pausa) funziona come prima, senza questi controlli.
+
+<p align="center">
+  <img src="../docs/img/webapp_calibration_ir.png" alt="Calibrazione nella WebApp: mirino arancione, riquadro con i quattro emettitori di cui uno debole e il messaggio di tiro rifiutato perché un emettitore IR è troppo debole" width="70%">
+</p>
 
 Ricordati di **salvare la calibrazione** e il profilo corrente subito dopo, salvando dalla WebApp, premendo *Start+Select* nella modalità Hotkey Pause, o scegliendo la terza opzione "Save Settings" nel Menu di Pausa Semplificato.
 
@@ -569,7 +588,7 @@ Queste operazioni possono essere eseguite anche dalle rispettive opzioni nel Men
 <a id="salvataggio-delle-impostazioni-nella-flash-italiano"></a>
 
 #### Salvataggio delle Impostazioni nella Flash
-I dati di calibrazione, le impostazioni dei profili e le opzioni estese della pistola (come la mappatura personalizzata dei pin e l'intensità del rumble) possono essere salvati nella memoria non volatile premendo **Start + Select** nella modalità Hotkey Pause (oppure usando Save Settings nel Menu di Pausa Semplificato), o salvando e ricevendo conferma nella WebApp. Il profilo di calibrazione attualmente selezionato al momento del salvataggio viene impostato come predefinito per le successive accensioni. Le impostazioni generali della pistola (mappatura pin, force feedback, ecc.) si applicano a *tutti i profili*.
+I dati di calibrazione, le impostazioni dei profili e le opzioni estese della pistola (come la mappatura personalizzata dei pin e l'intensità del rumble) possono essere salvati nella memoria non volatile premendo **Start + Select** nella modalità Hotkey Pause (oppure usando Save Settings nel Menu di Pausa Semplificato), o salvando e ricevendo conferma nella WebApp. Il profilo di calibrazione attualmente selezionato al momento del salvataggio viene impostato come predefinito per le successive accensioni. Le impostazioni generali della pistola (mappatura pin, force feedback, ecc.) si applicano a *tutti i profili*. Nella WebApp e nell'App desktop il pulsante **Salva e invia impostazioni** pulsa finché ci sono modifiche non salvate, per ricordare di salvare.
 
 <a id="modalità-di-test-italiano"></a>
 
@@ -581,7 +600,7 @@ Con il firmware 7.0.0 ogni cerchio degli emettitori mostra anche ciò che la tel
 - **Riempimento:** più intenso al centro (luminosità di picco della macchia) e sfumato verso il bordo (luminosità media). Un cerchio pieno indica un LED luminoso e ben rilevato; un cerchio quasi vuoto indica un LED debole, vicino al limite di rilevamento.
 - **Cerchio tratteggiato con una X rossa:** quell'emettitore non è visto dalla telecamera; la sua posizione è solo stimata.
 
-Il cerchio grigio indica dove sta puntando la pistola e il cerchio rosso il centro dei quattro emettitori. Con la telecamera DFRobot/Wii, che non misura la luminosità, cambia solo la dimensione dei cerchi. Con firmware precedenti vengono mostrati i cerchi classici.
+Il cerchio grigio indica dove sta puntando la pistola e il cerchio rosso il centro dei quattro emettitori. Con la telecamera DFRobot/Wii dimensione e luminosità arrivano dal formato dati completo della telecamera e sono convertite sulla stessa scala. Con firmware precedenti vengono mostrati i cerchi classici.
 
 <p align="center">
   <img src="../docs/img/webapp_ir_test.png" alt="Test della telecamera IR nella WebApp: tre emettitori visti, con cerchi di dimensione e luminosità diverse, e un emettitore non visto, segnato con una X rossa" width="70%">
@@ -595,6 +614,7 @@ Il cerchio grigio indica dove sta puntando la pistola e il cerchio rosso il cent
 - **La WebApp non trova la porta della pistola:** usa un cavo USB **dati** (alcuni cavi servono solo per la ricarica) e un browser da computer con Web Serial, come Chrome o Edge. Con i browser senza Web Serial (ad esempio Firefox, Safari o i browser dei telefoni) puoi usare la [WebApp offline](#configurazione-con-la-webapp) contenuta nella pistola; per un browser così vecchio da non aprire nessuna delle due, vedi l'App desktop in [Configurazione della Scheda](#configurazione-della-scheda-italiano). Sulle schede con due connettori USB usa quello collegato all'USB nativa dell'ESP32-S3 (OTG): sulla DevKitC-1, guardandola dall'alto con i connettori rivolti in avanti, è quello a destra, davanti al LED NeoPixel integrato (l'immagine della scheda nella sezione **Layout Scheda** della WebApp lo indica come **USB OTG**). Chiudi le altre pagine della WebApp, i monitor seriali e MAMEHOOKER, che possono tenere occupata la porta. Se la pistola è stata avviata tenendo premuto **B**, la sua porta seriale è sostituita dalla rete della WebApp offline: riavvia senza tenere premuti pulsanti.
 - **Messaggio della WebApp "Errore dispositivo: Fotocamera non disponibile!":** dopo un'installazione pulita il modello di telecamera è **DFRobot SEN0158 / Wii**. Con una PAJ7025R2 o R3, selezionala in **Impostazioni Gun → Modello TELECAMERA**, imposta i suoi pin SPI nel **Layout Scheda**, poi salva e riavvia. Altrimenti controlla l'alimentazione della telecamera e che i suoi fili non siano invertiti o assegnati ad altre funzioni.
 - **Nessun punto IR nel test, o ne manca qualcuno:** controlla che gli emettitori siano accesi e adatti alla telecamera (940 nm per DFRobot/Wii, 850 nm per PAJ7025R2/R3), che la telecamera veda tutta la disposizione degli emettitori e che la sensibilità della telecamera non sia troppo bassa. Salva la sensibilità prima di aprire il test.
+- **La calibrazione non passa al bersaglio successivo:** in una calibrazione avviata dalla WebApp o dall'App desktop un tiro sui bersagli viene accettato solo con il mirino verde. Guarda il riquadro degli emettitori in basso a destra: un emettitore segnato con una X rossa deve tornare nel campo visivo della telecamera (allontanati se ne esce ai bordi dello schermo); per uno debole, mostrato in ambra, controlla l'emettitore, la distanza e la [sensibilità della telecamera](#sensibilità-della-telecamera-ir-italiano). Vedi [Come Calibrare](#come-calibrare-italiano).
 - **Il puntatore salta o trema:** di solito è un riflesso o un'altra sorgente di luce (finestra, lampada, superficie lucida) vista come un punto IR in più. Cercalo nel [test IR](#modalità-di-test-italiano), eliminalo o coprilo, oppure riduci la [sensibilità della telecamera](#sensibilità-della-telecamera-ir-italiano). Ripeti la calibrazione dopo aver spostato gli emettitori.
 - **La pistola non si associa al dongle:** inserisci prima il dongle e attendi circa 15 secondi, poi accendi la pistola senza collegarla al computer via USB (con l'USB funziona via cavo). Dopo aver scollegato o riavviato il dongle, riavvia anche la pistola. Usa un dongle per ogni pistola e firmware della stessa release per lightgun e dongle ([guida dongle](../../dongle/README.md#versione-italiana)).
 - **Il pedale wireless non viene trovato:** funziona solo con una pistola collegata tramite il dongle. Abilita **Pedale wireless**, lascia non assegnati entrambi gli ingressi dei pedali cablati e salva; accendi il pedale prima della pistola. Dopo aver riavviato il pedale, riavvia anche la pistola.
@@ -614,7 +634,6 @@ Alcuni comportamenti sono limiti del sistema e non guasti: vedi [Limiti noti](#l
 - Il firmware si installa dalla porta USB di ciascun dispositivo, non tramite il dongle o la pagina di configurazione Wi-Fi.
 - Nella modalità WebApp offline via USB, la porta seriale USB della pistola, e quindi MAMEHOOKER, non è disponibile fino a un riavvio normale.
 - Le App di configurazione per firmware precedenti alla 7.0.0, comprese quelle del progetto OpenFIRE originale, non sono compatibili; usa la WebApp o l'App desktop compatibile (vedi [Configurazione della Scheda](#configurazione-della-scheda-italiano)).
-- La telecamera DFRobot/Wii non fornisce la luminosità dei punti IR, quindi il test IR ne mostra solo la dimensione.
 
 <a id="dettagli-tecnici-e-note-varie-italiano"></a>
 
@@ -642,7 +661,7 @@ Il numero del giocatore cambia anche i tasti Start e Select (P1: 1 e 5, P2: 2 e 
 
 **Gioco senza fili con più pistole:** si possono usare senza fili fino a quattro pistole, ognuna con **il proprio dongle** e, se vuoi, il proprio pedale wireless; ogni dongle si associa a una sola pistola. Non importa a quale dongle si associ una pistola: il dongle assume l'identità della pistola (nome, numero del giocatore e numero di serie USB), quindi il computer vede sempre P1 come P1. L'associazione e la scelta del canale radio sono automatiche, e i dongle possono trovarsi sullo stesso canale o su canali diversi: non c'è nulla da impostare.
 
-Se vuoi, prepara una pistola alla volta: inserisci il primo dongle, attendi circa 15 secondi, accendi prima il relativo pedale wireless, se presente, e poi la pistola; ripeti per la pistola successiva. Così ogni dongle sceglie il canale valutando anche le eventuali interferenze, comprese quelle prodotte dai dongle e dalle pistole già in uso, e ogni pedale wireless si associa alla pistola giusta, perché un pedale si associa alla prima pistola che lo cerca. È un consiglio, non un obbligo.
+Se vuoi, prepara una pistola alla volta: inserisci il primo dongle, attendi circa 15 secondi, accendi la prima pistola e il suo pedale, poi fai lo stesso con la successiva. Così ogni dongle sceglie il canale valutando anche le eventuali interferenze, comprese quelle prodotte dai dongle e dalle pistole già in uso, e ogni pedale wireless si associa alla pistola giusta, perché un pedale si associa alla prima pistola che lo cerca. È un consiglio, non un obbligo.
 
 ---
 ### Domande o Problemi?
