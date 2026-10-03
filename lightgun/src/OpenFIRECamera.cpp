@@ -118,6 +118,9 @@ bool OpenFIRECamera::Select() {
     const CameraModel model = (CameraModel)OF_Prefs::settings[OF_Const::cameraModel];
 
     switch (model) {
+        // An unknown saved model (damaged settings, or saved by a newer firmware) uses the
+        // DFRobot, the model of a clean installation, so that the profile is never empty.
+        default:
         case OF_Const::DFRobot_SEN0158:
             activeProfile = &OpenFIRE_CameraProfiles::DFRobot_SEN0158;
             activeOps = &DFRobotOps;
@@ -130,12 +133,6 @@ bool OpenFIRECamera::Select() {
             activeProfile = &OpenFIRE_CameraProfiles::PixArt_PAJ7025R3;
             activeOps = &PAJ7025R3Ops;
             break;
-        default:
-            activeProfile = nullptr;
-            activeOps = nullptr;
-            activeRead = nullptr;
-            activeExtendedCapabilities = 0;
-            return false;
     }
 
     activeRead = activeOps->readBasic;

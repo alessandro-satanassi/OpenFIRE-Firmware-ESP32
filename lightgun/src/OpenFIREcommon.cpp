@@ -403,7 +403,8 @@ constexpr uint8_t CALI_IR_MISSING = 0x01;   // the camera does not see all four 
 constexpr uint8_t CALI_IR_WEAK    = 0x02;   // at least one emitter seen is weak
 
 // Checks the last camera frame: all four emitters seen and, with the Extended format
-// (the only one that carries the brightness), none of them weak.
+// (the only one that carries the brightness), none of them weak. An emitter seen but still
+// without Extended data (the first Full read after the format switch failed) counts as missing.
 static uint8_t CaliIrProblems()
 {
     uint8_t problems = 0;
@@ -415,7 +416,11 @@ static uint8_t CaliIrProblems()
     if(OpenFIRECamera::DataFormat() == OpenFIRECamera::DataFormat_Extended) {
         for(uint8_t i = 0; i < 4; ++i) {
             const OpenFIRECamera::ObjectData& object = OpenFIRECamera::Object(i);
-            if(((seenFlags >> i) & 1U) && object.valid && object.maxBrightness < IR_WEAK_MAX_BRIGHTNESS)
+            if(!((seenFlags >> i) & 1U))
+                continue;
+            if(!object.valid)
+                problems |= CALI_IR_MISSING;
+            else if(object.maxBrightness < IR_WEAK_MAX_BRIGHTNESS)
                 problems |= CALI_IR_WEAK;
         }
     }

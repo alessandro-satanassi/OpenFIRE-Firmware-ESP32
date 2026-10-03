@@ -388,6 +388,7 @@
             if (this.closed) return;
             this.closed = true;
             clearTimeout(this._irWarningTimer);
+            clearTimeout(this._irExpiryTimer);
             doc.removeEventListener('keydown', this._onKey, true);
             root.removeEventListener('resize', this._onResize);
             doc.removeEventListener('fullscreenchange', this._onFullscreen);
@@ -441,6 +442,21 @@
             this.coords = Array.from({ length: 12 }, (_, i) => view.getInt32(i * 4, true));
             this.coordsTime = Date.now();
             this.render();
+            this._armIrExpiry();
+        }
+
+        /**
+         * Calibration IR view: redraws when the IR data gets old (blobs first, then coordinates),
+         * so that a link that stops sending without closing does not leave a green crosshair.
+         */
+        _armIrExpiry() {
+            clearTimeout(this._irExpiryTimer);
+            if (this.closed || this.mode !== MODE_CALIBRATE) return;
+            const now = Date.now();
+            const ends = [this.coordsTime + CALI_IR_MAX_AGE, this.blobs ? this.blobs.time + IRTEST_BLOBS_MAX_AGE : 0]
+                .filter((end) => end >= now);
+            if (!ends.length) return;
+            this._irExpiryTimer = setTimeout(() => { this.render(); this._armIrExpiry(); }, Math.min(...ends) - now + 20);
         }
 
         /** Calibration: the board refused a target shot (sCaliIrWarning bits: 1 emitter missing, 2 weak). */
@@ -474,6 +490,7 @@
             if (!this._freshBlobs()) this.blobLevels = [null, null, null, null]; // after a gap: no stale average
             this.blobs = { time: Date.now(), entries };
             this._updateBlobLevels(entries);
+            this._armIrExpiry();
         }
 
         /** Current blob data, or null when missing or stale (older firmware: classic view). */
