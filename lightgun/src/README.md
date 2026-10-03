@@ -113,6 +113,8 @@ Press the lightgun buttons **before powering on or resetting**, and keep them he
 
 Firmware update takes priority if both combinations are held. **A/B are the lightgun's mapped buttons, not the board's physical BOOT button.** On a blank board, an older firmware or when the shortcuts cannot work, use the board's physical BOOT/RESET procedure instead. On a lightgun running 7.0.0 normally, the Web Flasher can also switch it to flashing mode by itself, and the WebApp can do the same with **Restart Microcontroller in Firmware Update Mode** in the *Gun Tests* tab. After this software restart the serial port changes: start the installation again and select the new port. The firmware cannot be flashed through the wireless dongle or the Wi-Fi configuration page.
 
+To enter download mode manually with the board connected by USB: **hold BOOT, press and release RESET/EN, then release BOOT**. Use the physical buttons on the board.
+
 For installation, select the image matching the **board and flash/PSRAM variant**, not the camera. A normal update and a clean installation use the same image; a clean installation erases all settings and calibration. When moving from 6.2.1 to 7.0.0, a clean installation is recommended: note your existing settings first, then configure and calibrate again.
 
 ### Camera, display and startup settings
@@ -126,7 +128,7 @@ For installation, select the image matching the **board and flash/PSRAM variant*
 After flashing a new board, or after a clean installation, the gun has no calibration yet. It waits for the first calibration and does not move the pointer; the board's RGB LED, if present, blinks orange.
 
 1. Connect the gun to the WebApp. If you use custom pins, map at least the *Trigger* and *Button A* in *Board Layout*; select your camera and check the buttons in the *Gun Tests* tab, then save.
-2. Start the calibration with any of the *Calibrate Profile* buttons in the *Calibration Profiles* tab, or pull the trigger to run the standalone calibration (see [How to Calibrate](#how-to-calibrate)).
+2. Start the calibration with any of the *Calibrate Profile* buttons in the *Calibration Profiles* tab, or save and disconnect the WebApp, then pull the trigger to run the standalone calibration (see [How to Calibrate](#how-to-calibrate)).
 3. Save the calibration.
 
 If the camera is not available (for example because the wrong model is selected), pulling the trigger does not start the calibration: correct the camera settings in the WebApp first.
@@ -189,7 +191,7 @@ Pause mode can be entered by either pressing C + Select by default, pressing the
 - B or Down: Navigate Cursor Down
 - Trigger: Select option
 - C: Exit pause mode
-  - Holding A or B for half the duration of the hold-to-pause time (so ~2s by default) will also exit the simple pause menu.
+  - Holding A or B for half the configured hold-to-pause time (about 1.25 seconds with the default 2.5-second setting) will also exit the simple pause menu.
 Available options in simple pause menu are as follows, from first option to last before rolling back:
 * Calibrate current profile (always the initial option)
 * Switch profiles (submenu)
@@ -293,7 +295,7 @@ The player number also changes the Start and Select keys (P1: 1 and 5, P2: 2 and
 
 **Wireless play with several guns:** up to four guns can be used wirelessly, each with **its own dongle** and, if you want, its own wireless pedal; each dongle pairs with one gun only. It does not matter which dongle a gun pairs with: the dongle takes on the identity of the gun (name, player number and USB serial number), so the computer always sees P1 as P1. Pairing and the choice of radio channel are automatic, and the dongles may end up on the same channel or on different ones: there is nothing to set.
 
-If you like, set up one gun at a time: plug in the first dongle, wait about 15 seconds, switch on the first gun and its pedal, then do the same for the next one. Each dongle then chooses its channel taking into account any interference, including that produced by the dongles and guns already in use, and each wireless pedal pairs with the intended gun, because a pedal pairs with the first gun that searches for it. This is a recommendation, not a requirement.
+If you like, set up one gun at a time: plug in the first dongle, wait about 15 seconds, switch on its wireless pedal first, if used, and then the gun; repeat for the next gun. Each dongle then chooses its channel taking into account any interference, including that produced by the dongles and guns already in use, and each wireless pedal pairs with the intended gun, because a pedal pairs with the first gun that searches for it. This is a recommendation, not a requirement.
 
 ---
 ### Questions or Issues?
@@ -422,6 +424,8 @@ Premi i pulsanti della lightgun **prima di accendere o riavviare** e mantienili 
 
 L'aggiornamento firmware ha la precedenza se vengono tenute premute entrambe le combinazioni. **A/B sono i pulsanti mappati della lightgun, non il pulsante fisico BOOT della scheda.** Su una scheda vuota, con un firmware precedente o quando le scorciatoie non funzionano, usa invece la procedura BOOT/RESET della scheda. Su una lightgun che esegue normalmente la 7.0.0, il Web Flasher può anche portarla da solo in modalità flashing, e la WebApp può fare lo stesso con **Riavvia il microcontrollore in modalità aggiornamento firmware** nella scheda *Gun Tests*. Dopo questo riavvio software la porta seriale cambia: riavvia l'installazione e seleziona la nuova porta. Non si può installare il firmware attraverso il dongle wireless o la pagina di configurazione Wi-Fi.
 
+Per entrare manualmente in modalità download con la scheda collegata via USB: **tieni premuto BOOT, premi e rilascia RESET/EN, quindi rilascia BOOT**. Usa i pulsanti fisici sulla scheda.
+
 Per l'installazione scegli l'immagine corrispondente alla **scheda e alla variante flash/PSRAM**, non alla telecamera. Aggiornamento normale e installazione pulita usano la stessa immagine; l'installazione pulita elimina tutte le impostazioni e calibrazioni. Passando dalla 6.2.1 alla 7.0.0 è consigliata un'installazione pulita: annota prima le impostazioni esistenti, poi configura e calibra nuovamente.
 
 ### Telecamera, display e impostazioni di avvio
@@ -437,7 +441,7 @@ Per l'installazione scegli l'immagine corrispondente alla **scheda e alla varian
 Dopo l'installazione su una scheda nuova, o dopo un'installazione pulita, la pistola non ha ancora una calibrazione. Resta in attesa della prima calibrazione e non muove il puntatore; il LED RGB della scheda, se presente, lampeggia di arancione.
 
 1. Collega la pistola alla WebApp. Se usi pin personalizzati, assegna almeno il *Grilletto* e il *Pulsante A* nel *Layout Scheda*; scegli la telecamera e prova i pulsanti nella scheda *Gun Tests*, poi salva.
-2. Avvia la calibrazione con uno dei pulsanti *Calibra profilo* nella scheda *Profili di calibrazione*, oppure premi il grilletto per la calibrazione autonoma (vedi [Come Calibrare](#come-calibrare-italiano)).
+2. Avvia la calibrazione con uno dei pulsanti *Calibra profilo* nella scheda *Profili di calibrazione*, oppure salva e disconnetti la WebApp, quindi premi il grilletto per avviare la calibrazione autonoma (vedi [Come Calibrare](#come-calibrare-italiano)).
 3. Salva la calibrazione.
 
 Se la telecamera non è disponibile (ad esempio perché è selezionato il modello sbagliato), premendo il grilletto la calibrazione non parte: correggi prima le impostazioni della telecamera nella WebApp.
@@ -510,7 +514,7 @@ Si può entrare in modalità Pausa premendo **C + Select** (impostazione predefi
 - **B o Giù:** Muovi il cursore Giù
 - **Grilletto:** Seleziona l'opzione
 - **C:** Esci dal menu di pausa
-  - *Tenendo premuto A o B per metà della durata del tempo di hold-to-pause (circa ~2 secondi di default) si uscirà anche dal menu di pausa semplice.*
+  - *Tenendo premuto A o B per metà del tempo configurato per la pausa con pressione prolungata (circa 1,25 secondi con l'impostazione predefinita di 2,5 secondi) si uscirà anche dal menu di pausa semplice.*
   
 Le opzioni disponibili nel menu di pausa semplificato sono le seguenti (dalla prima all'ultima, per poi ricominciare):
 * Calibra il profilo corrente (sempre la prima opzione iniziale)
@@ -638,7 +642,7 @@ Il numero del giocatore cambia anche i tasti Start e Select (P1: 1 e 5, P2: 2 e 
 
 **Gioco senza fili con più pistole:** si possono usare senza fili fino a quattro pistole, ognuna con **il proprio dongle** e, se vuoi, il proprio pedale wireless; ogni dongle si associa a una sola pistola. Non importa a quale dongle si associ una pistola: il dongle assume l'identità della pistola (nome, numero del giocatore e numero di serie USB), quindi il computer vede sempre P1 come P1. L'associazione e la scelta del canale radio sono automatiche, e i dongle possono trovarsi sullo stesso canale o su canali diversi: non c'è nulla da impostare.
 
-Se vuoi, prepara una pistola alla volta: inserisci il primo dongle, attendi circa 15 secondi, accendi la prima pistola e il suo pedale, poi fai lo stesso con la successiva. Così ogni dongle sceglie il canale valutando anche le eventuali interferenze, comprese quelle prodotte dai dongle e dalle pistole già in uso, e ogni pedale wireless si associa alla pistola giusta, perché un pedale si associa alla prima pistola che lo cerca. È un consiglio, non un obbligo.
+Se vuoi, prepara una pistola alla volta: inserisci il primo dongle, attendi circa 15 secondi, accendi prima il relativo pedale wireless, se presente, e poi la pistola; ripeti per la pistola successiva. Così ogni dongle sceglie il canale valutando anche le eventuali interferenze, comprese quelle prodotte dai dongle e dalle pistole già in uso, e ogni pedale wireless si associa alla pistola giusta, perché un pedale si associa alla prima pistola che lo cerca. È un consiglio, non un obbligo.
 
 ---
 ### Domande o Problemi?

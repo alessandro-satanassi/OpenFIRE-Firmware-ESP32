@@ -1,7 +1,7 @@
 ### Table of Contents:
  - [MAMEHOOKER Setup Guide](#mamehooker-setup-guide)
  - [How does MAMEHOOKER work?](#how-does-mamehooker-work)
- - [How does configuration files work?](#how-does-configuration-files-work)
+ - [How do configuration files work?](#how-do-configuration-files-work)
  - [Opening, Writing to, and Closing COM Ports](#opening-writing-to-and-closing-com-ports)
  - [Light Gun Serial Commands](#light-gun-serial-commands)
  - [MAMEHOOKER's Pipe & State Modifiers](#mamehookers-pipe--state-modifiers)
@@ -54,7 +54,9 @@ output                    windows
  * DemulShooter is needed to provide outputs for PC/Windows-based arcade games and other compatible things. Games in DemulShooter will usually provide a `PX_CtmRecoil` & `PX_Damaged` (PX = player number, i.e. P1 or P2); the former intended for solenoid, the latter intended for rumble.
  * Supermodel & native Flycast *technically* provides outputs natively, but it only provides lamp control and no other significant peripheral functionality.
 
-## How does configuration files work?
+<a id="how-does-configuration-files-work"></a>
+
+## How do configuration files work?
 
 This is the basic anatomy of a MAMEHOOKER-compatible ini file - games can have either all of or less outputs available, and depends on the game whether they provide that output channel or not, but these are what you'll want to focus on mainly:
 
