@@ -389,6 +389,40 @@ void FW_Common::SetRunMode(const FW_Const::RunMode_e &newMode)
     }
 }
 
+// An emitter whose brightest pixel stays below this value is reported as weak: the
+// PAJ7025 detects a blob from brightness 130 (150 on the R2 at the highest
+// sensitivity), so it is barely above that limit and can flicker in and out.
+// Used by the WebApp IR view (sTestBlobs flag) and by the calibration check below,
+// in the same way for every camera: each driver provides the brightness (the DFRobot,
+// which does not measure it, a fixed value above this limit). Starting value: check it
+// on the hardware with the IR test view (?irdebug in the WebApp address shows it).
+constexpr uint8_t IR_WEAK_MAX_BRIGHTNESS = 170;
+
+// Problems of the IR emitters for a calibration target shot (sCaliIrWarning bits).
+constexpr uint8_t CALI_IR_MISSING = 0x01;   // the camera does not see all four emitters
+constexpr uint8_t CALI_IR_WEAK    = 0x02;   // at least one emitter seen is weak
+
+// Checks the last camera frame: all four emitters seen and, with the Extended format
+// (the only one that carries the brightness), none of them weak.
+static uint8_t CaliIrProblems()
+{
+    uint8_t problems = 0;
+    const unsigned int seenFlags = OpenFIRECamera::Seen();
+
+    if((seenFlags & 0x0FU) != 0x0FU)
+        problems |= CALI_IR_MISSING;
+
+    if(OpenFIRECamera::DataFormat() == OpenFIRECamera::DataFormat_Extended) {
+        for(uint8_t i = 0; i < 4; ++i) {
+            const OpenFIRECamera::ObjectData& object = OpenFIRECamera::Object(i);
+            if(((seenFlags >> i) & 1U) && object.valid && object.maxBrightness < IR_WEAK_MAX_BRIGHTNESS)
+                problems |= CALI_IR_WEAK;
+        }
+    }
+
+    return problems;
+}
+
 void FW_Common::ExecCalMode(const bool &fromDesktop)
 {
     buttons.ReportDisable();
@@ -487,10 +521,23 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
             }
         }
 
+        // WebApp IR view: every target shot (centre, the four edges, final centre) is refused
+        // while an emitter is missing or weak, so that each reading is taken with all four
+        // emitters seen. The WebApp is told why (sCaliIrWarning) and the stage does not change.
+        // With a narrow camera close to the screen an emitter can leave the field at the edges:
+        // the player then steps back. The confirmation of the verify stage is not checked.
+        const uint8_t shotRefusal =
+            (fromDesktop && caliIrView && buttons.pressed == FW_Const::BtnMask_Trigger && !mouseMoving &&
+             calStage <= FW_Const::Cali_Center)
+            ? CaliIrProblems() : 0;
+
         // Handle button presses and calibration stages
         if(((buttons.pressedReleased & (FW_Const::ExitPauseModeBtnMask | FW_Const::ExitPauseModeHoldBtnMask)) && !justBooted) ||
            desktopCancel) {
             goto calibration_cancelled;
+        } else if(shotRefusal) {
+            if(!OF_Serial::AppSerialSendResponse(OF_Const::sCaliIrWarning, &shotRefusal, 1))
+                goto calibration_failed;
         } else if(buttons.pressed == FW_Const::BtnMask_Trigger && !mouseMoving) {
             ++calStage;
             if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliStageUpd, &calStage, 1))
@@ -769,8 +816,8 @@ calibration_cancelled:
     }
 }
 
-// IR test view only (sTestBlobs): area and brightness of the camera blob
-// drawn at each vertex. Called in RunMode_Processing, where GetPosition()
+// IR test view and calibration IR view (sTestBlobs): area and brightness of the camera blob
+// drawn at each vertex. Called in RunMode_Processing and with caliIrView, where GetPosition()
 // keeps the camera in Extended format, right before sTestCoords (which
 // makes the App redraw). Apps that do not know sTestBlobs ignore it.
 //
@@ -783,7 +830,8 @@ calibration_cancelled:
 // vertex; a pair longer than half the shortest vertex distance is rejected.
 //
 // Payload (21 bytes): [0] format version (1), then for each vertex, in the
-// sTestCoords order: flags (bit 0 = seen by the camera), average brightness,
+// sTestCoords order: flags (bit 0 = seen by the camera, bit 1 = weak, see
+// IR_WEAK_MAX_BRIGHTNESS; Apps that do not know bit 1 ignore it), average brightness,
 // max brightness, area (uint16, little endian; 0 when not seen).
 //
 // The pairing distances are computed in 32 bits. Coordinates are limited to
@@ -811,6 +859,7 @@ static void SendTestBlobs(const int (&vertexXin)[4], const int (&vertexYin)[4],
 {
     constexpr uint8_t TEST_BLOBS_VERSION = 1;
     constexpr uint8_t TEST_BLOB_SEEN = 0x01;
+    constexpr uint8_t TEST_BLOB_WEAK = 0x02;
     constexpr int32_t MIN_PAIR_DISTANCE = 20; // test-space px, lower bound of the pairing limit
 
     int32_t vertexX[4];
@@ -911,7 +960,8 @@ static void SendTestBlobs(const int (&vertexXin)[4], const int (&vertexYin)[4],
             continue; // not seen: all zero
 
         const OpenFIRECamera::ObjectData& object = OpenFIRECamera::Object((uint8_t)vertexBlob[i]);
-        entry[0] = TEST_BLOB_SEEN;
+        entry[0] = TEST_BLOB_SEEN |
+                   ((object.maxBrightness < IR_WEAK_MAX_BRIGHTNESS) ? TEST_BLOB_WEAK : 0);
         entry[1] = object.averageBrightness;
         entry[2] = object.maxBrightness;
         entry[3] = (uint8_t)(object.area & 0xFF);
@@ -980,11 +1030,12 @@ void FW_Common::GetPosition()
     constexpr int AR_CORRECTION_H = 3;
 
     if(OpenFIRECamera::IsReady()) {
-        // The IR test view (RunMode_Processing) also shows blob area and brightness,
-        // which need the Extended data format; every other mode keeps Basic.
+        // The IR test view (RunMode_Processing) and the WebApp IR view during calibration
+        // (caliIrView) also show blob area and brightness, which need the Extended data
+        // format; every other mode keeps Basic.
         // Switched here, right before Read(), so it happens in the camera read context.
         const OpenFIRECamera::DataFormat_e wantedFormat =
-            (runMode == FW_Const::RunMode_Processing) ? OpenFIRECamera::DataFormat_Extended
+            (runMode == FW_Const::RunMode_Processing || caliIrView) ? OpenFIRECamera::DataFormat_Extended
                                                       : OpenFIRECamera::DataFormat_Basic;
         if(OpenFIRECamera::DataFormat() != wantedFormat)
             OpenFIRECamera::SetDataFormat(wantedFormat);
@@ -1295,7 +1346,8 @@ void FW_Common::GetPosition()
                             pointY < 0 || pointY > cameraProfile.mouseMaxY;
                     }
 
-                    if(runMode == FW_Const::RunMode_Processing) {
+                    // IR test view, and calibration with the WebApp IR view.
+                    if(runMode == FW_Const::RunMode_Processing || caliIrView) {
                         int mouseXscaled = mouseX / PERSPECTIVE_SCALE;
                         int mouseYscaled = mouseY / PERSPECTIVE_SCALE;
 

@@ -1934,7 +1934,11 @@ void OF_Serial::AppSerialDispatchRequest(const AppSerialFrame_s &frame)
                 FW_Common::SetIrSensitivity(caliSettings & 0x0F);
                 FW_Common::SetIrLayout(caliSettings >> 4);
                 FW_Common::SetMode(FW_Const::GunMode_Calibration);
+                // Optional fourth byte: older Apps send three bytes and keep the classic calibration.
+                FW_Common::caliIrView = frame.length >= 4 &&
+                                        (frame.payload[3] & OF_Const::caliFlagIrView) != 0;
                 FW_Common::ExecCalMode(true);
+                FW_Common::caliIrView = false;
 
                 // A full App disconnect received inside ExecCalMode()
                 // first cancels calibration so that the backed-up profile

@@ -665,6 +665,11 @@
                 if (this.window) this.window.setTestBlobs(payload);
                 break;
 
+            case C.sCaliIrWarning:
+                if (payload.length === 1 && this.window && this.window.mode === OF.FullscreenWindow.MODE_CALIBRATE)
+                    this.window.showIrWarning(payload[0]);
+                break;
+
             case C.sTestCoords:
                 if (this.window) this.window.drawTest(payload);
                 break;
@@ -828,10 +833,13 @@
             const win = new OF.FullscreenWindow(OF.FullscreenWindow.MODE_CALIBRATE, {
                 onExitRequest: () => this.sendCommand(C.serialTerminator).then((ok) => { if (!ok) this.failOperation(); }),
                 onExit: (mode, values) => this.onWindowExit(win, mode, values),
+                diamond: settings.layoutType === this.S.layoutTypes_e.layoutDiamond, // IR view: emitters in their layout
             });
             this.window = win;
             win.open();
-            this.sendCommand(C.sCaliProfile, [C.sCaliStart, profile, (settings.irSensitivity + (settings.layoutType << 4)) & 0xFF])
+            // Fourth byte: ask for the IR emitters during calibration (older firmware ignores it).
+            const caliFlags = this.S.caliStartFlags_e ? this.S.caliStartFlags_e.caliFlagIrView : 0;
+            this.sendCommand(C.sCaliProfile, [C.sCaliStart, profile, (settings.irSensitivity + (settings.layoutType << 4)) & 0xFF, caliFlags])
                 .then((ok) => { if (!ok) this.failOperation(); });
         }
 

@@ -7,6 +7,7 @@
       node tests/sim-server.js --root .            (unbundled webapp: open /?ws)
 
     Options: --port 8080  --board <board>  --root <folder>  --latency <ms>
+             --cali-ir ok|missing|weak   (emitters shown during calibration, see MockFirmware caliIr)
 
     Build the device folder with:
       python scripts/webapp_build.py device --board waveshare-esp32-s3-zero --out dist/device
@@ -91,7 +92,7 @@ function acceptWebSocket(request, socket, onOpen) {
 
 // ----- Simulated lightgun ----------------------------------------------------
 
-function startServer({ port = 8080, root = WEBAPP, board = 'waveshare-esp32-s3-zero', latency = 2 } = {}) {
+function startServer({ port = 8080, root = WEBAPP, board = 'waveshare-esp32-s3-zero', latency = 2, caliIr = 'ok' } = {}) {
     if (!globalThis.OpenFIREshared) {
         vm.runInThisContext(fs.readFileSync(path.join(WEBAPP, 'boards', 'OpenFIREshared.js'), 'utf8') +
                             '\nglobalThis.OpenFIREshared = OpenFIREshared;');
@@ -99,7 +100,7 @@ function startServer({ port = 8080, root = WEBAPP, board = 'waveshare-esp32-s3-z
     // The page talks to the WebSocket link; serialLink is the (unused) USB port.
     const serialLink = new MemoryLink({ latency });
     const link = new MemoryLink({ latency });
-    const firmware = new MockFirmware(globalThis.OpenFIREshared, serialLink, { boardType: board, webLink: link });
+    const firmware = new MockFirmware(globalThis.OpenFIREshared, serialLink, { boardType: board, webLink: link, caliIr });
     firmware.loadPresets();
     firmware.start();
 
@@ -147,7 +148,7 @@ if (require.main === module) {
     const port = Number(option('port', 8080));
     const root = path.resolve(option('root', WEBAPP));
     const board = option('board', 'waveshare-esp32-s3-zero');
-    startServer({ port, root, board, latency: Number(option('latency', 2)) }).then(() => {
+    startServer({ port, root, board, latency: Number(option('latency', 2)), caliIr: option('cali-ir', 'ok') }).then(() => {
         console.log(`Simulated ${board} on http://localhost:${port}/ (files from ${root}, WebSocket /ws)`);
     });
 }

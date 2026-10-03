@@ -165,6 +165,10 @@ class MockFirmware {
         this.failNextSave = false;
         this.camNotAvailable = !!options.camNotAvailable;
         this.testBlobs = options.testBlobs !== false;  // false: firmware without sTestBlobs (classic IR test view)
+        // Emitters during a calibration started with caliFlagIrView: 'ok' (four, bright),
+        // 'missing' (one not seen) or 'weak' (one dim): the target shots are refused unless 'ok'.
+        this.caliIr = options.caliIr || 'ok';
+        this.caliIrView = false;
         // is_pedal_wireless of the firmware: a wireless pedal answered during the start-up,
         // so the two pedals work although no pin is mapped to them.
         this.pedalWireless = !!options.pedalWireless;
@@ -873,7 +877,10 @@ class MockFirmware {
                     new DataView(this.profiles[this.currentProfile].buffer).setUint32(32, settings & 0x0F, true);
                     new DataView(this.profiles[this.currentProfile].buffer).setUint32(40, settings >> 4, true);
                     this.gunMode = 'calibration';
+                    // Optional fourth byte (caliStartFlags_e): older Apps send three bytes.
+                    this.caliIrView = frame.payload.length >= 4 && (frame.payload[3] & this.S.caliStartFlags_e.caliFlagIrView) !== 0;
                     await this.execCalMode(true);
+                    this.caliIrView = false;
                     if (!this.sessionActive) {
                         this.sessionEnd();
                         this.restoreRunState();
@@ -923,6 +930,7 @@ class MockFirmware {
         this.gunMode = 'calibration';
 
         const fail = async () => { communicationFailed = true; return this._calCancelled(backup, communicationFailed); };
+        let lastIr = 0;
 
         if (!await this.sendResponse(C.sCaliStageUpd, Uint8Array.of(0)))
             return fail();
@@ -935,7 +943,17 @@ class MockFirmware {
             if (desktopCancel)
                 return this._calCancelled(backup, communicationFailed);
 
-            if (this.trigger) {
+            if (this.caliIrView && Date.now() - lastIr >= 50) {
+                lastIr = Date.now();
+                this._sendCaliIrView();
+            }
+
+            // FW_Common::ExecCalMode: every target shot is refused while an emitter is missing or weak.
+            if (this.trigger && fromDesktop && this.caliIrView && calStage <= 5 && this.caliIr !== 'ok') {
+                this.trigger = false;
+                if (!await this.sendResponse(C.sCaliIrWarning, Uint8Array.of(this.caliIr === 'missing' ? 1 : 2)))
+                    return fail();
+            } else if (this.trigger) {
                 this.trigger = false;
                 ++calStage;
                 if (!await this.sendResponse(C.sCaliStageUpd, Uint8Array.of(calStage)))
@@ -955,6 +973,10 @@ class MockFirmware {
                     this.gunMode = 'verification';
                     while (this.gunMode === 'verification') {
                         await this.serialProcessingDocked();
+                        if (this.caliIrView && Date.now() - lastIr >= 50) {
+                            lastIr = Date.now();
+                            this._sendCaliIrView();
+                        }
                         const cancel = fromDesktop && this.takeCalibrationCancel();
                         if (cancel)
                             return this._calCancelled(backup, communicationFailed);
@@ -984,6 +1006,23 @@ class MockFirmware {
         calStage = 7;
         if (!await this.sendResponse(C.sCaliStageUpd, Uint8Array.of(calStage)))
             await this.sendError();
+    }
+
+    /** Like FW_Common::GetPosition() during a calibration with caliFlagIrView: blobs, then coordinates. */
+    _sendCaliIrView() {
+        const coords = new Uint8Array(48);
+        const v = new DataView(coords.buffer);
+        const missing = this.caliIr === 'missing';
+        const values = [600 * 2, 300, 1320 * 2 + (missing ? 1 : 0), 300, 600 * 2, 780, 1320 * 2, 780, 960, 540, 955, 545];
+        values.forEach((value, i) => v.setInt32(i * 4, value, true));
+        // flags: bit 0 seen, bit 1 weak (firmware IR_WEAK_MAX_BRIGHTNESS)
+        const blobs = [[1, 220, 250, 160], missing ? [0, 0, 0, 0] : [1, 215, 248, 150],
+            this.caliIr === 'weak' ? [3, 140, 158, 14] : [1, 210, 245, 140], [1, 212, 246, 145]];
+        const payload = new Uint8Array(21);
+        payload[0] = 1;
+        blobs.forEach(([flags, avg, max, area], i) => payload.set([flags, avg, max, area & 255, area >> 8], 1 + i * 5));
+        this.sendEvent(this.C.sTestBlobs, payload);
+        this.sendEvent(this.C.sTestCoords, coords);
     }
 
     async _calCancelled(backup, communicationFailed) {

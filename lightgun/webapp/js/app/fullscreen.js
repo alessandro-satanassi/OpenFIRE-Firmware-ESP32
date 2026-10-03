@@ -4,6 +4,7 @@
         const win = new OF.FullscreenWindow('calibrate', { onExitRequest, onExit });
         win.open();                      // call it inside the click handler (fullscreen needs a user gesture)
         win.setStage(stage); win.setInfo(payload); win.setTestBlobs(blobs); win.drawTest(coords);
+        win.showIrWarning(bits);         // calibration: the board refused a target shot (sCaliIrWarning)
         win.shutdown();
 */
 (function (root) {
@@ -53,6 +54,32 @@
     const IRTEST_BLOBS_VERSION = 1;
     const IRTEST_BLOBS_LENGTH = 21;
     const IRTEST_NOT_SEEN_COLOR = '#ff3030';
+    const IRTEST_BLOB_WEAK = 0x02;          // sTestBlobs flag: emitter seen but weak (firmware IR_WEAK_MAX_BRIGHTNESS)
+
+    // ----- IR view in the calibration window ------------------------------------------
+    // Firmware that knows caliFlagIrView sends sTestBlobs + sTestCoords during calibration too:
+    // the crosshair turns green when all four emitters are seen and none is weak, a small panel
+    // in the bottom right corner shows each emitter, and the board refuses every target shot
+    // (sCaliIrWarning) while one is missing or weak.
+    const CALI_IR_PANEL_WIDTH = 0.14;      // of the window width (the panel is square)
+    const CALI_IR_PANEL_MAX_WIDTH = 300;   // px
+    const CALI_IR_PANEL_MIN_WIDTH = 140;   // px, also on small screens
+    const CALI_IR_MAX_AGE = 500;           // ms without coordinates: older firmware, no panel
+    const CALI_IR_WARNING_TIME = 4000;     // ms the refusal message stays on screen
+    const CALI_IR_MISSING = 0x01;          // sCaliIrWarning bits
+    const CALI_IR_WEAK = 0x02;
+    const CALI_IR_WEAK_COLOR = '#ffb000';
+    // Crosshair colour from the worst emitter: missing = intense red; weak = red to light orange
+    // as its brightness rises from the camera threshold (130) to the firmware limit
+    // (IR_WEAK_MAX_BRIGHTNESS, 170); good = light green to full green up to CALI_IR_FULL_GREEN.
+    const CALI_IR_BRIGHTNESS_MIN = 130;
+    const CALI_IR_BRIGHTNESS_WEAK = 170;
+    const CALI_IR_FULL_GREEN = 230;
+    const CALI_IR_SCALE = {
+        missing: [255, 20, 20],
+        weakLow: [255, 40, 40], weakHigh: [255, 190, 90],
+        goodLow: [170, 255, 140], goodHigh: [0, 220, 0],
+    };
 
     /** ?irdebug in the address: shows area and brightness under each emitter circle. */
     function irTestDebug() {
@@ -195,6 +222,24 @@
         return block;
     }
 
+    /** Splits each line at the spaces so that no line is longer than maxChars (longer words stay whole). */
+    function wrapLines(textLines, maxChars) {
+        const out = [];
+        for (const line of textLines) {
+            let current = '';
+            for (const word of line.split(' ')) {
+                if (current && [...current].length + 1 + [...word].length > maxChars) {
+                    out.push(current);
+                    current = word;
+                } else {
+                    current = current ? current + ' ' + word : word;
+                }
+            }
+            out.push(current);
+        }
+        return out;
+    }
+
     /** Translated lines: the Qt texts are padded for a left-aligned block, here lines are centred. */
     function lines(...keys) {
         return keys.map((key) => (key ? OF.i18n.t(key) : '').replace(/\u2026/g, '...').trim());
@@ -208,6 +253,26 @@
         return crosshairImage;
     }
 
+    // Crosshair tinted by the calibration IR view: one image per colour (colours are rounded,
+    // so only a few dozen exist).
+    const tintedCrosshairs = new Map();
+    function loadTintedCrosshair(rgb) {
+        const key = rgb.map((v) => Math.round(v / 8) * 8).map((v) => Math.min(255, v));
+        const color = '#' + key.map((v) => v.toString(16).padStart(2, '0')).join('');
+        let image = tintedCrosshairs.get(color);
+        if (!image) {
+            image = new Image();
+            image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(CROSSHAIR_SVG.replace('#ff8758', color));
+            tintedCrosshairs.set(color, image);
+        }
+        return image;
+    }
+
+    function mix(a, b, t) {
+        const k = Math.min(1, Math.max(0, t));
+        return a.map((v, i) => v + (b[i] - v) * k);
+    }
+
     // ----- Window -------------------------------------------------------------------------
 
     class FullscreenWindow {
@@ -217,6 +282,8 @@
             this.stage = STAGE.init;
             this.values = {};
             this.coords = null;
+            this.coordsTime = 0;     // when the last sTestCoords arrived (calibration IR panel)
+            this.irWarning = null;   // calibration: { bits, time } of the last refused shot
             this.blobs = null;       // sTestBlobs: { time, entries[4] }
             this.blobLevels = [null, null, null, null]; // smoothed { radius, center, edge } per emitter
             this.irDebug = irTestDebug();
@@ -319,6 +386,7 @@
         shutdown(values) {
             if (this.closed) return;
             this.closed = true;
+            clearTimeout(this._irWarningTimer);
             doc.removeEventListener('keydown', this._onKey, true);
             root.removeEventListener('resize', this._onResize);
             doc.removeEventListener('fullscreenchange', this._onFullscreen);
@@ -339,6 +407,7 @@
                 return;
             }
             this.stage = stage;
+            this.irWarning = null; // a new stage: the refused shot is no longer current
             if (stage === STAGE.init) {
                 this.resetValues();
                 this.mouse = null;
@@ -365,10 +434,20 @@
 
         /** sTestCoords: 12 int32 (TL, TR, BL, BR with the outside-FOV flag in bit 0 of X; mouse; D). */
         drawTest(payload) {
-            if (this.closed || this.mode !== MODE_IRTEST) return;
+            if (this.closed || (this.mode !== MODE_IRTEST && this.mode !== MODE_CALIBRATE)) return;
             if (payload.length !== 48) return;
             const view = new DataView(payload.buffer, payload.byteOffset, 48);
             this.coords = Array.from({ length: 12 }, (_, i) => view.getInt32(i * 4, true));
+            this.coordsTime = Date.now();
+            this.render();
+        }
+
+        /** Calibration: the board refused a target shot (sCaliIrWarning bits: 1 emitter missing, 2 weak). */
+        showIrWarning(bits) {
+            if (this.closed || this.mode !== MODE_CALIBRATE || !bits) return;
+            this.irWarning = { bits, time: Date.now() };
+            clearTimeout(this._irWarningTimer);
+            this._irWarningTimer = setTimeout(() => this.render(), CALI_IR_WARNING_TIME + 50);
             this.render();
         }
 
@@ -378,13 +457,14 @@
          * Unknown versions and lengths are ignored (classic view).
          */
         setTestBlobs(payload) {
-            if (this.closed || this.mode !== MODE_IRTEST) return;
+            if (this.closed || (this.mode !== MODE_IRTEST && this.mode !== MODE_CALIBRATE)) return;
             if (payload.length < IRTEST_BLOBS_LENGTH || payload[0] !== IRTEST_BLOBS_VERSION) return;
             const entries = [];
             for (let i = 0; i < 4; ++i) {
                 const o = 1 + i * 5;
                 entries.push({
                     seen: (payload[o] & 1) !== 0,
+                    weak: (payload[o] & IRTEST_BLOB_WEAK) !== 0,
                     avg: payload[o + 1],
                     max: payload[o + 2],
                     area: payload[o + 3] | (payload[o + 4] << 8),
@@ -558,11 +638,33 @@
             this._centered(ctx, stageText, stageTop, heading, tint);
             const headerTop = headerStageY === null ? stageTop + stageSize.height :
                 headerStageY - textSize(lines('Cali Step 5:'), heading).height / 2 + textSize(lines('Cali Step 5:'), heading).height;
-            this._centered(ctx, header, headerTop, heading, tint);
-            if (tutorial.length) {
+            const headerSize = this._centered(ctx, header, headerTop, heading, tint);
+            // IR view: every target is accepted only with the crosshair green.
+            if (this._caliIrColor() && this.stage <= STAGE.center)
+                this._centered(ctx, lines('Shoot when the crosshair is green.'), headerTop + headerSize.height + GLYPH * sub, sub);
+            // A refused shot (IR view): the reason takes the place of the tutorial for a few seconds.
+            // At most 60% of the width, so that the IR panel at the bottom right stays clear.
+            const warningChars = Math.max(16, Math.floor((w * 0.6) / (GLYPH * sub)));
+            const warningLines = (bits) => wrapLines(this._caliIrWarningText(bits), warningChars);
+            // The IR panel is sized for the widest of these texts, so it keeps its size when a warning appears.
+            let textRight = Math.max(...[CALI_IR_MISSING, CALI_IR_WEAK].map((bits) =>
+                w / 2 + textSize(warningLines(bits), sub).width / 2 + 8 * sub));
+            const irWarning = this.irWarning;
+            if (irWarning && Date.now() - irWarning.time <= CALI_IR_WARNING_TIME) {
+                const scale = sub;
+                const warning = warningLines(irWarning.bits);
+                const size = textSize(warning, scale);
+                const top = h * 0.8 - size.height / 2;
+                ctx.save();
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                ctx.fillRect(w / 2 - size.width / 2 - 8 * scale, top - 6 * scale, size.width + 16 * scale, size.height + 12 * scale);
+                ctx.restore();
+                this._centered(ctx, warning, top, scale, [255, 90, 90]);
+            } else if (tutorial.length) {
                 const size = textSize(tutorial, sub);
                 this._centered(ctx, tutorial, h * 0.8 - size.height / 2, sub, tint);
             }
+            if (tutorial.length) textRight = Math.max(textRight, w / 2 + textSize(tutorial, sub).width / 2);
 
             if (this.infoVisible) {
                 let y = h / 2 - 24 * sub;
@@ -576,13 +678,126 @@
             const positions = [[w / 2, h / 2], [w / 2, 0], [w / 2, h], [0, h / 2], [w, h / 2], [w / 2, h / 2]];
             let [x, y] = positions[this.stage] || positions[5];
             if (this.stage === STAGE.verify && this.mouse) ({ x, y } = this.mouse);
-            const image = loadCrosshair();
+            const irColor = this._caliIrColor();
+            let image = irColor ? loadTintedCrosshair(irColor) : loadCrosshair();
+            if (irColor && !(image.complete && image.naturalWidth)) {
+                // A new colour is still loading: keep the previous one for this frame.
+                image.onload = () => this.render();
+                image = this._lastCrosshair || loadCrosshair();
+            }
             const size = CROSSHAIR_SIZE * this.textScale('crosshair');
             if (image.complete && image.naturalWidth) {
                 ctx.imageSmoothingEnabled = true;
                 ctx.drawImage(image, x - size / 2, y - size / 2, size, size);
                 ctx.imageSmoothingEnabled = false;
+                this._lastCrosshair = image;
             }
+
+            this._drawCaliIrPanel(ctx, textRight);
+        }
+
+        /**
+         * Calibration IR view: crosshair colour [r, g, b] from the worst emitter, or null without
+         * IR data (older firmware: the crosshair keeps its colour). Green exactly when the board
+         * accepts the shot: four emitters seen and none weak.
+         */
+        _caliIrColor() {
+            if (!this.coords || Date.now() - this.coordsTime > CALI_IR_MAX_AGE) return null;
+            const blobs = this._freshBlobs();
+            if (!blobs) return null;
+            if (blobs.some((b) => !b.seen)) return CALI_IR_SCALE.missing;
+            const worst = Math.min(...blobs.map((b) => b.max));
+            if (blobs.some((b) => b.weak)) {
+                const t = (worst - CALI_IR_BRIGHTNESS_MIN) / (CALI_IR_BRIGHTNESS_WEAK - CALI_IR_BRIGHTNESS_MIN);
+                return mix(CALI_IR_SCALE.weakLow, CALI_IR_SCALE.weakHigh, t);
+            }
+            const t = (worst - CALI_IR_BRIGHTNESS_WEAK) / (CALI_IR_FULL_GREEN - CALI_IR_BRIGHTNESS_WEAK);
+            return mix(CALI_IR_SCALE.goodLow, CALI_IR_SCALE.goodHigh, t);
+        }
+
+        /**
+         * Calibration: the IR test view in small, bottom right, with the number of emitters seen.
+         * Drawn only while the firmware sends the coordinates (caliFlagIrView).
+         */
+        _drawCaliIrPanel(ctx, textRight) {
+            const c = this.coords;
+            if (!c || Date.now() - this.coordsTime > CALI_IR_MAX_AGE) return;
+            const w = this.width;
+            const h = this.height;
+            const small = this.textScale('small');
+            // Right of the tutorial text (bottom centre), which it must not cover on small screens.
+            const free = w - textRight - 2 * 12 * small;
+            // The emitters are drawn in their layout on a square of this side, not where the camera sees them.
+            const side = Math.max(CALI_IR_PANEL_MIN_WIDTH, Math.min(w * CALI_IR_PANEL_WIDTH, CALI_IR_PANEL_MAX_WIDTH, free));
+            const panelH = side;
+            const margin = 12 * small;
+
+            const blobs = this._freshBlobs();
+            const seen = blobs ? blobs.filter((b) => b.seen).length : null;
+            const weak = blobs ? blobs.some((b) => b.seen && b.weak) : false;
+            // Title: number of emitters seen, and "weak signal" on a second line.
+            const title = seen === null ? lines('IR emitters') : [OF.i18n.t('IR emitters: %1/4', String(seen))];
+            if (seen !== null && weak) title.push(OF.i18n.t('weak signal'));
+            // The panel keeps its size whatever the title says: it is sized for the longest title and
+            // always reserves two lines (the second one stays empty without "weak signal").
+            // It widens for the title when the free room allows it, the square stays centred.
+            const titleChoices = [...lines('IR emitters'), OF.i18n.t('IR emitters: %1/4', '4'), OF.i18n.t('weak signal')];
+            const titleBox = (scale) => ({
+                width: textSize(titleChoices, scale).width + 8 * small,
+                height: textSize(['', ''], scale).height + 4 * small
+            });
+            let titleScale = small;
+            while (titleScale > 1 && titleBox(titleScale).width > Math.max(side, free)) --titleScale;
+            const panelW = Math.max(side, titleBox(titleScale).width);
+            const titleH = titleBox(titleScale).height;
+            const x0 = w - margin - panelW;
+            const y0 = h - margin - panelH;
+            // Title and border in the crosshair colour (grey without blob data).
+            const tint = (this._caliIrColor() || [160, 160, 164]).map(Math.round);
+            const color = `rgb(${tint.join(',')})`;
+
+            ctx.save();
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(x0, y0 - titleH, panelW, panelH + titleH);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x0, y0 - titleH, panelW, panelH + titleH);
+            ctx.beginPath();
+            ctx.rect(x0, y0, panelW, panelH);
+            ctx.clip();
+
+            // Each emitter at its place in the layout, on a virtual square: Square at the corners
+            // (sTestCoords order TL, TR, BL, BR), Diamond at the middle of the sides (Diamond slots:
+            // 0 top, 1 left, 2 bottom, 3 right on the screen). No lines between them.
+            const d = side * 0.25;
+            const sx = (panelW - side) / 2; // square centred in a panel widened by its title
+            const places = (this.options.diamond ?
+                [[side / 2, d], [d, side / 2], [side / 2, side - d], [side - d, side / 2]] :
+                [[d, d], [side - d, d], [d, side - d], [side - d, side - d]]).map(([px, py]) => [sx + px, py]);
+            // Radius as in the IR test view, the largest blob filling 18% of the square (two Diamond
+            // neighbours do not touch); the dashed circle of an emitter not seen gets 9%, so its X stays readable.
+            const seenScale = side * 0.18 / (IRTEST_BLOB_RADIUS_MAX * IRTEST_BLOB_RADIUS_SCALE);
+            const notSeenScale = side * 0.09 / IRTEST_EMITTER_RADIUS;
+            const colors = ['#00ff00', '#00ff00', '#00ffff', '#00ffff'];
+            places.forEach(([px, py], i) => {
+                const blob = blobs ? blobs[i] : { seen: c[i * 2] % 2 === 0 };
+                const emitterColor = blob && blob.seen && blob.weak ? CALI_IR_WEAK_COLOR : colors[i];
+                // Without blob data (older firmware) the classic circle size is used.
+                const level = blobs ? this.blobLevels[i] : { radius: IRTEST_EMITTER_RADIUS, center: 1, edge: 0.4 };
+                const scale = blob && blob.seen && level ? seenScale : notSeenScale;
+                this._drawEmitter(ctx, x0 + px, y0 + py, scale, emitterColor, blob, level);
+            });
+            ctx.restore();
+
+            drawText(ctx, title, x0 + (panelW - textSize(title, titleScale).width) / 2, y0 - titleH + 2 * small, titleScale, tint);
+        }
+
+        /** Calibration: lines explaining why the board refused a target shot (sCaliIrWarning bits). */
+        _caliIrWarningText(bits) {
+            return lines(
+                bits & CALI_IR_MISSING ? 'Shot refused: the camera does not see all four IR emitters.' :
+                    bits & CALI_IR_WEAK ? 'Shot refused: an IR emitter is too weak.' : '',
+                'Check the emitters, your distance and the IR sensitivity, then shoot again.');
         }
 
         _drawAlignment(ctx) {

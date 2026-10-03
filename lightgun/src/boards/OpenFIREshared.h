@@ -367,7 +367,8 @@ public:
         sCaliInfoUpd,
         sTestCoords,
         sCurrentProf,
-        sTestBlobs, // 152: IR test only, blob area/brightness of each vertex
+        sTestBlobs, // 152: IR test and calibration IR view, blob area/brightness of each vertex
+        sCaliIrWarning, // 153: calibration target shot refused (WebApp IR view): bit 0 emitter missing, bit 1 emitter weak
 
         // Push settings to board
         sCommitStart = 0xAA, // 170
@@ -411,6 +412,13 @@ public:
         // Terminates out of any current mode, or undocks
         serialTerminator = 0xFE // 254
     } serialCmdTypes_e;
+
+    // Optional fourth byte of sCaliProfile + sCaliStart (App to board). Older Apps send
+    // three bytes and older firmware ignores the fourth, so both keep working as before.
+    enum {
+        caliFlagIrView = 0x01   // send the IR emitters during calibration (sTestBlobs + sTestCoords)
+                                // and refuse the target shots while an emitter is missing or weak
+    } caliStartFlags_e;
 
     enum {
         usbPID = 0,
