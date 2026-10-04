@@ -166,7 +166,7 @@ class MockFirmware {
         this.camNotAvailable = !!options.camNotAvailable;
         this.testBlobs = options.testBlobs !== false;  // false: firmware without sTestBlobs (classic IR test view)
         // Emitters during a calibration started with caliFlagIrView: 'ok' (four, bright),
-        // 'missing' (one not seen) or 'weak' (one dim): the target shots are refused unless 'ok'.
+        // 'missing' (one not seen) or 'weak' (one dim): the target shots are refused only when 'missing'.
         this.caliIr = options.caliIr || 'ok';
         this.caliIrView = false;
         // is_pedal_wireless of the firmware: a wireless pedal answered during the start-up,
@@ -948,10 +948,10 @@ class MockFirmware {
                 this._sendCaliIrView();
             }
 
-            // FW_Common::ExecCalMode: every target shot is refused while an emitter is missing or weak.
-            if (this.trigger && fromDesktop && this.caliIrView && calStage <= 5 && this.caliIr !== 'ok') {
+            // FW_Common::ExecCalMode: every target shot is refused while an emitter is missing.
+            if (this.trigger && fromDesktop && this.caliIrView && calStage <= 5 && this.caliIr === 'missing') {
                 this.trigger = false;
-                if (!await this.sendResponse(C.sCaliIrWarning, Uint8Array.of(this.caliIr === 'missing' ? 1 : 2)))
+                if (!await this.sendResponse(C.sCaliIrWarning, Uint8Array.of(1)))
                     return fail();
             } else if (this.trigger) {
                 this.trigger = false;

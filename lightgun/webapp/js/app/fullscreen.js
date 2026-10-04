@@ -59,27 +59,30 @@
 
     // ----- IR view in the calibration window ------------------------------------------
     // Firmware that knows caliFlagIrView sends sTestBlobs + sTestCoords during calibration too:
-    // the crosshair turns green when all four emitters are seen and none is weak, a small panel
+    // the crosshair changes colour with the weakest emitter (red when one is missing), a small panel
     // in the bottom right corner shows each emitter, and the board refuses every target shot
-    // (sCaliIrWarning) while one is missing or weak.
+    // (sCaliIrWarning) while one is missing. A weak emitter (orange crosshair) is accepted.
     const CALI_IR_PANEL_WIDTH = 0.14;      // of the window width (the panel is square)
     const CALI_IR_PANEL_MAX_WIDTH = 300;   // px
     const CALI_IR_PANEL_MIN_WIDTH = 140;   // px, also on small screens
     const CALI_IR_MAX_AGE = 500;           // ms without coordinates: older firmware, no panel
     const CALI_IR_WARNING_TIME = 4000;     // ms the refusal message stays on screen
-    const CALI_IR_MISSING = 0x01;          // sCaliIrWarning bits
-    const CALI_IR_WEAK = 0x02;
-    const CALI_IR_WEAK_COLOR = '#ffb000';
-    // Crosshair colour from the worst emitter: missing = intense red; weak = red to light orange
-    // as its brightness rises from the camera threshold (130) to the firmware limit
-    // (IR_WEAK_MAX_BRIGHTNESS, 170); good = light green to full green up to CALI_IR_FULL_GREEN.
+    const CALI_IR_MISSING = 0x01;          // sCaliIrWarning bit
+    // Colour of each emitter seen in the panel, and of the crosshair from the emitter with the
+    // lowest brightness; missing = intense red (the crosshair only; the panel keeps the dashed
+    // circle). Continuous scale of the brightness, without jumps: red at the camera threshold
+    // (130), light orange at CALI_IR_BRIGHTNESS_WEAK - CALI_IR_BLEND, then through yellow-green
+    // to light green at CALI_IR_BRIGHTNESS_WEAK + CALI_IR_BLEND, full green at CALI_IR_FULL_GREEN.
+    // CALI_IR_BRIGHTNESS_WEAK is the firmware limit (IR_WEAK_MAX_BRIGHTNESS); its weak flag, with
+    // IR_WEAK_HYSTERESIS, only shows the "weak signal" line.
     const CALI_IR_BRIGHTNESS_MIN = 130;
     const CALI_IR_BRIGHTNESS_WEAK = 170;
+    const CALI_IR_BLEND = 20;              // half width of the orange to green blend around the limit
     const CALI_IR_FULL_GREEN = 230;
     const CALI_IR_SCALE = {
         missing: [255, 20, 20],
-        weakLow: [255, 40, 40], weakHigh: [255, 190, 90],
-        goodLow: [170, 255, 140], goodHigh: [0, 220, 0],
+        weakLow: [255, 40, 40], weakHigh: [255, 190, 90],     // 130, limit - blend
+        goodLow: [170, 255, 140], goodHigh: [0, 220, 0],      // limit + blend, full green
     };
 
     /** ?irdebug in the address: shows area and brightness under each emitter circle. */
@@ -274,6 +277,24 @@
         return a.map((v, i) => v + (b[i] - v) * k);
     }
 
+    /** Calibration IR view: colour [r, g, b] of an emitter seen, from its brightness (continuous scale). */
+    function caliIrEmitterColor(blob) {
+        const orange = CALI_IR_BRIGHTNESS_WEAK - CALI_IR_BLEND;
+        const green = CALI_IR_BRIGHTNESS_WEAK + CALI_IR_BLEND;
+        if (blob.max < orange)
+            return mix(CALI_IR_SCALE.weakLow, CALI_IR_SCALE.weakHigh,
+                (blob.max - CALI_IR_BRIGHTNESS_MIN) / (orange - CALI_IR_BRIGHTNESS_MIN));
+        if (blob.max < green)
+            return mix(CALI_IR_SCALE.weakHigh, CALI_IR_SCALE.goodLow, (blob.max - orange) / (green - orange));
+        return mix(CALI_IR_SCALE.goodLow, CALI_IR_SCALE.goodHigh,
+            (blob.max - green) / (CALI_IR_FULL_GREEN - green));
+    }
+
+    /** [r, g, b] -> '#rrggbb'. */
+    function rgbHex(rgb) {
+        return '#' + rgb.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
+    }
+
     // ----- Window -------------------------------------------------------------------------
 
     class FullscreenWindow {
@@ -459,7 +480,7 @@
             this._irExpiryTimer = setTimeout(() => { this.render(); this._armIrExpiry(); }, Math.min(...ends) - now + 20);
         }
 
-        /** Calibration: the board refused a target shot (sCaliIrWarning bits: 1 emitter missing, 2 weak). */
+        /** Calibration: the board refused a target shot (sCaliIrWarning bit 1: an emitter is missing). */
         showIrWarning(bits) {
             if (this.closed || this.mode !== MODE_CALIBRATE || !bits) return;
             this.irWarning = { bits, time: Date.now() };
@@ -570,6 +591,16 @@
             ctx.fillRect(0, 0, this.width, this.height);
         }
 
+        /** One line centred on x, with its top at y, drawn in pieces of their own colour: [[text, tint], ...]. */
+        _centeredSegments(ctx, segments, y, scale) {
+            const cell = GLYPH * scale;
+            let x = this.width / 2 - segments.reduce((n, [text]) => n + [...text].length, 0) * cell / 2;
+            for (const [text, tint] of segments) {
+                drawText(ctx, [text], x, y, scale, tint);
+                x += [...text].length * cell;
+            }
+        }
+
         /** Text block centred on x, with its top at y. */
         _centered(ctx, text, y, scale, tint) {
             const size = textSize(text, scale);
@@ -657,16 +688,19 @@
             const headerTop = headerStageY === null ? stageTop + stageSize.height :
                 headerStageY - textSize(lines('Cali Step 5:'), heading).height / 2 + textSize(lines('Cali Step 5:'), heading).height;
             const headerSize = this._centered(ctx, header, headerTop, heading, tint);
-            // IR view: every target is accepted only with the crosshair green.
-            if (this._caliIrColor() && this.stage <= STAGE.center)
-                this._centered(ctx, lines('Shoot when the crosshair is green.'), headerTop + headerSize.height + GLYPH * sub, sub);
+            // IR view: a target shot is refused only with the crosshair red (an emitter missing).
+            // The colour word (%1) is drawn in the full green of the crosshair.
+            if (this._caliIrColor() && this.stage <= STAGE.center) {
+                const [before, after = ''] = lines('Preferably shoot when the crosshair is %1.')[0].split('%1');
+                this._centeredSegments(ctx, [[before], [OF.i18n.t('green'), CALI_IR_SCALE.goodHigh], [after]],
+                    headerTop + headerSize.height + GLYPH * sub, sub);
+            }
             // A refused shot (IR view): the reason takes the place of the tutorial for a few seconds.
             // At most 60% of the width, so that the IR panel at the bottom right stays clear.
             const warningChars = Math.max(16, Math.floor((w * 0.6) / (GLYPH * sub)));
             const warningLines = (bits) => wrapLines(this._caliIrWarningText(bits), warningChars);
-            // The IR panel is sized for the widest of these texts, so it keeps its size when a warning appears.
-            let textRight = Math.max(...[CALI_IR_MISSING, CALI_IR_WEAK].map((bits) =>
-                w / 2 + textSize(warningLines(bits), sub).width / 2 + 8 * sub));
+            // The IR panel is sized for this text too, so it keeps its size when a warning appears.
+            let textRight = w / 2 + textSize(warningLines(CALI_IR_MISSING), sub).width / 2 + 8 * sub;
             const irWarning = this.irWarning;
             if (irWarning && Date.now() - irWarning.time <= CALI_IR_WARNING_TIME) {
                 const scale = sub;
@@ -716,21 +750,18 @@
 
         /**
          * Calibration IR view: crosshair colour [r, g, b] from the worst emitter, or null without
-         * IR data (older firmware: the crosshair keeps its colour). Green exactly when the board
-         * accepts the shot: four emitters seen and none weak.
+         * IR data (older firmware: the crosshair keeps its colour). Red when the board refuses the
+         * shot (an emitter missing), otherwise the continuous scale of the weakest emitter.
          */
         _caliIrColor() {
             if (!this.coords || Date.now() - this.coordsTime > CALI_IR_MAX_AGE) return null;
             const blobs = this._freshBlobs();
             if (!blobs) return null;
             if (blobs.some((b) => !b.seen)) return CALI_IR_SCALE.missing;
-            const worst = Math.min(...blobs.map((b) => b.max));
-            if (blobs.some((b) => b.weak)) {
-                const t = (worst - CALI_IR_BRIGHTNESS_MIN) / (CALI_IR_BRIGHTNESS_WEAK - CALI_IR_BRIGHTNESS_MIN);
-                return mix(CALI_IR_SCALE.weakLow, CALI_IR_SCALE.weakHigh, t);
-            }
-            const t = (worst - CALI_IR_BRIGHTNESS_WEAK) / (CALI_IR_FULL_GREEN - CALI_IR_BRIGHTNESS_WEAK);
-            return mix(CALI_IR_SCALE.goodLow, CALI_IR_SCALE.goodHigh, t);
+            // The emitter with the lowest brightness gives the colour, so the crosshair always has
+            // the colour of one of the four circles.
+            const worst = blobs.reduce((a, b) => (b.max < a.max ? b : a));
+            return caliIrEmitterColor(worst);
         }
 
         /**
@@ -753,13 +784,16 @@
             const blobs = this._freshBlobs();
             const seen = blobs ? blobs.filter((b) => b.seen).length : null;
             const weak = blobs ? blobs.some((b) => b.seen && b.weak) : false;
-            // Title: number of emitters seen, and "weak signal" on a second line.
+            // Title: number of emitters seen and, on a second line, "emitters missing" while one is not
+            // seen (no hysteresis), otherwise "weak signal" while one is weak (firmware flag).
             const title = seen === null ? lines('IR emitters') : [OF.i18n.t('IR emitters: %1/4', String(seen))];
-            if (seen !== null && weak) title.push(OF.i18n.t('weak signal'));
+            if (seen !== null && seen < 4) title.push(OF.i18n.t('emitters missing'));
+            else if (seen !== null && weak) title.push(OF.i18n.t('weak signal'));
             // The panel keeps its size whatever the title says: it is sized for the longest title and
-            // always reserves two lines (the second one stays empty without "weak signal").
+            // always reserves two lines (the second one stays empty when all four are seen well).
             // It widens for the title when the free room allows it, the square stays centred.
-            const titleChoices = [...lines('IR emitters'), OF.i18n.t('IR emitters: %1/4', '4'), OF.i18n.t('weak signal')];
+            const titleChoices = [...lines('IR emitters'), OF.i18n.t('IR emitters: %1/4', '4'),
+                OF.i18n.t('weak signal'), OF.i18n.t('emitters missing')];
             const titleBox = (scale) => ({
                 width: textSize(titleChoices, scale).width + 8 * small,
                 height: textSize(['', ''], scale).height + 4 * small
@@ -799,7 +833,10 @@
             const colors = ['#00ff00', '#00ff00', '#00ffff', '#00ffff'];
             places.forEach(([px, py], i) => {
                 const blob = blobs ? blobs[i] : { seen: c[i * 2] % 2 === 0 };
-                const emitterColor = blob && blob.seen && blob.weak ? CALI_IR_WEAK_COLOR : colors[i];
+                // Seen: the crosshair scale with its own brightness (older firmware: layout colour);
+                // not seen: red dashed circle with the red X (only here, the IR test view keeps its colours).
+                const emitterColor = !blob.seen ? IRTEST_NOT_SEEN_COLOR :
+                    blobs ? rgbHex(caliIrEmitterColor(blob)) : colors[i];
                 // Without blob data (older firmware) the classic circle size is used.
                 const level = blobs ? this.blobLevels[i] : { radius: IRTEST_EMITTER_RADIUS, center: 1, edge: 0.4 };
                 const scale = blob && blob.seen && level ? seenScale : notSeenScale;
@@ -813,8 +850,7 @@
         /** Calibration: lines explaining why the board refused a target shot (sCaliIrWarning bits). */
         _caliIrWarningText(bits) {
             return lines(
-                bits & CALI_IR_MISSING ? 'Shot refused: the camera does not see all four IR emitters.' :
-                    bits & CALI_IR_WEAK ? 'Shot refused: an IR emitter is too weak.' : '',
+                bits & CALI_IR_MISSING ? 'Shot refused: the camera does not see all four IR emitters.' : '',
                 'Check the emitters, your distance and the IR sensitivity, then shoot again.');
         }
 

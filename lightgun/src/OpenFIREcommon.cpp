@@ -392,45 +392,64 @@ void FW_Common::SetRunMode(const FW_Const::RunMode_e &newMode)
 // An emitter whose brightest pixel stays below this value is reported as weak: the
 // PAJ7025 detects a blob from brightness 130 (150 on the R2 at the highest
 // sensitivity), so it is barely above that limit and can flicker in and out.
-// Used by the WebApp IR view (sTestBlobs flag) and by the calibration check below,
-// in the same way for every camera: each driver provides the brightness on this scale
-// (the DFRobot converts its intensity, see ReadDFRobotFull). Starting value: check it
-// on the hardware with the IR test view (?irdebug in the WebApp address shows it).
+// Used by the WebApp IR view (sTestBlobs flag), in the same way for every camera: each
+// driver provides the brightness on this scale (the DFRobot converts its intensity, see
+// ReadDFRobotFull). In calibration a weak emitter only adds "weak signal" in the Apps: the
+// target shot is accepted (see CaliIrProblems). Starting value: check it on the hardware
+// with the IR test view (?irdebug in the WebApp address shows it).
 constexpr uint8_t IR_WEAK_MAX_BRIGHTNESS = 170;
 
-// Problems of the IR emitters for a calibration target shot (sCaliIrWarning bits).
-constexpr uint8_t CALI_IR_MISSING = 0x01;   // the camera does not see all four emitters
-constexpr uint8_t CALI_IR_WEAK    = 0x02;   // at least one emitter seen is weak
+// Calibration IR view only: hysteresis around IR_WEAK_MAX_BRIGHTNESS, so that the "weak signal"
+// line of the Apps does not flicker for an emitter at the limit (the colours of the crosshair
+// and of the circles follow the brightness on a continuous scale and do not use the flag).
+// A weak emitter becomes good from IR_WEAK_MAX_BRIGHTNESS + IR_WEAK_HYSTERESIS, a good one
+// becomes weak below IR_WEAK_MAX_BRIGHTNESS - IR_WEAK_HYSTERESIS (190 and 150 with the values above).
+constexpr uint8_t IR_WEAK_HYSTERESIS = 20;
+static_assert(IR_WEAK_HYSTERESIS < IR_WEAK_MAX_BRIGHTNESS &&
+              IR_WEAK_MAX_BRIGHTNESS + IR_WEAK_HYSTERESIS <= 255, "the hysteresis must stay within 0..255");
 
-// Checks the last camera frame: all four emitters seen and, with the Extended format
-// (the only one that carries the brightness), none of them weak. An emitter seen but still
-// without Extended data (the first Full read after the format switch failed) counts as missing.
+// Problem of the IR emitters for a calibration target shot (sCaliIrWarning bit).
+constexpr uint8_t CALI_IR_MISSING = 0x01;   // the camera does not see all four emitters
+
+// Checks the last camera frame: all four emitters seen. A weak emitter does not refuse the
+// shot. With the Extended format, an emitter seen but still without Extended data (the first
+// Full read after the format switch failed) counts as missing.
 static uint8_t CaliIrProblems()
 {
-    uint8_t problems = 0;
     const unsigned int seenFlags = OpenFIRECamera::Seen();
 
     if((seenFlags & 0x0FU) != 0x0FU)
-        problems |= CALI_IR_MISSING;
+        return CALI_IR_MISSING;
 
     if(OpenFIRECamera::DataFormat() == OpenFIRECamera::DataFormat_Extended) {
         for(uint8_t i = 0; i < 4; ++i) {
-            const OpenFIRECamera::ObjectData& object = OpenFIRECamera::Object(i);
-            if(!((seenFlags >> i) & 1U))
-                continue;
-            if(!object.valid)
-                problems |= CALI_IR_MISSING;
-            else if(object.maxBrightness < IR_WEAK_MAX_BRIGHTNESS)
-                problems |= CALI_IR_WEAK;
+            if(!OpenFIRECamera::Object(i).valid)
+                return CALI_IR_MISSING;
         }
     }
 
-    return problems;
+    return 0;
 }
+
+// Calibration IR view: weak flag last sent for each vertex (SendTestBlobs), for
+// IR_WEAK_HYSTERESIS. None (plain limit for the next flag) when the vertex is not seen,
+// outside the calibration and at the start of every calibration (ExecCalMode), so the
+// hysteresis never carries over from an emitter that was lost or from a previous calibration.
+enum TestBlobState_e : uint8_t {
+    TestBlobState_None = 0,
+    TestBlobState_Good,
+    TestBlobState_Weak
+};
+static TestBlobState_e testBlobState[4] = {TestBlobState_None, TestBlobState_None,
+                                           TestBlobState_None, TestBlobState_None};
 
 void FW_Common::ExecCalMode(const bool &fromDesktop)
 {
     buttons.ReportDisable();
+
+    // Calibration IR view: every emitter starts again from the plain weak limit.
+    for(uint8_t i = 0; i < 4; ++i)
+        testBlobState[i] = TestBlobState_None;
 
     uint8_t calStage = 0;
     bool communicationFailed = false;
@@ -527,8 +546,9 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
         }
 
         // WebApp IR view: every target shot (centre, the four edges, final centre) is refused
-        // while an emitter is missing or weak, so that each reading is taken with all four
-        // emitters seen. The WebApp is told why (sCaliIrWarning) and the stage does not change.
+        // while an emitter is missing, so that each reading is taken with all four emitters
+        // seen (a weak one is accepted). The WebApp is told why (sCaliIrWarning) and the stage
+        // does not change.
         // With a narrow camera close to the screen an emitter can leave the field at the edges:
         // the player then steps back. The confirmation of the verify stage is not checked.
         const uint8_t shotRefusal =
@@ -836,7 +856,8 @@ calibration_cancelled:
 //
 // Payload (21 bytes): [0] format version (1), then for each vertex, in the
 // sTestCoords order: flags (bit 0 = seen by the camera, bit 1 = weak, see
-// IR_WEAK_MAX_BRIGHTNESS; Apps that do not know bit 1 ignore it), average brightness,
+// IR_WEAK_MAX_BRIGHTNESS, with IR_WEAK_HYSTERESIS in the calibration IR view; Apps that do
+// not know bit 1 ignore it), average brightness,
 // max brightness, area (uint16, little endian; 0 when not seen).
 //
 // The pairing distances are computed in 32 bits. Coordinates are limited to
@@ -961,12 +982,24 @@ static void SendTestBlobs(const int (&vertexXin)[4], const int (&vertexYin)[4],
 
     for(uint8_t i = 0; i < 4; ++i) {
         uint8_t* entry = &payload[1 + i * 5];
-        if(vertexBlob[i] < 0)
+        if(vertexBlob[i] < 0) {
+            testBlobState[i] = TestBlobState_None;
             continue; // not seen: all zero
+        }
 
         const OpenFIRECamera::ObjectData& object = OpenFIRECamera::Object((uint8_t)vertexBlob[i]);
-        entry[0] = TEST_BLOB_SEEN |
-                   ((object.maxBrightness < IR_WEAK_MAX_BRIGHTNESS) ? TEST_BLOB_WEAK : 0);
+        uint8_t weakLimit = IR_WEAK_MAX_BRIGHTNESS;
+        if(FW_Common::caliIrView && testBlobState[i] == TestBlobState_Weak)
+            weakLimit = IR_WEAK_MAX_BRIGHTNESS + IR_WEAK_HYSTERESIS;
+        else if(FW_Common::caliIrView && testBlobState[i] == TestBlobState_Good)
+            weakLimit = IR_WEAK_MAX_BRIGHTNESS - IR_WEAK_HYSTERESIS;
+        const bool weak = object.maxBrightness < weakLimit;
+        if(FW_Common::caliIrView)
+            testBlobState[i] = weak ? TestBlobState_Weak : TestBlobState_Good;
+        else
+            testBlobState[i] = TestBlobState_None;
+
+        entry[0] = TEST_BLOB_SEEN | (weak ? TEST_BLOB_WEAK : 0);
         entry[1] = object.averageBrightness;
         entry[2] = object.maxBrightness;
         entry[3] = (uint8_t)(object.area & 0xFF);

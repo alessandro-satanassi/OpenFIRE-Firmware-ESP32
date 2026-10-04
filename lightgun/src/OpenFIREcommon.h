@@ -166,7 +166,7 @@ public:
 
     // Calibration started by an App that asked for the IR view (sCaliStart, caliFlagIrView):
     // the IR emitters are sent during calibration, and the target shots are refused
-    // while an emitter is missing or weak (see ExecCalMode). False in every other case.
+    // while an emitter is missing (see ExecCalMode). False in every other case.
     static inline bool caliIrView = false;
 
     static inline uint32_t camWarningTimestamp = 0;
