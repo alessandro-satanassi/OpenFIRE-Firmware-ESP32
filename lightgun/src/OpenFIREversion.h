@@ -26,14 +26,14 @@
 #define OPENFIRE_VERSION_MAJOR 7
 #define OPENFIRE_VERSION_MINOR 0
 #define OPENFIRE_VERSION_PATCH 0
-#define OPENFIRE_VERSION_SUFFIX "rc2"
+#define OPENFIRE_VERSION_SUFFIX "rc3"
 
 // Deve valere MAJOR.MINOR. E' il primo campo della prima risposta della lightgun,
 // l'unico che la App desktop sa leggere, e per questo resta: non identifica piu'
 // la versione, la Web App usa la stringa completa qui sotto.
 // scripts/webapp_build.py verifica ad ogni compilazione che i due numeri coincidano.
 #define OPENFIRE_VERSION 7.0
-/////// #define OPENFIRE_CODENAME "Dawn Sigma rc2"
+/////// #define OPENFIRE_CODENAME "Dawn Sigma rc3"
 // #define GIT_HASH
 
 // Con "%.1f" il campo qui sopra non distingue 7.10 da 7.1: MINOR si ferma a 9.
