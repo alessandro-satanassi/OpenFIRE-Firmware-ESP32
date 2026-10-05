@@ -19,8 +19,10 @@
 
     const STAGE = { init: 0, top: 1, bottom: 2, left: 3, right: 4, center: 5, verify: 6, end: 7 };
 
-    const CALI_PREFIXES = ['   Top Offset: ', 'Bottom Offset: ', '  Left Offset: ', ' Right Offset: ', ' Top Left LED: ', 'Top Right LED: '];
+    const CALI_PREFIXES = ['Top Offset: ', 'Bottom Offset: ', 'Left Offset: ', 'Right Offset: ', 'Top Left LED: ', 'Top Right LED: '];
     const CALI_KEYS = ['topOffset', 'bottomOffset', 'leftOffset', 'rightOffset', 'TLled', 'TRled'];
+    const CALI_SHOT_TIME = 120; // ms: confirms a target acquired, not a save to flash
+    const CALI_SHOT_HOLD = 40;  // ms fully white, followed by a quick fade
 
     const CROSSHAIR_SIZE = 61.44;
     const CROSSHAIR_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 61.44 61.44" width="61.44" height="61.44">' +
@@ -68,14 +70,14 @@
     const CALI_IR_MAX_AGE = 500;           // ms without coordinates: older firmware, no panel
     const CALI_IR_WARNING_TIME = 4000;     // ms the refusal message stays on screen
     const CALI_IR_MISSING = 0x01;          // sCaliIrWarning bit
-    const CALI_IR_PANEL_COLOR = [160, 160, 164]; // panel border and title, fixed
+    const CALI_IR_PANEL_COLOR = [160, 160, 164]; // panel border and completed progress dots, fixed
     // Colour of each emitter seen in the panel, and of the crosshair from the emitter with the
     // lowest brightness; missing = intense red (the crosshair only; the panel keeps the dashed
     // circle). Continuous scale of the brightness, without jumps: red at the camera threshold
     // (130), light orange at CALI_IR_BRIGHTNESS_WEAK - CALI_IR_BLEND, then through yellow-green
     // to light green at CALI_IR_BRIGHTNESS_WEAK + CALI_IR_BLEND, full green at CALI_IR_FULL_GREEN.
-    // CALI_IR_BRIGHTNESS_WEAK is the firmware limit (IR_WEAK_MAX_BRIGHTNESS); its weak flag, with
-    // IR_WEAK_HYSTERESIS, only shows the "weak signal" line.
+    // CALI_IR_BRIGHTNESS_WEAK is the firmware limit (IR_WEAK_MAX_BRIGHTNESS). The colours
+    // follow brightness continuously, independently of the firmware weak flag/hysteresis.
     const CALI_IR_BRIGHTNESS_MIN = 130;
     const CALI_IR_BRIGHTNESS_WEAK = 170;
     const CALI_IR_BLEND = 20;              // half width of the orange to green blend around the limit
@@ -86,23 +88,18 @@
         goodLow: [170, 255, 140], goodHigh: [0, 220, 0],      // limit + blend, full green
     };
 
-    // ----- Crosshair highlight in calibration -----------------------------------------
-    // Behind the crosshair of every target (not while verifying, where it follows the gun):
-    // two rings spread from it when it reaches a new target, then a soft disc in the crosshair
-    // colour pulses in intensity only. The crosshair keeps its size, so aiming is not disturbed.
-    // With reduced motion asked by the system the disc stays still and the rings are not drawn.
+    // ----- Rotating target ring in calibration ----------------------------------------
+    // Only the outer dashed ring rotates. The original crosshair stays still and unchanged;
+    // both use the same colour. No coloured ring while verifying; reduced motion is static.
+    // Acquisition holds the crosshair at its target during a solid white flash, including the final centre.
     const CROSSHAIR_RING = 24.42 / 61.44;   // ring radius / crosshair size (CROSSHAIR_SVG)
     const CROSSHAIR_COLOR = [255, 135, 88]; // #ff8758, crosshair without IR data
-    const HALO_RADIUS = 1.35;               // of the crosshair ring radius
-    const HALO_ALPHA_MIN = 0.15;
-    const HALO_ALPHA_MAX = 0.55;
-    const HALO_ALPHA_STILL = 0.35;          // reduced motion
-    const HALO_PERIOD = 1000;               // ms of one pulse
-    const HALO_START = 1000;                // ms after reaching the target: the pulse starts
-    const RIPPLE_DELAYS = [0, 450];         // ms after reaching the target, one per ring
-    const RIPPLE_TIME = 1100;               // ms of each ring
-    const RIPPLE_GROWTH = 2.2;              // a ring ends at the crosshair ring radius * (1 + growth)
-    const HALO_FRAME_TIME = 33;             // ms between animation frames (about 30 per second)
+    const TARGET_RING_RADIUS = 48 / 39;    // outer / original ring radius, as in the preview
+    const TARGET_RING_PERIOD = 8000;       // ms of one full clockwise turn
+    const TARGET_RING_DASH = 21;           // degrees; ten identical segments, 15-degree gaps
+    const TARGET_RING_STEP = 36;
+    const TARGET_RING_WIDTH = 2.1;         // slightly thinner than the original crosshair's 2.4 stroke
+    const CALI_ANIMATION_FRAME_TIME = 33;  // ms, about 30 animation frames per second
 
     function reducedMotion() {
         try { return !!(root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; }
@@ -281,6 +278,7 @@
         if (!crosshairImage) {
             crosshairImage = new Image();
             crosshairImage.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(CROSSHAIR_SVG);
+            crosshairImage.crosshairColor = CROSSHAIR_COLOR;
         }
         return crosshairImage;
     }
@@ -295,6 +293,7 @@
         if (!image) {
             image = new Image();
             image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(CROSSHAIR_SVG.replace('#ff8758', color));
+            image.crosshairColor = key;
             tintedCrosshairs.set(color, image);
         }
         return image;
@@ -339,13 +338,17 @@
             this.irDebug = irTestDebug();
             this.mouse = null;
             this.closed = false;
-            this.targetTime = Date.now(); // calibration: when the crosshair reached its target (highlight)
+            this.targetTime = Date.now(); // calibration: start of the target ring's rotation
+            this.acceptedShot = null; // { stage, positionStage, time }: acquisition and held visual target
             this.resetValues();
         }
 
         resetValues() {
             for (const key of CALI_KEYS) this.values[key] = -1;
-            this.infoText = CALI_PREFIXES.slice();
+            const prefixes = CALI_PREFIXES.map((key) => OF.i18n.t(key));
+            const width = Math.max(...prefixes.map((text) => [...text].length));
+            this.infoPrefixes = prefixes.map((text) => ' '.repeat(width - [...text].length) + text);
+            this.infoText = this.infoPrefixes.slice();
             this.infoVisible = false;
         }
 
@@ -439,7 +442,12 @@
             this.closed = true;
             clearTimeout(this._irWarningTimer);
             clearTimeout(this._irExpiryTimer);
-            clearTimeout(this._haloTimer);
+            clearTimeout(this._targetRingTimer);
+            this._targetRingTimer = 0;
+            clearTimeout(this._shotTimer);
+            this._shotTimer = 0;
+            root.cancelAnimationFrame(this._frame);
+            this.acceptedShot = null;
             doc.removeEventListener('keydown', this._onKey, true);
             root.removeEventListener('resize', this._onResize);
             doc.removeEventListener('fullscreenchange', this._onFullscreen);
@@ -459,8 +467,7 @@
                 this.shutdown(Object.assign({}, this.values));
                 return;
             }
-            if (stage !== this.stage) this.targetTime = Date.now(); // a new target: rings again
-            this.stage = stage;
+            this._setCalibrationStage(stage);
             this.irWarning = null; // a new stage: the refused shot is no longer current
             if (stage === STAGE.init) {
                 this.resetValues();
@@ -469,6 +476,26 @@
                 this.infoVisible = true;
             }
             this.render();
+        }
+
+        /** Only a consecutive forward update acknowledges a shot; duplicates and resets do not. */
+        _setCalibrationStage(stage) {
+            if (stage === this.stage) return;
+            const now = Date.now();
+            const previous = this.acceptedShot;
+            const positionStage = previous && now - previous.time < CALI_SHOT_TIME ? previous.positionStage : this.stage;
+            this.acceptedShot = stage === this.stage + 1 && stage <= STAGE.verify ?
+                { stage: this.stage, positionStage, time: now } : null;
+            clearTimeout(this._shotTimer);
+            this._shotTimer = 0;
+            clearTimeout(this._targetRingTimer);
+            this._targetRingTimer = 0;
+            this.targetTime = now;
+            this.stage = stage;
+            if (stage > STAGE.center) {
+                clearTimeout(this._targetRingTimer);
+                this._targetRingTimer = 0;
+            }
         }
 
         /** sCaliInfoUpd payload: type (1-4 int32 offsets, 5-6 float LED positions) + 4 bytes. */
@@ -481,8 +508,8 @@
             this.values[CALI_KEYS[type - 1]] = value;
             // Qt QString::number(int) / QString::number(float, 'g', 6)
             const shown = type <= 4 ? String(value) : (OF.UI && OF.UI.formatG ? OF.UI.formatG(value) : String(Number(value.toPrecision(6))));
-            this.infoText[type - 1] = CALI_PREFIXES[type - 1] + shown;
-            if (type === 6) this.stage = STAGE.verify; // may arrive after the verify stage
+            this.infoText[type - 1] = this.infoPrefixes[type - 1] + shown;
+            if (type === 6) this._setCalibrationStage(STAGE.verify); // may arrive after the verify stage
             this.render();
         }
 
@@ -592,7 +619,7 @@
             if (this._frame) return;
             this._frame = root.requestAnimationFrame(() => {
                 this._frame = 0;
-                this._draw();
+                if (!this.closed) this._draw();
             });
         }
 
@@ -662,7 +689,14 @@
             const red = [225, 25, 25];
             this._background(ctx, 'dimgray');
 
-            this._drawCrosshairHighlight(ctx); // under every other drawing, as in the Qt App
+            const irColor = this._caliIrColor();
+            let image = irColor ? loadTintedCrosshair(irColor) : loadCrosshair();
+            if (irColor && !(image.complete && image.naturalWidth)) {
+                // A new colour is still loading: keep the previous one for this frame.
+                image.onload = () => this.render();
+                image = this._lastCrosshair || loadCrosshair();
+            }
+            this._drawTargetRing(ctx, image.crosshairColor); // below the original crosshair and guides
             if (this.stage !== STAGE.init) this._polyline(ctx, this._crossLines(), 'white', 2);
 
             let stageText;
@@ -683,7 +717,7 @@
             case STAGE.left:
             case STAGE.right:
             case STAGE.center:
-                stageText = lines(`Cali Step ${this.stage}:`);
+                stageText = lines(`Step ${this.stage}:`);
                 header = lines(['', 'Shoot at the top edge of the screen.', 'Shoot at the bottom edge of the screen.',
                     'Shoot at the left edge of the screen.', 'Shoot at the right edge of the screen.',
                     'Shoot at the final target in the center.'][this.stage]);
@@ -694,12 +728,12 @@
                 const v = this.values;
                 const inRange = CALI_KEYS.every((key) => v[key] >= -32768 && v[key] <= 32768);
                 if (inRange) {
-                    stageText = lines('Verify New Calibration:');
+                    stageText = lines('Verify aiming:');
                     header = lines('    Confirm that the bullseye     ', '   lines up with the gun sight.   ', 'If this calibration is acceptable,', '  confirm by pulling the trigger. ');
                     tutorial = lines("       If this target accuracy isn't desirable,      ", '          press either Button A or Button B          ',
                         '         to restart the calibration process.         ', '', '[You can also exit calibration without saving changes', '        by pressing Button C (if available).]        ');
                 } else if (v.TLled === -1 || v.TRled === -1) {
-                    stageText = lines('Verify New Calibration:');
+                    stageText = lines('Verify aiming:');
                     header = lines('Shoot at the final target in the center.');
                     headerStageY = h * 0.25;
                     tutorial = [];
@@ -716,9 +750,10 @@
 
             const stageSize = textSize(stageText, heading);
             const stageTop = stageY - stageSize.height / 2;
+            this._drawCalibrationProgress(ctx, stageTop);
             this._centered(ctx, stageText, stageTop, heading, tint);
             const headerTop = headerStageY === null ? stageTop + stageSize.height :
-                headerStageY - textSize(lines('Cali Step 5:'), heading).height / 2 + textSize(lines('Cali Step 5:'), heading).height;
+                headerStageY - textSize(lines('Step 5:'), heading).height / 2 + textSize(lines('Step 5:'), heading).height;
             const headerSize = this._centered(ctx, header, headerTop, heading, tint);
             // IR view: a target shot is refused only with the crosshair red (an emitter missing).
             // The colour word (%1) is drawn in the full green of the crosshair.
@@ -759,13 +794,6 @@
             }
 
             const [x, y] = this._crosshairPosition();
-            const irColor = this._caliIrColor();
-            let image = irColor ? loadTintedCrosshair(irColor) : loadCrosshair();
-            if (irColor && !(image.complete && image.naturalWidth)) {
-                // A new colour is still loading: keep the previous one for this frame.
-                image.onload = () => this.render();
-                image = this._lastCrosshair || loadCrosshair();
-            }
             const size = CROSSHAIR_SIZE * this.textScale('crosshair');
             if (image.complete && image.naturalWidth) {
                 ctx.imageSmoothingEnabled = true;
@@ -777,53 +805,92 @@
             this._drawCaliIrPanel(ctx, textRight);
         }
 
-        /** Crosshair position of each stage; while verifying it follows the gun's cursor. */
-        _crosshairPosition() {
+        /** Six targets: centre, top, bottom, left, right, centre; green is progress, not IR quality. */
+        _drawCalibrationProgress(ctx, stageTop) {
+            const scale = this.textScale('sub') / 2;
+            const y = stageTop - 22 * scale;
+            const x = this.width / 2 - 2.5 * 22 * scale;
+            ctx.save();
+            for (let i = 0; i < 6; ++i) {
+                const current = i === this.stage;
+                const done = i < this.stage;
+                ctx.beginPath();
+                ctx.arc(x + i * 22 * scale, y, (current ? 8 : 6) * scale, 0, Math.PI * 2);
+                ctx.fillStyle = current ? '#00dc00' : 'rgb(160,160,164)';
+                ctx.strokeStyle = 'rgb(160,160,164)';
+                ctx.lineWidth = 2 * scale;
+                if (current || done) ctx.fill();
+                else ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        /** Hold only the drawing during the flash; verification cursor data continues to update. */
+        _crosshairPosition(stage = this.acceptedShot ? this.acceptedShot.positionStage : this.stage) {
             const w = this.width;
             const h = this.height;
             const positions = [[w / 2, h / 2], [w / 2, 0], [w / 2, h], [0, h / 2], [w, h / 2], [w / 2, h / 2]];
-            if (this.stage === STAGE.verify && this.mouse) return [this.mouse.x, this.mouse.y];
-            return positions[this.stage] || positions[5];
+            if (stage === STAGE.verify && this.mouse) return [this.mouse.x, this.mouse.y];
+            return positions[stage] || positions[5];
         }
 
-        /** Calibration: rings and pulsing disc behind the crosshair of a target (see HALO_RADIUS). */
-        _drawCrosshairHighlight(ctx) {
-            if (this.stage > STAGE.center) return;
-            const [x, y] = this._crosshairPosition();
-            const color = this._caliIrColor() || CROSSHAIR_COLOR;
-            const ring = CROSSHAIR_SIZE * this.textScale('crosshair') * CROSSHAIR_RING;
+        /** Outer dashed target ring; colour comes from the SVG actually drawn in this frame. */
+        _drawTargetRing(ctx, color = CROSSHAIR_COLOR) {
             const still = reducedMotion();
-            const elapsed = Date.now() - this.targetTime;
-
-            ctx.save();
-            if (!still) {
-                for (const delay of RIPPLE_DELAYS) {
-                    const k = (elapsed - delay) / RIPPLE_TIME;
-                    if (k < 0 || k > 1) continue;
-                    ctx.strokeStyle = rgba(color, 0.85 * (1 - k));
-                    ctx.lineWidth = 6 * (1 - k) + 1.5;
-                    ctx.beginPath();
-                    ctx.arc(x, y, ring * (1 + k * RIPPLE_GROWTH), 0, Math.PI * 2);
-                    ctx.stroke();
-                }
+            if (this.closed || this.stage > STAGE.center || still || this.acceptedShot) {
+                clearTimeout(this._targetRingTimer);
+                this._targetRingTimer = 0;
             }
-            const phase = Math.max(0, elapsed - HALO_START) / HALO_PERIOD;
-            const alpha = still ? HALO_ALPHA_STILL :
-                HALO_ALPHA_MIN + (HALO_ALPHA_MAX - HALO_ALPHA_MIN) * (0.5 - 0.5 * Math.cos(2 * Math.PI * phase));
-            const radius = ring * HALO_RADIUS;
-            const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
-            gradient.addColorStop(0, rgba(color, alpha));
-            gradient.addColorStop(0.55, rgba(color, alpha * 0.6));
-            gradient.addColorStop(1, rgba(color, 0));
-            ctx.fillStyle = gradient;
-            ctx.beginPath();
-            ctx.arc(x, y, radius, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
+            if (this.closed) return;
+            if (this._drawShotConfirmation(ctx, still)) return;
+            if (this.stage <= STAGE.center) {
+                this._strokeTargetRing(ctx, this._crosshairPosition(), still ? 0 : Date.now() - this.targetTime, rgbHex(color));
+                if (!still && !this._targetRingTimer)
+                    this._targetRingTimer = setTimeout(() => { this._targetRingTimer = 0; this.render(); }, CALI_ANIMATION_FRAME_TIME);
+            }
+        }
 
-            // Next animation frame (the window otherwise redraws only when data arrives).
-            if (!still && !this._haloTimer)
-                this._haloTimer = setTimeout(() => { this._haloTimer = 0; this.render(); }, HALO_FRAME_TIME);
+        /** Solid white flash; only the crosshair's presentation waits for its expiry. */
+        _drawShotConfirmation(ctx, still) {
+            const shot = this.acceptedShot;
+            if (!shot) return false;
+            const elapsed = Math.max(0, Date.now() - shot.time);
+            if (elapsed >= CALI_SHOT_TIME) {
+                this.acceptedShot = null;
+                clearTimeout(this._shotTimer);
+                this._shotTimer = 0;
+                this.targetTime = Date.now();
+                return false;
+            }
+            const alpha = still ? 1 : Math.min(1, (CALI_SHOT_TIME - elapsed) / (CALI_SHOT_TIME - CALI_SHOT_HOLD));
+            this._strokeTargetRing(ctx, this._crosshairPosition(shot.positionStage), 0,
+                rgba([255, 255, 255], alpha), true);
+            // The final target also confirms during verification; reduced motion uses one expiry timer.
+            if (!this._shotTimer)
+                this._shotTimer = setTimeout(() => {
+                    this._shotTimer = 0;
+                    this.render();
+                }, still ? CALI_SHOT_TIME - elapsed : Math.min(CALI_ANIMATION_FRAME_TIME, CALI_SHOT_TIME - elapsed));
+            return true;
+        }
+
+        /** Same radius/stroke for the dashed rotating target and its solid stationary flash. */
+        _strokeTargetRing(ctx, position, elapsed, color, continuous = false) {
+            const [x, y] = position;
+            const scale = this.textScale('crosshair');
+            const radius = CROSSHAIR_SIZE * scale * CROSSHAIR_RING * TARGET_RING_RADIUS;
+            const arcUnit = 2 * Math.PI * radius / 360;
+            ctx.save();
+            ctx.translate(x, y);
+            if (!continuous) ctx.rotate((Math.max(0, elapsed) % TARGET_RING_PERIOD) * 2 * Math.PI / TARGET_RING_PERIOD);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = TARGET_RING_WIDTH * scale;
+            ctx.lineCap = 'round';
+            ctx.setLineDash(continuous ? [] : [TARGET_RING_DASH * arcUnit, (TARGET_RING_STEP - TARGET_RING_DASH) * arcUnit]);
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
         }
 
         /**
@@ -843,7 +910,7 @@
         }
 
         /**
-         * Calibration: the IR test view in small, bottom right, with the number of emitters seen.
+         * Calibration: a square, rounded IR diagram at the bottom right, without text.
          * Drawn only while the firmware sends the coordinates (caliFlagIrView).
          */
         _drawCaliIrPanel(ctx, textRight) {
@@ -856,56 +923,41 @@
             const free = w - textRight - 2 * 12 * small;
             // The emitters are drawn in their layout on a square of this side, not where the camera sees them.
             const side = Math.max(CALI_IR_PANEL_MIN_WIDTH, Math.min(w * CALI_IR_PANEL_WIDTH, CALI_IR_PANEL_MAX_WIDTH, free));
-            const panelH = side;
             const margin = 12 * small;
 
             const blobs = this._freshBlobs();
-            const seen = blobs ? blobs.filter((b) => b.seen).length : null;
-            const weak = blobs ? blobs.some((b) => b.seen && b.weak) : false;
-            // Title: number of emitters seen and, on a second line, "emitters missing" while one is not
-            // seen (no hysteresis), otherwise "weak signal" while one is weak (firmware flag).
-            const title = seen === null ? lines('IR emitters') : [OF.i18n.t('IR emitters: %1/4', String(seen))];
-            if (seen !== null && seen < 4) title.push(OF.i18n.t('emitters missing'));
-            else if (seen !== null && weak) title.push(OF.i18n.t('weak signal'));
-            // The panel keeps its size whatever the title says: it is sized for the longest title and
-            // always reserves two lines (the second one stays empty when all four are seen well).
-            // It widens for the title when the free room allows it, the square stays centred.
-            const titleChoices = [...lines('IR emitters'), OF.i18n.t('IR emitters: %1/4', '4'),
-                OF.i18n.t('weak signal'), OF.i18n.t('emitters missing')];
-            const titleBox = (scale) => ({
-                width: textSize(titleChoices, scale).width + 8 * small,
-                height: textSize(['', ''], scale).height + 4 * small
-            });
-            let titleScale = small;
-            while (titleScale > 1 && titleBox(titleScale).width > Math.max(side, free)) --titleScale;
-            const panelW = Math.max(side, titleBox(titleScale).width);
-            const titleH = titleBox(titleScale).height;
-            const x0 = w - margin - panelW;
-            const y0 = h - margin - panelH;
-            // Title and border always light grey: the state is shown by the crosshair and the circles.
-            const tint = CALI_IR_PANEL_COLOR;
-            const color = `rgb(${tint.join(',')})`;
+            const x0 = w - margin - side;
+            const y0 = h - margin - side;
+            const radius = side * 0.075;
 
             ctx.save();
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-            ctx.fillRect(x0, y0 - titleH, panelW, panelH + titleH);
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x0, y0 - titleH, panelW, panelH + titleH);
+            // Explicit path also works on browsers without CanvasRenderingContext2D.roundRect.
             ctx.beginPath();
-            ctx.rect(x0, y0, panelW, panelH);
+            ctx.moveTo(x0 + radius, y0);
+            ctx.lineTo(x0 + side - radius, y0);
+            ctx.quadraticCurveTo(x0 + side, y0, x0 + side, y0 + radius);
+            ctx.lineTo(x0 + side, y0 + side - radius);
+            ctx.quadraticCurveTo(x0 + side, y0 + side, x0 + side - radius, y0 + side);
+            ctx.lineTo(x0 + radius, y0 + side);
+            ctx.quadraticCurveTo(x0, y0 + side, x0, y0 + side - radius);
+            ctx.lineTo(x0, y0 + radius);
+            ctx.quadraticCurveTo(x0, y0, x0 + radius, y0);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fill();
+            ctx.strokeStyle = `rgb(${CALI_IR_PANEL_COLOR.join(',')})`;
+            ctx.lineWidth = 2;
+            ctx.stroke();
             ctx.clip();
 
             // Each emitter at its place in the layout, on a virtual square: Square at the corners
             // (sTestCoords order TL, TR, BL, BR), Diamond at the middle of the sides (Diamond slots:
             // 0 top, 1 left, 2 bottom, 3 right on the screen). No lines between them.
             const d = side * 0.25;
-            const sx = (panelW - side) / 2; // square centred in a panel widened by its title
             const places = (this.options.diamond ?
                 [[side / 2, d], [d, side / 2], [side / 2, side - d], [side - d, side / 2]] :
-                [[d, d], [side - d, d], [d, side - d], [side - d, side - d]]).map(([px, py]) => [sx + px, py]);
-            // Radius as in the IR test view, the largest blob filling 18% of the square (two Diamond
-            // neighbours do not touch); the dashed circle of an emitter not seen gets 9%, so its X stays readable.
+                [[d, d], [side - d, d], [d, side - d], [side - d, side - d]]);
+            // Same radii as before: the largest seen blob gets 18% of the side; missing gets 9%.
             const seenScale = side * 0.18 / (IRTEST_BLOB_RADIUS_MAX * IRTEST_BLOB_RADIUS_SCALE);
             const notSeenScale = side * 0.09 / IRTEST_EMITTER_RADIUS;
             const colors = ['#00ff00', '#00ff00', '#00ffff', '#00ffff'];
@@ -922,7 +974,6 @@
             });
             ctx.restore();
 
-            drawText(ctx, title, x0 + (panelW - textSize(title, titleScale).width) / 2, y0 - titleH + 2 * small, titleScale, tint);
         }
 
         /** Calibration: lines explaining why the board refused a target shot (sCaliIrWarning bits). */
