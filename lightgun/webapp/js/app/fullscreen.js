@@ -68,6 +68,7 @@
     const CALI_IR_MAX_AGE = 500;           // ms without coordinates: older firmware, no panel
     const CALI_IR_WARNING_TIME = 4000;     // ms the refusal message stays on screen
     const CALI_IR_MISSING = 0x01;          // sCaliIrWarning bit
+    const CALI_IR_PANEL_COLOR = [160, 160, 164]; // panel border and title, fixed
     // Colour of each emitter seen in the panel, and of the crosshair from the emitter with the
     // lowest brightness; missing = intense red (the crosshair only; the panel keeps the dashed
     // circle). Continuous scale of the brightness, without jumps: red at the camera threshold
@@ -84,6 +85,33 @@
         weakLow: [255, 40, 40], weakHigh: [255, 190, 90],     // 130, limit - blend
         goodLow: [170, 255, 140], goodHigh: [0, 220, 0],      // limit + blend, full green
     };
+
+    // ----- Crosshair highlight in calibration -----------------------------------------
+    // Behind the crosshair of every target (not while verifying, where it follows the gun):
+    // two rings spread from it when it reaches a new target, then a soft disc in the crosshair
+    // colour pulses in intensity only. The crosshair keeps its size, so aiming is not disturbed.
+    // With reduced motion asked by the system the disc stays still and the rings are not drawn.
+    const CROSSHAIR_RING = 24.42 / 61.44;   // ring radius / crosshair size (CROSSHAIR_SVG)
+    const CROSSHAIR_COLOR = [255, 135, 88]; // #ff8758, crosshair without IR data
+    const HALO_RADIUS = 1.35;               // of the crosshair ring radius
+    const HALO_ALPHA_MIN = 0.15;
+    const HALO_ALPHA_MAX = 0.55;
+    const HALO_ALPHA_STILL = 0.35;          // reduced motion
+    const HALO_PERIOD = 1000;               // ms of one pulse
+    const HALO_START = 1000;                // ms after reaching the target: the pulse starts
+    const RIPPLE_DELAYS = [0, 450];         // ms after reaching the target, one per ring
+    const RIPPLE_TIME = 1100;               // ms of each ring
+    const RIPPLE_GROWTH = 2.2;              // a ring ends at the crosshair ring radius * (1 + growth)
+    const HALO_FRAME_TIME = 33;             // ms between animation frames (about 30 per second)
+
+    function reducedMotion() {
+        try { return !!(root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; }
+    }
+
+    /** [r, g, b] + alpha -> 'rgba(...)'. */
+    function rgba(rgb, alpha) {
+        return `rgba(${rgb.map(Math.round).join(',')},${alpha.toFixed(3)})`;
+    }
 
     /** ?irdebug in the address: shows area and brightness under each emitter circle. */
     function irTestDebug() {
@@ -311,6 +339,7 @@
             this.irDebug = irTestDebug();
             this.mouse = null;
             this.closed = false;
+            this.targetTime = Date.now(); // calibration: when the crosshair reached its target (highlight)
             this.resetValues();
         }
 
@@ -410,6 +439,7 @@
             this.closed = true;
             clearTimeout(this._irWarningTimer);
             clearTimeout(this._irExpiryTimer);
+            clearTimeout(this._haloTimer);
             doc.removeEventListener('keydown', this._onKey, true);
             root.removeEventListener('resize', this._onResize);
             doc.removeEventListener('fullscreenchange', this._onFullscreen);
@@ -429,6 +459,7 @@
                 this.shutdown(Object.assign({}, this.values));
                 return;
             }
+            if (stage !== this.stage) this.targetTime = Date.now(); // a new target: rings again
             this.stage = stage;
             this.irWarning = null; // a new stage: the refused shot is no longer current
             if (stage === STAGE.init) {
@@ -631,6 +662,7 @@
             const red = [225, 25, 25];
             this._background(ctx, 'dimgray');
 
+            this._drawCrosshairHighlight(ctx); // under every other drawing, as in the Qt App
             if (this.stage !== STAGE.init) this._polyline(ctx, this._crossLines(), 'white', 2);
 
             let stageText;
@@ -726,10 +758,7 @@
                 }
             }
 
-            // Crosshair position of each stage; while verifying it follows the gun's cursor.
-            const positions = [[w / 2, h / 2], [w / 2, 0], [w / 2, h], [0, h / 2], [w, h / 2], [w / 2, h / 2]];
-            let [x, y] = positions[this.stage] || positions[5];
-            if (this.stage === STAGE.verify && this.mouse) ({ x, y } = this.mouse);
+            const [x, y] = this._crosshairPosition();
             const irColor = this._caliIrColor();
             let image = irColor ? loadTintedCrosshair(irColor) : loadCrosshair();
             if (irColor && !(image.complete && image.naturalWidth)) {
@@ -746,6 +775,55 @@
             }
 
             this._drawCaliIrPanel(ctx, textRight);
+        }
+
+        /** Crosshair position of each stage; while verifying it follows the gun's cursor. */
+        _crosshairPosition() {
+            const w = this.width;
+            const h = this.height;
+            const positions = [[w / 2, h / 2], [w / 2, 0], [w / 2, h], [0, h / 2], [w, h / 2], [w / 2, h / 2]];
+            if (this.stage === STAGE.verify && this.mouse) return [this.mouse.x, this.mouse.y];
+            return positions[this.stage] || positions[5];
+        }
+
+        /** Calibration: rings and pulsing disc behind the crosshair of a target (see HALO_RADIUS). */
+        _drawCrosshairHighlight(ctx) {
+            if (this.stage > STAGE.center) return;
+            const [x, y] = this._crosshairPosition();
+            const color = this._caliIrColor() || CROSSHAIR_COLOR;
+            const ring = CROSSHAIR_SIZE * this.textScale('crosshair') * CROSSHAIR_RING;
+            const still = reducedMotion();
+            const elapsed = Date.now() - this.targetTime;
+
+            ctx.save();
+            if (!still) {
+                for (const delay of RIPPLE_DELAYS) {
+                    const k = (elapsed - delay) / RIPPLE_TIME;
+                    if (k < 0 || k > 1) continue;
+                    ctx.strokeStyle = rgba(color, 0.85 * (1 - k));
+                    ctx.lineWidth = 6 * (1 - k) + 1.5;
+                    ctx.beginPath();
+                    ctx.arc(x, y, ring * (1 + k * RIPPLE_GROWTH), 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+            const phase = Math.max(0, elapsed - HALO_START) / HALO_PERIOD;
+            const alpha = still ? HALO_ALPHA_STILL :
+                HALO_ALPHA_MIN + (HALO_ALPHA_MAX - HALO_ALPHA_MIN) * (0.5 - 0.5 * Math.cos(2 * Math.PI * phase));
+            const radius = ring * HALO_RADIUS;
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+            gradient.addColorStop(0, rgba(color, alpha));
+            gradient.addColorStop(0.55, rgba(color, alpha * 0.6));
+            gradient.addColorStop(1, rgba(color, 0));
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // Next animation frame (the window otherwise redraws only when data arrives).
+            if (!still && !this._haloTimer)
+                this._haloTimer = setTimeout(() => { this._haloTimer = 0; this.render(); }, HALO_FRAME_TIME);
         }
 
         /**
@@ -804,8 +882,8 @@
             const titleH = titleBox(titleScale).height;
             const x0 = w - margin - panelW;
             const y0 = h - margin - panelH;
-            // Title and border in the crosshair colour (grey without blob data).
-            const tint = (this._caliIrColor() || [160, 160, 164]).map(Math.round);
+            // Title and border always light grey: the state is shown by the crosshair and the circles.
+            const tint = CALI_IR_PANEL_COLOR;
             const color = `rgb(${tint.join(',')})`;
 
             ctx.save();

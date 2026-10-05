@@ -25,7 +25,7 @@ All notable changes to this project will be documented in this file.
 * Startup shortcuts: **Trigger + A** for firmware flashing; **B** for the integrated WebApp. Hold for about 2 seconds.
 * Saved mouse/gamepad startup mode and an explicit wireless pedal option.
 * IR camera test: each emitter circle shows the size and brightness of the light spot measured by the camera; an emitter that is not seen is shown as a dashed circle with a red X.
-* Calibration from the WebApp or the desktop App checks the IR emitters: the crosshair turns green when all four are seen well and orange when one is weak, a small panel shows each emitter, and target shots are refused while an emitter is not seen. The calibration started from the gun works as before.
+* Calibration from the WebApp or the desktop App checks the IR emitters: the crosshair turns green when all four are seen well and orange when one is weak, a small panel shows each emitter, a pulsing halo highlights the crosshair, and target shots are refused while an emitter is not seen. The calibration started from the gun works as before.
 * DFRobot/Wii camera: the IR test and the calibration check also read the brightness of the light spots, from the camera's full data format.
 * **Save and Send Settings** pulses while there are unsaved changes (WebApp and desktop App).
 * The Web Flasher can switch a lightgun running 7.0.0 into update mode by itself (the serial port changes once: select the new port and retry).
@@ -85,7 +85,7 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 * Scorciatoie all'avvio: **Grilletto + A** per il flashing; **B** per la WebApp integrata. Tenere premuto per circa 2 secondi.
 * Modalità mouse/gamepad salvabile per l'avvio e opzione esplicita per il pedale wireless.
 * Test della telecamera IR: ogni cerchio degli emettitori mostra grandezza e luminosità della macchia di luce misurata dalla telecamera; un emettitore non visto è indicato da un cerchio tratteggiato con una X rossa.
-* La calibrazione dalla WebApp o dall'App desktop controlla gli emettitori IR: il mirino diventa verde quando tutti e quattro sono visti bene e arancione quando uno è debole, un piccolo riquadro mostra ogni emettitore e i tiri sui bersagli vengono rifiutati finché un emettitore non è visto. La calibrazione avviata dalla pistola funziona come prima.
+* La calibrazione dalla WebApp o dall'App desktop controlla gli emettitori IR: il mirino diventa verde quando tutti e quattro sono visti bene e arancione quando uno è debole, un piccolo riquadro mostra ogni emettitore, un alone pulsante mette in evidenza il mirino e i tiri sui bersagli vengono rifiutati finché un emettitore non è visto. La calibrazione avviata dalla pistola funziona come prima.
 * Telecamera DFRobot/Wii: il test IR e il controllo della calibrazione leggono anche la luminosità delle macchie di luce, dal formato dati completo della telecamera.
 * **Salva e invia impostazioni** pulsa finché ci sono modifiche non salvate (WebApp e App desktop).
 * Il Web Flasher può portare da solo in modalità aggiornamento una lightgun che esegue la 7.0.0 (la porta seriale cambia una volta: selezionare la nuova porta e riprovare).
