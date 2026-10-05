@@ -17,6 +17,7 @@ function setup(language = 'en') {
         document: { removeEventListener: noop, getElementById: () => null },
         location: { search: '' }, Date: { now: () => now },
         matchMedia: () => ({ matches: reduce }), removeEventListener: noop,
+        Image: class { constructor() { this.complete = false; this.naturalWidth = 0; } },
         setTimeout(fn, delay) { const token = ++id; timers.set(token, { fn, delay }); return token; },
         clearTimeout(token) { timers.delete(token); },
         requestAnimationFrame(fn) { const token = ++id; frames.set(token, fn); return token; },
@@ -341,4 +342,65 @@ test('a late redraw finishes the flash immediately; final expiry timer never ext
     assert.equal(s.win.acceptedShot, null); assert.equal(s.win._shotTimer, 0);
     assert.deepEqual(Array.from(s.win._crosshairPosition()), [640,0]);
     assert.equal(s.timers.size, 1); // just the new target's rotation
+});
+
+function drawCalibration(s) {
+    const texts = [], boxes = [], panels = [];
+    s.win._centered = (ctx, lines, y, scale, tint) => {
+        const width = Math.max(0, ...lines.map(line => [...line].length)) * 8 * scale;
+        const height = lines.length * 8 * scale;
+        texts.push({ lines: Array.from(lines), x: (s.win.width - width) / 2, y, width, height, scale, tint });
+        return { width, height };
+    };
+    s.win._centeredSegments = () => {};
+    s.win._drawCaliIrPanel = (ctx, textRight) => panels.push(textRight);
+    const noop = () => {};
+    const ctx = new Proxy({ fillRect(...rect) { boxes.push(rect); } },
+        { get: (obj, key) => key in obj ? obj[key] : noop });
+    s.win._drawCalibration(ctx);
+    const reminder = texts.find(text => text.lines[1] === (s.language === 'it' ? 'senza ruotare la lightgun.' : 'without rotating the lightgun.'));
+    return { texts, boxes, panels, reminder };
+}
+
+test('two-line posture reminder stays above unchanged bottom instructions in every stage, in English and Italian', () => {
+    for (const language of ['en', 'it']) {
+        for (const [width, height] of [[1280, 720], [1920, 1080], [2560, 1440], [3840, 2160]]) {
+            const s = setup(language); s.language = language; s.win.width = width; s.win.height = height;
+            s.win.values = { topOffset: 0, bottomOffset: 0, leftOffset: 0, rightOffset: 0, TLled: 100, TRled: 3000 };
+            for (let stage = 0; stage <= 6; ++stage) {
+                s.win.stage = stage;
+                const { texts, reminder } = drawCalibration(s);
+                assert.deepEqual(reminder.lines, language === 'it' ?
+                    ['Posizionati centralmente di fronte allo schermo,', 'senza ruotare la lightgun.'] :
+                    ['Stand in front of the centre of the screen,', 'without rotating the lightgun.']);
+                const tutorial = texts.find(text => text !== reminder && Math.abs(text.y + text.height / 2 - height * 0.8) < 1e-7);
+                assert.ok(tutorial, `bottom instructions remain centred at 80%: stage ${stage}`);
+                assert.equal(reminder.y + reminder.height + 8 * reminder.scale, tutorial.y);
+                assert.equal(reminder.tint, undefined, 'posture reminder remains white');
+                assert.ok(reminder.x >= 0 && reminder.x + reminder.width <= width);
+            }
+        }
+    }
+});
+
+test('posture reminder survives refused shots and leaves a full row above the warning box', () => {
+    for (const language of ['en', 'it']) {
+        const s = setup(language); s.language = language; s.win.width = 1920; s.win.height = 1080;
+        s.win.showIrWarning(1);
+        const { boxes, reminder } = drawCalibration(s);
+        assert.ok(reminder);
+        const box = boxes.find(rect => rect[1] > s.win.height * 0.6);
+        assert.ok(box);
+        assert.ok(reminder.y + reminder.height + 8 * reminder.scale <= box[1]);
+        assert.equal(s.win.stage, 0); assert.equal(s.win.acceptedShot, null);
+    }
+});
+
+test('posture reminder remains white in both incomplete and malformed verification branches', () => {
+    for (const values of [{ TLled: -1, TRled: -1 }, { TLled: 40000, TRled: 40000 }]) {
+        const s = setup(); s.win.stage = 6; s.win.values = values;
+        const { reminder } = drawCalibration(s);
+        assert.ok(reminder); assert.equal(reminder.tint, undefined);
+        assert.equal(s.win.values, values);
+    }
 });

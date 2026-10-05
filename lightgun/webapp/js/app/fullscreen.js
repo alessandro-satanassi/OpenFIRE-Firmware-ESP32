@@ -768,12 +768,16 @@
             const warningLines = (bits) => wrapLines(this._caliIrWarningText(bits), warningChars);
             // The IR panel is sized for this text too, so it keeps its size when a warning appears.
             let textRight = w / 2 + textSize(warningLines(CALI_IR_MISSING), sub).width / 2 + 8 * sub;
+            // Keep the posture reminder above the bottom instructions throughout calibration.
+            // Reserve the initial three-line block even when verification has no tutorial yet.
+            let instructionsTop = h * 0.8 - Math.max(3 * GLYPH * sub, textSize(tutorial, sub).height) / 2;
             const irWarning = this.irWarning;
             if (irWarning && Date.now() - irWarning.time <= CALI_IR_WARNING_TIME) {
                 const scale = sub;
                 const warning = warningLines(irWarning.bits);
                 const size = textSize(warning, scale);
                 const top = h * 0.8 - size.height / 2;
+                instructionsTop = Math.min(instructionsTop, top - 6 * scale);
                 ctx.save();
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
                 ctx.fillRect(w / 2 - size.width / 2 - 8 * scale, top - 6 * scale, size.width + 16 * scale, size.height + 12 * scale);
@@ -784,6 +788,9 @@
                 this._centered(ctx, tutorial, h * 0.8 - size.height / 2, sub, tint);
             }
             if (tutorial.length) textRight = Math.max(textRight, w / 2 + textSize(tutorial, sub).width / 2);
+
+            const positionHint = lines('Stand in front of the centre of the screen,', 'without rotating the lightgun.');
+            this._centered(ctx, positionHint, instructionsTop - textSize(positionHint, sub).height - GLYPH * sub, sub);
 
             if (this.infoVisible) {
                 let y = h / 2 - 24 * sub;

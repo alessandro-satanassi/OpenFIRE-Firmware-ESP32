@@ -202,7 +202,7 @@ Available options in simple pause menu are as follows, from first option to last
 ### How to calibrate
 ##### These instructions apply to the standalone on-board calibration process; the Calibration screens in the OpenFIRE WebApp have a similar procedure with more info to guide the user through the process.
 
-**Before you start:** stand in front of the screen, hold the gun without rotating it around the barrel, and aim carefully at each target.
+**Before you start:** stand in front of the centre of the screen, hold the gun without rotating it around the barrel, and aim carefully at each target. In the WebApp and desktop App, this posture reminder stays above the bottom instructions throughout calibration, including final aiming verification.
 
 1. Select the profile to calibrate - either through pressing A/B/Start/Select in the Hotkey Pause Mode, or selecting in the Simple Pause Menu - and pull the trigger to begin calibration. Alternatively, calibration can be started from the WebApp (*Calibration Profiles* tab, *Calibrate Profile* buttons). 
 2. Shoot the pointer at center of the screen and press the trigger while keeping a steady aim.
@@ -544,7 +544,7 @@ Le opzioni disponibili nel menu di pausa semplificato sono le seguenti (dalla pr
 ### Come Calibrare
 *Queste istruzioni si applicano al processo di calibrazione integrato e autonomo della pistola; le schermate di Calibrazione nella WebApp OpenFIRE ESP32 hanno una procedura simile con maggiori informazioni a schermo per guidare l'utente.*
 
-**Prima di iniziare:** mettiti davanti allo schermo, tieni la pistola senza ruotarla attorno alla canna e mira con cura ogni bersaglio.
+**Prima di iniziare:** posizionati centralmente di fronte allo schermo, tieni la pistola senza ruotarla attorno alla canna e mira con cura ogni bersaglio. Nella WebApp e nell'App desktop questo promemoria resta sopra le istruzioni inferiori per tutta la calibrazione, compresa la verifica finale del puntamento.
 
 1. Seleziona il profilo da calibrare (tramite A/B/Start/Select nella modalità Hotkey Pause, o selezionandolo nel Menu Pausa Semplificato) e premi il grilletto per iniziare la calibrazione. In alternativa, puoi avviarla dalla WebApp (scheda *Profili di calibrazione*, pulsanti *Calibra profilo*).
 2. Punta il mirino al centro dello schermo e premi il grilletto mantenendo la mira stabile.

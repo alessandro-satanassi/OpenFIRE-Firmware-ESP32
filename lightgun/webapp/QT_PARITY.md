@@ -47,6 +47,7 @@ Tests: `tests/*.test.js` (Node) and `tests/browser-e2e.js` (browser, simulated l
 
 ## Intentional differences
 
+- Calibration posture reminder, in both Apps: two centred English/Italian lines above the bottom instructions stay visible through final verification, including refused-shot warnings. Existing texts, targets, progress and IR panel keep their sizes and positions; only the reminder moves up when the verification instructions or refusal box need more space. In Qt its bitmap is generated once per window, with no new timer.
 - Linux checks of the Qt App (user not in `dialout`, running as root): not applicable to a browser.
 - File dialogs: the browser file chooser and download replace "Open New Layout" / "Save New Layout"; a download cannot be cancelled, so "Canceled custom layout save operation." does not exist.
 - Device list: Web Serial only lists ports the user allowed, hence "Add a Device...".
