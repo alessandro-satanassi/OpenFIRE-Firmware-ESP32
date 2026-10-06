@@ -772,6 +772,10 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
         SavePreferences();
         if(fromDesktop)
             SetMode(FW_Const::GunMode_Docked);
+        else {
+            // After confirming the first standalone calibration, return to Run.
+            SetMode(FW_Const::GunMode_Run);
+        }
     } else if(fromDesktop) {
         SetMode(FW_Const::GunMode_Docked);
     } else SetMode(FW_Const::GunMode_Run);
