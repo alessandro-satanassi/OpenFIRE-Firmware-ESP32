@@ -213,6 +213,14 @@ Available options in simple pause menu are as follows, from first option to last
    - If you want to start calibration over, press the A or B button in cali verification to restart from the center point in Step 2.
    - Calibration can be canceled outright by pressing C/Reload at any time, or the A/B buttons any time before cali verification.
 
+**Calibration guidance on the OLED.** If an SSD1306 display is fitted and enabled, the top status bar remains visible and the area below guides calibration. The display instructions are always in English.
+
+- **Where to aim:** a small TV outline and crosshair indicate the target position on your monitor, not your live aim. Progress runs from **1/6** to **6/6**, in this order: `CENTER`, `TOP`, `BOTTOM`, `LEFT`, `RIGHT`, `CENTER` (final centre). `SHOOT` tells you to shoot the target.
+- **Final verification:** after the sixth target, `CHECK AIM` asks you to check your aim on the monitor. `TRIGGER: CONFIRM` means pull the trigger to confirm; `A/B: REPEAT` means press A or B to repeat calibration.
+- **IR points:** white points remain visible over the instructions during calibration and verification. They show both detected and reconstructed emitter positions, without distinguishing between them: four points do not necessarily mean that all four emitters are actually visible to the camera.
+
+These are visual aids only: the calibration sequence, buttons and saving procedure described in this guide are unchanged.
+
 **Calibration from the WebApp or the desktop App.** With firmware 7.0.0, the calibration window started from the WebApp (or from the compatible desktop App) also checks the IR emitters before every target shot:
 - **Crosshair colour:** red when the camera does not see all four emitters; otherwise it follows the brightness of the weakest emitter on a continuous scale, from red through orange and a light yellow-green to full green, without sudden changes.
 - **Crosshair highlight:** a thin dashed outer ring slowly rotates in the same dynamic colour as the crosshair, without pulsing or changing brightness. The original crosshair stays still and keeps its size and position, also at the screen edges. The coloured outer ring is absent during aiming verification and stays still in the WebApp when the system asks for reduced motion.
@@ -554,6 +562,14 @@ Le opzioni disponibili nel menu di pausa semplificato sono le seguenti (dalla pr
    - Se la calibrazione è buona, premi il grilletto per confermare.
    - Se desideri ricominciare la calibrazione, premi il pulsante A o B nella schermata di verifica per ripartire dal punto centrale (Passo 2).
    - La calibrazione può essere annullata del tutto premendo C/Reload in qualsiasi momento, o i pulsanti A/B in qualsiasi momento prima della verifica finale.
+
+**Guida alla calibrazione sul display OLED.** Se è installato e abilitato un display SSD1306, la barra di stato superiore resta visibile e lo spazio sottostante guida la calibrazione. Le istruzioni sul display sono sempre in inglese.
+
+- **Dove mirare:** una TV stilizzata e un mirino indicano la posizione del bersaglio sul monitor, non il puntamento attuale della pistola. L'avanzamento va da **1/6** a **6/6**, nell'ordine: `CENTER`, `TOP`, `BOTTOM`, `LEFT`, `RIGHT`, `CENTER` (centro, alto, basso, sinistra, destra, centro finale). `SHOOT` indica di sparare al bersaglio.
+- **Verifica finale:** dopo il sesto bersaglio, `CHECK AIM` invita a verificare il puntamento sul monitor. `TRIGGER: CONFIRM` indica di premere il grilletto per confermare; `A/B: REPEAT` indica di premere A o B per ripetere la calibrazione.
+- **Punti IR:** i punti bianchi restano visibili sopra le istruzioni durante la calibrazione e la verifica. Mostrano sia le posizioni degli emettitori rilevati sia quelle ricostruite, senza distinguerle: quattro punti non significano necessariamente che la telecamera veda realmente tutti e quattro gli emettitori.
+
+Sono solo aiuti visivi: la sequenza di calibrazione, i pulsanti e la procedura di salvataggio descritti in questa guida restano invariati.
 
 **Calibrazione dalla WebApp o dall'App desktop.** Con il firmware 7.0.0 la finestra di calibrazione avviata dalla WebApp (o dall'App desktop compatibile) controlla anche gli emettitori IR prima di ogni tiro sui bersagli:
 - **Colore del mirino:** rosso quando la telecamera non vede tutti e quattro gli emettitori; altrimenti segue la luminosità dell'emettitore più debole su una scala continua, dal rosso all'arancione, poi a un giallo-verde chiaro fino al verde pieno, senza salti.

@@ -499,6 +499,9 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
 
     // Jack in, CaliMan, execute!!!
     SetMode(FW_Const::GunMode_Calibration);
+    #ifdef USES_DISPLAY
+        OLED.CalibrationStageUpdate(FW_Const::Cali_Init);
+    #endif // USES_DISPLAY
     if(fromDesktop) {
         const uint8_t stage = FW_Const::Cali_Init;
         if(!OF_Serial::AppSerialSendResponse(OF_Const::sCaliStageUpd, &stage, 1))
@@ -710,6 +713,9 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
 
                     // Let the user test.
                     SetMode(FW_Const::GunMode_Verification);
+                    #ifdef USES_DISPLAY
+                        OLED.CalibrationStageUpdate(FW_Const::Cali_Verify);
+                    #endif // USES_DISPLAY
                     while(gunMode == FW_Const::GunMode_Verification) {
                         buttons.Poll();
 
@@ -762,6 +768,11 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                 default:
                     break;
             }
+            #ifdef USES_DISPLAY
+                // Show the next target after capturing this shot, including a restart.
+                if(gunMode == FW_Const::GunMode_Calibration)
+                    OLED.CalibrationStageUpdate(calStage);
+            #endif // USES_DISPLAY
         }
     }
 
@@ -884,7 +895,7 @@ static inline int32_t ClampTestCoord(int32_t value)
     return value;
 }
 
-static void SendTestBlobs(const int (&vertexXin)[4], const int (&vertexYin)[4],
+static void SendTestBlobs(const int32_t (&vertexXin)[4], const int32_t (&vertexYin)[4],
                           bool diamond, const CameraProfile& profile)
 {
     constexpr uint8_t TEST_BLOBS_VERSION = 1;
@@ -1356,8 +1367,8 @@ void FW_Common::GetPosition()
                     testLastStamp = millis();
                     // RAW Camera Output mapped to screen res (1920x1080)
                     // Screen resolution is now dynamically derived from res_x/res_y.
-                    int rawX[4];
-                    int rawY[4];
+                    int32_t rawX[4];
+                    int32_t rawY[4];
                     bool outsideFov[4];
 
                     // RAW Output for viewing in processing sketch mapped to 1920x1080 screen resolution
@@ -1450,7 +1461,10 @@ void FW_Common::GetPosition()
                                 0, SCREEN_RES_Y);
                         }
                         */
-                        OLED.DrawVisibleIR(rawX, rawY);
+                        OLED.DrawVisibleIR(rawX, rawY,
+                            (gunMode == FW_Const::GunMode_Calibration ||
+                             gunMode == FW_Const::GunMode_Verification)
+                                ? ExtDisplay::IRDraw_Overlay : ExtDisplay::IRDraw_Clear);
                     #endif // USES_DISPLAY
                 }
             }

@@ -55,10 +55,19 @@ public:
     /// (i.e. small text printouts when health/ammo empty)
     void IdleOps();
 
-    /// @brief Draw seen points here
-    /// @details Should ONLY be used in scenarios where the mouse isn't being updated, i.e. calibration.
-    ///          Arguments here point to the original arrays of seen coords [4]
-    void DrawVisibleIR(int *pointX, int *pointY);
+    /// @brief Show a calibration target (stages 0..5) or the final aim check (stage 6).
+    /// @details Call only when the stage changes; the top 16-pixel panel is preserved.
+    void CalibrationStageUpdate(uint8_t stage);
+
+    enum IRDrawMode_e : uint8_t {
+        IRDraw_None = 0,     ///< No drawing or display refresh; existing pixels stay untouched.
+        IRDraw_Clear = 1,    ///< Original IR test: clear the background and map the input arrays in place.
+        IRDraw_Overlay = 2   ///< White points over the background; input arrays stay unchanged.
+    };
+
+    /// @brief Draw four tracked IR points, using the original IR test mode by default.
+    /// @details Overlay mode restores the pixels covered by the previous points.
+    void DrawVisibleIR(int32_t *pointX, int32_t *pointY, IRDrawMode_e mode = IRDraw_Clear);
 
     /// @brief Draw hotkey pause mode layout
     void PauseScreenShow(const int &currentProf, const char* name1, const char* name2, const char* name3, const char* name4);
@@ -128,6 +137,16 @@ public:
 
 private:
     int screenState = Screen_None;
+
+    // Radius-1 points cover five pixels. Save only their original background bits.
+    struct IRPointBackground_t {
+        uint8_t x;
+        uint8_t y;
+        uint8_t pixels;
+    };
+    IRPointBackground_t irOverlay[4] = {};
+    uint8_t irOverlayValid = 0;
+    void DrawVisibleIROverlay(const int32_t *pointX, const int32_t *pointY);
 
     bool ammoEmpty = false;
     bool lifeEmpty = false;

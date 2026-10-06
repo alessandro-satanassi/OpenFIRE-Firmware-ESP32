@@ -19,6 +19,7 @@
 #define SSD1306_NO_SPLASH
 
 #include <Arduino.h>
+#include <string.h>
 
 #ifdef USE_LOVYAN_GFX
   // nulla 
@@ -30,6 +31,7 @@
 #include <TinyUSB_Devices.h>
 
 #include "OpenFIREdisplay.h"
+#include "OpenFIREconstant.h"
 #include "OpenFIREprefs.h"
 #include "OpenFIREFeedback.h"
 #include "OpenFIREDefines.h"
@@ -105,6 +107,7 @@ bool ExtDisplay::Begin()
 
 void ExtDisplay::Stop()
 {
+    irOverlayValid = 0;
     if(display != nullptr) {
         delete display;
         display = nullptr;
@@ -285,6 +288,8 @@ void ExtDisplay::TopPanelUpdate(const char *textPrefix, const char *profText)
 
 void ExtDisplay::ScreenModeChange(const int &screenMode, const bool &isAnalog)
 {
+    // The new screen replaces the background; do not restore pixels from the old one.
+    irOverlayValid = 0;
     if(display != nullptr) {
         idleTimeStamp = millis();
         display->fillRect(0, 16, 128, 48, BLACK);
@@ -449,13 +454,89 @@ void ExtDisplay::ShowTemp()
 }
 #endif // USES_TEMP
 
-// Warning: SLOOOOW, should only be used in cali/where the mouse isn't being updated.
-// Use at your own discression.
-void ExtDisplay::DrawVisibleIR(int *pointX, int *pointY)
+void ExtDisplay::CalibrationStageUpdate(uint8_t stage)
 {
-    if(display != nullptr) {
+    if(display == nullptr || stage > FW_Const::Cali_Verify)
+        return;
+
+    // Static drawing on stage changes only, never at the camera frame rate.
+    // Leave the profile header (rows 0..15) untouched.
+    irOverlayValid = 0;
+    screenState = Screen_Calibrating;
+    display->fillRect(0, 16, SCREEN_WIDTH, SCREEN_HEIGHT - 16, BLACK);
+    display->setTextSize(1);
+    display->setTextColor(WHITE, BLACK);
+
+    const char *lines[3];
+    char progress[] = {char('1' + stage), '/', '6', '\0'};
+    int textX, textWidth, textY, lineSpacing;
+    if(stage == FW_Const::Cali_Verify) {
+        lines[0] = "CHECK AIM";
+        lines[1] = "TRIGGER: CONFIRM";
+        lines[2] = "A/B: REPEAT";
+        textX = 0;
+        textWidth = SCREEN_WIDTH;
+        textY = 21;
+        lineSpacing = 15;
+    } else {
+        static const char *const directions[] = {
+            "CENTER", "TOP", "BOTTOM", "LEFT", "RIGHT", "CENTER"
+        };
+        int x = 33, y = 40;
+        switch(stage) {
+            case FW_Const::Cali_Top:    y = 24; break;
+            case FW_Const::Cali_Bottom: y = 56; break;
+            case FW_Const::Cali_Left:   x = 5;  break;
+            case FW_Const::Cali_Right:  x = 61; break;
+            default: break;
+        }
+
+        display->drawRect(5, 24, 57, 33, WHITE);
+        // A small stationary reticle, including at the edges of the TV.
+        display->fillRect(x - 5, y - 5, 11, 11, BLACK);
+        display->drawCircle(x, y, 4, WHITE);
+        display->drawFastHLine(x - 5, y, 3, WHITE);
+        display->drawFastHLine(x + 3, y, 3, WHITE);
+        display->drawFastVLine(x, y - 5, 3, WHITE);
+        display->drawFastVLine(x, y + 3, 3, WHITE);
+        display->drawFastHLine(x - 1, y, 3, WHITE);
+        display->drawFastVLine(x, y - 1, 3, WHITE);
+
+        lines[0] = progress;
+        lines[1] = directions[stage];
+        lines[2] = "SHOOT";
+        textX = 74;
+        textWidth = 48;
+        textY = 20;
+        lineSpacing = 13;
+    }
+
+    for(uint8_t i = 0; i < 3; ++i) {
+        // Both supported backends use the default 6x8 font at size 1.
+        const int width = int(strlen(lines[i])) * 6;
+        display->setCursor(textX + (textWidth - width) / 2, textY + i * lineSpacing);
+        display->print(lines[i]);
+    }
+    display->display();
+}
+
+// Warning: SLOOOOW, should only be used where the mouse isn't being updated.
+// Use at your own discression.
+void ExtDisplay::DrawVisibleIR(int32_t *pointX, int32_t *pointY, IRDrawMode_e mode)
+{
+    if(mode == IRDraw_None || display == nullptr)
+        return;
+
+    if(mode == IRDraw_Overlay) {
+        DrawVisibleIROverlay(pointX, pointY);
+        return;
+    }
+
+    // Keep the original default mode, including in-place mapping and clipping.
+    if(mode == IRDraw_Clear && screenState != Screen_Calibrating) {
+        irOverlayValid = 0;
         display->fillRect(0, 16, 128, 48, BLACK);
-        for(int i = 0; i < 4; ++i) {
+        for(uint8_t i = 0; i < 4; ++i) {
           if(pointX[i] < 0 || pointX[i] > 1920 || pointY[i] < 0 || pointY[i] > 1080)
             continue;
           pointX[i] = map(pointX[i], 0, 1920, 0, 128);
@@ -465,6 +546,84 @@ void ExtDisplay::DrawVisibleIR(int *pointX, int *pointY)
         }
         display->display();
     }
+}
+
+void ExtDisplay::DrawVisibleIROverlay(const int32_t *pointX, const int32_t *pointY)
+{
+    static const int8_t offsetX[5] = {0, -1, 1, 0, 0};
+    static const int8_t offsetY[5] = {0, 0, 0, -1, 1};
+    uint8_t nextX[4] = {};
+    uint8_t nextY[4] = {};
+    uint8_t nextValid = 0;
+    uint8_t moved = 0;
+
+    for(uint8_t i = 0; i < 4; ++i) {
+        if(pointX[i] < 0 || pointX[i] > 1920 || pointY[i] < 0 || pointY[i] > 1080)
+            continue;
+        nextX[i] = (uint8_t)map(pointX[i], 0, 1920, 0, 128);
+        nextY[i] = (uint8_t)map(pointY[i], 0, 1080, 16, 64);
+        nextValid |= (uint8_t)(1U << i);
+        if(!(irOverlayValid & (1U << i)) ||
+           nextX[i] != irOverlay[i].x || nextY[i] != irOverlay[i].y)
+            moved = 1;
+    }
+
+    // Camera movement below one OLED pixel needs no pixel work or I2C refresh.
+    if(!moved && nextValid == irOverlayValid)
+        return;
+
+    // Batch pixel writes: LovyanGFX OLED panels can auto-refresh at endWrite().
+    // Adafruit's startWrite/endWrite are compatible no-ops for this buffered OLED.
+    display->startWrite();
+
+    // Restore ALL old points before sampling ANY new ones: footprints can overlap.
+    for(uint8_t i = 0; i < 4; ++i) {
+        if(!(irOverlayValid & (1U << i)))
+            continue;
+        for(uint8_t bit = 0; bit < 5; ++bit) {
+            const int16_t x = (int16_t)irOverlay[i].x + offsetX[bit];
+            const int16_t y = (int16_t)irOverlay[i].y + offsetY[bit];
+            if(x >= 0 && x < SCREEN_WIDTH && y >= 16 && y < SCREEN_HEIGHT)
+                display->drawPixel(x, y, (irOverlay[i].pixels & (1U << bit)) ? WHITE : BLACK);
+        }
+    }
+
+    // Read only the RAM framebuffer, through the selected graphics backend.
+    for(uint8_t i = 0; i < 4; ++i) {
+        if(!(nextValid & (1U << i)))
+            continue;
+        irOverlay[i].x = nextX[i];
+        irOverlay[i].y = nextY[i];
+        irOverlay[i].pixels = 0;
+        for(uint8_t bit = 0; bit < 5; ++bit) {
+            const int16_t x = (int16_t)nextX[i] + offsetX[bit];
+            const int16_t y = (int16_t)nextY[i] + offsetY[bit];
+            if(x < 0 || x >= SCREEN_WIDTH || y < 16 || y >= SCREEN_HEIGHT)
+                continue;
+            #ifdef USE_LOVYAN_GFX
+                const uint8_t lit = display->readPixel(x, y) != 0;
+            #else
+                const uint8_t lit = display->getPixel(x, y);
+            #endif
+            if(lit)
+                irOverlay[i].pixels |= (uint8_t)(1U << bit);
+        }
+    }
+
+    // Sample all backgrounds first, then draw the same radius-1 white points.
+    for(uint8_t i = 0; i < 4; ++i) {
+        if(!(nextValid & (1U << i)))
+            continue;
+        for(uint8_t bit = 0; bit < 5; ++bit) {
+            const int16_t x = (int16_t)nextX[i] + offsetX[bit];
+            const int16_t y = (int16_t)nextY[i] + offsetY[bit];
+            if(x >= 0 && x < SCREEN_WIDTH && y >= 16 && y < SCREEN_HEIGHT)
+                display->drawPixel(x, y, WHITE);
+        }
+    }
+    irOverlayValid = nextValid;
+    display->endWrite();
+    display->display();
 }
 
 void ExtDisplay::PauseScreenShow(const int &currentProf, const char* name1, const char* name2, const char* name3, const char* name4)
