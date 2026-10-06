@@ -211,7 +211,7 @@ Available options in simple pause menu are as follows, from first option to last
 5. The new calibration profile will be applied and you'll be able to test the tracking. A good sign of a good calibration is maintaining as close to line-of-sight accuracy as possible when aiming at the screen edges and corners.
    - If the calibration is good, pull the trigger to confirm.
    - If you want to start calibration over, press the A or B button in cali verification to restart from the center point in Step 2.
-   - Calibration can be canceled outright by pressing C/Reload at any time, or the A/B buttons any time before cali verification.
+   - Calibration can be canceled outright by pressing C/Reload at any time, or the A/B buttons any time before cali verification (during the first calibration after a clean installation, these buttons do not cancel the procedure; in the WebApp or desktop App, you can still cancel by closing the calibration window).
 
 **Moving cursor in standalone calibration.** By default, the mouse pointer continuously traces a small circle while waiting for each target shot. At the centre of the screen, aim at the centre of the circle; at the four edges, aim at its point of contact with the edge. The animation stops while travelling to the next target and during final aiming verification. It does not change the calibration calculations or the calibration interface in the WebApp or desktop App.
 
@@ -563,7 +563,7 @@ Le opzioni disponibili nel menu di pausa semplificato sono le seguenti (dalla pr
 5. Il nuovo profilo di calibrazione verrà applicato e potrai testare il tracciamento. Un buon indicatore di una calibrazione corretta è il mantenimento di una precisione il più vicino possibile alla linea di vista (line-of-sight) quando si mira ai bordi e agli angoli dello schermo.
    - Se la calibrazione è buona, premi il grilletto per confermare.
    - Se desideri ricominciare la calibrazione, premi il pulsante A o B nella schermata di verifica per ripartire dal punto centrale (Passo 2).
-   - La calibrazione può essere annullata del tutto premendo C/Reload in qualsiasi momento, o i pulsanti A/B in qualsiasi momento prima della verifica finale.
+   - La calibrazione può essere annullata del tutto premendo C/Reload in qualsiasi momento, o i pulsanti A/B in qualsiasi momento prima della verifica finale (durante la prima calibrazione dopo un'installazione pulita, questi pulsanti non annullano la procedura; dalla WebApp o dall'App desktop puoi comunque annullarla chiudendo la finestra di calibrazione).
 
 **Cursore in movimento nella calibrazione dalla lightgun.** Di default, il puntatore del mouse descrive continuamente un piccolo cerchio mentre attende ogni tiro. Al centro dello schermo, mira al centro del cerchio; sui quattro bordi, mira al punto di contatto del cerchio con il bordo. L'animazione si interrompe durante lo spostamento verso il bersaglio successivo e nella verifica finale del puntamento. Non cambia i calcoli di calibrazione né l'interfaccia di calibrazione nella WebApp o nell'App desktop.
 
