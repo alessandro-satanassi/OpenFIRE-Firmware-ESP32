@@ -205,13 +205,15 @@ Available options in simple pause menu are as follows, from first option to last
 **Before you start:** stand in front of the centre of the screen, hold the gun without rotating it around the barrel, and aim carefully at each target. In the WebApp and desktop App, this posture reminder stays above the bottom instructions throughout calibration, including final aiming verification.
 
 1. Select the profile to calibrate - either through pressing A/B/Start/Select in the Hotkey Pause Mode, or selecting in the Simple Pause Menu - and pull the trigger to begin calibration. Alternatively, calibration can be started from the WebApp (*Calibration Profiles* tab, *Calibrate Profile* buttons). 
-2. Shoot the pointer at center of the screen and press the trigger while keeping a steady aim.
-3. The mouse should move to the four edges of the screen; first topmost, bottommost, leftmost, rightmost. Shoot the edge of the screen where the cursor is at.
-4. When the cursor returns to the center, shoot the cursor to finish calibration.
+2. Aim at the centre of the screen and pull the trigger while keeping a steady aim.
+3. The cursor moves to the four edges of the screen: top, bottom, left, right. At each edge it draws a small circle tangent to the edge. Shoot the point where the circle touches the screen edge, **not the centre of that circle**.
+4. When the cursor returns to the centre of the screen, aim at the centre of its small circle and shoot to finish calibration.
 5. The new calibration profile will be applied and you'll be able to test the tracking. A good sign of a good calibration is maintaining as close to line-of-sight accuracy as possible when aiming at the screen edges and corners.
    - If the calibration is good, pull the trigger to confirm.
    - If you want to start calibration over, press the A or B button in cali verification to restart from the center point in Step 2.
    - Calibration can be canceled outright by pressing C/Reload at any time, or the A/B buttons any time before cali verification.
+
+**Moving cursor in standalone calibration.** By default, the mouse pointer continuously traces a small circle while waiting for each target shot. At the centre of the screen, aim at the centre of the circle; at the four edges, aim at its point of contact with the edge. The animation stops while travelling to the next target and during final aiming verification. It does not change the calibration calculations or the calibration interface in the WebApp or desktop App.
 
 **Calibration guidance on the OLED.** If an SSD1306 display is fitted and enabled, the top status bar remains visible and the area below guides calibration. The display instructions are always in English.
 
@@ -555,13 +557,15 @@ Le opzioni disponibili nel menu di pausa semplificato sono le seguenti (dalla pr
 **Prima di iniziare:** posizionati centralmente di fronte allo schermo, tieni la pistola senza ruotarla attorno alla canna e mira con cura ogni bersaglio. Nella WebApp e nell'App desktop questo promemoria resta sopra le istruzioni inferiori per tutta la calibrazione, compresa la verifica finale del puntamento.
 
 1. Seleziona il profilo da calibrare (tramite A/B/Start/Select nella modalità Hotkey Pause, o selezionandolo nel Menu Pausa Semplificato) e premi il grilletto per iniziare la calibrazione. In alternativa, puoi avviarla dalla WebApp (scheda *Profili di calibrazione*, pulsanti *Calibra profilo*).
-2. Punta il mirino al centro dello schermo e premi il grilletto mantenendo la mira stabile.
-3. Il cursore si sposterà sui quattro bordi dello schermo; prima in alto, poi in basso, a sinistra e a destra. Spara sul bordo dello schermo nel punto esatto in cui si trova il cursore.
-4. Quando il cursore torna al centro, spara sul cursore per terminare la calibrazione.
+2. Mira al centro dello schermo e premi il grilletto mantenendo una mira stabile.
+3. Il cursore si sposterà sui quattro bordi dello schermo: in alto, in basso, a sinistra e a destra. Su ogni bordo descrive un piccolo cerchio tangente al bordo. Spara nel punto in cui il cerchio tocca il bordo dello schermo, **non al centro di quel cerchio**.
+4. Quando il cursore torna al centro dello schermo, mira al centro del piccolo cerchio e spara per terminare la calibrazione.
 5. Il nuovo profilo di calibrazione verrà applicato e potrai testare il tracciamento. Un buon indicatore di una calibrazione corretta è il mantenimento di una precisione il più vicino possibile alla linea di vista (line-of-sight) quando si mira ai bordi e agli angoli dello schermo.
    - Se la calibrazione è buona, premi il grilletto per confermare.
    - Se desideri ricominciare la calibrazione, premi il pulsante A o B nella schermata di verifica per ripartire dal punto centrale (Passo 2).
    - La calibrazione può essere annullata del tutto premendo C/Reload in qualsiasi momento, o i pulsanti A/B in qualsiasi momento prima della verifica finale.
+
+**Cursore in movimento nella calibrazione dalla lightgun.** Di default, il puntatore del mouse descrive continuamente un piccolo cerchio mentre attende ogni tiro. Al centro dello schermo, mira al centro del cerchio; sui quattro bordi, mira al punto di contatto del cerchio con il bordo. L'animazione si interrompe durante lo spostamento verso il bersaglio successivo e nella verifica finale del puntamento. Non cambia i calcoli di calibrazione né l'interfaccia di calibrazione nella WebApp o nell'App desktop.
 
 **Guida alla calibrazione sul display OLED.** Se è installato e abilitato un display SSD1306, la barra di stato superiore resta visibile e lo spazio sottostante guida la calibrazione. Le istruzioni sul display sono sempre in inglese.
 

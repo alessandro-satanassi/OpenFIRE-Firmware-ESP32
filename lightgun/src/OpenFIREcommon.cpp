@@ -443,6 +443,82 @@ enum TestBlobState_e : uint8_t {
 static TestBlobState_e testBlobState[4] = {TestBlobState_None, TestBlobState_None,
                                            TestBlobState_None, TestBlobState_None};
 
+// Standalone calibration only. Set to 0 for the original stationary cursor.
+// Solo calibrazione dalla lightgun. Impostare 0 per il cursore fermo originale.
+#ifndef CALI_CURSOR_ORBIT_ENABLED
+#define CALI_CURSOR_ORBIT_ENABLED 1
+#endif
+
+#if CALI_CURSOR_ORBIT_ENABLED
+constexpr uint16_t CALI_CURSOR_RADIUS_PX = 10;       // px in the 1920x1080 reference space
+constexpr float CALI_CURSOR_REV_PER_SEC = 3.0f;    // revolutions per second / giri al secondo
+constexpr uint32_t CALI_CURSOR_UPDATE_US = 10000;  // at most 100 reports/s; no extra delay
+
+constexpr int32_t CALI_CURSOR_HID_MAX = 32767;
+constexpr int32_t CALI_CURSOR_SCREEN_X = res_x >> 2;
+constexpr int32_t CALI_CURSOR_SCREEN_Y = res_y >> 2;
+static_assert(CALI_CURSOR_RADIUS_PX > 0 &&
+              2U * CALI_CURSOR_RADIUS_PX < CALI_CURSOR_SCREEN_X &&
+              2U * CALI_CURSOR_RADIUS_PX < CALI_CURSOR_SCREEN_Y, "cursor radius must fit inside the screen");
+static_assert(CALI_CURSOR_REV_PER_SEC > 0.0f && CALI_CURSOR_REV_PER_SEC <= 10.0f,
+              "cursor speed must be greater than 0 and at most 10 revolutions/s");
+constexpr uint32_t CALI_CURSOR_TURN_US = (uint32_t)(1000000.0f / CALI_CURSOR_REV_PER_SEC + 0.5f);
+static_assert(CALI_CURSOR_TURN_US <= std::numeric_limits<uint32_t>::max() / 32U,
+              "cursor speed too low for 32-bit phase arithmetic");
+constexpr int32_t CALI_CURSOR_RADIUS_X =
+    (CALI_CURSOR_RADIUS_PX * CALI_CURSOR_HID_MAX + (CALI_CURSOR_SCREEN_X - 1) / 2) / (CALI_CURSOR_SCREEN_X - 1);
+constexpr int32_t CALI_CURSOR_RADIUS_Y =
+    (CALI_CURSOR_RADIUS_PX * CALI_CURSOR_HID_MAX + (CALI_CURSOR_SCREEN_Y - 1) / 2) / (CALI_CURSOR_SCREEN_Y - 1);
+
+// 32 positions per turn from an 18-byte quarter-wave table. No runtime trigonometry.
+static int16_t CaliCursorSin(uint8_t phase)
+{
+    static constexpr int16_t quarter[9] = {0, 6393, 12539, 18204, 23170, 27245, 30273, 32137, 32767};
+    const uint8_t offset = phase & 7U;
+    const int16_t value = quarter[(phase & 8U) ? 8U - offset : offset];
+    return (phase & 16U) ? -value : value;
+}
+
+static void CaliCursorPosition(int32_t targetX, int32_t targetY, uint32_t phaseUs,
+                               int32_t &cursorX, int32_t &cursorY)
+{
+    uint8_t phase = (uint8_t)(phaseUs * 32U / CALI_CURSOR_TURN_US);
+    // At the edges start at the tangent point: the target stays on the actual edge,
+    // not at the circle centre. Only the visual circle is shifted inside the screen.
+    if(targetY == 0) phase += 24U;
+    else if(targetY == CALI_CURSOR_HID_MAX) phase += 8U;
+    else if(targetX == 0) phase += 16U;
+    const int32_t centreX = targetX == 0 ? CALI_CURSOR_RADIUS_X :
+                           targetX == CALI_CURSOR_HID_MAX ? CALI_CURSOR_HID_MAX - CALI_CURSOR_RADIUS_X : targetX;
+    const int32_t centreY = targetY == 0 ? CALI_CURSOR_RADIUS_Y :
+                           targetY == CALI_CURSOR_HID_MAX ? CALI_CURSOR_HID_MAX - CALI_CURSOR_RADIUS_Y : targetY;
+    cursorX = centreX + CALI_CURSOR_RADIUS_X * CaliCursorSin(phase + 8U) / 32767;
+    cursorY = centreY + CALI_CURSOR_RADIUS_Y * CaliCursorSin(phase) / 32767;
+}
+
+extern Adafruit_USBD_HID usbHid;
+
+static bool CaliCursorReport(int32_t cursorX, int32_t cursorY)
+{
+    if(!TinyUSBDevices.onBattery) {
+        // Animation is optional: skip a busy USB endpoint instead of waiting.
+        // sendReport can also refuse after ready(); do not change the last position then.
+        if(!usbHid.ready()) return false;
+        hid_abs_mouse_report_t report = AbsMouse5.absmouse5Report;
+        report.x = (int16_t)cursorX;
+        report.y = (int16_t)cursorY;
+        if(!usbHid.sendReport(HID_RID_e::HID_RID_MOUSE, &report, sizeof(report))) return false;
+        AbsMouse5.move((int16_t)cursorX, (int16_t)cursorY);
+        TinyUSBDevices.newReport[TinyUSBDevices_::reportMouse] = false;
+    } else {
+        // Keep the existing radio/Bluetooth routing, including the dongle.
+        AbsMouse5.move((int16_t)cursorX, (int16_t)cursorY);
+        AbsMouse5.report();
+    }
+    return true;
+}
+#endif // CALI_CURSOR_ORBIT_ENABLED
+
 void FW_Common::ExecCalMode(const bool &fromDesktop)
 {
     buttons.ReportDisable();
@@ -496,6 +572,10 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
     int32_t mouseTargetX = mouseCurrentX;
     int32_t mouseTargetY = mouseCurrentY;
     bool mouseMoving = false;
+    #if CALI_CURSOR_ORBIT_ENABLED
+        uint32_t cursorOrbitStamp = micros();
+        uint32_t cursorOrbitPhaseUs = 0;
+    #endif
 
     // Jack in, CaliMan, execute!!!
     SetMode(FW_Const::GunMode_Calibration);
@@ -544,9 +624,32 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
 
             if (mouseCurrentX == mouseTargetX && mouseCurrentY == mouseTargetY) {
                 mouseMoving = false;
+                #if CALI_CURSOR_ORBIT_ENABLED
+                    cursorOrbitStamp = micros();
+                    cursorOrbitPhaseUs = 0;
+                #endif
                 delay(5);  // Optional small delay
             }
         }
+        #if CALI_CURSOR_ORBIT_ENABLED
+        else if(!fromDesktop && buttons.pressed != FW_Const::BtnMask_Trigger) {
+            const uint32_t now = micros();
+            const uint32_t elapsed = now - cursorOrbitStamp; // wrap-safe micros() difference
+            if(elapsed >= CALI_CURSOR_UPDATE_US) {
+                cursorOrbitStamp = now;
+                cursorOrbitPhaseUs = (cursorOrbitPhaseUs + elapsed % CALI_CURSOR_TURN_US) % CALI_CURSOR_TURN_US;
+                int32_t cursorX;
+                int32_t cursorY;
+                CaliCursorPosition(mouseTargetX, mouseTargetY, cursorOrbitPhaseUs, cursorX, cursorY);
+                if((cursorX != mouseCurrentX || cursorY != mouseCurrentY) && CaliCursorReport(cursorX, cursorY)) {
+                    // Travel to the next target starts at the last reported position.
+                    // Camera mouseX/mouseY and the calibration targets are never modified.
+                    mouseCurrentX = cursorX;
+                    mouseCurrentY = cursorY;
+                }
+            }
+        }
+        #endif // CALI_CURSOR_ORBIT_ENABLED
 
         // WebApp IR view: every target shot (centre, the four edges, final centre) is refused
         // while an emitter is missing, so that each reading is taken with all four emitters
@@ -761,6 +864,15 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                             SetMode(FW_Const::GunMode_Calibration);
                             AbsMouse5.move(32768/2, 32768/2);
                             AbsMouse5.report();
+                            #if CALI_CURSOR_ORBIT_ENABLED
+                                if(!fromDesktop) {
+                                    mouseCurrentX = mouseTargetX = 32768 / 2;
+                                    mouseCurrentY = mouseTargetY = 32768 / 2;
+                                    mouseMoving = false;
+                                    cursorOrbitStamp = micros();
+                                    cursorOrbitPhaseUs = 0;
+                                }
+                            #endif
 
                         }
                     }
