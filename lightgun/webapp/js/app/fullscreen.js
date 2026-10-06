@@ -721,7 +721,7 @@
                 header = lines(['', 'Shoot at the top edge of the screen.', 'Shoot at the bottom edge of the screen.',
                     'Shoot at the left edge of the screen.', 'Shoot at the right edge of the screen.',
                     'Shoot at the final target in the center.'][this.stage]);
-                tutorial = lines('The calibration process can be reset by pressing', 'either Button A or Button B, and can be canceled', '      by pressing Button C (if available).      ');
+                tutorial = lines('Calibration can be exited without changes', '  by pressing either Button A, Button B, ', '       or Button C (if available).       ');
                 break;
             default: {
                 stageY = h * 0.15;
