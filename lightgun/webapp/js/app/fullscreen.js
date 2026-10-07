@@ -57,6 +57,8 @@
     const IRTEST_BLOBS_VERSION = 1;
     const IRTEST_BLOBS_LENGTH = 21;
     const IRTEST_NOT_SEEN_COLOR = '#ff3030';
+    const IRTEST_LEGEND_SIZE = 380; // square at 1920x1080, like the approved preview
+    const IRTEST_AIM_SCALE = 25 / 24.42; // calibration geometry, with the existing 50 px circle
     const IRTEST_BLOB_WEAK = 0x02;          // sTestBlobs flag: emitter seen but weak (firmware IR_WEAK_MAX_BRIGHTNESS)
 
     // ----- IR view in the calibration window ------------------------------------------
@@ -374,6 +376,7 @@
             this.canvas = canvas;
             this.retryButton = retry;
             if (this.mode === MODE_CALIBRATE) this._createCaliLegend();
+            if (this.mode === MODE_IRTEST) this._createIRTestLegend();
 
             // The page behind stays out of reach (keyboard focus, screen readers), like a Qt fullscreen window.
             const app = doc.getElementById('app');
@@ -689,7 +692,9 @@
             const heading = this.textScale('heading');
             const sub = this.textScale('sub');
             const red = [225, 25, 25];
-            this._background(ctx, 'dimgray');
+            // The overlay supplies the gray background; the transparent canvas
+            // keeps the moving verification crosshair above the legend beneath it.
+            ctx.clearRect(0, 0, w, h);
 
             const irColor = this._caliIrColor();
             let image = irColor ? loadTintedCrosshair(irColor) : loadCrosshair();
@@ -802,6 +807,8 @@
                 }
             }
 
+            // The crosshair moves freely during verification, including over this panel.
+            this._drawCaliIrPanel(ctx, textRight);
             const [x, y] = this._crosshairPosition();
             const size = CROSSHAIR_SIZE * this.textScale('crosshair');
             if (image.complete && image.naturalWidth) {
@@ -811,7 +818,6 @@
                 this._lastCrosshair = image;
             }
 
-            this._drawCaliIrPanel(ctx, textRight);
             this._updateCaliLegend(textRight);
         }
 
@@ -1129,18 +1135,110 @@
             drawText(ctx, tutorial, w * 0.05, h * 0.9 - size.height / 2, sub);
         }
 
+        /** The test uses the board's applied layout, not unsaved profile edits. */
+        setIRTestLayout(diamond) {
+            if (this.closed || this.mode !== MODE_IRTEST) return;
+            this.options.diamond = !!diamond;
+            this._updateIRTestLegend();
+        }
+
+        _createIRTestLegend() {
+            const legend = doc.createElement('aside');
+            legend.className = 'ir-test-legend';
+            legend.innerHTML = `<h3 data-ir-key="IR Camera Test Legend"></h3>
+                <div class="ir-legend-body">
+                    <div class="ir-layouts">
+                        <div class="ir-layout" data-layout="square"><span>Square</span><div class="ir-layout-map ir-map-square" aria-hidden="true"><i class="ir-led ir-green ir-tl"></i><i class="ir-led ir-green ir-tr"></i><i class="ir-led ir-cyan ir-bl"></i><i class="ir-led ir-cyan ir-br"></i></div></div>
+                        <div class="ir-layout" data-layout="diamond"><span>Diamond</span><div class="ir-layout-map ir-map-diamond" aria-hidden="true"><i class="ir-led ir-green ir-top"></i><i class="ir-led ir-green ir-left"></i><i class="ir-led ir-cyan ir-bottom"></i><i class="ir-led ir-cyan ir-right"></i></div></div>
+                    </div>
+                    <div class="ir-measures">
+                        <section><h4 data-ir-key="IR signal intensity"></h4><div class="ir-signal-samples" aria-hidden="true"></div><div class="ir-signal-samples ir-signal-cyan" aria-hidden="true"></div><div class="ir-axis"><span data-ir-key="Weak"></span><span data-ir-key="Strong"></span></div></section>
+                        <section><h4 data-ir-key="IR point size"></h4><div class="ir-size-samples" aria-hidden="true"></div><div class="ir-axis"><span data-ir-key="Small"></span><span data-ir-key="Large"></span></div></section>
+                    </div>
+                    <div class="ir-missing-key"><div class="ir-missing-samples" aria-hidden="true"><span class="ir-mark ir-green"><i></i><i></i></span><span class="ir-mark ir-cyan"><i></i><i></i></span></div><div><strong data-ir-key="Emitter not detected"></strong><small data-ir-key="Reconstructed position"></small></div></div>
+                    <div class="ir-references">
+                        <div><img class="ir-aim-key" alt=""><span data-ir-key="Lightgun aim"></span></div>
+                        <div><span class="ir-ring ir-red" aria-hidden="true"></span><span data-ir-key="Emitter centre"></span></div>
+                        <div><span class="ir-outline" aria-hidden="true"></span><span data-ir-key="Lines joining IR points"></span></div>
+                    </div>
+                    <p class="ir-note" data-ir-key="Green and cyan identify emitter positions, not signal quality."></p>
+                </div>`;
+            for (const row of legend.querySelectorAll('.ir-signal-samples')) {
+                for (let i = 0; i < 5; ++i) row.append(doc.createElement('i'));
+            }
+            for (let i = 0; i < 5; ++i) legend.querySelector('.ir-size-samples').append(doc.createElement('i'));
+            legend.querySelector('.ir-aim-key').src = 'data:image/svg+xml;charset=utf-8,' +
+                encodeURIComponent(CROSSHAIR_SVG.replace(/#ff8758/g, '#a0a0a4'));
+            this.overlay.append(legend);
+            this.irTestLegend = legend;
+        }
+
+        _updateIRTestLegend() {
+            const legend = this.irTestLegend;
+            if (!legend) return;
+            const margin = Math.min(24, this.width / 80);
+            const side = Math.min(IRTEST_LEGEND_SIZE, this.width * 0.26, this.height * 0.45);
+            // Only on narrow windows, keep the panel above the existing ESC instruction.
+            const exitWidth = textSize(lines('Press ESC to exit test mode.'), this.textScale('sub')).width;
+            const bottom = margin + side + 8 > (this.width - exitWidth) / 2 ?
+                Math.max(margin, this.height * 0.15 + 8) : margin;
+            legend.style.left = `${margin}px`;
+            legend.style.bottom = `${bottom}px`;
+            legend.style.transform = `scale(${side / IRTEST_LEGEND_SIZE})`;
+            const language = OF.i18n.currentLang;
+            if (this._irLegendLanguage !== language) {
+                legend.lang = language;
+                legend.setAttribute('aria-label', OF.i18n.t('IR Camera Test Legend'));
+                legend.querySelectorAll('[data-ir-key]').forEach(el => { el.textContent = OF.i18n.t(el.dataset.irKey); });
+                this._irLegendLanguage = language;
+            }
+            const layout = this.options.diamond ? 'diamond' : 'square';
+            legend.querySelectorAll('.ir-layout').forEach(el => {
+                const active = el.dataset.layout === layout;
+                el.classList.toggle('active', active);
+                if (active) el.setAttribute('aria-current', 'true');
+                else el.removeAttribute('aria-current');
+            });
+        }
+
+        /** Same crosshair as calibration, without the separate rotating ring. */
+        _drawIRTestAim(ctx, x, y) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(IRTEST_AIM_SCALE, IRTEST_AIM_SCALE);
+            ctx.strokeStyle = '#a0a0a4';
+            ctx.lineCap = 'square';
+            ctx.lineWidth = 2.4;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 24.42, 24.42, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.lineWidth = 1.44;
+            ctx.beginPath();
+            ctx.moveTo(-30, 0); ctx.lineTo(-18.84, 0);
+            ctx.moveTo(0, -29.99); ctx.lineTo(0, -18.83);
+            ctx.moveTo(29.99, 0); ctx.lineTo(18.83, 0);
+            ctx.moveTo(0, 29.99); ctx.lineTo(0, 18.83);
+            ctx.moveTo(-3.78, 0); ctx.lineTo(3.8, 0);
+            ctx.moveTo(0, -3.78); ctx.lineTo(0, 3.8);
+            ctx.stroke();
+            ctx.restore();
+        }
+
         _drawIRTest(ctx) {
             const w = this.width;
             const h = this.height;
             const heading = this.textScale('heading');
             const sub = this.textScale('sub');
-            this._background(ctx, 'midnightblue');
+            // Transparent live layer: the overlay supplies the blue background and
+            // the legend below, so tracked points and lines can pass over it.
+            ctx.clearRect(0, 0, w, h);
 
             const header = lines('     The array of shapes displayed onscreen     ', 'represents the emitters that the camera can see.',
-                '   The colored points should move opposite to   ', '     your aim, and the gray circle should be    ', '          lining up with your gun sight.        ');
+                '   The colored points should move opposite to   ', '    your aim, and the gray crosshair should be  ', '          lining up with your gun sight.        ');
             const headerSize = textSize(header, heading);
             this._centered(ctx, header, h * 0.1 - headerSize.height / 2, heading);
             this._centered(ctx, lines('Press ESC to exit test mode.'), h * 0.85, sub);
+            this._updateIRTestLegend();
 
             const c = this.coords;
             if (!c) return;
@@ -1183,7 +1281,10 @@
             } else {
                 points.forEach((p, i) => circle(offsetX, offsetY, scale, scale, p.x, p.y, colors[i], p.outside));
             }
-            circle(0, 0, scaleX, scaleY, c[8], c[9], '#a0a0a4', false);
+            ctx.save();
+            ctx.scale(scaleX, scaleY); // keep the existing full-screen aim coordinate mapping
+            this._drawIRTestAim(ctx, c[8], c[9]);
+            ctx.restore();
             circle(offsetX, offsetY, scale, scale, c[10], c[11], '#ff0000', false);
 
             // The emitters box is added last to the Qt scene: drawn over the circles.

@@ -643,6 +643,8 @@
                     const selection = payload[0];
                     if (selection !== this.state.cur.selectedProfile && selection < this.state.profileCount)
                         this.state.setSelectedProfile(selection);
+                    if (this.window && this.window.mode === OF.FullscreenWindow.MODE_IRTEST)
+                        this.window.setIRTestLayout(this.state.orig.profiles[this.state.cur.selectedProfile].layoutType === this.S.layoutTypes_e.layoutDiamond);
                     this.refresh();
                 }
                 break;
@@ -874,7 +876,10 @@
             }
             if (this.window) this.window.shutdown();
             this.irTestActive = true;
-            const win = new OF.FullscreenWindow(OF.FullscreenWindow.MODE_IRTEST, { onExit: (mode) => this.onWindowExit(win, mode) });
+            const win = new OF.FullscreenWindow(OF.FullscreenWindow.MODE_IRTEST, {
+                onExit: (mode) => this.onWindowExit(win, mode),
+                diamond: this.state.orig.profiles[this.state.cur.selectedProfile].layoutType === this.S.layoutTypes_e.layoutDiamond,
+            });
             this.window = win;
             win.open();
             this.refresh();

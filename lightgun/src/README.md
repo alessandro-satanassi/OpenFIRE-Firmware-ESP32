@@ -272,7 +272,7 @@ With firmware 7.0.0, each emitter circle also shows what the camera measures:
 - **Fill:** brightest at the centre (peak brightness of the spot) and fading towards the edge (average brightness). A full circle means a bright, well detected LED; an almost empty circle means a weak LED close to the detection limit.
 - **Dashed circle with a red X:** that emitter is not seen by the camera; its position is only estimated.
 
-The gray circle shows where the gun is aiming and the red circle marks the centre of the four emitters. With the DFRobot/Wii camera, size and brightness come from the camera's full data format and are converted to the same scale. With older firmware the classic circles are shown.
+The gray crosshair shows where the gun is aiming and the red circle marks the centre of the four emitters. The bottom-left legend explains the symbols, brightness and size of the IR points; the layout used by the test (Square or Diamond) is underlined. Green and cyan identify emitter positions, not signal quality. With the DFRobot/Wii camera, size and brightness come from the camera's full data format and are converted to the same scale. With older firmware the classic emitter circles are shown.
 
 <p align="center">
   <img src="../docs/img/webapp_ir_test.png" alt="IR camera test in the WebApp: three emitters seen, with circles of different size and brightness, and one emitter not seen, marked with a red X" width="70%">
@@ -635,7 +635,7 @@ Con il firmware 7.0.0 ogni cerchio degli emettitori mostra anche ciò che la tel
 - **Riempimento:** più intenso al centro (luminosità di picco della macchia) e sfumato verso il bordo (luminosità media). Un cerchio pieno indica un LED luminoso e ben rilevato; un cerchio quasi vuoto indica un LED debole, vicino al limite di rilevamento.
 - **Cerchio tratteggiato con una X rossa:** quell'emettitore non è visto dalla telecamera; la sua posizione è solo stimata.
 
-Il cerchio grigio indica dove sta puntando la pistola e il cerchio rosso il centro dei quattro emettitori. Con la telecamera DFRobot/Wii dimensione e luminosità arrivano dal formato dati completo della telecamera e sono convertite sulla stessa scala. Con firmware precedenti vengono mostrati i cerchi classici.
+Il mirino grigio indica dove sta puntando la pistola e il cerchio rosso il centro dei quattro emettitori. La legenda in basso a sinistra spiega i simboli, la luminosità e la dimensione dei punti IR; il layout utilizzato dal test (Square o Diamond) è sottolineato. Verde e ciano indicano la posizione degli emettitori, non la qualità del segnale. Con la telecamera DFRobot/Wii dimensione e luminosità arrivano dal formato dati completo della telecamera e sono convertite sulla stessa scala. Con firmware precedenti vengono mostrati i cerchi classici degli emettitori.
 
 <p align="center">
   <img src="../docs/img/webapp_ir_test.png" alt="Test della telecamera IR nella WebApp: tre emettitori visti, con cerchi di dimensione e luminosità diverse, e un emettitore non visto, segnato con una X rossa" width="70%">

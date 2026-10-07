@@ -49,7 +49,7 @@
     "     The array of shapes displayed onscreen     ": "     The array of shapes displayed onscreen     ",
     "represents the emitters that the camera can see.": "represents the emitters that the camera can see.",
     "   The colored points should move opposite to   ": "   The colored points should move opposite to   ",
-    "     your aim, and the gray circle should be    ": "     your aim, and the gray circle should be    ",
+    "    your aim, and the gray crosshair should be  ": "    your aim, and the gray crosshair should be  ",
     "          lining up with your gun sight.        ": "          lining up with your gun sight.        ",
     "Press ESC to exit test mode.": "Press ESC to exit test mode.",
     "Initialize Calibration:": "Initialize Calibration:",
@@ -532,5 +532,12 @@
     "Carry on": "Carry on",
     "Go back": "Go back",
     "Stand in front of the centre of the screen,": "Stand in front of the centre of the screen,",
-    "without rotating the lightgun.": "without rotating the lightgun."
+    "without rotating the lightgun.": "without rotating the lightgun.",
+    "IR Camera Test Legend": "IR Camera Test Legend",
+    "Emitter not detected": "Emitter not detected",
+    "Reconstructed position": "Reconstructed position",
+    "Lightgun aim": "Lightgun aim",
+    "Emitter centre": "Emitter centre",
+    "Lines joining IR points": "Lines joining IR points",
+    "Green and cyan identify emitter positions, not signal quality.": "Green and cyan identify emitter positions, not signal quality."
 }

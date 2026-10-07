@@ -49,7 +49,7 @@
     "     The array of shapes displayed onscreen     ": "  L'insieme di forme visualizzato sullo schermo ",
     "represents the emitters that the camera can see.": " rappresenta gli emettitori visti dalla camera. ",
     "   The colored points should move opposite to   ": " I punti colorati devono muoversi al contrario  ",
-    "     your aim, and the gray circle should be    ": "    della tua mira, e il cerchio grigio deve    ",
+    "    your aim, and the gray crosshair should be  ": "    della tua mira, e il mirino grigio deve     ",
     "          lining up with your gun sight.        ": "    allinearsi con il mirino della tua arma.    ",
     "Press ESC to exit test mode.": "    Premi ESC per uscire.   ",
     "Initialize Calibration:": "  Inizia calibrazione: ",
@@ -532,5 +532,12 @@
     "Carry on": "Continua",
     "Go back": "Torna indietro",
     "Stand in front of the centre of the screen,": "Posizionati centralmente di fronte allo schermo,",
-    "without rotating the lightgun.": "senza ruotare la lightgun."
+    "without rotating the lightgun.": "senza ruotare la lightgun.",
+    "IR Camera Test Legend": "Legenda Test CAM IR",
+    "Emitter not detected": "Emettitore non rilevato",
+    "Reconstructed position": "Posizione ricostruita",
+    "Lightgun aim": "Puntamento della lightgun",
+    "Emitter centre": "Centro degli emettitori",
+    "Lines joining IR points": "Linee che collegano i punti IR",
+    "Green and cyan identify emitter positions, not signal quality.": "I colori verde e ciano degli emettitori indicano la posizione, non la qualità del segnale."
 }
