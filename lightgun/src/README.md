@@ -100,7 +100,7 @@ Switch on the gun holding **B** for about 2 seconds (see [Special boot modes](#s
 
 - **Wi-Fi, phones included:** join the **OpenFIRE_Config** network. If a welcome page appears, choose to stay connected even without Internet (on some Android phones, the menu option to use the network as it is). Then open your **normal browser**, not the welcome window, and go to **http://openfire.local/**, or to **http://192.168.4.1/** if the name does not open.
 - **USB cable:** on a computer that supports USB networking (NCM), connect the gun directly and open **http://192.168.7.1/** (**http://openfire.local/** may also work). Wi-Fi is not needed.
-- **Battery-powered gun:** keep the dongle plugged in and paired; there is no need to connect the gun to the computer with a USB cable to configure it over Wi-Fi. The wireless link remains available, but connecting the WebApp puts the gun in configuration mode: normal play is suspended until you disconnect.
+- **Battery-powered gun:** keep the dongle plugged in and paired: without a USB cable, the gun completes its startup, and turns on the **OpenFIRE_Config** network, only after connecting to the dongle. No USB cable is needed to configure it over Wi-Fi. Connecting the WebApp puts the gun in configuration mode: normal play is suspended until you disconnect.
 - **Serial port:** in this mode the gun's USB serial port is replaced by the network connection. Online configuration and serial programs such as MAMEHOOKER are not available on the gun's USB port until you restart the gun normally. The dongle keeps its serial port, but do not use it with another program while the WebApp is connected to the gun.
 
 Use one configuration page at a time. When you have finished, save, close the page and **restart the gun without holding any buttons** to return to normal play.
@@ -254,7 +254,7 @@ At the first startup after a new or clean installation, pull the trigger once to
 
 With an OLED display, the screen below the status bar guides you: a small TV with a crosshair shows where the current target is on your monitor, together with the step (**1/6** to **6/6**) and `SHOOT`. At the end it shows `CHECK AIM`, `TRIGGER: CONFIRM` and `A/B: REPEAT`. The white dots on the display are the emitter positions the gun is tracking; some may be estimated, so four dots do not guarantee that the camera really sees all four emitters. The checks on the emitters are only available in the WebApp and desktop App windows.
 
-The first calibration performed from the gun, when no calibration is stored, is **saved automatically** when you confirm it. A calibration started from pause mode is applied in RAM: **save it before switching off**, with Start + Select in Hotkey pause mode, with Save Settings in the Simple Pause Menu, or from the WebApp. Otherwise the previous saved calibration is restored at the next startup.
+The first calibration performed from the gun, when no calibration is stored, is **saved automatically** when you confirm it. A calibration started from pause mode stays active only until you switch the gun off: **save it**, with Start + Select in Hotkey pause mode, with Save Settings in the Simple Pause Menu, or from the WebApp. Otherwise the previous saved calibration is restored at the next startup.
 
 ### IR Camera Sensitivity
 The camera sensitivity can be adjusted per profile. Keep it as high as possible: too low and the pointer loses precision, too high and the camera may pick up reflections that make the pointer jump. The best value depends on your setup: emitter brightness, distance, camera lens and shiny surfaces nearby.
@@ -456,7 +456,7 @@ Accendi la pistola tenendo premuto **B** per circa 2 secondi (vedi [Modalità sp
 
 - **Wi-Fi, anche da telefono:** collegati alla rete **OpenFIRE_Config**. Se compare una pagina di benvenuto, scegli di restare connesso anche senza Internet (su alcuni Android: la voce del menu per usare la rete così com'è). Poi apri il **browser normale**, non la finestra di benvenuto, e vai su **http://openfire.local/**, oppure su **http://192.168.4.1/** se il nome non si apre.
 - **Cavo USB:** su un computer che supporta la rete via USB (NCM), collega direttamente la pistola e apri **http://192.168.7.1/** (può funzionare anche **http://openfire.local/**). Il Wi-Fi non serve.
-- **Pistola a batteria:** tieni il dongle inserito e associato; per configurarla via Wi-Fi non serve collegare la pistola al computer con un cavo USB. Il collegamento wireless resta disponibile, ma quando colleghi la WebApp la pistola entra in modalità configurazione: il gioco normale è sospeso fino alla disconnessione.
+- **Pistola a batteria:** tieni il dongle inserito e associato: senza cavo USB la pistola completa l'avvio, e attiva la rete **OpenFIRE_Config**, solo dopo essersi collegata al dongle. Per configurarla via Wi-Fi non serve il cavo USB. Quando colleghi la WebApp la pistola entra in modalità configurazione: il gioco normale è sospeso fino alla disconnessione.
 - **Porta seriale:** in questa modalità la porta seriale USB della pistola è sostituita dal collegamento di rete. La configurazione online e i programmi seriali come MAMEHOOKER non sono disponibili sulla porta USB della pistola finché non la riavvii normalmente. Il dongle mantiene la propria porta seriale, ma non usarla con un altro programma mentre la WebApp è collegata alla pistola.
 
 Usa una sola pagina di configurazione alla volta. Al termine salva, chiudi la pagina e **riavvia la pistola senza tenere premuti pulsanti** per tornare al gioco normale.
@@ -624,7 +624,7 @@ Al primo avvio dopo una nuova installazione o un'installazione pulita, premi il 
 
 Con un display OLED, lo schermo sotto la barra di stato ti guida: una piccola TV con un mirino mostra dove si trova il bersaglio corrente sul monitor, insieme al passo (da **1/6** a **6/6**) e a `SHOOT`. Alla fine mostra `CHECK AIM`, `TRIGGER: CONFIRM` e `A/B: REPEAT`. I punti bianchi sul display sono le posizioni degli emettitori seguite dalla pistola; alcune possono essere stimate, quindi quattro punti non garantiscono che la telecamera veda davvero tutti e quattro gli emettitori. I controlli sugli emettitori sono disponibili solo nelle finestre della WebApp e dell'App desktop.
 
-La prima calibrazione eseguita dalla pistola, quando non ne è presente una salvata, viene **memorizzata automaticamente** alla conferma. Una calibrazione avviata dalla pausa viene applicata in RAM: **salvala prima di spegnere**, con Start + Select nella modalità pausa Hotkey, con Save Settings nel Menu di Pausa Semplificato, oppure dalla WebApp. Altrimenti al riavvio viene ripristinata la calibrazione salvata in precedenza.
+La prima calibrazione eseguita dalla pistola, quando non ne è presente una salvata, viene **memorizzata automaticamente** alla conferma. Una calibrazione avviata dalla pausa resta attiva solo fino allo spegnimento: **salvala**, con Start + Select nella modalità pausa Hotkey, con Save Settings nel Menu di Pausa Semplificato, oppure dalla WebApp. Altrimenti al riavvio viene ripristinata la calibrazione salvata in precedenza.
 
 <a id="sensibilità-della-telecamera-ir-italiano"></a>
 

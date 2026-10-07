@@ -43,7 +43,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 * Hotkey pause mode: the Left/Right rumble and solenoid toggles now work when no hardware switch is fitted, as in the Simple Pause Menu, and are ignored when a hardware switch is fitted or the rumble/solenoid output is not mapped.
-* After the first calibration started from the gun on a new or clean-installed board, the gun saves it automatically and returns to normal operation as soon as you confirm the calibration. Calibrations started from pause mode must be saved separately.
+* After the first calibration started from the gun on a new or clean-installed board, the gun returns to normal operation as soon as you confirm the calibration. As before, this first calibration is saved automatically; calibrations started from pause mode must be saved separately.
 
 ### Migration from 6.2.1
 
@@ -105,7 +105,7 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 ### Correzioni
 
 * Modalità pausa Hotkey: i comandi Sinistra/Destra per attivare/disattivare rumble e solenoide ora funzionano quando non è montato un interruttore fisico, come nel Menu di Pausa Semplificato, e vengono ignorati se l'interruttore fisico è montato o se l'uscita rumble/solenoide non è mappata.
-* Dopo la prima calibrazione avviata dalla pistola su una scheda nuova o dopo un'installazione pulita, la pistola la salva automaticamente e torna al funzionamento normale appena confermi la calibrazione. Le calibrazioni avviate dalla pausa vanno salvate separatamente.
+* Dopo la prima calibrazione avviata dalla pistola su una scheda nuova o dopo un'installazione pulita, la pistola torna al funzionamento normale appena confermi la calibrazione. Come in precedenza, questa prima calibrazione viene salvata automaticamente; quelle avviate dalla pausa vanno salvate separatamente.
 
 ### Passaggio dalla 6.2.1
 

@@ -35,7 +35,7 @@ New to OpenFIRE? Start from [Getting Started](https://github.com/alessandro-sata
 
 * Refined IR tracking and faster recovery of temporarily hidden LEDs; the Square layout supports vertical and wide rectangles.
 * Hotkey pause mode: the rumble/solenoid toggles now work when no hardware switch is fitted.
-* After the first calibration started from the gun on a new board, the gun saves it automatically and returns to normal operation once you confirm it. Calibrations started from pause mode must be saved separately.
+* After the first calibration started from the gun on a new board, the gun returns to normal operation once you confirm it. As before, this first calibration is saved automatically; calibrations started from pause mode must be saved separately.
 * Rewritten bilingual user guides: see the [operating manual](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/lightgun/src/README.md#english-version).
 
 ### Installation and Usage Notes
@@ -253,7 +253,7 @@ Non conosci ancora OpenFIRE? Parti dai [Primi passi](https://github.com/alessand
 
 * Tracciamento IR affinato e recupero più rapido dei LED temporaneamente nascosti; il layout Square supporta rettangoli verticali e larghi.
 * Modalità pausa Hotkey: i comandi per rumble e solenoide ora funzionano quando non è montato un interruttore fisico.
-* Dopo la prima calibrazione avviata dalla pistola su una scheda nuova, la pistola la salva automaticamente e torna al funzionamento normale appena la confermi. Le calibrazioni avviate dalla pausa vanno salvate separatamente.
+* Dopo la prima calibrazione avviata dalla pistola su una scheda nuova, la pistola torna al funzionamento normale appena la confermi. Come in precedenza, questa prima calibrazione viene salvata automaticamente; quelle avviate dalla pausa vanno salvate separatamente.
 * Guide utente bilingui riscritte: consulta il [manuale operativo](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/lightgun/src/README.md#versione-italiana).
 
 ### Note di installazione e utilizzo
