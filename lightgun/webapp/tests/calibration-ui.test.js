@@ -63,6 +63,7 @@ test('six dots track every target and verification, independently of IR quality'
             assert.equal(arcs.length, 6); // progress never draws a shot-confirmation ring
             arcs.slice(0, 6).forEach((dot, i) => {
                 assert.equal(dot.x, width / 2 + (i - 2.5) * 22 * scale);
+                assert.equal(dot.y, 188 - 52 * scale);
                 assert.equal(dot.radius, (i === stage ? 8 : 6) * scale);
                 assert.equal(dot.fill, i === stage ? '#00dc00' : i < stage ? 'rgb(160,160,164)' : undefined);
                 assert.equal(dot.stroke, i > stage ? 'rgb(160,160,164)' : undefined);
@@ -124,25 +125,49 @@ test('all six calibration values retain their types and values; final info does 
     }
 });
 
-test('panel is square and text-free for Square/Diamond, preserving emitter geometry and missing marks', () => {
-    for (const diamond of [false, true]) {
-        const s = setup(), w = s.win;
+test('panel adds a translated central label for Square/Diamond, preserving emitter geometry and missing marks', () => {
+    for (const language of ['en', 'it']) for (const diamond of [false, true]) {
+        const s = setup(language), w = s.win;
         w.options.diamond = diamond; w.coordsTime = 1000000;
         w.coords = [0, 0, 0, 0, 1, 0, 0, 0]; // BL / bottom missing
-        const emitters = [], curves = [];
+        const emitters = [], curves = [], labels = [];
         w._drawEmitter = (...args) => emitters.push(args);
-        const ctx = new Proxy({ quadraticCurveTo(...args) { curves.push(args); } }, { get: (o, k) => k in o ? o[k] : () => {} });
+        const ctx = new Proxy({ quadraticCurveTo(...args) { curves.push(args); },
+            fillText(text, x, y) { labels.push({ text, x, y, color: this.fillStyle, align: this.textAlign, font: this.font }); }
+        }, { get: (o, k) => k in o ? o[k] : () => {} });
         w._drawCaliIrPanel(ctx, 960);
         const side = 1280 * 0.14, margin = 24, x = 1280 - margin - side, y = 800 - margin - side;
         const d = side * 0.25;
         const places = diamond ? [[side / 2, d], [d, side / 2], [side / 2, side - d], [side - d, side / 2]] :
             [[d, d], [side - d, d], [d, side - d], [side - d, side - d]];
         assert.equal(curves.length, 4); assert.equal(emitters.length, 4);
+        assert.deepEqual(labels.map(label => label.text), language === 'it' ? ['LED', 'IR'] : ['IR', 'LEDs']);
+        labels.forEach((label, i) => {
+            assert.equal(label.x, x + side / 2);
+            assert.equal(label.y, y + side / 2 + (i * 16 - 8) * side / 268.8);
+            assert.equal(label.align, 'center'); assert.equal(label.color, '#dedede');
+            assert.ok(label.font.includes('Segoe UI'));
+        });
         emitters.forEach((args, i) => {
             assert.equal(args[1], x + places[i][0]); assert.equal(args[2], y + places[i][1]);
             assert.equal(args[5].seen, i !== 2);
             if (i === 2) { assert.equal(args[4], '#ff3030'); assert.equal(args[3], side * 0.09 / 25); }
         });
+    }
+});
+
+test('raised progress dots remain below the upper target at the supported desktop scales', () => {
+    for (const [width, height] of [[800, 600], [1280, 720], [1920, 1080], [2560, 1440]]) {
+        const s = setup(), w = s.win;
+        w.width = width; w.height = height; w.stage = 1;
+        const stageTop = height * .25 - 8 * w.textScale('heading') / 2;
+        const arcs = [], noop = () => {};
+        const ctx = new Proxy({ arc(x, y, r) { arcs.push({ x, y, r }); } }, { get: (o, k) => k in o ? o[k] : noop });
+        w._drawCalibrationProgress(ctx, stageTop);
+        const radius = 24.42 * w.textScale('crosshair') * 48 / 39;
+        const stroke = 2.1 * w.textScale('crosshair') / 2;
+        assert.equal(arcs.length, 6);
+        assert(arcs.every(dot => dot.y - dot.r > radius + stroke + 10));
     }
 });
 

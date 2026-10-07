@@ -874,7 +874,7 @@
         /** Six targets: centre, top, bottom, left, right, centre; green is progress, not IR quality. */
         _drawCalibrationProgress(ctx, stageTop) {
             const scale = this.textScale('sub') / 2;
-            const y = stageTop - 22 * scale;
+            const y = stageTop - 52 * scale; // 45 px higher at 1080p; clear of the upper target
             const x = this.width / 2 - 2.5 * 22 * scale;
             ctx.save();
             for (let i = 0; i < 6; ++i) {
@@ -976,7 +976,7 @@
         }
 
         /**
-         * Calibration: a square, rounded IR diagram at the bottom right, without text.
+         * Calibration: a square, rounded IR diagram with a small central label.
          * Drawn only while the firmware sends the coordinates (caliFlagIrView).
          */
         _drawCaliIrPanel(ctx, textRight) {
@@ -1014,6 +1014,19 @@
             ctx.lineWidth = 2;
             ctx.stroke();
             ctx.clip();
+
+            // In the centre there is room for two short lines, even with maximum-size
+            // Diamond blobs. Draw before the emitters so their appearance stays unchanged.
+            const labelScale = side / CALI_LEGEND_SIZE;
+            ctx.save();
+            ctx.fillStyle = '#dedede';
+            ctx.font = `500 ${14 * labelScale}px "Segoe UI", Arial, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            OF.i18n.t('IR LEDs').split(' ').slice(0, 2).forEach((line, i) => {
+                ctx.fillText(line, x0 + side / 2, y0 + side / 2 + (i * 16 - 8) * labelScale);
+            });
+            ctx.restore();
 
             // Each emitter at its place in the layout, on a virtual square: Square at the corners
             // (sTestCoords order TL, TR, BL, BR), Diamond at the middle of the sides (Diamond slots:
