@@ -71,6 +71,7 @@
     const CALI_IR_WARNING_TIME = 4000;     // ms the refusal message stays on screen
     const CALI_IR_MISSING = 0x01;          // sCaliIrWarning bit
     const CALI_IR_PANEL_COLOR = [160, 160, 164]; // panel border and completed progress dots, fixed
+    const CALI_LEGEND_SIZE = 268.8;        // same square as the IR panel at 1920x1080
     // Colour of each emitter seen in the panel, and of the crosshair from the emitter with the
     // lowest brightness; missing = intense red (the crosshair only; the panel keeps the dashed
     // circle). Continuous scale of the brightness, without jumps: red at the camera threshold
@@ -372,6 +373,7 @@
             this.overlay = overlay;
             this.canvas = canvas;
             this.retryButton = retry;
+            if (this.mode === MODE_CALIBRATE) this._createCaliLegend();
 
             // The page behind stays out of reach (keyboard focus, screen readers), like a Qt fullscreen window.
             const app = doc.getElementById('app');
@@ -810,6 +812,63 @@
             }
 
             this._drawCaliIrPanel(ctx, textRight);
+            this._updateCaliLegend(textRight);
+        }
+
+        /** Static help only: never consumes IR data or changes the calibration state. */
+        _createCaliLegend() {
+            const legend = doc.createElement('aside');
+            legend.className = 'calibration-legend';
+            legend.innerHTML = `<h3 data-legend-key="Legend"></h3>
+                <section><h4 data-legend-key="IR signal intensity"></h4>
+                    <div class="legend-color-bar"></div><div class="legend-crosshairs" aria-hidden="true"></div>
+                    <div class="legend-labels"><span data-legend-key="Weak"></span><span data-legend-key="Strong"></span></div></section>
+                <section class="legend-blob-size"><h4 data-legend-key="IR point size"></h4>
+                    <div class="legend-circles" aria-hidden="true"></div>
+                    <div class="legend-labels"><span data-legend-key="Small"></span><span data-legend-key="Large"></span></div></section>
+                <div class="legend-missing"><span class="legend-missing-mark" aria-hidden="true"></span><span data-legend-key="IR not detected"></span></div>
+                <div class="legend-notes"><p data-legend-key="The crosshair colour indicates the emitter with the weakest signal."></p>
+                    <p data-legend-key="All 4 emitters must be detected to proceed."></p></div>`;
+            const crosshairs = legend.querySelector('.legend-crosshairs');
+            const circles = legend.querySelector('.legend-circles');
+            const diameters = [3, 5, 8, 11, 15, 19, 23];
+            diameters.forEach((diameter, i) => {
+                const image = doc.createElement('img');
+                image.alt = '';
+                image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(CROSSHAIR_SVG.replace('#ff8758',
+                    rgbHex(caliIrEmitterColor({ max: CALI_IR_BRIGHTNESS_MIN + (CALI_IR_FULL_GREEN - CALI_IR_BRIGHTNESS_MIN) * i / 6 }))));
+                crosshairs.append(image);
+                const cell = doc.createElement('span');
+                const circle = doc.createElement('i');
+                circle.style.width = circle.style.height = `${diameter}px`;
+                cell.append(circle);
+                circles.append(cell);
+            });
+            this.overlay.append(legend);
+            this.caliLegend = legend;
+        }
+
+        _caliIrPanelSide(textRight) {
+            const free = this.width - textRight - 2 * 12 * this.textScale('small');
+            return Math.max(CALI_IR_PANEL_MIN_WIDTH, Math.min(this.width * CALI_IR_PANEL_WIDTH, CALI_IR_PANEL_MAX_WIDTH, free));
+        }
+
+        /** Stays visible from the first target through verification, including an IR-data gap. */
+        _updateCaliLegend(textRight) {
+            const legend = this.caliLegend;
+            if (!legend) return;
+            const side = this._caliIrPanelSide(textRight);
+            const margin = 12 * this.textScale('small');
+            legend.style.left = `${margin}px`;
+            legend.style.bottom = `${margin}px`;
+            legend.style.transform = `scale(${side / CALI_LEGEND_SIZE})`;
+            const language = OF.i18n.currentLang || 'en';
+            if (this._legendLanguage !== language) {
+                legend.setAttribute('lang', language);
+                legend.setAttribute('aria-label', OF.i18n.t('Legend'));
+                legend.querySelectorAll('[data-legend-key]').forEach((el) => { el.textContent = OF.i18n.t(el.dataset.legendKey); });
+                this._legendLanguage = language;
+            }
         }
 
         /** Six targets: centre, top, bottom, left, right, centre; green is progress, not IR quality. */
@@ -927,9 +986,8 @@
             const h = this.height;
             const small = this.textScale('small');
             // Right of the tutorial text (bottom centre), which it must not cover on small screens.
-            const free = w - textRight - 2 * 12 * small;
             // The emitters are drawn in their layout on a square of this side, not where the camera sees them.
-            const side = Math.max(CALI_IR_PANEL_MIN_WIDTH, Math.min(w * CALI_IR_PANEL_WIDTH, CALI_IR_PANEL_MAX_WIDTH, free));
+            const side = this._caliIrPanelSide(textRight);
             const margin = 12 * small;
 
             const blobs = this._freshBlobs();

@@ -13,7 +13,7 @@ function setup(language = 'en') {
     const translations = JSON.parse(fs.readFileSync(path.join(__dirname, '../lang/', language + '.json'), 'utf8'));
     const noop = () => {};
     const root = {
-        OF: { i18n: { t: (key) => translations[key] || key } },
+        OF: { i18n: { currentLang: language, t: (key) => translations[key] || key } },
         document: { removeEventListener: noop, getElementById: () => null },
         location: { search: '' }, Date: { now: () => now },
         matchMedia: () => ({ matches: reduce }), removeEventListener: noop,
@@ -402,5 +402,50 @@ test('posture reminder remains white in both incomplete and malformed verificati
         const { reminder } = drawCalibration(s);
         assert.ok(reminder); assert.equal(reminder.tint, undefined);
         assert.equal(s.win.values, values);
+    }
+});
+
+test('static legend follows the existing panel size without requiring IR samples or adding timers', () => {
+    for (const language of ['en', 'it']) {
+        const s = setup(language), w = s.win;
+        const nodes = ['Legend', 'IR signal intensity', 'Weak', 'Strong', 'IR point size', 'Small', 'Large',
+            'IR not detected', 'The crosshair colour indicates the emitter with the weakest signal.',
+            'All 4 emitters must be detected to proceed.'].map(key => ({ dataset: { legendKey: key }, textContent: '' }));
+        const attributes = {};
+        w.caliLegend = { style: {}, setAttribute: (key, value) => { attributes[key] = value; }, querySelectorAll: () => nodes };
+        for (const [width, height] of [[1280, 720], [1920, 1080], [2560, 1440]]) {
+            w.width = width; w.height = height;
+            for (let stage = 0; stage <= 6; ++stage) {
+                w.stage = stage;
+                const values = Object.assign({}, w.values), timers = s.timers.size;
+                w._updateCaliLegend(width * .8);
+                const margin = 12 * w.textScale('small');
+                const side = Math.max(140, Math.min(width * .14, 300, width * .2 - 2 * margin));
+                assert.ok(Math.abs(Number(w.caliLegend.style.transform.slice(6, -1)) * 268.8 - side) < 1e-7);
+                assert.equal(w.caliLegend.style.left, margin + 'px');
+                assert.equal(w.caliLegend.style.bottom, margin + 'px');
+                assert.equal(attributes.lang, language);
+                assert.equal(nodes[0].textContent, language === 'it' ? 'Legenda' : 'Legend');
+                assert.equal(nodes[1].textContent, language === 'it' ? 'Intensità segnale IR' : 'IR signal intensity');
+                assert.equal(nodes[7].textContent, language === 'it' ? 'IR non rilevato' : 'IR not detected');
+                assert.equal(s.timers.size, timers);
+                assert.deepEqual(JSON.parse(JSON.stringify(w.values)), values);
+                assert.equal(w.coords, null);
+            }
+        }
+    }
+});
+
+test('the legend is not updated in alignment or IR-test mode', () => {
+    for (const mode of ['alignment', 'irtest']) {
+        const s = setup(), w = s.win;
+        w.mode = mode;
+        w.overlay = { getBoundingClientRect: () => ({ width: 1920, height: 1080 }) };
+        w.canvas = { width: 1920, height: 1080, getContext: () => ({ setTransform() {} }) };
+        let drawn = false;
+        w._drawAlignment = w._drawIRTest = () => { drawn = true; };
+        w._updateCaliLegend = () => { throw Error('legend must remain calibration-only'); };
+        w._draw();
+        assert.equal(drawn, true);
     }
 });

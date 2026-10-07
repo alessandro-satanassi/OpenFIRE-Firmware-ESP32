@@ -1033,6 +1033,42 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
 }
 
 .fullscreen-canvas { display: block; width: 100%; height: 100%; }
+/* Static calibration legend: normal typeface, same geometry as the emitters panel.
+   Its overlay never captures a pointer or adds a focusable control. */
+.calibration-legend {
+    position: absolute;
+    box-sizing: border-box;
+    width: 268.8px;
+    height: 268.8px;
+    padding: 10px;
+    border: 2px solid rgb(160, 160, 164);
+    border-radius: 20.16px;
+    background: #4a4a4a;
+    color: #f7f7f7;
+    font: 12px/1.15 "Segoe UI", Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    transform-origin: left bottom;
+    pointer-events: none;
+}
+.calibration-legend h3 { margin: 0 0 4px; font: 500 15px/18px "Segoe UI", Arial, sans-serif; text-align: center; }
+.calibration-legend h4 { margin: 0 0 3px; font: 400 12px/14px "Segoe UI", Arial, sans-serif; text-align: center; color: #dedede; }
+.calibration-legend .legend-color-bar { height: 5px; border-radius: 6px; background: linear-gradient(to right, #ff2828 0%, #ffbe5a 20%, #aaff8c 60%, #00dc00 100%); }
+.calibration-legend .legend-crosshairs { display: flex; justify-content: space-between; align-items: center; height: 25px; margin-top: 3px; }
+.calibration-legend .legend-crosshairs img { display: block; width: 25px; height: 25px; flex-shrink: 0; }
+.calibration-legend .legend-labels { display: flex; justify-content: space-between; margin-top: 1px; font-size: 11px; line-height: 13px; }
+.calibration-legend .legend-blob-size { margin-top: 6px; }
+.calibration-legend .legend-circles { display: flex; align-items: center; justify-content: space-between; height: 25px; }
+.calibration-legend .legend-circles > span { width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.calibration-legend .legend-circles i { display: block; box-sizing: border-box; border: 1px solid #f7f7f7; border-radius: 50%; }
+.calibration-legend .legend-missing { display: flex; justify-content: center; align-items: center; gap: 8px; height: 20px; min-height: 20px; margin: 6px 0; }
+.calibration-legend .legend-missing-mark { box-sizing: border-box; position: relative; width: 20px; height: 20px; border: 1.5px dashed #ff3030; border-radius: 50%; flex-shrink: 0; }
+.calibration-legend .legend-missing-mark::before,
+.calibration-legend .legend-missing-mark::after { content: ""; position: absolute; left: 2px; top: 7.5px; width: 13px; height: 1.5px; background: #ff3030; transform: rotate(45deg); }
+.calibration-legend .legend-missing-mark::after { transform: rotate(-45deg); }
+.calibration-legend .legend-notes { margin-top: auto; padding-top: 5px; border-top: 1px solid #777; font-size: 11px; line-height: 13px; color: #dedede; }
+.calibration-legend .legend-notes p { margin: 0 0 4px; }
+.calibration-legend .legend-notes p:last-child { margin-bottom: 0; }
 /* appcali.ui: BlankCursor in every mode */
 .fullscreen-window, .fullscreen-canvas { cursor: none; }
 .fullscreen-retry {
