@@ -1079,11 +1079,11 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
 .calibration-legend .legend-notes { margin-top: auto; padding-top: 5px; border-top: 1px solid #777; font-size: 11px; line-height: 13px; color: #dedede; }
 .calibration-legend .legend-notes p { margin: 0 0 4px; }
 .calibration-legend .legend-notes p:last-child { margin-bottom: 0; }
-/* IR test: static square help; deliberately separate from calibration colours/logic. */
-.ir-test-legend { position: absolute; box-sizing: border-box; width: 380px; height: 380px; padding: 14px 16px; border: 2px solid #a0a0a4; border-radius: 18px; background: #484848; color: #fff; font: 400 13px/1.3 "Segoe UI", Arial, sans-serif; transform-origin: left bottom; pointer-events: none; }
-.ir-test-legend h3 { margin: 0 0 9px; text-align: center; font: 500 16px/1.3 "Segoe UI", Arial, sans-serif; }
-.ir-test-legend .ir-legend-body { display: flex; flex-direction: column; gap: 6px; }
-.ir-test-legend h4 { margin: 0 0 3px; text-align: center; font: 500 13px/1.3 "Segoe UI", Arial, sans-serif; }
+/* IR test: static vertical help; deliberately separate from calibration colours/logic. */
+.ir-test-legend { position: absolute; box-sizing: border-box; width: 250px; height: 540px; padding: 14px 16px; border: 2px solid #a0a0a4; border-radius: 18px; background: #484848; color: #fff; font: 400 13px/1.3 "Segoe UI", Arial, sans-serif; transform-origin: left bottom; pointer-events: none; }
+.ir-test-legend h3 { margin: 0 0 12px; text-align: center; font: 500 16px/1.3 "Segoe UI", Arial, sans-serif; }
+.ir-test-legend .ir-legend-body { display: flex; flex-direction: column; gap: 12px; }
+.ir-test-legend h4 { margin: 0 0 5px; text-align: center; font: 500 13px/1.3 "Segoe UI", Arial, sans-serif; }
 .ir-test-legend .ir-layouts { display: flex; justify-content: center; gap: 25px; }
 .ir-test-legend .ir-layout { width: 94px; text-align: center; color: #ddd; }
 .ir-test-legend .ir-layout.active { color: #fff; }
@@ -1096,10 +1096,10 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
 .ir-test-legend .ir-bl { left: 25%; top: 76%; } .ir-test-legend .ir-br { left: 75%; top: 76%; }
 .ir-test-legend .ir-top { left: 50%; top: 14%; } .ir-test-legend .ir-left { left: 20%; top: 50%; }
 .ir-test-legend .ir-bottom { left: 50%; top: 86%; } .ir-test-legend .ir-right { left: 80%; top: 50%; }
-.ir-test-legend .ir-measures { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 15px; }
+.ir-test-legend .ir-measures { display: grid; grid-template-columns: 1fr; gap: 12px; }
 .ir-test-legend .ir-measures section { min-width: 0; }
-.ir-test-legend .ir-axis { display: flex; justify-content: space-between; font-size: 12px; }
-.ir-test-legend .ir-signal-samples, .ir-test-legend .ir-size-samples { display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
+.ir-test-legend .ir-axis { width: 164.5px; margin: 0 auto; display: flex; justify-content: space-between; font-size: 12px; }
+.ir-test-legend .ir-signal-samples, .ir-test-legend .ir-size-samples { box-sizing: border-box; width: 164.5px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
 .ir-test-legend .ir-size-samples { height: 26px; }
 .ir-test-legend .ir-signal-samples { height: 22px; --signal-rgb: 0,255,0; }
 .ir-test-legend .ir-signal-cyan { --signal-rgb: 0,255,255; }
@@ -1118,17 +1118,17 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
 .ir-test-legend .ir-missing-key { display: flex; align-items: center; justify-content: center; gap: 10px; }
 .ir-test-legend .ir-missing-key strong { display: block; font-weight: 500; }
 .ir-test-legend .ir-missing-key small { display: block; color: #eee; font-size: 12px; }
-.ir-test-legend .ir-missing-samples { display: flex; gap: 6px; }
+.ir-test-legend .ir-missing-samples { display: flex; gap: 6px; flex: none; }
 .ir-test-legend .ir-mark { position: relative; display: block; width: 23px; height: 23px; border: 1.5px dashed currentColor; border-radius: 50%; }
 .ir-test-legend .ir-mark i { position: absolute; top: 11px; left: 3px; width: 17px; height: 2px; background: #ff3030; transform: rotate(45deg); }
 .ir-test-legend .ir-mark i + i { transform: rotate(-45deg); }
-.ir-test-legend .ir-references { display: grid; gap: 5px; border-top: 1px solid #777; padding-top: 8px; }
-.ir-test-legend .ir-references > div { display: flex; align-items: center; gap: 12px; min-height: 22px; }
+.ir-test-legend .ir-references { display: grid; gap: 6px; border-top: 1px solid #777; padding-top: 10px; }
+.ir-test-legend .ir-references > div { display: flex; align-items: center; gap: 12px; min-height: 24px; }
 .ir-test-legend .ir-ring { display: block; box-sizing: border-box; width: 20px; height: 20px; margin: 0 10px; border: 2px solid currentColor; border-radius: 50%; flex: none; }
 .ir-test-legend .ir-aim-key { display: block; width: 24px; height: 24px; margin: 0 8px; flex: none; }
 .ir-test-legend .ir-red { color: #ff0000; }
 .ir-test-legend .ir-outline { display: block; width: 22px; height: 14px; margin: 0 9px; border: 1.5px solid #a0a0a4; transform: skew(-15deg); flex: none; }
-.ir-test-legend .ir-note { margin: 0; padding-top: 8px; border-top: 1px solid #777; text-align: center; color: #eee; font-size: 12px; }
+.ir-test-legend .ir-note { margin: 0; padding-top: 10px; border-top: 1px solid #777; text-align: center; color: #eee; font-size: 12px; }
 /* appcali.ui: BlankCursor in every mode */
 .fullscreen-window, .fullscreen-canvas { cursor: none; }
 .fullscreen-retry {

@@ -107,3 +107,31 @@ test('every static legend phrase is explicitly translated in English and Italian
         assert(!json['    your aim, and the gray crosshair should be  '].includes('circle'));
     }
 });
+
+test('vertical legend keeps the lower-left anchor, sample spacing and translations on resize', () => {
+    const css = fs.readFileSync(path.join(__dirname, '../style.css'), 'utf8');
+    assert.match(css, /\.ir-test-legend\s*\{[^}]*width:\s*250px;\s*height:\s*540px;/);
+    assert.match(css, /\.ir-test-legend \.ir-measures\s*\{[^}]*grid-template-columns:\s*1fr;/);
+    assert.match(css, /\.ir-test-legend \.ir-signal-samples, \.ir-test-legend \.ir-size-samples\s*\{[^}]*width:\s*164\.5px;/);
+    const keys = Array.from(source.matchAll(/data-ir-key="([^"]+)"/g), m => m[1]);
+    for (const language of ['en', 'it']) {
+        const { win, root } = setup(language);
+        const translated = keys.map(key => ({ dataset: { irKey: key }, textContent: '' }));
+        const attrs = {}, legend = { style: {}, setAttribute: (key, value) => { attrs[key] = value; },
+            querySelectorAll: selector => selector === '[data-ir-key]' ? translated : [] };
+        win.irTestLegend = legend;
+        for (const [width, height] of [[1920, 1080], [1280, 720], [1024, 768], [800, 600], [640, 480], [2560, 1080]]) {
+            win.width = width; win.height = height;
+            win._updateIRTestLegend();
+            const scale = Number(legend.style.transform.match(/scale\(([^)]+)\)/)[1]);
+            const left = parseFloat(legend.style.left), bottom = parseFloat(legend.style.bottom);
+            assert(scale > 0 && scale <= 1);
+            assert.equal(left, Math.min(24, width / 80));
+            assert(left + 250 * scale <= width && bottom + 540 * scale <= height);
+            if (width === 1920) { assert.equal(scale, 1); assert.equal(bottom, 24); }
+            assert.equal(legend.lang, language);
+            assert.equal(attrs['aria-label'], root.OF.i18n.t('IR Camera Test Legend'));
+            translated.forEach(el => assert.equal(el.textContent, root.OF.i18n.t(el.dataset.irKey)));
+        }
+    }
+});
