@@ -15,8 +15,8 @@
 </p>
 
 <p align="center">
-  <b>DOCUMENTATION:</b><br>
-  <a href="#getting-started">Getting Started</a> &nbsp; | &nbsp; <a href="lightgun/README.md#english-version">Lightgun Module</a> &nbsp; | &nbsp; <a href="dongle/README.md#english-version">Dongle Receiver</a> &nbsp; | &nbsp; <a href="pedal/README.md#english-version">Wireless Pedal</a>
+  <b>DOCUMENTATION:</b><br>
+  <a href="#getting-started">Getting Started</a> &nbsp; | &nbsp; <a href="lightgun/README.md#english-version">Lightgun Module</a> &nbsp; | &nbsp; <a href="dongle/README.md#english-version">Dongle Receiver</a> &nbsp; | &nbsp; <a href="pedal/README.md#english-version">Wireless Pedal</a>
 </p>
 
 <p align="center">
@@ -46,11 +46,12 @@
 
 ## At a Glance
 
-OpenFIRE ESP32 turns an ESP32-S3 board into a complete lightgun for modern TVs and monitors, for wired or wireless play.
+OpenFIRE ESP32 turns an ESP32-S3 board into a complete lightgun for modern TVs and monitors, to play with a cable or without.
 
-- **Accurate aiming:** four IR emitters around the screen and a camera in the gun, with tracking refined for the Square layout, also close to the screen and towards the edges.
-- **Wireless play:** a small USB dongle receives the data from the gun. The computer sees standard mouse, keyboard and gamepad devices, with the same 209 Hz update rate as the USB cable and no drivers to install. Up to four guns can play together, each with its own dongle.
+- **Accurate aiming:** four IR emitters around the screen and a camera in the gun, with tracking refined for the Square layout, even close to the screen and near its edges.
+- **Wireless play:** a small USB dongle receives the data from the gun. The computer sees standard mouse, keyboard and gamepad devices, updated 209 times per second exactly as with the USB cable, with no drivers to install. Up to four guns can play together, each with its own dongle.
 - **Nothing to install:** the firmware is installed from the browser with the [Web Flasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=en), and the gun is configured and tested with the [WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=en), online or, without Internet and even from a phone, through the WebApp stored in the gun.
+- **Guided calibration:** the WebApp shows at every target whether the camera sees the four emitters well, and refuses the shot when one is missing, so every calibration starts from a good view.
 - **One firmware, three cameras:** Wii Cam / DFRobot SEN0158, PixArt PAJ7025R2 and the wide-angle PixArt PAJ7025R3.
 - **Complete feedback:** solenoid, rumble motor, NeoPixel LEDs and an OLED display for menus, life and ammo, with game-driven force feedback through MAMEHOOKER and similar programs.
 - **Optional wireless pedal** for cover shooters such as the *Time Crisis* series.
@@ -59,20 +60,24 @@ OpenFIRE ESP32 turns an ESP32-S3 board into a complete lightgun for modern TVs a
 To build and set up your first gun, follow [Getting Started](#getting-started).
 
 ## Introduction - what is OpenFIRE-firmware *(The Open Four Infra-Red Emitter Light Gun System)*
+
+<details>
+<summary>About the original OpenFIRE project</summary>
+
 *... from the [OpenFIRE](https://openfirelightgun.org/) project homepage:*
 >OpenFIRE Lightgun is a feature-rich open-source firmware to allow lightgun enthusiasts to build their own lightgun that will work on modern flat screen displays. OpenFIRE uses small infrared LEDs mounted to the perimeter of your display arranged in a rectangle pattern with two on top and two on bottom (dual sensor bar) or a diamond pattern (one at the middle of each side). An infrared detecting camera mounted inside the lightgun is used to track the position of the infrared LEDs to aim your lightgun.
 >The OpenFIRE firmware is software that is programmed onto a microcontroller circuit board inside your lightgun. When the trigger is pulled or a button pressed, the firmware sends the appropriate command to your emulator via USB or Bluetooth. The firmware also controls feedbacks such as a solenoid, rumble motor or RGB LEDs to enhance your gaming experience.
 >The [OpenFIRE App/GUI](https://github.com/TeamOpenFIRE/OpenFIRE-App) is software that runs on your Windows or Linux computer and is used to configure and test your OpenFIRE lightgun.
 
-**In this ESP32 port** the description above still applies, with two differences: wireless play uses a dedicated dongle connected to the PC (ESP-NOW protocol) instead of Bluetooth, and the gun is configured with the **[WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=en)** instead of the original App.
+</details>
 
 ## What is the OpenFIRE-firmware port for ESP32
 
-This repository hosts an advanced port of the [OpenFIRE-firmware](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) project, developed by TeamOpenFIRE, adapted and optimized for the **ESP32-S3** microcontroller architecture.
+This repository is a port of the [OpenFIRE firmware](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) by TeamOpenFIRE to the **ESP32-S3** microcontroller. It keeps the original project's features, with three main differences:
 
-The main goal of this work is to introduce native support for **wireless gameplay via ESP-NOW**. The aim is to enable completely cable-free operation while simultaneously maintaining real-time responsiveness and behavior aligned with a directly connected PC system under typical usage conditions.
-
-Furthermore, the **tracking system has been refined** specifically for the "square" IR LED configuration. The integration of anti-jitter techniques, better rotation handling, and increased tolerance to the temporary loss of IR emitter visibility contribute to a more stable and fluid cursor behavior. The result is more consistent tracking across different usage scenarios, with good precision even near the edges of the screen and greater flexibility in the operating distance from the monitor. ***(Note: the "diamond" configuration retains the original standard tracking).***
+- **Wireless play through a dongle:** instead of Bluetooth, the gun talks to a small dongle plugged into the computer over **ESP-NOW**, the ESP32's own radio protocol. The gun keeps the same responsiveness and behaviour as when it is connected by cable.
+- **Refined tracking for the Square layout:** less jitter, better handling of a tilted gun and more tolerance when an emitter briefly disappears from view, for a steadier pointer, accurate up to the screen edges and over a wider range of distances. *(The Diamond layout keeps the original tracking.)*
+- **Configuration in the browser:** the gun is configured with the **[WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=en)** instead of the original App.
 
 <a id="getting-started"></a>
 
@@ -86,82 +91,80 @@ New to OpenFIRE? Here is what you need and the steps to follow; each step links 
 
 **Two web tools, two jobs:** the Web Flasher installs or updates the firmware on each device, while the WebApp configures and tests the lightgun. Use the Web Flasher first, then the WebApp; both are also linked from the [project hub](https://alessandro-satanassi.github.io/OpenFIRE-ESP32/?lang=en).
 
-1. **Build the lightgun:** an ESP32-S3 board, an IR camera, a trigger and, ideally, the A and B buttons ([hardware requirements](lightgun/README.md#english-version)). Components and purchase links are on the [PICON-AS site](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/) (currently in Italian). Note the exact [board variant](lightgun/README.md#board-variant), for example N16R8.
-2. **Install the firmware** with the [Web Flasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=en) in Chrome or Edge: choose the device, the board and its variant. For a new board, or when coming from 6.2.1, choose **Clean Install**.
+1. **Build the lightgun:** an ESP32-S3 board, an IR camera, a trigger and, ideally, the A and B buttons ([hardware requirements](lightgun/README.md#english-version)). Components and purchase links are on the [PICON-AS site](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/). Note the exact [board variant](lightgun/README.md#board-variant), for example N16R8.
+2. **Install the firmware** with the [Web Flasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=en) in Chrome, Edge or Opera: choose the device, the board and its variant. For a new board, or when coming from 6.2.1, choose **Clean Install**.
 3. **Open the [WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=en)** and connect the lightgun with a USB data cable ([how to connect](lightgun/src/README.md#configuration-with-the-webapp)).
 4. **Set pins and camera:** assign the buttons and the camera pins in **Board Layout**, select your camera in **Gun Settings → CAMERA Model** (after a clean installation it is DFRobot/Wii) and, if fitted, enable the OLED display; then save ([details](lightgun/src/README.md#camera-display-and-startup-settings)).
 5. **Mount the four IR emitters** around the screen ([IR emitter setup](lightgun/src/README.md#ir-emitter-setup)).
 6. **Calibrate** each profile you use, then save ([how to calibrate](lightgun/src/README.md#how-to-calibrate)).
 7. **Test** the buttons in **Gun Tests** and the camera with **Open IR Camera Tester...** ([test mode](lightgun/src/README.md#test-mode)).
-8. **Play** with the USB cable, or wirelessly: plug in the [dongle](dongle/README.md#english-version) and wait about 15 seconds, switch on the [wireless pedal](pedal/README.md#english-version) if you use one, then switch on the gun. For two to four players, see [several guns](lightgun/src/README.md#multiple-guns-and-multiplayer).
+8. **Play** with the USB cable, or wirelessly: plug in the [dongle](dongle/README.md#english-version) and wait about 15 seconds, switch on the [wireless pedal](pedal/README.md#english-version) if you use one, then switch on the gun. [Your First Game](lightgun/src/README.md#your-first-game) explains how to leave configuration and set up the game's inputs. For two to four players, see [several guns](lightgun/src/README.md#multiple-guns-and-multiplayer).
 
 If something does not work, see [Common Problems](lightgun/src/README.md#common-problems). The [operational manual](lightgun/src/README.md#english-version) explains buttons, pause mode and profiles.
 
 ## What's New in 7.0.0
 
-Version 7.0.0 introduces the **[OpenFIRE ESP32 WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=en)** as the main configuration tool: configure pins and buttons, select your camera, calibrate profiles and test the lightgun without installing a desktop application.
+Version 7.0.0 introduces the **[OpenFIRE ESP32 WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=en)** as the main configuration tool: map pins and buttons, choose your camera, calibrate profiles and test the lightgun without installing anything.
 
 <p align="center">
   <img src="lightgun/docs/img/webapp_board_layout.png" alt="OpenFIRE ESP32 WebApp, Board Layout tab" width="80%">
 </p>
 
-* **Three camera models in one firmware:** DFRobot SEN0158 / Wii Cam, PixArt PAJ7025R2 and wide-angle PAJ7025R3. Select the installed model in the WebApp; you do not need a different firmware for each camera. The firmware also corrects the distortion of the R3's wide-angle lens.
-* **Online or offline configuration:** use the online WebApp through USB or a paired dongle, or hold **B while powering on for about 2 seconds** to start the WebApp stored in the lightgun, accessible over Wi-Fi or USB networking.
-* **Firmware update without opening the gun:** on a lightgun already running 7.0.0, hold **Trigger + A while powering on for about 2 seconds**, then connect its own USB OTG port to the computer and use the Web Flasher.
+* **Three camera models in one firmware:** DFRobot SEN0158 / Wii Cam, PixArt PAJ7025R2 and the wide-angle PAJ7025R3. Select yours in the WebApp: no separate firmware per camera. The firmware also corrects the distortion of the R3's wide-angle lens.
+* **Online or offline configuration:** use the online WebApp through the USB cable or the paired dongle, or hold **B while switching on for about 2 seconds** to start the WebApp stored in the lightgun, reachable over Wi-Fi or USB networking, phones included.
+* **Firmware update without opening the gun:** on a lightgun already running 7.0.0, hold **Trigger + A while switching on for about 2 seconds**, then connect its USB OTG port to the computer and use the Web Flasher.
 * **One firmware file per board:** normal updates and clean installations use the same file; a clean installation erases all settings and calibrations.
-* **Square layout with LEDs at the screen corners:** besides the recommended vertical rectangle, a wider rectangle with the LEDs at the screen corners is now supported. Recalibrate after changing the emitter layout.
-* **Clearer IR camera test:** each emitter circle shows the size and brightness of the light spot seen by the camera, and emitters that are not seen are marked with a red X, so LED placement and camera sensitivity are easier to check.
-* **Calibration that checks the emitters:** in the WebApp and the desktop App, the crosshair turns green when the camera sees all four emitters well and orange when one of them is weak, a small panel shows each of them, and the target shots are refused while an emitter is not seen, so every calibration is taken with all four emitters in view. Six progress dots and a brief white ring show which target was acquired; the emitters panel is square, rounded and text-free.
+* **Square layout with LEDs at the screen corners:** besides the recommended vertical rectangle, a wider rectangle with the LEDs at the screen corners is now supported. Calibrate again after changing the emitter layout.
+* **Clearer IR camera test:** each emitter circle shows the size and brightness of the light spot seen by the camera, emitters that are not seen are marked with a red X, and a legend explains every symbol. LED placement and camera sensitivity are much easier to check.
+* **Calibration that checks the emitters:** in the WebApp and the desktop App the crosshair is green when the camera sees all four emitters well, orange when one is weak and red when one is missing; a panel shows each emitter, and target shots are refused while an emitter is not seen. Progress dots mark the targets, and a brief white flash on the crosshair confirms each accepted shot.
+* **Easier calibration from the gun:** the cursor traces a small circle on each target, and an OLED display shows where the target is and how far along you are.
 
-For migration from 6.2.1, a **clean installation is recommended**. Note your current settings first, then configure the camera and pins and recalibrate. Use lightgun, dongle and pedal firmware from the same release. Configuration Apps for earlier firmware are not compatible with the new configuration protocol.
+For migration from 6.2.1, a **clean installation is recommended**. Note your current settings first, then configure the camera and pins and calibrate again. Use lightgun, dongle and pedal firmware from the same release. Configuration Apps for earlier firmware do not work with the new configuration protocol.
 
-[Open the ecosystem hub](https://alessandro-satanassi.github.io/OpenFIRE-ESP32/?lang=en) for configuration, firmware installation and downloads. The [lightgun guide](lightgun/README.md#english-version) explains the connections and boot modes.
+[Open the ecosystem hub](https://alessandro-satanassi.github.io/OpenFIRE-ESP32/?lang=en) for configuration, firmware installation and downloads. The [lightgun guide](lightgun/README.md#english-version) explains the connections and boot modes. The [changelog](CHANGELOG.md) lists every change.
 
 ## Main Features and Capabilities
-The firmware transforms the microcontroller into a highly advanced lightgun controller, offering the following core features (inherited from the original project):
+The firmware turns the microcontroller into a complete lightgun controller, with the features of the original project:
 
-* **Advanced IR Tracking:** Utilizes a four-point infrared system with real-time perspective correction. Supports multiple emitter configurations, including double lightbar (recommended) or diamond layouts, ensuring absolute precision regardless of the player's angle to the screen.
-* **Complete Peripheral Support:** Native management of tactile and force feedback (Solenoid and Rumble motor), temperature monitoring via TMP36 sensor, and dynamic lighting via WS2812B NeoPixel LEDs.
-* **Flexible Inputs and Mapping:** The system provides simultaneous outputs such as Keyboard, 5-button Absolute Positioning Mouse (ABS), and dual-stick Gamepad (with D-pad support). It offers a robust button mapping system configurable for any need.
-* **WebApp and Internal Memory:** Configure and test the lightgun with the online or integrated **[OpenFIRE ESP32 WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=en)**. Calibration profiles and settings are stored in the lightgun. Save changes before disconnecting or switching it off.
-* **OLED Visual Feedback:** Support for I2C SSD1306 displays, used for menu navigation and providing visual indicators for in-game elements (e.g., life count, ammo).
-* **Advanced Compatibility:** Fully compatible with PC Force Feedback handlers (such as Mame Hooker, The Hook Of The Reaper, and QMamehook) and the MiSTer FPGA ecosystem.
-* **Dual-Core Optimization:** Leverages the microcontroller's dual-core capabilities to simultaneously manage input polling, camera processing, and peripheral management without any slowdowns.
+* **Advanced IR tracking:** four infrared points with real-time perspective correction, so aiming stays accurate even when you do not stand exactly in front of the screen. Double lightbar (Square, recommended) and Diamond layouts are supported.
+* **Complete peripheral support:** recoil and vibration (solenoid and rumble motor), solenoid temperature monitoring with a TMP36 sensor, and NeoPixel WS2812B or RGB lighting.
+* **Flexible inputs and mapping:** keyboard, 5-button absolute-positioning mouse and dual-stick gamepad with D-pad, all at the same time, with every button freely remappable.
+* **WebApp and internal memory:** configure and test the lightgun with the online or built-in **[OpenFIRE ESP32 WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=en)**. Calibration profiles and settings are stored in the gun; save before disconnecting or switching it off.
+* **OLED display:** an SSD1306 I2C display for the pause menu, the calibration guide, the connection status and the life and ammo counters.
+* **Broad compatibility:** works with PC force feedback programs (such as MAMEHOOKER, The Hook Of The Reaper and QMamehook) and with MiSTer FPGA.
 
 ## Project Philosophy and Porting
-The OpenFIRE-Firmware-ESP32 firmware stems from the need to bring the features of a professional open-source lightgun to an architecture that allows maximum freedom of movement. The code was developed using the PlatformIO ecosystem and, while introducing structural innovations for wireless management, maintains extremely high logical and functional fidelity to the original TeamOpenFIRE code.
 
-The distinctive features of this port include:
+<details>
+<summary>Background and development of the ESP32 port</summary>
 
-* **Transparent Wireless Integration**: The implementation of the ESP-NOW protocol allows direct communication between the peripheral and a dedicated dongle connected to the PC. This solution is designed to be totally transparent: the operating system detects the lightgun as a standard USB peripheral, with no perceivable latency and no need for third-party drivers or software.
+This port brings a complete open-source lightgun to a board that can also work without cables. It is built with PlatformIO and, apart from the wireless part, stays very close to the original TeamOpenFIRE code:
 
-* **Enhanced Tracking Algorithms:** This port introduces deep refinements to the spatial calculation algorithms, specifically for the "square" IR LED configuration. The system now offers exceptional cursor stability even at very close distances and correctly calculates tracking even during wide rotations of the lightgun on its axis (tilt). ***(Note: the "diamond" configuration retains the original standard tracking).*** At the end of the testing phase, if these implementations prove solid and superior, it is my intention to propose a Pull Request (PR) to the original project so that the entire OpenFIRE community can benefit from them.
+* **Transparent wireless:** the gun and its dongle talk directly over ESP-NOW, and the computer sees a standard USB device, with no perceptible latency and no extra drivers or software.
+* **Refined tracking:** the Square layout calculations were reworked for a very steady pointer even close to the screen and with the gun tilted on its axis. *(The Diamond layout keeps the original tracking.)* When these improvements have proven themselves, I intend to offer them to the original project through a Pull Request, so the whole OpenFIRE community can benefit.
+* **Faithful to the original:** apart from the ESP32 adaptations and the radio link, the control logic follows the official version, so improvements and fixes from TeamOpenFIRE can keep flowing into this port.
 
-* **Fidelity to the Original Code**: Excluding the necessary adaptations for the ESP32 architecture and radio transmission management, the core control logic remains consistent with the official version. This ensures that improvements and fixes made by TeamOpenFIRE can be cyclically integrated into this repository.
+Special thanks to TeamOpenFIRE for their excellent work on the original firmware: the core architecture is theirs, and so is our gratitude for making such an advanced system available to everyone.
 
-* **Hardware Versatility**: Although the project is focused on the wireless capabilities of the ESP32-S3, the code maintains compatibility with the RP2040 microcontroller. In the latter case, operation is limited to a wired USB connection, while still maintaining firmware uniformity within the OpenFIRE ecosystem.
-
-Special thanks to TeamOpenFIRE for their excellent work in creating the original firmware; they deserve credit for the core architecture and our gratitude for making such an advanced system available to the community.
+</details>
 
 ## Supported Microcontrollers
-The firmware has been tested and optimized for the **ESP32-S3** architecture, which is the reference microcontroller for this project. The system relies entirely on the dual-core power and connectivity of the **ESP32-S3**, which supports all features, including wireless communication via ESP-NOW and HID management via USB OTG. *(e.g., ESP32-S3-WROOM1-DevKitC-1, Waveshare ESP32-S3-PICO, Waveshare ESP32-S3-ZERO, LILYGO T-Dongle-S3, ESP32-S3 Pocket Dongle S3)*.
+The project is built and tested for the **ESP32-S3**, which supports every feature, including the ESP-NOW wireless link and the USB OTG port that presents the gun to the computer *(for example ESP32-S3-WROOM1-DevKitC-1, Waveshare ESP32-S3-PICO, Waveshare ESP32-S3-ZERO, LILYGO T-Dongle-S3, ESP32-S3 Pocket Dongle S3)*.
 
-For best results and maximum ease of assembly, the following form factors are recommended:
+For the easiest build, these boards are recommended:
 
 | Device | Recommended Boards | Usage |
 | :--- | :---: | :--- |
-| **Lightgun** | <img src="docs/board_scheme/ESP32S3-Devkit-C.svg" width="44%"> <img src="docs/board_scheme/esp32-s3-pico.svg" width="40%"> | **ESP32-S3-DevKitC-1 / Waveshare S3-PICO**<br>Ideal for integration within the gun shell due to the high number of GPIO pins, necessary to easily manage all buttons, the sensor, and actuators. |
-| **Dongle** | <img src="docs/board_scheme/LILYGO-T-Dongle-S3-ESP32-S3.svg" width="45%"> <img src="docs/board_scheme/esp32-s3-pocket-dongle-s3.svg" width="45%"> | **LILYGO T-Dongle-S3 / Pocket Dongle S3**<br>"Turnkey" solutions with integrated USB connector. Perfect as compact receivers to connect directly to the PC or console, without the need for cables or soldering. |
-| **Pedal** | <img src="docs/board_scheme/esp32-s3-zero.svg" width="45%"> | **Waveshare ESP32-S3-ZERO**<br>Thanks to its ultra-compact dimensions, it is the perfect choice to be placed inside a wireless pedal structure, where space is limited and very few pins are needed. |
+| **Lightgun** | <img src="docs/board_scheme/ESP32S3-Devkit-C.svg" width="44%"> <img src="docs/board_scheme/esp32-s3-pico.svg" width="40%"> | **ESP32-S3-DevKitC-1 / Waveshare S3-PICO**<br>Ideal inside the gun shell, with plenty of pins for all the buttons, the camera and the feedback devices. |
+| **Dongle** | <img src="docs/board_scheme/LILYGO-T-Dongle-S3-ESP32-S3.svg" width="45%"> <img src="docs/board_scheme/esp32-s3-pocket-dongle-s3.svg" width="45%"> | **LILYGO T-Dongle-S3 / Pocket Dongle S3**<br>Ready-made sticks with a built-in USB connector: plug them straight into the computer, no cables or soldering. |
+| **Pedal** | <img src="docs/board_scheme/esp32-s3-zero.svg" width="45%"> | **Waveshare ESP32-S3-ZERO**<br>Tiny, so it fits inside a pedal, where space is tight and only a few pins are needed. |
 
-**Hardware Versatility and Interchangeability**
-Except for the "USB Sticks" (like the LILYGO T-Dongle or Pocket Dongle), which by their physical nature are designed exclusively for PC use as receivers, **all other standard boards are universal**. 
-A board like the DevKitC-1, PICO, or ZERO can be programmed and used interchangeably for the Lightgun, the Pedal, or even to build a "DIY" Dongle by wiring a USB plug. Specific hardware configuration details are illustrated in their respective folders.
+**Any standard board, any role:** apart from the USB sticks (LILYGO T-Dongle, Pocket Dongle), which are made to be plugged into the computer as receivers, a DevKitC-1, PICO or ZERO can be used for the lightgun, the pedal or even a home-made dongle with a USB cable. Each module's guide shows the wiring.
 
-> *Compatibility Note: Although the code maintains basic compatibility with the original RP2040 architecture, its use remains strictly limited to wired USB connections. Active development, optimization, and all advanced wireless features are focused exclusively on the ESP32-S3 platform.*
+> *RP2040 boards: the code still builds for the original RP2040 boards, but only for wired USB play. Development and all the wireless features are focused on the ESP32-S3.*
 
 ## System Architecture
-The project is divided into three modular components, each with specific technical documentation within their respective folders:
+The project has three parts, each with its own guide:
 
 <p align="center">
   <img src="docs/img/architecture_en.png" alt="System architecture: the wireless pedal (optional) connects to the lightgun via ESP-NOW, the lightgun connects via ESP-NOW to the dongle, which is plugged into the PC by USB; for wired play the lightgun is connected to the PC directly by USB cable" width="100%">
@@ -170,45 +173,44 @@ The project is divided into three modular components, each with specific technic
 For wireless play the pedal talks to the lightgun, and the lightgun to the dongle plugged into the PC. For wired play the lightgun is connected to the PC directly by USB cable.
 
 1. ***Lightgun Firmware***
-   The main firmware that manages the IR sensor, button logic, and feedback peripherals (solenoid, rumble, LEDs). It can operate in both wireless and wired modes.
-   Technical documentation: **[Lightgun Folder](lightgun/README.md#english-version)**
+   The heart of the system: camera, buttons and feedback devices (solenoid, rumble, LEDs), wired or wireless.
+   Guide: **[Lightgun Folder](lightgun/README.md#english-version)**
 
 2. ***Receiver Dongle***
-   The Dongle acts as an invisible bridge between the lightgun and the PC. It handles the reception of ESP-NOW packets and translates the data into standard HID protocols.
-   Technical documentation: **[Dongle Folder](dongle/README.md#english-version)**
+   The invisible bridge between the lightgun and the PC: it receives the gun's data over ESP-NOW and presents it to the computer as standard USB devices.
+   Guide: **[Dongle Folder](dongle/README.md#english-version)**
 
 3. ***Wireless Pedal***
-   An optional but essential accessory for certain cover shooter titles (e.g., Time Crisis). It communicates directly with the lightgun to send ultra-low latency input signals, eliminating the need for bulky wiring on the floor.
-   Technical documentation: **[Pedal Folder](pedal/README.md#english-version)**
+   Optional, but essential for cover shooters such as Time Crisis. It talks directly to the gun with very low latency, with no cable across the floor.
+   Guide: **[Pedal Folder](pedal/README.md#english-version)**
 
 ## Quick Installation (Web Flasher)
 
-The easiest, fastest, and safest way to install or update the firmware for any module (Lightgun, Dongle, or Pedal) is using our unified Web Flasher. It requires no external drivers or software: everything runs directly within your browser.
+The easiest, fastest and safest way to install or update the firmware of any module (Lightgun, Dongle or Pedal) is the Web Flasher. No drivers and no programs: everything runs in your browser.
 
-* **Requirements:** PC/Mac with Google Chrome, Microsoft Edge, or Opera.
+* **Requirements:** a computer with Google Chrome, Microsoft Edge or Opera.
 
 **[LAUNCH OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=en)**
 
-> **Note for advanced users:** If your browser does not support the Web Flasher, or if you prefer to proceed via command line or external tools, you can find the manual `.bin` flashing instructions in the technical documentation of each specific module (Lightgun, Dongle, or Pedal).
+> **For advanced users:** if your browser does not support the Web Flasher, or you prefer the command line, each module's guide explains how to install the `.bin` files yourself.
 
 ## Connectivity Management
-The firmware intelligently manages connection priorities:
+The gun chooses the connection by itself:
 
-* **Wired Connection**: In normal operating mode, a USB data connection to the PC takes priority over the wireless dongle connection. The special WebApp boot mode also enables the configuration network.
+* **USB cable:** if the gun is connected to the computer by a USB data cable when you switch it on, it plays wired and switches the radio off.
+* **Wireless:** without the cable, the gun looks for its dongle and pairs with it automatically; the dongle has already chosen the radio channel with the least interference. If **Wireless pedal** is enabled, the gun then looks for the pedal for 10 seconds. From then on the computer sees the gun exactly as if it were connected by cable.
+* **Fast reconnection:** if you switch only the gun off and on again, it reconnects almost instantly to the dongle and pedal it was paired with, as long as they stayed on. After restarting the dongle or the pedal, restart the gun too.
+* **Status at a glance:** the gun and dongle displays show icons for the connection type and status; the pedal uses its 4 LEDs.
 
-* **Wireless Connection**: In the absence of a USB connection, the lightgun activates ESP-NOW mode. The pairing process is completely automatic and requires no user intervention: the dongle connected to the PC handles scanning the environment to select the radio channel with the least interference. The lightgun then searches for an available dongle and pairs with it. Immediately after, if **Wireless pedal** is enabled in the WebApp and neither pedal input has a wired pin assigned, the lightgun starts a 10-second search to locate and pair an available wireless pedal (the use of which is entirely optional; the system works perfectly without it). Once the connection is established, the PC will manage the peripheral exactly as if it were connected via cable, with no operational difference.
-In the event of a power-off and subsequent restart of the lightgun, the system will prioritize searching for the last paired dongle and pedal to ensure instant reconnection; if it does not detect them, it will automatically start a new search. *(Note: this instant reconnection is only possible if the dongle and pedal have remained continuously powered on since the first pairing; if they are rebooted, they will reset and listen for new connections, requiring a new scan from the lightgun)*.
-
-* **Visual Feedback**: If the system is equipped with a display, the interface will show dedicated icons to distinguish the connection state (USB or Wireless) and monitor the link status (on the lightgun and dongle displays, or via 4 dedicated LEDs on the pedal).
+The [lightgun guide](lightgun/README.md#english-version) describes the startup sequence step by step.
 
 ## PICON-AS Hardware Project
-For those who wish to build a fully battery-operated wireless lightgun based on this firmware, the **PICON-AS** reference hardware project is available. This is a lightgun derived from the PICON-OG project, optimized to integrate a rechargeable 21700 Li-ion battery and support the cable-free wireless ecosystem.
-This project provides detailed assembly instructions, complete with STL files for 3D printing and wiring diagrams.
+To build a fully wireless, battery-powered lightgun for this firmware, there is the **PICON-AS** reference project: a lightgun derived from PICON-OG, designed around a rechargeable 21700 Li-ion battery and the wireless ecosystem. It includes detailed assembly instructions, STL files for 3D printing and wiring diagrams.
 
 Hardware manual: **[PICON-AS Documentation Site](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/)**
 
 > [!NOTE]
-> The site is already usable and the technical content is correct; we are just finalizing the drafting of some instruction sections. Currently, the site is only available in Italian, but it will be translated into English once completed.
+> The site is already usable and its technical content is correct; a few instruction sections are still being written. It is currently in Italian only and will be translated into English once complete.
 
 ## Further Reading
 
@@ -216,42 +218,42 @@ Hardware manual: **[PICON-AS Documentation Site](https://alessandro-satanassi.gi
 - [MAMEHOOKER documentation](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/wiki/MAMEHOOKER_Documentation_EN): setting up game-driven force feedback.
 - [OpenFIRE serial commands](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/wiki/Serial_Commands_OpenFIRE_EN): the commands the gun accepts from force-feedback programs.
 - [Changelog](CHANGELOG.md): what changed in each release.
+- [Build guide](lightgun/docs/COMPILING.md): for developers who want to build the firmware themselves.
 
 <a id="community-support-english"></a>
 
 ## Community and Support
 
-Depending on the type of support you need, you can join two different Discord communities:
+Depending on the kind of help you need, you can join two Discord communities:
 
-* **Official OpenFIRE Server:** The main hub for the firmware. If you have questions about the software, technical issues, or want to follow the updates, this is the right place. **Make sure to visit the `#software-ports` channel**, where we specifically discuss this ESP32 port!
+* **Official OpenFIRE Server:** the main place for the firmware. For questions about the software, technical issues or news, this is the right place. **Visit the `#software-ports` channel**, dedicated to ports like this ESP32 one.
 <br><a href="https://discord.gg/G8XMdCR5pf"><img src="https://img.shields.io/badge/Discord-OpenFIRE%20Official-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="OpenFIRE Discord"></a>
 
-* **DIY Lightgun Builders:** The perfect place if you need advice on hardware construction, 3D printing, soldering, or if you simply want to show off your finished PICON-AS (inside this server you will also find a channel dedicated to the **`#Picon-AS`**).
+* **DIY Lightgun Builders:** the place for advice on building the hardware, 3D printing and soldering, or to show off your finished PICON-AS (there is a dedicated **`#Picon-AS`** channel).
 <br><a href="https://discord.gg/8fm4YUxEsa"><img src="https://img.shields.io/badge/Discord-Hardware%20&%20Builds-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Builders Discord"></a>
 
-**Useful Resources and Websites:**
-In addition to the Discord servers, you can check out the following websites:
+**Useful websites:**
 * [OpenFIRE ESP32 Hub](https://alessandro-satanassi.github.io/OpenFIRE-ESP32/?lang=en)
 * [OpenFIRE ESP32 WebApp (configuration)](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=en)
 * [OpenFIRE Firmware (Official Site)](https://openfirelightgun.org/)
-* [OpenFIRE ESP32 Tools (Download OpenFIRE-App and Web Flasher)](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=en)
+* [OpenFIRE ESP32 Tools (desktop App and other downloads)](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=en)
 * [DIY Lightgun](https://diylightgun.com/lightguns/?pt=lightgun)
 * [Picon-AS (Picon-AS lightgun website)](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/)
 
-**Related GitHub Repositories:**
-* [OpenFIRE Firmware ESP32 (This repository)](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32)
-* [OpenFIRE Firmware (Original RP2040)](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware)
-* [OpenFIRE App (original project reference, not the ESP32 configuration App)](https://github.com/TeamOpenFIRE/OpenFIRE-App)
-* [OpenFIRE Boards (For developers wanting to add a new board to the project)](https://github.com/TeamOpenFIRE/OpenFIRE-Boards)
+**Related GitHub repositories:**
+* [OpenFIRE Firmware ESP32 (this repository)](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32)
+* [OpenFIRE Firmware (original, RP2040)](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware)
+* [OpenFIRE App (original project, not the ESP32 configuration App)](https://github.com/TeamOpenFIRE/OpenFIRE-App)
+* [OpenFIRE Boards (for developers adding a new board to the project)](https://github.com/TeamOpenFIRE/OpenFIRE-Boards)
 
 ## Sponsorship & Support
 
-A special thanks to **[PCBWay](https://www.pcbway.com)** for sponsoring the hardware development of this project. Their professional PCB manufacturing service has been fundamental in transforming our schematics into reliable, high-quality physical boards.
+A special thanks to **[PCBWay](https://www.pcbway.com)** for sponsoring the hardware development of this project. Their professional PCB manufacturing has been fundamental in turning our schematics into reliable, high-quality boards.
 
 We chose PCBWay for their:
-* **Manufacturing Precision:** Excellent solder mask and silkscreen quality even on dense designs.
-* **Reliability:** Consistent build quality across different batches.
-* **Fast Prototyping:** Quick turnaround times that significantly accelerated our testing phase.
+* **Manufacturing precision:** excellent solder mask and silkscreen quality, even on dense designs.
+* **Reliability:** consistent quality across different batches.
+* **Fast prototyping:** short turnaround times that sped up our testing considerably.
 
 <p align="left">
   <a href="https://www.pcbway.com">
@@ -262,33 +264,33 @@ We chose PCBWay for their:
 ## Credits & Acknowledgments
 
 ### Original OpenFIRE Core Team & Contributors
-A special thanks to the original authors and the OpenFIRE community, without whom this port and the ecosystem expansions (Dongle and Pedal) would never have existed:
-* **That One Seong** (`SeongsSeongs@gmail.com`): The lead developer and coordinator of the OpenFIRE project.
-* **Samuel Ballantyne (Samco)** (`samuelballantyne@hotmail.com`): For his original SAMCO project, the gorgeous OpenFIRE branding, and perspective-based tracking system.
-* **Mike Lynch (Prow7)**: For his enhanced SAMCO fork which provided the basis of pause mode and saving subsystems.
-* **Odwalla-J, mrkylegp, RG2020 & lemmingDev**: For prerelease consultation, bug testing, and feedback.
-* **The IR-GUN4ALL testers**: For their early feedback and feature requests. This wouldn't have happened without you lot!
-* **Chris Young**: For his TinyUSB compatible library (now part of `TinyUSB_Devices`).
+A special thanks to the original authors and the OpenFIRE community, without whom this port and its additions (dongle and pedal) would never have existed:
+* **That One Seong** (`SeongsSeongs@gmail.com`): lead developer and coordinator of the OpenFIRE project.
+* **Samuel Ballantyne (Samco)** (`samuelballantyne@hotmail.com`): for his original SAMCO project, the gorgeous OpenFIRE branding and the perspective-based tracking system.
+* **Mike Lynch (Prow7)**: for his enhanced SAMCO fork, the basis of pause mode and of the saving system.
+* **Odwalla-J, mrkylegp, RG2020 & lemmingDev**: for prerelease consultation, bug testing and feedback.
+* **The IR-GUN4ALL testers**: for their early feedback and feature requests. This wouldn't have happened without you lot!
+* **Chris Young**: for his TinyUSB compatible library (now part of `TinyUSB_Devices`).
 
 ### ESP32 Port Contributors
-A massive thank you to those who personally supported the development and testing of this specific ESP32 port:
-* **Reverse Cosmos**: For his invaluable help and time spent testing the OpenFIRE ESP32 firmware.
-* **VINNY!**: For designing the mechanical parts and providing the .stl files for the wireless pedal.
-* **Alextrical**: For designing the PCBs on which to mount the PixArt PAJ7025R2 and PixArt PAJ7025R3 cameras.
+A huge thank you to those who personally supported the development and testing of this ESP32 port:
+* **Reverse Cosmos**: for his invaluable help and the time spent testing the OpenFIRE ESP32 firmware.
+* **VINNY!**: for designing the mechanical parts and providing the .stl files of the wireless pedal.
+* **Alextrical**: for designing the PCBs for the PixArt PAJ7025R2 and PixArt PAJ7025R3 cameras.
 
 ## License, Commercial Use, and Forks
 
-In full compliance with the original license and the vision of the OpenFIRE creators, this port adheres to the following guidelines regarding forks and commercial use:
+The official firmware downloads are **free of charge**; you do not need to buy a licence to use them. Distribution and modification are governed by the [GNU LGPL licence included in the repository](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/LICENSE). In addition, we ask those who build on this work to respect the following:
 
-* **No Rebranding:** Forks created solely for "rebranding" purposes (changing names and logos to present the project as one's own) are strongly **DISCOURAGED**. All forks derived from this repository must maintain the OpenFIRE name and credit both the original core authors (That One Seong, Samco, Prow7) and the author of this specific ESP32 Wireless port (Alessandro Satanassi).
+* **No rebranding:** forks made only to rebrand the project (changing names and logos to present it as one's own) are strongly **DISCOURAGED**. We ask forks to keep the OpenFIRE name and credit both the original core authors (That One Seong, Samco, Prow7) and the author of this ESP32 wireless port (Alessandro Satanassi).
 
-* **Commercial Integrations:** Products intended to integrate OpenFIRE using this firmware (e.g., within pre-assembled lightguns for sale) must make its usage extremely clear and provide appropriate credits to both the core authors and the port author. Although it is Free Software, we ask anyone profiting from this volunteer work to consider a donation or sponsorship to the project.
-  * For commercial inquiries, collaborations, or licensing regarding this specific **ESP32 port and the wireless ecosystem (Dongle/Pedal)**, please contact *Alessandro Satanassi* (`alessandro@cittini.it`).
-  * For commercial or licensing inquiries regarding the **original OpenFIRE core**, please open a thread in the Discussions section of the [original repository](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) or contact *That One Seong* (`SeongsSeongs@gmail.com`) and/or *Samuel Ballantyne* (`samuelballantyne@hotmail.com`).
+* **Commercial integrations:** we ask makers of products using this firmware (for example pre-assembled lightguns for sale) to state it clearly and credit both the core authors and the port author. Anyone profiting from this volunteer work is also invited to consider a donation or sponsorship.
+  * For commercial enquiries, collaborations or licensing about this **ESP32 port and the wireless ecosystem (dongle/pedal)**, contact *Alessandro Satanassi* (`alessandro@cittini.it`).
+  * For commercial or licensing enquiries about the **original OpenFIRE core**, open a thread in the Discussions section of the [original repository](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) or contact *That One Seong* (`SeongsSeongs@gmail.com`) and/or *Samuel Ballantyne* (`samuelballantyne@hotmail.com`).
 
-* **GNU LGPL Compliance:** As established by the *GNU Lesser General Public License*, any entity (private or commercial) wishing to incorporate parts or the entirety of this firmware's components **must make their source code modifications available to the public upon request**. 
+* **GNU LGPL compliance:** anyone redistributing the firmware, whether unchanged or modified, must comply with its licence, including the requirements concerning copyright notices and access to the corresponding source code. Refer to `LICENSE` for the full conditions.
 
-* **Free Software (Anti-Scam):** OpenFIRE is Free Software, both in terms of "liberty" and "cost". If you have been charged any amount to download or use the OpenFIRE firmware, **you have been scammed and should demand an immediate refund!**
+* **Official downloads:** download the firmware from this project's Releases page or Web Flasher. Paid hardware, assembly or support services are separate from the official firmware, which is available free of charge.
 
 ---
 
@@ -301,7 +303,7 @@ In full compliance with the original license and the vision of the OpenFIRE crea
 # OpenFIRE Firmware per ESP32
 
 <p align="center">
-  <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases"><img src="https://img.shields.io/github/v/release/alessandro-satanassi/OpenFIRE-Firmware-ESP32?include_prereleases&style=flat-square&color=007ec6&label=ultima%20versione" alt="Ultima Versione"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32"><img src="https://img.shields.io/github/languages/top/alessandro-satanassi/OpenFIRE-Firmware-ESP32?style=flat-square&color=success" alt="Linguaggio Principale"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32"><img src="https://img.shields.io/badge/Platform-PlatformIO-orange?style=flat-square&logo=platformio" alt="PlatformIO"></a> <a href="#community-support-italiano"><img src="https://img.shields.io/badge/Discord-Community-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord Community"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/LICENSE"><img src="https://img.shields.io/github/license/alessandro-satanassi/OpenFIRE-Firmware-ESP32?style=flat-square&label=licenza" alt="Licenza"></a>
+  <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases"><img src="https://img.shields.io/github/v/release/alessandro-satanassi/OpenFIRE-Firmware-ESP32?include_prereleases&style=flat-square&color=007ec6&label=ultima%20versione" alt="Ultima Versione"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32"><img src="https://img.shields.io/github/languages/top/alessandro-satanassi/OpenFIRE-Firmware-ESP32?style=flat-square&color=success" alt="Linguaggio Principale"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32"><img src="https://img.shields.io/badge/Platform-PlatformIO-orange?style=flat-square&logo=platformio" alt="PlatformIO"></a> <a href="#community-support-italiano"><img src="https://img.shields.io/badge/Discord-Community-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord Community"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/LICENSE"><img src="https://img.shields.io/github/license/alessandro-satanassi/OpenFIRE-Firmware-ESP32?style=flat-square&label=licenza" alt="Licenza"></a>
 </p>
 
 <p align="center">
@@ -342,9 +344,10 @@ In full compliance with the original license and the vision of the OpenFIRE crea
 
 OpenFIRE ESP32 trasforma una scheda ESP32-S3 in una lightgun completa per TV e monitor moderni, da usare via cavo o senza fili.
 
-- **Mira precisa:** quattro emettitori IR intorno allo schermo e una telecamera nella pistola, con un tracciamento affinato per il layout Square, anche vicino allo schermo e verso i bordi.
-- **Gioco senza fili:** un piccolo dongle USB riceve i dati dalla pistola. Il computer vede normali dispositivi mouse, tastiera e gamepad, con lo stesso aggiornamento a 209 Hz del cavo USB e senza driver da installare. Fino a quattro pistole possono giocare insieme, ognuna con il proprio dongle.
+- **Mira precisa:** quattro emettitori IR intorno allo schermo e una telecamera nella pistola, con un tracciamento affinato per il layout Square, anche vicino allo schermo e ai suoi bordi.
+- **Gioco senza fili:** un piccolo dongle USB riceve i dati dalla pistola. Il computer vede normali dispositivi mouse, tastiera e gamepad, aggiornati 209 volte al secondo esattamente come con il cavo USB, senza driver da installare. Fino a quattro pistole possono giocare insieme, ognuna con il proprio dongle.
 - **Niente da installare:** il firmware si installa dal browser con il [Web Flasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=it) e la pistola si configura e si prova con la [WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=it), online oppure, senza Internet e anche da telefono, con la WebApp contenuta nella pistola.
+- **Calibrazione guidata:** la WebApp mostra a ogni bersaglio se la telecamera vede bene i quattro emettitori e rifiuta il tiro quando ne manca uno, così ogni calibrazione parte da una buona visuale.
 - **Un firmware, tre telecamere:** Wii Cam / DFRobot SEN0158, PixArt PAJ7025R2 e PixArt PAJ7025R3 grandangolare.
 - **Feedback completo:** solenoide, motore rumble, LED NeoPixel e display OLED per menu, vite e munizioni, con force feedback guidato dal gioco tramite MAMEHOOKER e programmi simili.
 - **Pedale wireless facoltativo** per i cover shooter come la serie *Time Crisis*.
@@ -353,110 +356,111 @@ OpenFIRE ESP32 trasforma una scheda ESP32-S3 in una lightgun completa per TV e m
 Per costruire e configurare la tua prima pistola segui i [Primi passi](#primi-passi).
 
 ## Premessa - cos'è OpenFIRE-firmware *(The Open Four Infra-Red Emitter Light Gun System)*
+
+<details>
+<summary>Il progetto OpenFIRE originale</summary>
+
 *... dalla homepage del progetto [OpenFIRE](https://openfirelightgun.org/):*
 >OpenFIRE Lightgun è un firmware open source ricco di funzionalità che consente agli appassionati di costruire la propria lightgun compatibile con i moderni schermi piatti. OpenFIRE utilizza piccoli LED a infrarossi montati sul perimetro del display, disposti secondo uno schema rettangolare con due in alto e due in basso (configurazione a doppia barra sensore) oppure a diamante (uno al centro di ogni lato). Una telecamera a infrarossi montata all'interno della lightgun viene utilizzata per tracciare la posizione dei LED e consentire il puntamento.
 >Il firmware OpenFIRE è il software che viene programmato sulla scheda del microcontrollore all'interno della lightgun. Quando viene premuto il grilletto o un pulsante, il firmware invia il comando appropriato all'emulatore tramite USB o Bluetooth. Il firmware gestisce inoltre i sistemi di feedback, come solenoidi, motori rumble o LED RGB, per arricchire l'esperienza di gioco.
->L' [App/GUI OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-App) è il software applicativo, compatibile con sistemi Windows o Linux, utilizzato per configurare e testare la tua lightgun OpenFIRE.
+>L'[App/GUI OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-App) è il software applicativo, compatibile con sistemi Windows o Linux, utilizzato per configurare e testare la tua lightgun OpenFIRE.
 
-**In questo porting ESP32** la descrizione precedente resta valida, con due differenze: il gioco senza fili usa un dongle dedicato collegato al PC (protocollo ESP-NOW) invece del Bluetooth, e la pistola si configura con la **[WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=it)** invece che con l'App originale.
-
+</details>
 
 ## Cos'è il porting di OpenFIRE-firmware per ESP32
 
-Questo repository ospita un porting avanzato del progetto [OpenFIRE-firmware](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware), sviluppato dal TeamOpenFIRE, adattato e ottimizzato per l'architettura del microcontrollore **ESP32-S3**.
+Questo repository è il porting del [firmware OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) del TeamOpenFIRE sul microcontrollore **ESP32-S3**. Mantiene le funzionalità del progetto originale, con tre differenze principali:
 
-L'obiettivo principale di questo lavoro è introdurre un supporto nativo al **gameplay wireless tramite ESP-NOW**. Lo scopo è consentire un'operatività totalmente priva di cavi, pur mantenendo al contempo una reattività in tempo reale e un comportamento allineato a un sistema con connessione diretta al PC in condizioni d'uso tipiche.
-
-Inoltre, il **sistema di tracciamento è stato affinato** specificatamente per la configurazione "square" dei LED IR. L'integrazione di tecniche anti-jitter, una migliore gestione della rotazione e una maggiore tolleranza alla perdita temporanea della visibilità degli emettitori IR contribuiscono a un comportamento del cursore più stabile e fluido. Il risultato è un tracciamento più consistente tra i diversi scenari d’uso, con buona precisione anche vicino ai bordi dello schermo e una maggiore flessibilità nella distanza di utilizzo dal monitor. ***(Nota: la configurazione "diamond" mantiene il tracciamento standard originale).***
+- **Gioco senza fili tramite un dongle:** invece del Bluetooth, la pistola comunica con un piccolo dongle inserito nel computer tramite **ESP-NOW**, il protocollo radio dell'ESP32. La pistola mantiene la stessa reattività e lo stesso comportamento di quando è collegata via cavo.
+- **Tracciamento affinato per il layout Square:** meno tremolio, migliore gestione della pistola inclinata e più tolleranza quando un emettitore sparisce per un attimo dalla vista, per un puntatore più stabile, preciso fino ai bordi dello schermo e su una gamma di distanze più ampia. *(Il layout Diamond mantiene il tracciamento originale.)*
+- **Configurazione nel browser:** la pistola si configura con la **[WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=it)** invece che con l'App originale.
 
 <a id="primi-passi"></a>
 
 ## Primi passi
 
-Sei nuovo di OpenFIRE? Ecco cosa ti serve e i passi da seguire; ogni passo rimanda alle istruzioni dettagliate.
+Non conosci ancora OpenFIRE? Ecco cosa ti serve e i passi da seguire; ogni passo rimanda alle istruzioni dettagliate.
 
 **Cosa ti serve:** una lightgun basata su una scheda ESP32-S3, con una telecamera IR, quattro emettitori IR e i pulsanti. Per giocare senza fili servono anche un [dongle](dongle/README.md#versione-italiana) collegato al computer e una batteria nella pistola; il [pedale wireless](pedal/README.md#versione-italiana) è facoltativo.
 
 **Quanto è impegnativo?** Puoi seguire il progetto completo [PICON-AS](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/), con scocca da stampare in 3D, schemi di cablaggio e batteria ricaricabile, oppure costruire la tua pistola su una scheda di sviluppo ESP32-S3: bastano saldature e cablaggi di base. Per il dongle, una chiavetta USB già pronta come la LILYGO T-Dongle-S3 richiede solo l'installazione del firmware, senza saldature ([guida dongle](dongle/README.md#versione-italiana)).
 
-**Due strumenti web, due compiti:** il Web Flasher installa o aggiorna il firmware di ogni dispositivo, mentre la WebApp configura e prova la lightgun. Si usa prima il Web Flasher, poi la WebApp; entrambi sono raccolti anche nel [portale del progetto](https://alessandro-satanassi.github.io/OpenFIRE-ESP32/?lang=it).
+**Due strumenti web, due compiti:** il Web Flasher installa o aggiorna il firmware di ogni dispositivo, mentre la WebApp configura e prova la lightgun. Usa prima il Web Flasher, poi la WebApp; entrambi sono raccolti anche nel [portale del progetto](https://alessandro-satanassi.github.io/OpenFIRE-ESP32/?lang=it).
 
 1. **Costruisci la lightgun:** una scheda ESP32-S3, una telecamera IR, un grilletto e, possibilmente, i pulsanti A e B ([requisiti hardware](lightgun/README.md#versione-italiana)). Componenti e link per l'acquisto sono sul [sito PICON-AS](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/). Annota l'esatta [variante della scheda](lightgun/README.md#variante-scheda), ad esempio N16R8.
-2. **Installa il firmware** con il [Web Flasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=it) in Chrome o Edge: scegli il dispositivo, la scheda e la sua variante. Per una scheda nuova, o passando dalla 6.2.1, scegli **Installazione Pulita**.
+2. **Installa il firmware** con il [Web Flasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=it) in Chrome, Edge o Opera: scegli il dispositivo, la scheda e la sua variante. Per una scheda nuova, o passando dalla 6.2.1, scegli **Installazione Pulita**.
 3. **Apri la [WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=it)** e collega la lightgun con un cavo USB dati ([come collegarsi](lightgun/src/README.md#configurazione-con-la-webapp)).
 4. **Imposta pin e telecamera:** assegna i pulsanti e i pin della telecamera in **Layout Scheda**, scegli la telecamera in **Impostazioni Gun → Modello TELECAMERA** (dopo un'installazione pulita è DFRobot/Wii) e, se presente, abilita il display OLED; poi salva ([dettagli](lightgun/src/README.md#telecamera-display-e-impostazioni-di-avvio)).
 5. **Monta i quattro emettitori IR** intorno allo schermo ([configurazione emettitori IR](lightgun/src/README.md#configurazione-emettitori-ir-italiano)).
 6. **Calibra** ogni profilo che usi, poi salva ([come calibrare](lightgun/src/README.md#come-calibrare-italiano)).
 7. **Prova** i pulsanti in **Gun Tests** e la telecamera con **Apri Tester telecamera IR...** ([modalità di test](lightgun/src/README.md#modalità-di-test-italiano)).
-8. **Gioca** con il cavo USB, oppure senza fili: inserisci il [dongle](dongle/README.md#versione-italiana) e attendi circa 15 secondi, accendi il [pedale wireless](pedal/README.md#versione-italiana) se lo usi, poi accendi la pistola. Per giocare in due, tre o quattro, vedi [più pistole](lightgun/src/README.md#modifica-dell-id-usb-per-pistole-multiple-italiano).
+8. **Gioca** con il cavo USB, oppure senza fili: inserisci il [dongle](dongle/README.md#versione-italiana) e attendi circa 15 secondi, accendi il [pedale wireless](pedal/README.md#versione-italiana) se lo usi, poi accendi la pistola. [La prima partita](lightgun/src/README.md#la-prima-partita) spiega come uscire dalla configurazione e impostare i comandi del gioco. Per giocare in due, tre o quattro, vedi [più pistole](lightgun/src/README.md#modifica-dell-id-usb-per-pistole-multiple-italiano).
 
 Se qualcosa non funziona, consulta [Problemi comuni](lightgun/src/README.md#problemi-comuni-italiano). Il [manuale operativo](lightgun/src/README.md#versione-italiana) spiega pulsanti, modalità pausa e profili.
 
 ## Novità della versione 7.0.0
 
-La versione 7.0.0 introduce la **[WebApp OpenFIRE ESP32](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=it)** come strumento principale di configurazione: mappa pin e pulsanti, seleziona la telecamera, calibra i profili e prova la lightgun senza installare un'applicazione desktop.
+La versione 7.0.0 introduce la **[WebApp OpenFIRE ESP32](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=it)** come strumento principale di configurazione: mappa pin e pulsanti, scegli la telecamera, calibra i profili e prova la lightgun senza installare nulla.
 
 <p align="center">
   <img src="lightgun/docs/img/webapp_board_layout.png" alt="WebApp OpenFIRE ESP32, scheda Layout Scheda" width="80%">
 </p>
 
-* **Tre modelli di telecamera in un solo firmware:** DFRobot SEN0158 / Wii Cam, PixArt PAJ7025R2 e PAJ7025R3 grandangolare. Seleziona nella WebApp il modello installato; non occorre un firmware diverso per ogni telecamera. Il firmware corregge anche la distorsione dell'ottica grandangolare della R3.
-* **Configurazione online oppure offline:** usa la WebApp online tramite USB o dongle associato, oppure tieni premuto **B all'accensione per circa 2 secondi** per avviare la WebApp contenuta nella lightgun, accessibile tramite Wi-Fi o rete USB.
+* **Tre modelli di telecamera in un solo firmware:** DFRobot SEN0158 / Wii Cam, PixArt PAJ7025R2 e PAJ7025R3 grandangolare. Scegli la tua nella WebApp: nessun firmware diverso per ogni telecamera. Il firmware corregge anche la distorsione dell'ottica grandangolare della R3.
+* **Configurazione online oppure offline:** usa la WebApp online tramite il cavo USB o il dongle associato, oppure tieni premuto **B all'accensione per circa 2 secondi** per avviare la WebApp contenuta nella lightgun, raggiungibile via Wi-Fi o rete USB, anche da telefono.
 * **Aggiornamento firmware senza aprire la pistola:** su una lightgun che esegue già la 7.0.0, tieni premuti **Grilletto + A all'accensione per circa 2 secondi**, poi collega al computer la sua porta USB OTG e usa il Web Flasher.
 * **Un solo file firmware per scheda:** aggiornamento normale e installazione pulita usano lo stesso file; l'installazione pulita cancella tutte le impostazioni e le calibrazioni.
-* **Layout Square con LED agli angoli dello schermo:** oltre al rettangolo verticale consigliato, ora è supportato anche un rettangolo più largo con i LED agli angoli dello schermo. Ripeti la calibrazione dopo aver cambiato la disposizione degli emettitori.
-* **Test della telecamera IR più chiaro:** ogni cerchio degli emettitori mostra grandezza e luminosità della macchia di luce vista dalla telecamera, e gli emettitori non visti sono segnati con una X rossa: è più facile verificare la posizione dei LED e la sensibilità della telecamera.
-* **Calibrazione che controlla gli emettitori:** nella WebApp e nell'App desktop il mirino diventa verde quando la telecamera vede bene tutti e quattro gli emettitori e arancione quando uno di essi è debole, un piccolo riquadro li mostra uno per uno e i tiri sui bersagli vengono rifiutati finché un emettitore non è visto: ogni calibrazione si fa con tutti e quattro gli emettitori in vista. Sei pallini di avanzamento e un breve anello bianco indicano il bersaglio acquisito; il riquadro degli emettitori è quadrato, arrotondato e senza scritte.
+* **Layout Square con LED agli angoli dello schermo:** oltre al rettangolo verticale consigliato, ora è supportato anche un rettangolo più largo con i LED agli angoli dello schermo. Calibra di nuovo dopo aver cambiato la disposizione degli emettitori.
+* **Test della telecamera IR più chiaro:** ogni cerchio degli emettitori mostra grandezza e luminosità della macchia di luce vista dalla telecamera, gli emettitori non visti sono segnati con una X rossa e una legenda spiega ogni simbolo. Verificare la posizione dei LED e la sensibilità della telecamera diventa molto più semplice.
+* **Calibrazione che controlla gli emettitori:** nella WebApp e nell'App desktop il mirino è verde quando la telecamera vede bene tutti e quattro gli emettitori, arancione quando uno è debole e rosso quando ne manca uno; un riquadro mostra ogni emettitore e i tiri sui bersagli vengono rifiutati finché non sono visibili tutti e quattro gli emettitori. I pallini indicano l'avanzamento tra i bersagli e un breve lampo bianco sul mirino conferma ogni tiro accettato.
+* **Calibrazione dalla pistola più semplice:** il cursore descrive un piccolo cerchio su ogni bersaglio, e un display OLED mostra dove si trova il bersaglio e a che punto sei.
 
-Per il passaggio dalla 6.2.1 è consigliata un'**installazione pulita**. Annota prima le impostazioni attuali, poi configura telecamera e pin e ripeti la calibrazione. Usa firmware della stessa release per lightgun, dongle e pedale. Le App di configurazione dei firmware precedenti non sono compatibili con il nuovo protocollo di configurazione.
+Per il passaggio dalla 6.2.1 è consigliata un'**installazione pulita**. Annota prima le impostazioni attuali, poi configura telecamera e pin e calibra di nuovo. Usa firmware della stessa release per lightgun, dongle e pedale. Le App di configurazione dei firmware precedenti non funzionano con il nuovo protocollo di configurazione.
 
-[Apri il portale dell'ecosistema](https://alessandro-satanassi.github.io/OpenFIRE-ESP32/?lang=it) per configurazione, installazione firmware e download. La [guida lightgun](lightgun/README.md#versione-italiana) spiega collegamenti e modalità di avvio.
+[Apri il portale dell'ecosistema](https://alessandro-satanassi.github.io/OpenFIRE-ESP32/?lang=it) per configurazione, installazione firmware e download. La [guida lightgun](lightgun/README.md#versione-italiana) spiega collegamenti e modalità di avvio. La [cronologia modifiche](CHANGELOG.md#versione-italiana) elenca ogni cambiamento.
 
 ## Caratteristiche e Funzionalità Principali
-Il firmware trasforma il microcontrollore in un controller per lightgun estremamente avanzato, offrendo le seguenti funzionalità di base (ereditate dal progetto originale):
+Il firmware trasforma il microcontrollore in un controller per lightgun completo, con le funzionalità del progetto originale:
 
-* **Tracciamento IR Avanzato:** Utilizza un sistema a quattro punti a infrarossi con correzione prospettica in tempo reale. Supporta configurazioni multiple degli emettitori, inclusi layout a doppia barra luminosa (consigliato) o a diamante, garantendo una precisione assoluta indipendentemente dall'angolazione del giocatore rispetto allo schermo.
-* **Supporto Periferiche Completo:** Gestione nativa del feedback tattile e di forza (Solenoide e motore Rumble), monitoraggio della temperatura tramite sensore TMP36 e illuminazione dinamica tramite LED NeoPixel WS2812B.
-* **Input Flessibili e Mappatura:** Il sistema fornisce output simultanei come Tastiera, Mouse a posizionamento assoluto (ABS) a 5 pulsanti e Gamepad dual-stick (con supporto D-pad). Offre un robusto sistema di mappatura dei pulsanti configurabile per ogni esigenza.
-* **WebApp e Memoria Interna:** Configura e prova la lightgun con la **[WebApp OpenFIRE ESP32](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=it)** online o integrata. Profili e impostazioni sono salvati nella lightgun. Salva le modifiche prima di disconnetterla o spegnerla.
-* **Feedback Visivo OLED:** Supporto per display I2C SSD1306, utilizzati per la navigazione dei menu e per fornire indicazioni visive degli elementi in-game (es. conteggio vite, munizioni).
-* **Compatibilità Avanzata:** Pienamente compatibile con i gestori di Force Feedback per PC (come Mame Hooker, The Hook Of The Reaper e QMamehook) e con l'ecosistema MiSTer FPGA.
-* **Ottimizzazione Dual-Core:** Sfrutta le capacità dual-core del microcontrollore per gestire simultaneamente e senza rallentamenti il polling degli input, l'elaborazione della videocamera e la gestione delle periferiche.
+* **Tracciamento IR avanzato:** quattro punti a infrarossi con correzione prospettica in tempo reale, così la mira resta precisa anche quando non sei esattamente di fronte allo schermo. Sono supportati i layout a doppia barra (Square, consigliato) e a rombo (Diamond).
+* **Supporto completo delle periferiche:** rinculo e vibrazione (solenoide e motore rumble), controllo della temperatura del solenoide con un sensore TMP36, e illuminazione con LED NeoPixel WS2812B o RGB.
+* **Ingressi flessibili e mappatura:** tastiera, mouse a posizionamento assoluto a 5 pulsanti e gamepad dual-stick con D-pad, tutti contemporaneamente, con ogni pulsante liberamente rimappabile.
+* **WebApp e memoria interna:** configura e prova la lightgun con la **[WebApp OpenFIRE ESP32](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=it)** online o integrata. Profili di calibrazione e impostazioni sono salvati nella pistola; salva prima di scollegarla o spegnerla.
+* **Display OLED:** un display I2C SSD1306 per il menu di pausa, la guida alla calibrazione, lo stato della connessione e i contatori di vite e munizioni.
+* **Ampia compatibilità:** funziona con i programmi di force feedback per PC (come MAMEHOOKER, The Hook Of The Reaper e QMamehook) e con MiSTer FPGA.
 
 ## Filosofia del Progetto e Porting
-Il firmware OpenFIRE-Firmware-ESP32 nasce dalla necessità di portare le funzionalità di una lightgun open-source professionale su un'architettura che consenta la massima libertà di movimento. Il codice è stato sviluppato utilizzando l'ecosistema PlatformIO e, pur introducendo innovazioni strutturali per la gestione del wireless, mantiene un'altissima fedeltà logica e funzionale rispetto al codice originale del TeamOpenFIRE.
 
-Le caratteristiche distintive di questo porting includono:
+<details>
+<summary>Origini e sviluppo del porting ESP32</summary>
 
-* **Integrazione Wireless Trasparente**: L'implementazione del protocollo ESP-NOW permette una comunicazione diretta tra la periferica e un dongle dedicato collegato al PC. Questa soluzione è progettata per essere totalmente trasparente: il sistema operativo rileva la lightgun come una periferica USB standard, senza latenze percepibili e senza la necessità di driver o software di terze parti.
+Questo porting rende disponibile una lightgun open source completa su una scheda capace di funzionare anche senza cavi. È sviluppato con PlatformIO e, a parte il collegamento senza fili, resta molto vicino al codice originale del TeamOpenFIRE:
 
-* **Algoritmi di Tracciamento Potenziati:** Questo porting introduce profondi affinamenti agli algoritmi di calcolo spaziale, specificatamente per la configurazione "square" dei LED IR. Il sistema offre ora una stabilità del cursore eccezionale anche a distanze ravvicinate e calcola correttamente il tracciamento anche durante ampie rotazioni della lightgun sull'asse (tilt). ***(Nota: la configurazione "diamond" mantiene il tracciamento standard originale).*** Al termine della fase di testing, se queste implementazioni si confermeranno solide e superiori, è mia intenzione proporre una Pull Request (PR) al progetto originale affinché tutta la community di OpenFIRE possa beneficiarne.
+* **Wireless trasparente:** pistola e dongle comunicano direttamente via ESP-NOW e il computer vede un normale dispositivo USB, senza latenza percepibile e senza driver o programmi aggiuntivi.
+* **Tracciamento affinato:** i calcoli del layout Square sono stati rielaborati per un puntatore molto stabile anche vicino allo schermo e con la pistola inclinata sul proprio asse. *(Il layout Diamond mantiene il tracciamento originale.)* Quando questi miglioramenti avranno dato buona prova di sé, è mia intenzione proporli al progetto originale con una Pull Request, perché ne possa beneficiare tutta la community di OpenFIRE.
+* **Fedele all'originale:** a parte gli adattamenti per ESP32 e il collegamento radio, la logica di controllo segue la versione ufficiale, così miglioramenti e correzioni del TeamOpenFIRE possono continuare a confluire in questo porting.
 
-* **Fedeltà al Codice Originale**: Ad esclusione degli adattamenti necessari per l'architettura ESP32 e per la gestione della trasmissione radio, il cuore della logica di controllo rimane coerente con la versione ufficiale. Questo garantisce che i miglioramenti e le correzioni apportate dal TeamOpenFIRE possano essere integrati ciclicamente in questo repository.
+Un ringraziamento speciale al TeamOpenFIRE per l'eccellente lavoro sul firmware originale: l'architettura di base è merito loro, e a loro va la nostra gratitudine per aver reso disponibile a tutti un sistema così avanzato.
 
-* **Versatilità Hardware**: Sebbene il progetto sia focalizzato sulle capacità wireless dell'ESP32-S3, il codice mantiene la compatibilità con il microcontrollore RP2040. In quest'ultimo caso, il funzionamento rimane limitato alla connessione cablata USB, mantenendo però l'uniformità del firmware all'interno dell'ecosistema OpenFIRE.
-
-Si ringrazia il TeamOpenFIRE per l'eccellente lavoro svolto nella creazione del firmware originale; a loro vanno i meriti dell'architettura di base e la gratitudine per aver reso disponibile un sistema così avanzato alla comunità.
+</details>
 
 ## Microcontrollori Supportati
-Il firmware è stato testato e ottimizzato per l'architettura **ESP32-S3**, che è il microcontrollore di riferimento per questo progetto. Il sistema si basa interamente sulla potenza e sulla connettività dell'**ESP32-S3**, che supporta tutte le funzionalità, inclusa la comunicazione wireless via ESP-NOW e la gestione HID via USB OTG. *(ESP32-S3-WROOM1-DevKitC-1, Waveshare ESP32-S3-PICO, Waveshare ESP32-S3-ZERO, LILYGO T-Dongle-S3, ESP32-S3 Pocket Dongle S3)*.
+Il progetto è sviluppato e provato per l'**ESP32-S3**, che supporta tutte le funzionalità, compresi il collegamento wireless ESP-NOW e la porta USB OTG con cui la pistola si presenta al computer *(ad esempio ESP32-S3-WROOM1-DevKitC-1, Waveshare ESP32-S3-PICO, Waveshare ESP32-S3-ZERO, LILYGO T-Dongle-S3, ESP32-S3 Pocket Dongle S3)*.
 
-Per ottenere i migliori risultati e la massima facilità di montaggio, si consigliano i seguenti form factor:
+Per la costruzione più semplice si consigliano queste schede:
 
-| Dispositivo | Board Consigliate | Utilizzo |
+| Dispositivo | Schede Consigliate | Utilizzo |
 | :--- | :---: | :--- |
-| **Lightgun** | <img src="docs/board_scheme/ESP32S3-Devkit-C.svg" width="44%"> <img src="docs/board_scheme/esp32-s3-pico.svg" width="40%"> | **ESP32-S3-DevKitC-1 / Waveshare S3-PICO**<br>Ideali per essere integrate all'interno della scocca della pistola grazie all'elevato numero di pin GPIO, necessari per gestire agevolmente tutti i pulsanti, il sensore e gli attuatori. |
-| **Dongle** | <img src="docs/board_scheme/LILYGO-T-Dongle-S3-ESP32-S3.svg" width="45%"> <img src="docs/board_scheme/esp32-s3-pocket-dongle-s3.svg" width="45%"> | **LILYGO T-Dongle-S3 / Pocket Dongle S3**<br>Soluzioni "chiave in mano" con connettore USB integrato. Perfette come ricevitori compatti da collegare direttamente al PC o alla console, senza necessità di cavi o saldature. |
-| **Pedale** | <img src="docs/board_scheme/esp32-s3-zero.svg" width="45%"> | **Waveshare ESP32-S3-ZERO**<br>Grazie alle sue dimensioni ultracompatte, è la scelta perfetta per essere inserita all'interno della struttura di un pedale wireless, dove lo spazio è ridotto e servono pochissimi pin. |
+| **Lightgun** | <img src="docs/board_scheme/ESP32S3-Devkit-C.svg" width="44%"> <img src="docs/board_scheme/esp32-s3-pico.svg" width="40%"> | **ESP32-S3-DevKitC-1 / Waveshare S3-PICO**<br>Ideali dentro la scocca della pistola, con tanti pin per tutti i pulsanti, la telecamera e i dispositivi di feedback. |
+| **Dongle** | <img src="docs/board_scheme/LILYGO-T-Dongle-S3-ESP32-S3.svg" width="45%"> <img src="docs/board_scheme/esp32-s3-pocket-dongle-s3.svg" width="45%"> | **LILYGO T-Dongle-S3 / Pocket Dongle S3**<br>Chiavette già pronte con connettore USB integrato: si inseriscono direttamente nel computer, senza cavi né saldature. |
+| **Pedale** | <img src="docs/board_scheme/esp32-s3-zero.svg" width="45%"> | **Waveshare ESP32-S3-ZERO**<br>Piccolissima, entra in un pedale, dove lo spazio è poco e servono pochi pin. |
 
-**Versatilità e Intercambiabilità dell'Hardware**
-Fatta eccezione per le "USB Stick" (come il LILYGO T-Dongle o il Pocket Dongle) che per la loro natura fisica sono pensate esclusivamente per l'uso su PC come ricevitori, **tutte le altre schede standard sono universali**. 
-Una board come la DevKitC-1, la PICO o la ZERO può essere programmata e utilizzata indistintamente per la Lightgun, per il Pedale o persino per costruire un Dongle "fai-da-te" cablando una presa USB. I dettagli specifici sulle configurazioni hardware sono illustrati nelle rispettive cartelle.
+**Qualsiasi scheda standard, qualsiasi ruolo:** a parte le chiavette USB (LILYGO T-Dongle, Pocket Dongle), fatte per essere inserite nel computer come ricevitori, una DevKitC-1, una PICO o una ZERO si possono usare per la lightgun, per il pedale o anche per un dongle autocostruito con un cavo USB. La guida di ogni modulo mostra i collegamenti.
 
-> *Nota di compatibilità: Sebbene il codice mantenga la compatibilità di base con l'architettura originale RP2040, il suo utilizzo rimane strettamente limitato alla connessione cablata USB. Lo sviluppo attivo, l'ottimizzazione e tutte le funzionalità wireless avanzate sono focalizzate esclusivamente sulla piattaforma ESP32-S3.*
+> *Schede RP2040: il codice si compila ancora per le schede RP2040 originali, ma solo per il gioco via cavo USB. Lo sviluppo e tutte le funzionalità wireless sono concentrati sull'ESP32-S3.*
 
 ## Architettura del Sistema
-Il progetto si articola in tre componenti modulari, ognuno dei quali dispone di documentazione tecnica specifica all'interno delle relative cartelle:
+Il progetto è composto da tre parti, ognuna con la sua guida:
 
 <p align="center">
   <img src="docs/img/architecture_it.png" alt="Architettura del sistema: il pedale wireless (facoltativo) si collega alla lightgun via ESP-NOW, la lightgun via ESP-NOW al dongle, inserito nel PC tramite USB; nel gioco via cavo la lightgun è collegata direttamente al PC con il cavo USB" width="100%">
@@ -465,88 +469,87 @@ Il progetto si articola in tre componenti modulari, ognuno dei quali dispone di 
 Nel gioco senza fili il pedale comunica con la lightgun e la lightgun con il dongle inserito nel PC. Nel gioco via cavo la lightgun è collegata direttamente al PC con il cavo USB.
 
 1. ***Lightgun Firmware***
-   Il firmware principale che gestisce il sensore IR, la logica dei pulsanti e le periferiche di feedback (solenoide, rumble, LED). Può operare sia in modalità wireless che via cavo.
-   Documentazione tecnica: **[Cartella Lightgun](lightgun/README.md#versione-italiana)**
+   Il cuore del sistema: telecamera, pulsanti e dispositivi di feedback (solenoide, rumble, LED), via cavo o senza fili.
+   Guida: **[Cartella Lightgun](lightgun/README.md#versione-italiana)**
 
 2. ***Dongle Ricevitore***
-   Il Dongle agisce come ponte invisibile tra la lightgun e il PC. Gestisce la ricezione dei pacchetti ESP-NOW e traduce i dati in protocolli HID standard.
-   Documentazione tecnica: **[Cartella Dongle](dongle/README.md#versione-italiana)**
+   Il ponte invisibile tra la lightgun e il PC: riceve i dati della pistola via ESP-NOW e li presenta al computer come normali dispositivi USB.
+   Guida: **[Cartella Dongle](dongle/README.md#versione-italiana)**
 
 3. ***Pedale Wireless***
-   Un accessorio opzionale ma fondamentale per alcuni titoli cover shooter (es. Time Crisis). Comunica direttamente con la lightgun per inviare segnali di input a bassissima latenza, eliminando la necessità di cablaggi ingombranti sul pavimento.
-   Documentazione tecnica: **[Cartella Pedal](pedal/README.md#versione-italiana)**
+   Facoltativo, ma fondamentale per i cover shooter come Time Crisis. Comunica direttamente con la pistola con una latenza bassissima, senza cavi sul pavimento.
+   Guida: **[Cartella Pedal](pedal/README.md#versione-italiana)**
 
 ## Installazione Rapida (Web Flasher)
 
-Il modo più semplice, veloce e sicuro per installare o aggiornare il firmware di qualsiasi modulo (Lightgun, Dongle o Pedale) è utilizzare il nostro Web Flasher unificato. Non richiede l'installazione di driver o software esterni: viene eseguito interamente dal tuo browser.
+Il modo più semplice, veloce e sicuro per installare o aggiornare il firmware di qualsiasi modulo (Lightgun, Dongle o Pedale) è il Web Flasher. Niente driver e niente programmi: funziona tutto nel browser.
 
-* **Requisiti:** PC/Mac con Google Chrome, Microsoft Edge o Opera.
+* **Requisiti:** un computer con Google Chrome, Microsoft Edge o Opera.
 
 **[AVVIA OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=it)**
 
-> **Nota per utenti esperti:** Se il tuo browser non supporta il Web Flasher, o se preferisci procedere tramite riga di comando o tool esterni, puoi trovare le istruzioni per il flashing manuale dei file `.bin` all'interno della documentazione tecnica di ogni specifico modulo (Lightgun, Dongle o Pedale).
+> **Per utenti esperti:** se il tuo browser non supporta il Web Flasher, o preferisci la riga di comando, la guida di ogni modulo spiega come installare manualmente i file `.bin`.
 
 ## Gestione della Connettività
-Il firmware gestisce in modo intelligente la priorità delle connessioni:
+La pistola sceglie da sola il collegamento:
 
-* **Connessione Cablata**: In modalità di funzionamento normale, il collegamento USB dati al PC ha priorità sulla connessione al dongle wireless. La modalità speciale WebApp abilita anche la rete di configurazione.
+* **Cavo USB:** se all'accensione la pistola è collegata al computer con un cavo USB dati, gioca via cavo e spegne la radio.
+* **Senza fili:** senza il cavo, la pistola cerca il suo dongle e si associa automaticamente; il dongle ha già scelto il canale radio con meno interferenze. Se **Pedale wireless** è attivo, la pistola cerca poi il pedale per 10 secondi. Da quel momento il computer vede la pistola esattamente come se fosse collegata via cavo.
+* **Riconnessione rapida:** se spegni e riaccendi solo la pistola, si ricollega quasi all'istante al dongle e al pedale a cui era associata, purché siano rimasti accesi. Dopo aver riavviato il dongle o il pedale, riavvia anche la pistola.
+* **Stato a colpo d'occhio:** i display di pistola e dongle mostrano icone per tipo e stato del collegamento; il pedale usa i suoi 4 LED.
 
-* **Connessione Wireless**: In assenza di collegamento USB, la lightgun attiva la modalità ESP-NOW. Il processo di accoppiamento è completamente automatico e non richiede alcun intervento da parte dell'utente: è il dongle collegato al PC a occuparsi della scansione dell'ambiente per selezionare il canale radio con minori interferenze. La lightgun cerca quindi un dongle libero e vi si associa. Subito dopo, se **Wireless pedal** è abilitato nella WebApp e nessuno dei due ingressi del pedale ha un pin cablato assegnato, la lightgun avvia una ricerca di 10 secondi per individuare e accoppiare un pedale wireless libero (il cui utilizzo rimane comunque facoltativo, il sistema funziona perfettamente anche senza). Una volta stabilita la connessione, il PC gestirà la periferica esattamente come se fosse collegata via cavo, senza alcuna differenza di funzionamento.
-In caso di spegnimento e successivo riavvio della lightgun, il sistema cercherà in via prioritaria l'ultimo dongle e l'ultimo pedale associati per garantire una riconnessione istantanea; se non li rileva, avvierà automaticamente una nuova ricerca. *(Nota bene: questa riconnessione istantanea è possibile solo se il dongle e il pedale sono rimasti ininterrottamente accesi dopo il primo accoppiamento; se vengono riavviati, si resetteranno mettendosi in ascolto di nuove connessioni, richiedendo una nuova scansione da parte della lightgun)*.
-
-* **Feedback Visivo**: Se il sistema è dotato di display, l'interfaccia mostrerà icone dedicate per distinguere lo stato della connessione (USB o Wireless) e monitorare lo stato del collegamento (sui display di lightgun e dongle, o tramite 4 LED dedicati sul pedale).
+La [guida lightgun](lightgun/README.md#versione-italiana) descrive la sequenza di avvio passo per passo.
 
 ## Progetto Hardware PICON-AS
-Per chi desidera realizzare una lightgun wireless funzionante completamente a batteria basata su questo firmware, è disponibile il progetto hardware di riferimento **PICON-AS**. Si tratta di una lightgun derivata dal progetto PICON-OG, ottimizzata per integrare una batteria Li-ion 21700 ricaricabile e supportare l'ecosistema wireless senza cavi.
-Tale progetto fornisce istruzioni dettagliate per l'assemblaggio, completo di file STL per la stampa 3D e schemi elettrici.
+Per costruire una lightgun completamente senza fili e a batteria per questo firmware c'è il progetto di riferimento **PICON-AS**: una lightgun derivata da PICON-OG, pensata per una batteria Li-ion 21700 ricaricabile e per l'ecosistema wireless. Include istruzioni di montaggio dettagliate, file STL per la stampa 3D e schemi elettrici.
 
 Manuale hardware: **[Sito Documentazione PICON-AS](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/)**
 
 > [!NOTE]
-> Il sito è già fruibile e i contenuti tecnici sono corretti; stiamo solo ultimando la stesura di alcune sezioni delle istruzioni. Al momento il sito è solo in lingua italiana, sarà tradotto in inglese quando sarà completato.
+> Il sito è già utilizzabile e i contenuti tecnici sono corretti; restano da completare alcune sezioni delle istruzioni. Per ora è solo in italiano e sarà tradotto in inglese quando sarà completo.
 
 ## Approfondimenti
 
 - [Manuale operativo](lightgun/src/README.md#versione-italiana): pulsanti, modalità pausa, calibrazione, profili, problemi comuni e limiti noti.
 - [Documentazione MAMEHOOKER](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/wiki/MAMEHOOKER_Documentation_IT): come impostare il force feedback guidato dal gioco.
 - [Comandi seriali OpenFIRE](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/wiki/Serial_Commands_OpenFIRE_IT): i comandi che la pistola accetta dai programmi di force feedback.
-- [Changelog](CHANGELOG.md#cronologia-modifiche): cosa è cambiato in ogni versione.
+- [Changelog](CHANGELOG.md#versione-italiana): cosa è cambiato in ogni versione.
+- [Guida alla compilazione](lightgun/docs/COMPILING.md): per gli sviluppatori che vogliono compilare da sé il firmware.
 
 <a id="community-support-italiano"></a>
 
 ## Community e Supporto
 
-A seconda del tipo di supporto di cui hai bisogno, puoi unirti a due diverse community su Discord:
+A seconda dell'aiuto che ti serve, puoi unirti a due community su Discord:
 
-* **Server Ufficiale OpenFIRE:** Il fulcro principale per il firmware. Se hai domande sul software, problemi tecnici o vuoi seguire gli aggiornamenti, questo è il posto giusto. **Assicurati di visitare il canale `#software-ports`**, dove parliamo specificatamente di questo porting per ESP32!
+* **Server Ufficiale OpenFIRE:** il punto di riferimento per il firmware. Per domande sul software, problemi tecnici o novità, è il posto giusto. **Visita il canale `#software-ports`**, dedicato ai porting come questo per ESP32.
 <br><a href="https://discord.gg/G8XMdCR5pf"><img src="https://img.shields.io/badge/Discord-OpenFIRE%20Official-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="OpenFIRE Discord"></a>
 
-* **DIY Lightgun Builders:** Il posto perfetto se ti servono consigli sulla costruzione hardware, la stampa 3D, le saldature, o se vuoi semplicemente mostrare la tua PICON-AS terminata (all'interno di questo server troverai anche un canale dedicato alla **`#Picon-AS`**).
+* **DIY Lightgun Builders:** il posto per consigli sulla costruzione dell'hardware, la stampa 3D e le saldature, o per mostrare la tua PICON-AS finita (c'è un canale dedicato, **`#Picon-AS`**).
 <br><a href="https://discord.gg/8fm4YUxEsa"><img src="https://img.shields.io/badge/Discord-Hardware%20&%20Builds-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Builders Discord"></a>
 
-**Risorse e Siti Web Utili:**
-Oltre ai server Discord, puoi consultare i seguenti siti web:
+**Siti utili:**
 * [Portale OpenFIRE ESP32](https://alessandro-satanassi.github.io/OpenFIRE-ESP32/?lang=it)
 * [WebApp OpenFIRE ESP32 (configurazione)](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=it)
 * [OpenFIRE Firmware (Sito Ufficiale)](https://openfirelightgun.org/)
-* [OpenFIRE ESP32 Tools (Download OpenFIRE-App e Web Flasher)](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=it)
+* [OpenFIRE ESP32 Tools (App desktop e altri download)](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=it)
 * [DIY Lightgun](https://diylightgun.com/lightguns/?pt=lightgun)
 * [Picon-AS (Sito della lightgun Picon-AS)](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/)
 
-**Repository GitHub Correlati:**
-* [OpenFIRE Firmware ESP32 (Questo repository)](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32)
-* [OpenFIRE Firmware (Originale RP2040)](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware)
-* [OpenFIRE App (riferimento al progetto originale, non l'App di configurazione ESP32)](https://github.com/TeamOpenFIRE/OpenFIRE-App)
-* [OpenFIRE Board (per sviluppatori che vogliono inserire una nuova board al progetto)](https://github.com/TeamOpenFIRE/OpenFIRE-Boards)
+**Repository GitHub correlati:**
+* [OpenFIRE Firmware ESP32 (questo repository)](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32)
+* [OpenFIRE Firmware (originale, RP2040)](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware)
+* [OpenFIRE App (progetto originale, non l'App di configurazione ESP32)](https://github.com/TeamOpenFIRE/OpenFIRE-App)
+* [OpenFIRE Boards (per sviluppatori che vogliono aggiungere una nuova board al progetto)](https://github.com/TeamOpenFIRE/OpenFIRE-Boards)
 
 ## Sponsorizzazione e Supporto
 
-Un ringraziamento speciale a **[PCBWay](https://www.pcbway.com)** per aver sponsorizzato lo sviluppo hardware di questo progetto. Il loro servizio professionale di produzione di PCB è stato fondamentale per trasformare i nostri schemi elettrici in schede fisiche affidabili e di alta qualità.
+Un ringraziamento speciale a **[PCBWay](https://www.pcbway.com)** per aver sponsorizzato lo sviluppo hardware di questo progetto. La loro produzione professionale di PCB è stata fondamentale per trasformare i nostri schemi in schede affidabili e di alta qualità.
 
 Abbiamo scelto PCBWay per:
-* **Precisione di Produzione:** Eccellente qualità del solder mask e della serigrafia anche su design ad alta densità.
-* **Affidabilità:** Qualità costruttiva uniforme e costante su diversi lotti di produzione.
-* **Prototipazione Rapida:** Tempi di realizzazione brevi che hanno accelerato significativamente la nostra fase di test.
+* **Precisione di produzione:** ottima qualità del solder mask e della serigrafia, anche su progetti ad alta densità.
+* **Affidabilità:** qualità costante tra lotti diversi.
+* **Prototipazione rapida:** tempi di realizzazione brevi, che hanno accelerato molto la nostra fase di test.
 
 <p align="left">
   <a href="https://www.pcbway.com">
@@ -557,33 +560,33 @@ Abbiamo scelto PCBWay per:
 ## Crediti e Ringraziamenti
 
 ### Team Originale e Contributori di OpenFIRE
-Un ringraziamento speciale agli autori originali e alla community del progetto OpenFIRE, senza i quali questo porting e le espansioni dell'ecosistema (Dongle e Pedale) non sarebbero mai esistiti:
-* **That One Seong** (`SeongsSeongs@gmail.com`): Lo sviluppatore principale e coordinatore del progetto OpenFIRE.
-* **Samuel Ballantyne (Samco)** (`samuelballantyne@hotmail.com`): Per il suo progetto originale SAMCO, il magnifico branding OpenFIRE e il sistema di tracciamento basato sulla prospettiva.
-* **Mike Lynch (Prow7)**: Per il suo fork migliorato di SAMCO, che ha fornito le basi per la modalità pausa e per i sottosistemi di salvataggio.
-* **Odwalla-J, mrkylegp, RG2020 & lemmingDev**: Per la consulenza tecnica in fase di pre-release, la ricerca dei bug e i preziosi feedback.
-* **Tutti i tester di IR-GUN4ALL**: Per i feedback iniziali e le richieste di nuove funzionalità. Tutto questo non sarebbe successo senza di voi!
-* **Chris Young**: Per la sua libreria compatibile TinyUSB (ora parte di `TinyUSB_Devices`).
+Un ringraziamento speciale agli autori originali e alla community di OpenFIRE, senza i quali questo porting e le sue aggiunte (dongle e pedale) non sarebbero mai esistiti:
+* **That One Seong** (`SeongsSeongs@gmail.com`): sviluppatore principale e coordinatore del progetto OpenFIRE.
+* **Samuel Ballantyne (Samco)** (`samuelballantyne@hotmail.com`): per il suo progetto originale SAMCO, il magnifico branding OpenFIRE e il sistema di tracciamento basato sulla prospettiva.
+* **Mike Lynch (Prow7)**: per il suo fork migliorato di SAMCO, base della modalità pausa e del sistema di salvataggio.
+* **Odwalla-J, mrkylegp, RG2020 & lemmingDev**: per la consulenza in fase di pre-release, la ricerca dei bug e i feedback.
+* **Tutti i tester di IR-GUN4ALL**: per i primi feedback e le richieste di nuove funzionalità. Tutto questo non sarebbe successo senza di voi!
+* **Chris Young**: per la sua libreria compatibile TinyUSB (ora parte di `TinyUSB_Devices`).
 
 ### Contributori al Porting per ESP32
-Un enorme grazie a chi ha supportato personalmente lo sviluppo e i test di questo specifico porting per ESP32:
-* **Reverse Cosmos**: Per il prezioso aiuto e il tempo dedicato ai test del firmware OpenFIRE ESP32.
-* **VINNY!**: Per aver progettato la parte meccanica e i file .stl del pedale wireless.
-* **Alextrical**: Per aver progettato i PCB su cui montare le telecamere PixArt PAJ7025R2 e PixArt PAJ7025R3.
+Un enorme grazie a chi ha sostenuto personalmente lo sviluppo e i test di questo porting per ESP32:
+* **Reverse Cosmos**: per il prezioso aiuto e il tempo dedicato ai test del firmware OpenFIRE ESP32.
+* **VINNY!**: per aver progettato la parte meccanica e i file .stl del pedale wireless.
+* **Alextrical**: per aver progettato i PCB delle telecamere PixArt PAJ7025R2 e PixArt PAJ7025R3.
 
 ## Licenza, Uso Commerciale e Fork
 
-Nel pieno rispetto della licenza originale e del volere dei creatori di OpenFIRE, questo porting aderisce alle seguenti linee guida per i fork e l'uso commerciale:
+Il firmware scaricato dai canali ufficiali è **gratuito**; non serve acquistare una licenza per usarlo. Distribuzione e modifica sono regolate dalla [licenza GNU LGPL inclusa nel repository](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/LICENSE). Chiediamo inoltre a chi si basa su questo lavoro di rispettare queste indicazioni:
 
-* **No al Rebranding:** I fork creati al solo scopo di fare "rebranding" (cambiare nome e logo per far sembrare proprio il progetto) sono fortemente **SCONSIGLIATI**. Tutti i fork derivati da questo repository dovrebbero mantenere il nome OpenFIRE e accreditare sia gli autori originali del core (That One Seong, Samco, Prow7) sia l'autore di questo specifico porting per ESP32 Wireless (Alessandro Satanassi).
+* **No al rebranding:** i fork creati solo per fare "rebranding" (cambiare nome e logo per presentare il progetto come proprio) sono fortemente **SCONSIGLIATI**. Chiediamo ai fork di mantenere il nome OpenFIRE e citare sia gli autori originali del core (That One Seong, Samco, Prow7) sia l'autore di questo porting ESP32 wireless (Alessandro Satanassi).
 
-* **Integrazioni Commerciali:** I prodotti che desiderano integrare OpenFIRE utilizzando questo firmware (ad esempio, all'interno di lightgun pre-assemblate destinate alla vendita) devono rendere estremamente chiaro il suo utilizzo e fornire i crediti appropriati sia agli autori del core che all'autore del porting. Sebbene si tratti di Software Libero, si chiede a chiunque tragga profitto da questo lavoro volontario di considerare una donazione o sponsorizzazione al progetto.
-  * Per questioni commerciali, collaborazioni o licenze riguardanti lo specifico **porting ESP32 e l'ecosistema wireless (Dongle/Pedale)**, si prega di contattare *Alessandro Satanassi* (`alessandro@cittini.it`).
-  * Per questioni commerciali o di licenza riguardanti il **core originale di OpenFIRE**, si prega di aprire un thread nella sezione Discussions del [repository originale](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) o di contattare *That One Seong* (`SeongsSeongs@gmail.com`) e/o *Samuel Ballantyne* (`samuelballantyne@hotmail.com`).
+* **Integrazioni commerciali:** chiediamo a chi realizza prodotti che usano questo firmware (ad esempio lightgun pre-assemblate in vendita) di dichiararlo chiaramente e citare sia gli autori del core sia l'autore del porting. Invitiamo inoltre chi trae profitto da questo lavoro volontario a considerare una donazione o una sponsorizzazione.
+  * Per richieste commerciali, collaborazioni o licenze riguardanti questo **porting ESP32 e l'ecosistema wireless (dongle/pedale)**, contatta *Alessandro Satanassi* (`alessandro@cittini.it`).
+  * Per richieste commerciali o di licenza riguardanti il **core originale di OpenFIRE**, apri una discussione nella sezione Discussions del [repository originale](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) oppure contatta *That One Seong* (`SeongsSeongs@gmail.com`) e/o *Samuel Ballantyne* (`samuelballantyne@hotmail.com`).
 
-* **Conformità GNU LGPL:** Come stabilito dalla *GNU Lesser General Public License*, qualsiasi entità (privata o commerciale) che desideri incorporare in parte o in toto i componenti di questo firmware **deve rendere pubbliche le proprie modifiche al codice sorgente su richiesta**. 
+* **Conformità GNU LGPL:** chi redistribuisce il firmware, originale o modificato, deve rispettarne la licenza, comprese le condizioni relative alle note di copyright e all'accesso al codice sorgente corrispondente. Le condizioni complete sono nel file `LICENSE`.
 
-* **Software Libero (Anti-Scam):** OpenFIRE è Software Libero (Free Software), sia nel senso di "libertà" che di "gratuito". Se ti è stata addebitata una qualsiasi somma per scaricare o utilizzare il firmware OpenFIRE, **sei stato truffato e dovresti esigerne l'immediato rimborso!**
+* **Download ufficiali:** scarica il firmware dalla pagina Releases di questo progetto o dal Web Flasher. Hardware, assemblaggio e assistenza a pagamento sono servizi distinti dal firmware ufficiale, disponibile gratuitamente.
 
 ---
 ![BannerDark](lightgun/docs/of_bannerLoD.png#gh-dark-mode-only)![BannerLight](lightgun/docs/of_bannerDoL.png#gh-light-mode-only)

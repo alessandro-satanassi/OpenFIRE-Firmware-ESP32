@@ -20,36 +20,36 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-* Official configuration WebApp: online via USB serial (directly or through the paired dongle), and offline from the lightgun over Wi-Fi or USB NCM.
-* PAJ7025R2 and wide-angle PAJ7025R3 cameras, selectable alongside DFRobot/Wii in the same board firmware.
-* Startup shortcuts: **Trigger + A** for firmware flashing; **B** for the integrated WebApp. Hold for about 2 seconds.
-* Saved mouse/gamepad startup mode and an explicit wireless pedal option.
-* IR camera test: each emitter circle shows the size and brightness of the light spot measured by the camera; an emitter that is not seen is shown as a dashed circle with a red X.
-* Calibration from the WebApp or the desktop App checks the IR emitters: the crosshair turns green when all four are seen well and orange when one is weak, a small panel shows each emitter, a slowly rotating dashed outer ring highlights the crosshair in the same dynamic colour without pulsing, and target shots are refused while an emitter is not seen. The calibration started from the gun works as before.
-* Both calibration interfaces show six target-progress dots and a brief solid white flash at the target just acquired. The crosshair stays still during the 120 ms flash, then moves to the next target; the rotating dashed ring is slightly thinner than the original crosshair circle and the dots do not flash. The IR panel is square, rounded and text-free. Stage captions and numeric labels are translated in English/Italian. Calibration values, protocol and save behaviour are unchanged.
-* Both calibration interfaces keep a two-line posture reminder above the bottom instructions through final aiming verification: stand centrally in front of the screen without rotating the lightgun.
-* DFRobot/Wii camera: the IR test and the calibration check also read the brightness of the light spots, from the camera's full data format.
+* **OpenFIRE ESP32 WebApp**, the new configuration tool: online from a computer browser, through the gun's USB cable or its paired dongle, or offline from the WebApp stored in the gun, over Wi-Fi (phones included) or USB networking. No program to install.
+* **Three cameras, one firmware:** DFRobot SEN0158 / Wii Cam, PixArt PAJ7025R2 and the wide-angle PixArt PAJ7025R3, chosen in the WebApp. The firmware corrects the distortion of the R3's wide-angle lens.
+* **Startup shortcuts**, held for about 2 seconds while switching on: **Trigger + A** prepares the gun for a firmware update, **B** starts the offline WebApp.
+* **Startup mode** (mouse or gamepad) saved in the gun, and a **Wireless pedal** option to skip the pedal search when you do not use one.
+* **IR camera test:** each emitter circle shows how large and bright the camera sees its light spot; an emitter that is not seen appears as a dashed circle with a red X. The gun's aim is drawn as a crosshair, and a legend explains every symbol and underlines the layout in use (Square or Diamond).
+* **Calibration from the WebApp or the desktop App checks the IR emitters:** the crosshair is green when the camera sees all four emitters well, turns orange when one is weak and red when one is missing. A panel shows each emitter, a target shot is refused while an emitter is missing, and the window explains why. Six dots show the progress, a brief white flash on the crosshair confirms each accepted shot, a reminder asks you to stand centrally without rotating the gun, and a legend explains the colours.
+* **Calibration from the gun:** the cursor traces a small circle on each target, so it is easy to spot. With an OLED display, the screen shows where the target is, the step (1/6 to 6/6) and, at the end, how to confirm or repeat.
+* **DFRobot/Wii camera:** the IR test and the calibration check also read the brightness of the light spots.
 * **Save and Send Settings** pulses while there are unsaved changes (WebApp and desktop App).
-* The Web Flasher can switch a lightgun running 7.0.0 into update mode by itself (the serial port changes once: select the new port and retry).
-* Central project hub, version-matched WebApp and Web Flasher.
+* The **Web Flasher** can switch a gun running 7.0.0 into update mode by itself (the serial port changes once: select the new port and retry).
+* **Project hub** linking the WebApp, the Web Flasher, the tools and the documentation. Each firmware version opens the WebApp made for it.
 
 ### Changed
 
-* Refined IR tracking and recovery when some LEDs disappear. Square layout supports vertical or wide rectangles, including screen-corner placement; recalibrate after moving the emitters.
+* Refined IR tracking and faster recovery when some LEDs disappear from view. The Square layout supports a vertical rectangle or a wider one with the LEDs at the screen corners; recalibrate after moving the emitters.
 * The pause menu also accepts the Up/Down directional buttons.
-* The camera test and calibration views (WebApp, desktop App and OLED) keep the real proportions of the camera image.
-* One firmware image per board, not separate camera or NoFS/Full images. Clean installation erases the whole flash before writing the same image.
-* Updated configuration communication and user documentation. The compatible ESP32 desktop App remains available from the Tools page.
+* The camera test and calibration screens (WebApp, desktop App and OLED) keep the real proportions of the camera image.
+* One firmware file per board, with no separate camera or NoFS/Full files. A clean installation erases the whole flash and writes the same file.
+* New configuration protocol and rewritten user documentation. A compatible desktop App for ESP32 7.x remains available on the Tools page.
 
 ### Fixed
 
-* Hotkey pause mode: the Left/Right rumble and solenoid toggles now work when no hardware switch is configured, as in the Simple Pause Menu, and are ignored when a hardware switch is fitted or the rumble/solenoid output is not mapped.
+* Hotkey pause mode: the Left/Right rumble and solenoid toggles now work when no hardware switch is fitted, as in the Simple Pause Menu, and are ignored when a hardware switch is fitted or the rumble/solenoid output is not mapped.
+* After the first calibration started from the gun on a new or clean-installed board, the gun saves it automatically and returns to normal operation as soon as you confirm the calibration. Calibrations started from pause mode must be saved separately.
 
 ### Migration from 6.2.1
 
 * A clean installation is recommended; note your settings first, then configure and calibrate again. Erasing removes all saved settings and profiles.
-* Use the new WebApp or a compatible ESP32 desktop App; old configuration Apps are incompatible with the new protocol. Normal game HID outputs and MAMEHOOKER commands remain available.
-* Use matching releases for lightgun, dongle and pedal. USB serial is unavailable on the lightgun while its special USB network configuration mode is active.
+* Use the new WebApp or the compatible ESP32 desktop App; earlier configuration Apps do not work with the new protocol. Game outputs and MAMEHOOKER commands are unchanged.
+* Use lightgun, dongle and pedal firmware from the same release. While the gun runs the offline WebApp (B held at startup), its USB serial port is not available.
 
 ---
 
@@ -82,36 +82,36 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 
 ### Aggiunte
 
-* WebApp ufficiale di configurazione: online tramite seriale USB (direttamente o attraverso il dongle associato), e offline dalla lightgun tramite Wi-Fi o USB NCM.
-* Telecamere PAJ7025R2 e PAJ7025R3 grandangolare, selezionabili insieme a DFRobot/Wii nello stesso firmware della scheda.
-* Scorciatoie all'avvio: **Grilletto + A** per il flashing; **B** per la WebApp integrata. Tenere premuto per circa 2 secondi.
-* Modalità mouse/gamepad salvabile per l'avvio e opzione esplicita per il pedale wireless.
-* Test della telecamera IR: ogni cerchio degli emettitori mostra grandezza e luminosità della macchia di luce misurata dalla telecamera; un emettitore non visto è indicato da un cerchio tratteggiato con una X rossa.
-* La calibrazione dalla WebApp o dall'App desktop controlla gli emettitori IR: il mirino diventa verde quando tutti e quattro sono visti bene e arancione quando uno è debole, un piccolo riquadro mostra ogni emettitore, un cerchio esterno tratteggiato ruota lentamente con lo stesso colore dinamico del mirino senza pulsazioni e i tiri sui bersagli vengono rifiutati finché un emettitore non è visto. La calibrazione avviata dalla pistola funziona come prima.
-* Entrambe le interfacce di calibrazione mostrano sei pallini di avanzamento e un breve flash bianco intero sul bersaglio appena acquisito. Il mirino resta fermo durante il flash di 120 ms, poi si sposta sul bersaglio successivo; il cerchio tratteggiato rotante è leggermente più sottile del cerchio originale del mirino e i pallini non lampeggiano. Il riquadro IR è quadrato, arrotondato e senza scritte. Titoli dei passi e valori numerici sono tradotti in inglese/italiano. Valori di calibrazione, protocollo e comportamento del salvataggio restano invariati.
-* Entrambe le interfacce di calibrazione mantengono un promemoria su due righe sopra le istruzioni inferiori fino alla verifica finale del puntamento: posizionarsi centralmente di fronte allo schermo senza ruotare la lightgun.
-* Telecamera DFRobot/Wii: il test IR e il controllo della calibrazione leggono anche la luminosità delle macchie di luce, dal formato dati completo della telecamera.
+* **WebApp OpenFIRE ESP32**, il nuovo strumento di configurazione: online dal browser di un computer, tramite il cavo USB della pistola o il suo dongle associato, oppure offline con la WebApp contenuta nella pistola, via Wi-Fi (anche da telefono) o rete USB. Nessun programma da installare.
+* **Tre telecamere, un solo firmware:** DFRobot SEN0158 / Wii Cam, PixArt PAJ7025R2 e PixArt PAJ7025R3 grandangolare, da scegliere nella WebApp. Il firmware corregge la distorsione dell'ottica grandangolare della R3.
+* **Scorciatoie all'accensione**, da tenere premute per circa 2 secondi: **Grilletto + A** prepara la pistola all'aggiornamento del firmware, **B** avvia la WebApp offline.
+* **Modalità all'avvio** (mouse o gamepad) salvata nella pistola, e opzione **Pedale wireless** per saltare la ricerca del pedale quando non lo usi.
+* **Test della telecamera IR:** ogni cerchio degli emettitori mostra quanto è grande e luminosa la macchia di luce vista dalla telecamera; un emettitore non visto appare come un cerchio tratteggiato con una X rossa. Il puntamento della pistola è disegnato come un mirino e una legenda spiega ogni simbolo e sottolinea il layout in uso (Square o Diamond).
+* **La calibrazione dalla WebApp o dall'App desktop controlla gli emettitori IR:** il mirino è verde quando la telecamera vede bene tutti e quattro gli emettitori, diventa arancione se uno è debole e rosso se ne manca uno. Un riquadro mostra ogni emettitore, il tiro su un bersaglio viene rifiutato finché manca un emettitore e la finestra spiega il motivo. Sei pallini mostrano l'avanzamento, un breve lampo bianco sul mirino conferma ogni tiro accettato, un promemoria ricorda di stare al centro senza ruotare la pistola e una legenda spiega i colori.
+* **Calibrazione dalla pistola:** il cursore descrive un piccolo cerchio su ogni bersaglio, così si individua subito. Con un display OLED lo schermo mostra dove si trova il bersaglio, il passo (da 1/6 a 6/6) e, alla fine, come confermare o ripetere.
+* **Telecamera DFRobot/Wii:** il test IR e il controllo della calibrazione leggono anche la luminosità delle macchie di luce.
 * **Salva e invia impostazioni** pulsa finché ci sono modifiche non salvate (WebApp e App desktop).
-* Il Web Flasher può portare da solo in modalità aggiornamento una lightgun che esegue la 7.0.0 (la porta seriale cambia una volta: selezionare la nuova porta e riprovare).
-* Hub centrale del progetto, WebApp abbinata alla versione e Web Flasher.
+* Il **Web Flasher** può portare da solo in modalità aggiornamento una pistola con la 7.0.0 (la porta seriale cambia una volta: seleziona la nuova porta e riprova).
+* **Portale del progetto** con WebApp, Web Flasher, strumenti e documentazione. Ogni versione del firmware apre la WebApp della stessa versione.
 
 ### Modifiche
 
-* Affinati il tracciamento IR e il recupero quando alcuni LED scompaiono. Il layout Square supporta rettangoli verticali o larghi, anche con LED agli angoli dello schermo; ricalibrare dopo aver spostato gli emettitori.
+* Tracciamento IR affinato e recupero più rapido quando alcuni LED escono dal campo visivo. Il layout Square accetta un rettangolo verticale o uno più largo con i LED agli angoli dello schermo; ricalibra dopo aver spostato gli emettitori.
 * Il menu di pausa accetta anche i tasti direzionali Su/Giù.
 * Le schermate di test della telecamera e di calibrazione (WebApp, App desktop e OLED) mantengono le proporzioni reali dell'immagine della telecamera.
-* Un'unica immagine firmware per scheda, senza varianti separate per telecamera o NoFS/Full. L'installazione pulita cancella l'intera flash prima di scrivere la stessa immagine.
-* Aggiornate la comunicazione di configurazione e la documentazione utente. L'App desktop ESP32 compatibile resta disponibile nella pagina Tools.
+* Un solo file firmware per scheda, senza file separati per telecamera o NoFS/Full. L'installazione pulita cancella l'intera flash e scrive lo stesso file.
+* Nuovo protocollo di configurazione e documentazione utente riscritta. Nella pagina Tools resta disponibile un'App desktop compatibile con ESP32 7.x.
 
 ### Correzioni
 
-* Modalità pausa Hotkey: i comandi Sinistra/Destra per attivare/disattivare rumble e solenoide ora funzionano quando non è configurato un interruttore fisico, come nel Menu di Pausa Semplificato, e vengono ignorati se è presente l'interruttore fisico o se l'uscita rumble/solenoide non è mappata.
+* Modalità pausa Hotkey: i comandi Sinistra/Destra per attivare/disattivare rumble e solenoide ora funzionano quando non è montato un interruttore fisico, come nel Menu di Pausa Semplificato, e vengono ignorati se l'interruttore fisico è montato o se l'uscita rumble/solenoide non è mappata.
+* Dopo la prima calibrazione avviata dalla pistola su una scheda nuova o dopo un'installazione pulita, la pistola la salva automaticamente e torna al funzionamento normale appena confermi la calibrazione. Le calibrazioni avviate dalla pausa vanno salvate separatamente.
 
 ### Passaggio dalla 6.2.1
 
-* È consigliata un'installazione pulita; annotare prima le impostazioni, poi configurare e calibrare nuovamente. La cancellazione elimina tutte le impostazioni e i profili salvati.
-* Usare la nuova WebApp o un'App desktop ESP32 compatibile; le vecchie App di configurazione non sono compatibili con il nuovo protocollo. Restano disponibili le normali uscite HID di gioco e i comandi MAMEHOOKER.
-* Usare release corrispondenti per lightgun, dongle e pedale. La seriale USB della lightgun non è disponibile mentre è attiva la modalità speciale di configurazione con rete USB.
+* È consigliata un'installazione pulita; annota prima le impostazioni, poi configura e calibra di nuovo. La cancellazione elimina tutte le impostazioni e i profili salvati.
+* Usa la nuova WebApp o l'App desktop ESP32 compatibile; le App di configurazione precedenti non funzionano con il nuovo protocollo. Uscite di gioco e comandi MAMEHOOKER restano invariati.
+* Usa firmware della stessa release per lightgun, dongle e pedale. Mentre la pistola esegue la WebApp offline (B premuto all'avvio), la sua porta seriale USB non è disponibile.
 
 ---
 
@@ -119,4 +119,3 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 
 ### Aggiunte
 * **Assegnazione fissa della porta COM (USB Serial Number):** Aggiunto un numero di serie USB univoco al descrittore USB della scheda ESP32 della lightgun. Questo garantisce che Windows assegni sempre la stessa porta COM alla stessa lightgun, indipendentemente dalla porta USB o dal dongle USB utilizzato.
-

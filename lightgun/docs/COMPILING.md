@@ -1,99 +1,129 @@
-> **ESP32 7.0.0 users:** use the [Web Flasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/) or the [installation guide](../README.md#english-version). The inherited Arduino/RP2040 instructions below are not the build procedure for this ESP32-S3 port, which uses PlatformIO and its supplied project configuration.
->
-> **Utenti ESP32 7.0.0:** usare il [Web Flasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/) o la [guida di installazione](../README.md#versione-italiana). Le istruzioni Arduino/RP2040 ereditate riportate sotto non sono la procedura di compilazione di questo port ESP32-S3, che usa PlatformIO e la configurazione di progetto fornita.
+<a id="english-version"></a>
+
+[English](#english-version) · [Italiano](#versione-italiana)
+
+# Building the OpenFIRE ESP32 firmware
+
+> **Just want to use the gun?** You do not need to build anything: install the firmware with the [Web Flasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=en) and follow the [lightgun guide](../README.md#english-version).
 
 > [!NOTE]
-> If you discover issues with custom builds or are not using the provided binaries in the releases page, **make sure you inform in the issue of what you modified in the code.** If it's a general firmware issue, see if it happens in the precompiled builds first.
+> If you report a problem with a firmware you built yourself, **say what you changed in the code**. If it is a general firmware problem, check first whether it also happens with the official release files.
 
-## OpenFIRE Build Manual
- - [Arduino IDE Setup](#arduino-ide-setup)
- - [Arduino (-cli) Setup](#arduino--cli-setup)
- - [Sketch Configuration](#sketch-configuration)
- - [Define Buttons & Timers](#define-buttons--timers)
+## What you need
+- [Visual Studio Code](https://code.visualstudio.com/) with the **PlatformIO IDE** extension, or [PlatformIO Core](https://platformio.org/install/cli) for the command line.
+- Git, to clone the repository.
+- An Internet connection for the first build: PlatformIO downloads the ESP32 platform and the libraries listed in `platformio.ini`.
 
-### Arduino IDE Setup
-For most people, you may prefer editing, testing and using the Arduino IDE. This applies to Arduino IDE 2.x, though 1.x can also be made to work.
- 1. [Download and install the Arduino IDE for your system](https://www.arduino.cc/en/software) (or for Linux users, install from your system's package manager).
- 2. After opening the IDE, go to File->Preferences and paste the following into the *Additional boards manager URLs* field:
- ```
- https://github.com/TeamOpenFIRE/arduino-pico/releases/download/global/package_rp2040_index.json
- ```
- 3. Open the Boards Manager (second button from the top on the left sidebar), search and install the latest version of *"Raspberry Pi Pico/RP2040/RP2350 (TUSB Fix)"*.
-    - Using this fork is REQUIRED as it includes a fixed version of Adafruit's TinyUSB library. Until adafruit/Adafruit_TinyUSB_Arduino#293 is resolved, do not use the upstream *Arduino-Pico* core or install the separate Adafruit TinyUSB library.
- 4. Clone/extract the contents of the source repository into your system's `Arduino` folder, so that the `OpenFIREmain` folder is next to `libraries`. Open the `OpenFIREmain` sketch.
- 5. From the app menu up top, set the current microcontroller to your current board under *Tools->Board:->Raspberry Pi Pico/RP2040/RP2350 (TUSB Fix),* set CPU speed to *133 MHz,* set Optimize to *Optimize Even More (-O3),* set Flash Size to include at least a 64KB file system,* and set USB Stack to *Adafruit TinyUSB* (not *Host*). For RP2350 boards, *CPU Architecture* must be set to *ARM*.
- 6. When you're ready to build, click Verify to check for compilation errors, Upload to directly upload the binary to the microcontroller (if connected), or go to *Sketch->Export Compiled Binary* to generate a .uf2 file under `OpenFIREmain/build/rp2040.rp2040.board_name` that you can drag and drop onto your microcontroller when it's in bootloader mode (either by holding BOOTSEL on poweron, or resetting to bootloader from the OpenFIRE App).
+## Project layout
+The repository contains three separate PlatformIO projects, one per device, each with its own `platformio.ini`:
 
-### Arduino (-cli) Setup
-Compiling from the cli can be used to automate the build process, and is used by the GitHub actions deployments for release builds.
- 1. [Download the Arduino-cli tool for your system](https://github.com/arduino/arduino-cli/releases/latest) and install it to where it's most convenient (or for Linux users, install from your system's package manager).
-    - These instructions are tailored to Linux, but Windows users can use `arduino-cli.exe` whenever the tool is referenced.
- 2. Install the latest version of the patched RP2040/RP2350 core for OpenFIRE:
-    ```bash
-    $ arduino-cli core install rp2040:rp2040 --additional-urls https://github.com/TeamOpenFIRE/arduino-pico/releases/download/global/package_rp2040_index.json
-    ```
-    - Optional: for *Arduino Nano RP2040 Connect*, also install its WiFiNINA library:
-      ```bash
-      $ arduino-cli lib install WiFiNINA
-      ```
- 3. Clone the repository, making sure to also download its submodules:
-    ```bash
-    $ git clone --recursive https://github.com/TeamOpenFIRE/OpenFIRE-Firmware
-    ```
- 4. Find the proto name of the board to build for:
-    ```bash
-    $ arduino-cli board listall rp2040
+| Folder | Device |
+| --- | --- |
+| `lightgun/` | the lightgun (it also builds and embeds the WebApp) |
+| `dongle/` | the USB receiver |
+| `pedal/` | the wireless pedal |
 
-    Board Name                           FQBN
-    0xCB Helios                          rp2040:rp2040:0xcb_helios
-    Adafruit Feather RP2040              rp2040:rp2040:adafruit_feather
-    Adafruit Feather RP2040 CAN          rp2040:rp2040:adafruit_feather_can
-    Adafruit Feather RP2040 DVI          rp2040:rp2040:adafruit_feather_dvi
-    Adafruit Feather RP2040 Prop-Maker   rp2040:rp2040:adafruit_feather_prop_maker
-    Adafruit Feather RP2040 RFM          rp2040:rp2040:adafruit_feather_rfm
-    ...
-    ```
- 5. Find the flash value that allocates at least 64KB for the File System (replacing `{BOARD}` with your desired microcontroller's FQBN name). The example output below would be seen if `{BOARD}` was set to `rp2040:rp2040:rpipico`:
-    ```bash
-    $ arduino-cli board details -b {BOARD}
+`shared_boards/` holds the board definitions and partition tables, `shared_lib/` the libraries shared by the three projects. Opening `OpenFIRE.code-workspace` in VS Code shows all of them in one window.
 
-    ...
-    Option:       Flash Size                                       flash
-                  2MB (no FS)                                      flash=2097152_0
-                  2MB (Sketch: 1984KB, FS: 64KB)                   flash=2097152_65536
-                  2MB (Sketch: 1920KB, FS: 128KB)                  flash=2097152_131072
-                  2MB (Sketch: 1792KB, FS: 256KB)                  flash=2097152_262144
-                  2MB (Sketch: 1536KB, FS: 512KB)                  flash=2097152_524288
-                  2MB (Sketch: 1MB, FS: 1MB)                       flash=2097152_1048576
-    ...
-    ```
- 6. Build OpenFIRE Firmware (replacing `{BOARD}` with your desired microcontroller's FBQN name and `{FLASH}` with the flash value found above):
-    ```bash
-    $ arduino-cli compile -e --fqbn rp2040:rp2040:{BOARD}:usbstack=tinyusb,opt=Optimize3,flash={FLASH} /path/to/OpenFIRE-Firmware/OpenFIREmain --libraries /path/to/repo/libraries
-    ```
-    
-When successful, you will find the exported binary at `/path/to/OpenFIRE-Firmware/OpenFIREmain/build/rp2040.rp2040.{BOARD}/OpenFIREmain.ino.uf2`
+## Choosing the board
+Each project has one environment per supported board. Pick it in the PlatformIO toolbar, or set `default_envs` at the top of `platformio.ini`.
 
-### Sketch Configuration
-Per-board build configurations for various microcontrollers, and the strings to identify which board is for what, can be found in `boards/OpenFIREshared.h`
+| Lightgun environment | Dongle environment | Pedal environment |
+| --- | --- | --- |
+| `ESP32_S3_WROOM1_DevKitC_1_N16R8` | `LILYGO_T_DONGLE_S3` | `ESP32_S3_WROOM1_DevKitC_1_N16R8` |
+| `ESP32_S3_WROOM1_DevKitC_1_N8R2` | `GNPE_POCKET_DONGLE_S3_N16R8` | `ESP32_S3_WROOM1_DevKitC_1_N8R2` |
+| `WAVESHARE_ESP32_S3_PICO` | `ESP32_S3_WROOM1_DevKitC_1_N16R8` | `WAVESHARE_ESP32_S3_PICO` |
+| `WAVESHARE_ESP32_S3_ZERO_N8R8` | `ESP32_S3_WROOM1_DevKitC_1_N8R2` | `WAVESHARE_ESP32_S3_ZERO_N8R8` |
+| `WAVESHARE_ESP32_S3_ZERO_N4R2` | `WAVESHARE_ESP32_S3_PICO` | `WAVESHARE_ESP32_S3_ZERO_N4R2` |
+| | `WAVESHARE_ESP32_S3_ZERO_N8R8` | |
+| | `WAVESHARE_ESP32_S3_ZERO_N4R2` | |
 
-### Define Buttons & Timers
-Tactile extras can be defined/unset by simply (un)commenting the respective defines in `OpenFIREDefines.h` - though each one of these can be simply disabled at runtime even when the firmware is "fully kitted".
+Choose the exact flash/PSRAM variant of your board, as explained in [Which board variant do I have?](../README.md#board-variant). The lightgun project also has environments for the Raspberry Pi Pico family (`rpipico`, `rpipicow`, `rpipico2`, `rpipico2w`): they build a wired-only firmware, without the wireless features.
 
-If your gun is going to be hardset to player 1/2/3/4 e.g. for an arcade build, uncomment and set `#define PLAYER_NUMBER` to 1, 2, 3, or 4 depending on what keys you want the Start/Select buttons to correlate to. Remember that, when this variable is unset, guns can be remapped to any player number arrangement at any time if needed by sending an `XR#` command over Serial - where # is the player number.
+## Building and uploading
+In VS Code use the PlatformIO **Build** and **Upload** buttons. From the command line, inside the device folder:
 
-To change the default USB ID, these parameters are easily found and can be redefined in `OpenFIREDefines.h`:
-
-```c++
-#define MANUFACTURER_NAME "OpenFIRE"
-#define DEVICE_NAME "FIRECon"
-#define DEVICE_VID 0xF143
+```bash
+cd lightgun
+pio run -e WAVESHARE_ESP32_S3_PICO              # build
+pio run -e WAVESHARE_ESP32_S3_PICO -t upload    # build and upload through the board's USB port
+pio run -e WAVESHARE_ESP32_S3_PICO -t erase     # erase the whole flash (clean installation)
 ```
 
-You may change these to suit whatever your heart desires - though the only parts *necessary to change for multiplayer* is the Device Vendor ID and/or Product ID (the latter is determined by either loaded preferences or Player Number, in that order). Then, just reflash the board!
-Keep in mind that for App and most distros' compatibility, the Vendor ID (`DEVICE_VID`) **MUST** be kept at the default `0xF143` identifier.
+Uploading keeps the settings saved in the gun; erase first for a clean installation. If the board does not enter update mode by itself, use its BOOT/RESET buttons (on a lightgun already running 7.0.0 you can also start it holding **Trigger + A**).
 
-Remember that the sketch uses the Arduino GPIO pin numbers; on many boards, including the Raspberry Pi Pico and the Adafruit Itsybitsy RP2040, these are the silkscreen labels on the **underside** of the microcontroller (marked GP00-29). Note that this does not apply to the analog pins (A0-A3), which are macros for GP26-29.
-For boards already implemented, the OpenFIRE Desktop App has an embedded interactive *boards previewer* to view the default layout, location, and extra capabilities of GPIO for supported microcontrollers. You can also refer to [this interactive webpage](https://pico.pinout.xyz/) for detailed information on the Pico/W's layout, or your board vendor's documentation for more information about your particular microcontroller.
+## The WebApp inside the lightgun
+Every lightgun build runs `scripts/pack_webapp.py`, which rebuilds the WebApp from `webapp/` and embeds it in the firmware (`include/web_assets.h`), the version served by the offline WebApp mode. The same build also writes the published WebApp of this firmware to `dist/site` and the home page of the site to `dist/launcher`. The first time a board picture needs compressing, the build installs Pillow in PlatformIO's Python. Details are in [webapp/README.md](../webapp/README.md).
 
-The default button:pins layout used will be reflected by default in the OpenFIRE App, which can be used as reference or can be changed to any custom pins layout to suit your needs - custom settings will take priority over board defaults if enabled & detected.
+## Build options
+- **Features:** the optional parts (OLED display, solenoid, rumble, temperature sensor, analog stick, NeoPixels, RGB LED, hardware switches, MAMEHOOKER support...) are enabled by the `-D USES_...` and similar entries of `build_flags` in the `[common]` section of `lightgun/platformio.ini`. The official files have them all enabled except hardware switches (`USES_SWITCHES`); everything can still be turned off at runtime in the WebApp.
+- **Default camera:** `CAMERA_DEFAULT` in the `[camera]` section sets the camera selected after a clean installation (DFRobot/Wii in the official files). Both camera drivers are always built in.
+- **Fixed player number:** uncomment `-D PLAYER_NUMBER=1` (1 to 4) in `build_flags` to tie the Start/Select keys to that player, regardless of the player chosen in the WebApp. Without it, the player can be changed in the WebApp or at any time with the serial command `XR#`.
+- **USB identity:** `MANUFACTURER_NAME`, `DEVICE_NAME` (at most 15 characters) and `DEVICE_VID` are defined in `src/OpenFIREDefines.h`. For multiplayer there is no need to change them: the player number in the WebApp sets a different Product ID for each gun. Keep `DEVICE_VID` at `0xF143` and `MANUFACTURER_NAME` at `OpenFIRE`: the Apps and several programs recognise OpenFIRE guns by them.
+- **Boards and default pins:** board names, default pin layouts and the pictures used by the Apps are defined in `src/boards/OpenFIREshared.h` (see [src/boards/README.md](../src/boards/README.md)). The current default pins of the ESP32 boards are also listed in [BOARDS.md](BOARDS.md).
+
+---
+
+<a id="versione-italiana"></a>
+
+[English](#english-version) · [Italiano](#versione-italiana)
+
+# Compilare il firmware OpenFIRE ESP32
+
+> **Vuoi solo usare la pistola?** Non serve compilare nulla: installa il firmware con il [Web Flasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=it) e segui la [guida lightgun](../README.md#versione-italiana).
+
+> [!NOTE]
+> Se segnali un problema con un firmware compilato da te, **indica cosa hai modificato nel codice**. Se è un problema generale del firmware, verifica prima se si presenta anche con i file ufficiali della release.
+
+## Cosa serve
+- [Visual Studio Code](https://code.visualstudio.com/) con l'estensione **PlatformIO IDE**, oppure [PlatformIO Core](https://platformio.org/install/cli) per la riga di comando.
+- Git, per clonare il repository.
+- Una connessione Internet per la prima compilazione: PlatformIO scarica la piattaforma ESP32 e le librerie elencate in `platformio.ini`.
+
+## Struttura del progetto
+Il repository contiene tre progetti PlatformIO separati, uno per dispositivo, ognuno con il proprio `platformio.ini`:
+
+| Cartella | Dispositivo |
+| --- | --- |
+| `lightgun/` | la lightgun (compila e incorpora anche la WebApp) |
+| `dongle/` | il ricevitore USB |
+| `pedal/` | il pedale wireless |
+
+`shared_boards/` contiene le definizioni delle schede e le tabelle delle partizioni, `shared_lib/` le librerie comuni ai tre progetti. Aprendo `OpenFIRE.code-workspace` in VS Code li vedi tutti in un'unica finestra.
+
+## Scegliere la scheda
+Ogni progetto ha un ambiente (environment) per ogni scheda supportata. Sceglilo nella barra di PlatformIO, oppure imposta `default_envs` all'inizio di `platformio.ini`.
+
+| Ambiente lightgun | Ambiente dongle | Ambiente pedale |
+| --- | --- | --- |
+| `ESP32_S3_WROOM1_DevKitC_1_N16R8` | `LILYGO_T_DONGLE_S3` | `ESP32_S3_WROOM1_DevKitC_1_N16R8` |
+| `ESP32_S3_WROOM1_DevKitC_1_N8R2` | `GNPE_POCKET_DONGLE_S3_N16R8` | `ESP32_S3_WROOM1_DevKitC_1_N8R2` |
+| `WAVESHARE_ESP32_S3_PICO` | `ESP32_S3_WROOM1_DevKitC_1_N16R8` | `WAVESHARE_ESP32_S3_PICO` |
+| `WAVESHARE_ESP32_S3_ZERO_N8R8` | `ESP32_S3_WROOM1_DevKitC_1_N8R2` | `WAVESHARE_ESP32_S3_ZERO_N8R8` |
+| `WAVESHARE_ESP32_S3_ZERO_N4R2` | `WAVESHARE_ESP32_S3_PICO` | `WAVESHARE_ESP32_S3_ZERO_N4R2` |
+| | `WAVESHARE_ESP32_S3_ZERO_N8R8` | |
+| | `WAVESHARE_ESP32_S3_ZERO_N4R2` | |
+
+Scegli la variante flash/PSRAM esatta della tua scheda, come spiegato in [Quale variante di scheda ho?](../README.md#variante-scheda). Il progetto lightgun ha anche ambienti per la famiglia Raspberry Pi Pico (`rpipico`, `rpipicow`, `rpipico2`, `rpipico2w`): producono un firmware solo via cavo, senza le funzioni wireless.
+
+## Compilare e caricare
+In VS Code usa i pulsanti **Build** e **Upload** di PlatformIO. Da riga di comando, dentro la cartella del dispositivo:
+
+```bash
+cd lightgun
+pio run -e WAVESHARE_ESP32_S3_PICO              # compila
+pio run -e WAVESHARE_ESP32_S3_PICO -t upload    # compila e carica dalla porta USB della scheda
+pio run -e WAVESHARE_ESP32_S3_PICO -t erase     # cancella tutta la flash (installazione pulita)
+```
+
+Il caricamento conserva le impostazioni salvate nella pistola; per un'installazione pulita cancella prima la flash. Se la scheda non entra da sola in modalità aggiornamento, usa i suoi pulsanti BOOT/RESET (su una lightgun che esegue già la 7.0.0 puoi anche avviarla tenendo premuti **Grilletto + A**).
+
+## La WebApp dentro la lightgun
+Ogni compilazione della lightgun esegue `scripts/pack_webapp.py`, che ricostruisce la WebApp da `webapp/` e la incorpora nel firmware (`include/web_assets.h`): è la versione servita dalla modalità WebApp offline. La stessa compilazione scrive anche la WebApp pubblicata di questo firmware in `dist/site` e la pagina iniziale del sito in `dist/launcher`. La prima volta che un'immagine di scheda va compressa, la compilazione installa Pillow nel Python di PlatformIO. I dettagli sono in [webapp/README.md](../webapp/README.md).
+
+## Opzioni di compilazione
+- **Funzioni:** le parti opzionali (display OLED, solenoide, rumble, sensore di temperatura, stick analogico, NeoPixel, LED RGB, interruttori fisici, supporto MAMEHOOKER...) si abilitano con le voci `-D USES_...` e simili di `build_flags` nella sezione `[common]` di `lightgun/platformio.ini`. I file ufficiali le hanno tutte attive tranne gli interruttori fisici (`USES_SWITCHES`); tutto può comunque essere disattivato durante l'uso dalla WebApp.
+- **Telecamera predefinita:** `CAMERA_DEFAULT` nella sezione `[camera]` imposta la telecamera selezionata dopo un'installazione pulita (DFRobot/Wii nei file ufficiali). Entrambi i driver delle telecamere sono sempre inclusi.
+- **Numero di giocatore fisso:** togli il commento a `-D PLAYER_NUMBER=1` (da 1 a 4) in `build_flags` per legare i tasti Start/Select a quel giocatore, indipendentemente dal giocatore scelto nella WebApp. Senza, il giocatore si cambia nella WebApp o in qualsiasi momento con il comando seriale `XR#`.
+- **Identità USB:** `MANUFACTURER_NAME`, `DEVICE_NAME` (al massimo 15 caratteri) e `DEVICE_VID` sono definiti in `src/OpenFIREDefines.h`. Per il multigiocatore non serve cambiarli: il numero del giocatore nella WebApp imposta un Product ID diverso per ogni pistola. Lascia `DEVICE_VID` a `0xF143` e `MANUFACTURER_NAME` a `OpenFIRE`: le App e diversi programmi riconoscono le pistole OpenFIRE da questi valori.
+- **Schede e pin predefiniti:** nomi delle schede, pin predefiniti e immagini usate dalle App sono definiti in `src/boards/OpenFIREshared.h` (vedi [src/boards/README.md](../src/boards/README.md)). I pin predefiniti attuali delle schede ESP32 sono elencati anche in [BOARDS.md](BOARDS.md).

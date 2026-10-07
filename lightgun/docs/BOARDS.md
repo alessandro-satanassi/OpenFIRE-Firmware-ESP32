@@ -1,86 +1,104 @@
-> **ESP32 7.0.0:** this reference includes inherited board layouts and default assignments. For the current ESP32 setup, use the board preview and **Board Layout** in the WebApp, selecting the exact board and installed camera. Do not treat older RP2040 examples or labels such as unused SPI pins as the wiring instructions for PAJ7025R2/R3. See the [hardware guide](../README.md#english-version).
->
-> **ESP32 7.0.0:** questo riferimento include layout ereditati e assegnazioni predefinite. Per la configurazione ESP32 attuale usare l'anteprima della scheda e il **Layout Scheda** nella WebApp, scegliendo scheda esatta e telecamera installata. Non usare i vecchi esempi RP2040 o indicazioni come pin SPI inutilizzati per cablare PAJ7025R2/R3. Consultare la [guida hardware](../README.md#versione-italiana).
+# Default board layouts
 
-# Supported Boards Layouts:
- - [Waveshare esp32-s3-pico](#waveshare-esp32-s3-pico)
- - [ESP32_S3_WROOM1_DevKitC_1_N16R8](#esp32_s3_wroom1_devkitc_1_n16r8)
- - [Raspberry Pi Pico (Non/W)](#raspberry-pi-pico-nonw)
- - [Adafruit ItsyBitsy RP2040](#adafruit-itsybitsy-rp2040)
- - [Adafruit Keeboar KB2040](#adafruit-keeboar-kb2040)
- - [Arduino Nano RP2040 Connect](#arduino-nano-rp2040-connect)
- - [Waveshare RP2040 Zero](#waveshare-rp2040-zero)
- - [VCC-GND YD RP2040 (Not Implemented)](#vcc-gnd-yd-rp2040)
+These are the pins each supported board uses after a clean installation. Every pin can be changed in the **Board Layout** tab of the WebApp, which also shows the board picture with each pin highlighted; the WebApp is always the reference for your firmware version. The illustrated pinouts are in the [lightgun guide](../README.md#english-version).
+
+> **Italiano:** questa pagina elenca i pin predefiniti di ogni scheda supportata dopo un'installazione pulita. Ogni pin si può cambiare nella sezione **Layout Scheda** della WebApp, che mostra anche l'immagine della scheda con ogni pin evidenziato. Le tabelle usano i nomi delle funzioni in inglese, come nella WebApp in inglese; i pinout illustrati sono nella [guida lightgun](../README.md#versione-italiana).
+
+## ESP32-S3 boards
+
+The PixArt PAJ7025R2/R3 cameras use four SPI pins (**Camera SPI MISO, MOSI, SCK, CS**): the DevKitC-1 has them by default on GPIO 13, 11, 12 and 10; on the PICO and the ZERO assign them to free pins. The DFRobot/Wii camera uses **Camera SDA** and **Camera SCL**. An OLED display uses **Peripherals SDA** and **Peripherals SCL** (default on the DevKitC-1 and the PICO; choose free pins on the ZERO). On the DevKitC-1, GPIO 0, 19, 20, 43, 44 and 48 are reserved (BOOT button, USB, serial port, built-in RGB LED); pins that are not listed on any board are not available.
+
+### ESP32-S3-DevKitC-1 (N16R8 / N8R2)
+
+| GPIO | Default function |
+| ---: | --- |
+| 1 | Trigger |
+| 2 | D-Pad Right |
+| 4 | Analog Stick X |
+| 5 | Analog Stick Y |
+| 6 | Temperature Sensor |
+| 8 | Camera SDA |
+| 9 | Camera SCL |
+| 10 | Camera SPI CS |
+| 11 | Camera SPI MOSI |
+| 12 | Camera SPI SCK |
+| 13 | Camera SPI MISO |
+| 14 | External NeoPixel |
+| 15 | Peripherals SCL |
+| 16 | Rumble Signal |
+| 17 | Solenoid Signal |
+| 18 | Peripherals SDA |
+| 21 | Button C |
+| 35 | Home Button |
+| 36 | Button A |
+| 37 | Button B |
+| 38 | Select |
+| 39 | Start |
+| 40 | D-Pad Up |
+| 41 | D-Pad Down |
+| 42 | D-Pad Left |
+| 45 | Pump Action |
+
+Free GPIO, available in Board Layout: 3, 7, 46, 47.
+
+### Waveshare ESP32-S3-PICO
+
+| GPIO | Default function |
+| ---: | --- |
+| 4 | Camera SDA |
+| 5 | Camera SCL |
+| 7 | Analog Stick Y |
+| 8 | Analog Stick X |
+| 9 | Temperature Sensor |
+| 11 | Button A |
+| 12 | Button B |
+| 13 | Button C |
+| 14 | Start |
+| 15 | Select |
+| 16 | Home Button |
+| 17 | D-Pad Up |
+| 18 | D-Pad Down |
+| 33 | D-Pad Left |
+| 34 | D-Pad Right |
+| 35 | Peripherals SDA |
+| 36 | Peripherals SCL |
+| 37 | External NeoPixel |
+| 38 | Pump Action |
+| 40 | Trigger |
+| 41 | Rumble Signal |
+| 42 | Solenoid Signal |
+
+Free GPIO, available in Board Layout: 1, 2, 6, 10, 39.
+
+### Waveshare ESP32-S3-ZERO (N8R8 / N4R2)
+
+| GPIO | Default function |
+| ---: | --- |
+| 4 | Camera SDA |
+| 5 | Camera SCL |
+| 6 | Trigger |
+| 7 | Button A |
+| 8 | Button B |
+| 9 | Button C |
+| 10 | Start |
+| 11 | Select |
+| 12 | Rumble Signal |
+| 13 | Solenoid Signal |
+
+Free GPIO, available in Board Layout: 1, 2, 3, 14, 15, 16, 17, 18, 38, 39, 40, 41, 42, 45.
+
+
+---
+
+## RP2040 boards (wired only)
+
+These layouts come from the original OpenFIRE project. On RP2040 boards the firmware works by USB cable only, without the wireless features.
 
 ```
                                         Symbol Legend:
                        (x) = GND/No Connect | (-) = GPIO | (p) = Power
 ```
 
-> [!NOTE]
-> Any button/function GPIO pin assignments written here are the ***defaults***, and can be changed for any other function from within the OpenFIRE App.
-> 
-> All of these layouts can also be previewed from within the OpenFIRE App (v3.0+) under *Help->View Compatible Boards*.
-
-### 
-
-## waveshare esp32-s3-pico
-```
-                                        (_____)
-                      A Button   11  |-) *USB* (-| VBUS  5v (USB voltage)
-                      B Button   12  |-)       (-| VSYS  (Input from Battery/Output to NeoPixels)
-                                 GND |x)       (x| GND
-                      C Button   13  |-)       (x| 3V3   En
-                         Start   14  |-)       (p| 3V3   Out (to Display/Cam/Analog Inputs)
-                        Select   15  |-)       (x|  10   
-                   Home Button   16  |-)       (-|  09   Temp Sensor
-                                 GND |x)       (x| GND 
-                      D-Pad Up   17  |-)       (-|  08   *Unmapped* Analop X
-                    D-Pad Down   18  |-)       (-|  07   *Unmapped* Analog Y
-                    D-Pad Left   33  |-)       (x| RUN
-                   D-Pad Right   34  |-)       (-|  06   *Unmapped*
-                                 GND |x)       (x| GND
-Peripherals SDA (OLED) RGB Red   35  |-)       (-|  05   Camera SCL
-Peripherals SCL OLED RGB Green   36  |-)       (-|  04   Camera SDA
-                      RGB Blue   37  |-)       (-|  02   *Unmapped* Peripherals SCL (OLED)
-                   Pump Action   38  |-)       (-|  01   *Unmapped* Peripherals SDA (OLED)
-                                 GND |x)       (x| GND
-                         Pedal   39  |-)       (-|  41   Rumble Signal
-                       Trigger   40  |-) _|_|_ (-|  42   Solenoid Signal
-
-* GPIO 21 at RGB LED 
-
-```
-
-## ESP32_S3_WROOM1_DevKitC_1_N16R8
-```
-
-                                         (__)  (__)  
-                                 GND |-)  USB  USB  (-| GND
-                                 GND |-)  SER  OTG  (-| 5V IN-OUT
-    COLLEGATO A USB OTG ???  GPIO 19 |x)            (x| GPIO 14
-    COLLEGATO A USB OTG ???  GPIO 20 |-)            (x| GPIO 13  MISO -> RX  (non usato per momento) SPI
-     2DOWN     GUNC          GPIO 21 |-)            (p| GPIO 12  SCK  -> SCK (non usato per momento) SPI
-     2LEFT      PEDAL        GPIO 47 |-)            (x| GPIO 11  MOSI -> TX  (non usato per momento) SPI
-       COLLEGATO AL LED RGB  GPIO 48 |-)            (-| GPIO 10  SS   -> CSn (non usato per momento) SPI
-     2RIGHT     PUMP         GPIO 45 |x)            (x| GPIO  9  SCL (sono di default li riusiamo in OpenFIRE) CAM SCL
-  COLLEGATO A PULSANTE BOOT  GPIO  0 |-)            (-| GPIO 46
-    2MIDDLE    HOME          GPIO 35 |-)            (-| GPIO  3 USATO PER USB SERIALE JTAG ????? (comunque non usato)
-       2SET    GUNA          GPIO 36 |-)            (x| GPIO  8  SDA (sono di default li riusiamo in OpenFire) CAM SDA
-       2RST    GUNB          GPIO 37 |-)            (-| GPIO 18  SDA1 OLED SDA (OpenFIRE)
-       1SET   SELECT         GPIO 38 |x)            (x| GPIO 17  SOLENOID signal (OpenFIRE)
-       1RST   START          GPIO 39 |-)            (-| GPIO 16  RUMBLE signal (OpenFIRE)
-            1DPAD UP         GPIO 40 |-)            (-| GPIO 15  SCL1 OLED SCL (OpenFIRE)
-            1DPAD DOWN       GPIO 41 |-)            (-| GPIO  7 LIVELLO BATTERIA (non usato per il momento)
-            1DPAD LEFT       GPIO 42 |-)            (-| GPIO  6 TEMP SENSOR (OpenFIRE)
-            1DPAD RIGHT      GPIO  2 |x)            (x| GPIO  5 ANALOG JOYSTICK Y
-    1MIDDLE     TRIGGER      GPIO  1 |-)            (-| GPIO  4 ANALOG JOYSTICK X
-COLLEG 44 A USB SERIAL JTAG U0RXD RX |x)            (x| RST CHIP PU - COLLEGATO A PULSANTE RST
-COLLEG 43 A USB SERIAL JTAG U0TXD TX |-)            (-| 3V3 VDD33
-                                 GND |-)            (-| 3V3 VDD33
-                                     |____ANTENNA_____|  
-
-```
 ## Raspberry Pi Pico (Non/W)
 ```
 
@@ -93,15 +111,15 @@ COLLEG 43 A USB SERIAL JTAG U0TXD TX |-)            (-| 3V3 VDD33
                      Select       4  |-)       (x| ADCVREF
                      Home Button  5  |-)       (-|  A2 Temp Sensor 28
                                  GND |x)       (x| AGND (for ADC VREF)
-                     D-Pad Up     6  |-)       (-|  A1 *Unmapped* Analop X 27
+                     D-Pad Up     6  |-)       (-|  A1 *Unmapped* Analog X 27
                      D-Pad Down   7  |-)       (-|  A0 *Unmapped* Analog Y 26
                      D-Pad Left   8  |-)       (x| RUN
                      D-Pad Right  9  |-)       (-|  22 *Unmapped*
                                  GND |x)       (x| GND
 Peripherals SDA OLED RGB Red     10  |-)       (-|  21 Camera SCL
 Peripherals SCL OLED RGB Green   11  |-)       (-|  20 Camera SDA
-                     RGB Blue    12  |-)       (-|  19 *Unmapped* Peripherals SCL (impostato da App)
-                     Pump Action 13  |-)       (-|  18 *Unmapped* Peripherals SDA (impostato da App)
+                     RGB Blue    12  |-)       (-|  19 *Unmapped* Peripherals SCL (assign in Board Layout)
+                     Pump Action 13  |-)       (-|  18 *Unmapped* Peripherals SDA (assign in Board Layout)
                                  GND |x)       (x| GND
                      Pedal       14  |-)       (-|  17 Rumble Signal
                      Trigger     15  |-) _|_|_ (-|  16 Solenoid Signal

@@ -52,7 +52,8 @@ To add a language copy it to `lang/<code>.json` (`de.json`, `fr.json`, `pt-BR.js
 translate the values; texts left identical or empty are shown in English. The language appears
 in the selector at the next build. Keep `%1`, `%2`... and the HTML tags of the texts that have them.
 Texts of the calibration screens are drawn with a bitmap typeface: accented lowercase letters are
-supported, other scripts use the system font.
+supported, other scripts use the system font. The legends of the calibration and IR test screens,
+and the "IR LEDs" label of the calibration panel, always use the system font.
 
 ## User interface
 

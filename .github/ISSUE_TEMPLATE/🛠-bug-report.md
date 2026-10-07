@@ -7,8 +7,7 @@ assignees: alessandro-satanassi
 
 ---
 
-### For the maintainers' sanity, *please* use the provided template. Any issues that don't use at least part of this issue template (minus this disclaimer) **may be closed as *Not Planned.***
-###### pls kthx xoxo - Alessandro
+### Please fill in the template below: it lets us reproduce the problem quickly. Issues that ignore it may be closed as *Not Planned*.
 ___
 
 **Describe the bug**
@@ -16,9 +15,9 @@ What exactly is the problem? Be concise, please!
 
 **To Reproduce**
 Steps to reproduce the behavior: (as an example)
-1. Boot up the gun.
+1. Switch on the gun.
 2. Do X.
-3. Point at Y.
+3. Aim at Y.
 4. etc.
 
 **Expected behavior**

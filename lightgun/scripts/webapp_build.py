@@ -20,9 +20,11 @@ What gets published: every firmware has its own app, and dist/site is exactly th
 one version of it, not a site. Publishing a version means copying dist/site into
 v/<version>/ of the site repository and adding it to versions.json; the home page
 (dist/launcher) sits at the root and sends everybody to the right version. The version is
-the string the firmware itself sends when the app docks, "%.1f" of OPENFIRE_VERSION in
-src/OpenFIREversion.h, so 6.2: it is the only version an already installed lightgun can
-tell the app about, and it names the folder.
+the full one, MAJOR.MINOR.PATCH plus the optional suffix of src/OpenFIREversion.h (7.0.0,
+7.0.0-rc2...), see read_version(): the firmware sends it in its full-version marker when
+the app docks, and it names the folder (v/7.0.0/) and the release tag (v7.0.0). The old
+"%.1f" field of OPENFIRE_VERSION is only checked for consistency; the launcher keeps a
+fallback on it for firmware that does not send the full version.
 
 index.html lists the scripts between <!-- OF:SCRIPTS --> and <!-- /OF:SCRIPTS -->: in
 the build they are joined, in order, into a single app.js. Two of them are generated:
@@ -31,7 +33,8 @@ the build they are joined, in order, into a single app.js. Two of them are gener
 Serving the webapp folder as it is (python -m http.server) runs the unbundled app.
 
 Command line (no PlatformIO needed):
-  python scripts/webapp_build.py site   [--out DIR]
+  python scripts/webapp_build.py site     [--out DIR]
+  python scripts/webapp_build.py launcher [--out DIR]
   python scripts/webapp_build.py device --board <board> [--header FILE | --out DIR]
   python scripts/webapp_build.py sizes
 """

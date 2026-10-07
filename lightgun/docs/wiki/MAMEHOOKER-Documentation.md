@@ -6,9 +6,9 @@
  - [Light Gun Serial Commands](#light-gun-serial-commands)
  - [MAMEHOOKER's Pipe & State Modifiers](#mamehookers-pipe--state-modifiers)
 
-**OpenFIRE ESP32 7.0.0:** these game/serial commands remain separate from the new configuration App protocol. Disconnect the configuration App before using the same serial port. Start the lightgun normally for direct USB serial: the special offline WebApp USB NCM mode replaces that port with a network interface. The paired dongle retains its serial port.
+> **OpenFIRE ESP32 7.0.0:** these commands work exactly as in the original OpenFIRE. They reach the gun through its serial port: the gun's own USB port, or its dongle's port when it plays wirelessly. Only one program can use the port at a time, so close the WebApp first. Start the gun normally: in the offline WebApp mode (B held at startup) its USB serial port is not available.
 
-**OpenFIRE ESP32 7.0.0:** questi comandi di gioco/seriali restano separati dal nuovo protocollo dell'App di configurazione. Disconnetti l'App prima di usare la stessa porta seriale. Per la seriale USB diretta avvia normalmente la lightgun: la modalità speciale WebApp offline USB NCM sostituisce quella porta con una rete. Il dongle associato mantiene la sua porta seriale.
+> **OpenFIRE ESP32 7.0.0:** questi comandi funzionano esattamente come nell'OpenFIRE originale. Arrivano alla pistola attraverso la sua porta seriale: la porta USB della pistola, oppure quella del suo dongle quando gioca senza fili. La porta può essere usata da un solo programma alla volta, quindi chiudi prima la WebApp. Avvia la pistola normalmente: nella modalità WebApp offline (B premuto all'avvio) la sua porta seriale USB non è disponibile.
 
 
 ## MAMEHOOKER Setup Guide
