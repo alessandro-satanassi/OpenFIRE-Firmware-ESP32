@@ -710,7 +710,7 @@
 
             switch (this.stage) {
             case STAGE.init:
-                stageText = lines('Initialize Calibration:');
+                stageText = lines('Calibration: step 1 of 6');
                 header = lines('Shoot at the target to start calibration.');
                 tutorial = lines('Calibration can be exited without changes', '  by pressing either Button A, Button B, ', '       or Button C (if available).       ');
                 break;
@@ -719,7 +719,7 @@
             case STAGE.left:
             case STAGE.right:
             case STAGE.center:
-                stageText = lines(`Step ${this.stage}:`);
+                stageText = lines(`Calibration: step ${this.stage + 1} of 6`);
                 header = lines(['', 'Shoot at the top edge of the screen.', 'Shoot at the bottom edge of the screen.',
                     'Shoot at the left edge of the screen.', 'Shoot at the right edge of the screen.',
                     'Shoot at the final target in the center.'][this.stage]);

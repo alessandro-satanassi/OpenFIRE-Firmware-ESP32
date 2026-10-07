@@ -387,6 +387,60 @@ function drawCalibration(s) {
     return { texts, boxes, panels, reminder };
 }
 
+test('six target titles are numbered 1 to 6 in both languages without moving instructions or targets', () => {
+    const headers = ['Shoot at the target to start calibration.', 'Shoot at the top edge of the screen.',
+        'Shoot at the bottom edge of the screen.', 'Shoot at the left edge of the screen.',
+        'Shoot at the right edge of the screen.', 'Shoot at the final target in the center.'];
+    for (const language of ['en', 'it']) {
+        const translations = JSON.parse(fs.readFileSync(path.join(__dirname, '../lang/', language + '.json'), 'utf8'));
+        for (const [width, height] of [[800, 600], [1280, 720], [1920, 1080], [2560, 1440], [3840, 2160]]) {
+            const s = setup(language), w = s.win;
+            w.width = width; w.height = height;
+            const targets = [[width / 2, height / 2], [width / 2, 0], [width / 2, height],
+                [0, height / 2], [width, height / 2], [width / 2, height / 2]];
+            for (let stage = 0; stage < 6; ++stage) {
+                w.setStage(stage);
+                s.time(1000000 + stage * 1000 + 120); // expire the preceding shot confirmation
+                w.infoVisible = false; // the minimal canvas stub tests headings, not the profile glyph renderer
+                const values = JSON.stringify(w.values);
+                const { texts } = drawCalibration(s);
+                const title = language === 'it' ? `Calibrazione: passo ${stage + 1} di 6` : `Calibration: step ${stage + 1} of 6`;
+                assert.deepEqual(texts[0].lines, [title]);
+                assert.equal(texts[0].y, height * .25 - 4 * w.textScale('heading'));
+                assert.ok(texts[0].x >= 0 && texts[0].x + texts[0].width <= width);
+                assert.deepEqual(texts[1].lines, [(translations[headers[stage]] || headers[stage]).trim()]);
+                assert.equal(texts[1].y, texts[0].y + texts[0].height);
+                assert.deepEqual(Array.from(w._crosshairPosition()), targets[stage]);
+                assert.equal(w.stage, stage);
+                assert.equal(JSON.stringify(w.values), values);
+            }
+        }
+    }
+});
+
+test('verification keeps its existing title and instructions in all three branches and both languages', () => {
+    const normal = { topOffset: 0, bottomOffset: 0, leftOffset: 0, rightOffset: 0, TLled: 100, TRled: 3000 };
+    const cases = [
+        { values: normal, title: 'Verify aiming:', header: '    Confirm that the bullseye     ', headerY: .15 },
+        { values: { ...normal, topOffset: 40000, TLled: -1 }, title: 'Verify aiming:', header: 'Shoot at the final target in the center.', headerY: .25 },
+        { values: { ...normal, topOffset: 40000 }, title: 'WARNING: Possibly Malformed Calibration!!', header: '  The current pending values for this profile  ', headerY: .15 },
+    ];
+    for (const language of ['en', 'it']) {
+        const translations = JSON.parse(fs.readFileSync(path.join(__dirname, '../lang/', language + '.json'), 'utf8'));
+        for (const branch of cases) {
+            const s = setup(language), w = s.win;
+            w.stage = 6; w.values = { ...branch.values };
+            const { texts } = drawCalibration(s);
+            assert.deepEqual(texts[0].lines, [(translations[branch.title] || branch.title).trim()]);
+            assert.equal(texts[0].y, w.height * .15 - 4 * w.textScale('heading'));
+            assert.equal(texts[1].lines[0].trim(), (translations[branch.header] || branch.header).trim());
+            assert.equal(texts[1].y, w.height * branch.headerY + 4 * w.textScale('heading'));
+            assert.deepEqual(w.values, branch.values);
+            assert.equal(w.stage, 6);
+        }
+    }
+});
+
 test('two-line posture reminder stays above unchanged bottom instructions in every stage, in English and Italian', () => {
     for (const language of ['en', 'it']) {
         for (const [width, height] of [[1280, 720], [1920, 1080], [2560, 1440], [3840, 2160]]) {
