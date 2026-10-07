@@ -1649,21 +1649,22 @@ void ExecRunModeProcessing()
     for(;;) {
         FW_Common::buttons.Poll(1);
 
-        // Only bytes of the App session change the screen (not the other link).
         const bool sessionInput = WebAppSerial::available() > 0;
         if(sessionInput || OF_Serial::AppSerialInputPending()) {
-            #ifdef USES_DISPLAY
-                if(sessionInput)
-                    FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Docked);
-            #endif // USES_DISPLAY
-
             OF_Serial::SerialProcessingDocked();
         }
 
         if(FW_Common::dockedSaving ||
            FW_Common::runMode != FW_Const::RunMode_Processing ||
-           FW_Common::gunMode != FW_Const::GunMode_Docked)
+           FW_Common::gunMode != FW_Const::GunMode_Docked) {
+            #ifdef USES_DISPLAY
+                // Restore the logo on test exit, without replacing another mode's screen.
+                if(!FW_Common::dockedSaving &&
+                   FW_Common::gunMode == FW_Const::GunMode_Docked)
+                    FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Docked);
+            #endif // USES_DISPLAY
             return;
+        }
 
         if(FW_Common::irPosUpdateTick) {
             FW_Common::irPosUpdateTick = 0;
