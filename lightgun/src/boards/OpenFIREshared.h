@@ -183,6 +183,8 @@ public:
         i2cOLED,
         i2cOLEDaltAddr,
         pedalWireless,
+        analogInvertX,
+        analogInvertY,
         // Add here
         boolTypesCount
     } boolTypes_e;
@@ -201,6 +203,8 @@ public:
         {"I2COLEDEnabled",      i2cOLED             },
         {"I2COLEDAltAddr",      i2cOLEDaltAddr      },
         {"PedalWireless",       pedalWireless       },
+        {"AnalogInvertX",       analogInvertX       },
+        {"AnalogInvertY",       analogInvertY       },
     };
 
     // Variable settings indices

@@ -183,6 +183,8 @@ The averaging modes slightly reduce jitter without adding noticeable lag. The ES
 
 **Low Buttons Mode** (**Gun Settings → Input / Output**) is meant for guns with few buttons: when enabled, A and B pressed while aiming off-screen act as Start and Select. Every button can be remapped in the **Button Mapping** tab.
 
+**Analog stick:** with **Analog Stick X** and **Analog Stick Y** assigned in **Board Layout**, the **Analog Stick** box of the **Button Mapping** tab chooses whether the stick works as a gamepad stick, the D-pad or the keyboard arrows. If a direction comes out reversed, for example pushing up moves down, enable **Invert X Axis** (left/right) or **Invert Y Axis** (up/down) and save; the **Gun Tests** tab shows the result straight away.
+
 **Entering pause mode:** press C + Select (default), the *Home* button if you have one, or, if hold-to-pause is enabled, hold the trigger and A **while aiming away from the screen** (pointing at the floor works well).
 
 **Which pause mode is active?** By default the gun uses the **Hotkey** pause mode: once paused, each button or combination listed below does its job directly. To use the **Simple Pause Menu** instead (a list of options scrolled with the buttons, easiest with an OLED display), enable **Simple Pause Menu** in **Gun Settings → UI and UX**. Pausing with Trigger + A needs **Hold to Pause Enabled** in the same group, where you also set the hold time. Save after changing these options.
@@ -546,6 +548,8 @@ Le modalità *Averaging* riducono un po' il tremolio senza aggiungere ritardo pe
 - **Home:** entra in modalità pausa
 
 La **Modalità pulsanti 'fuori schermo'** (**Impostazioni Gun → Input / Output**; in inglese *Low Buttons Mode*) è pensata per pistole con pochi pulsanti: quando è attiva, A e B premuti puntando fuori dallo schermo funzionano come Start e Select. Ogni pulsante si può rimappare nella scheda **Mappatura Pulsanti**.
+
+**Stick analogico:** con **Stick analogico X** e **Stick analogico Y** assegnati in **Layout Scheda**, il riquadro **Stick Analogico** della scheda **Mappatura Pulsanti** sceglie se lo stick funziona come stick del gamepad, D-pad o frecce della tastiera. Se una direzione risulta invertita, per esempio spingendo in su il movimento va in giù, attiva **Inverti asse X** (sinistra/destra) o **Inverti asse Y** (su/giù) e salva; la scheda **Gun Tests** mostra subito il risultato.
 
 **Entrare in modalità pausa:** premi **C + Select** (impostazione predefinita), il pulsante **Home** se lo hai, oppure, se la pausa con pressione prolungata è attiva, tieni premuti il grilletto e A **puntando fuori dallo schermo** (verso il pavimento va benissimo).
 

@@ -48,11 +48,15 @@
     const TAB_HELP = '<html><head/><body><p>This tab shows the currently loaded Button Mapping settings.</p><p>Any enabled button input in the current <span style=" font-style:italic;">Board Layout</span> can be assigned to output any button from any of the three Input Devices that OpenFIRE presents to any connected device (a Mouse, Keyboard, and Xbox-like Gamepad), depending on the condition that the input is pressed.</p><p>Hover over an option to view detailed info about it here.</p></body></html>';
     const ASTICK_HELP = '<html><head/><body><p>If an analog stick is enabled in the current <span style=" font-style:italic;">Board Layout,</span> this determines which type of Button Output it uses.</p><p><span style=" font-weight:700;">Gamepad Analog Stick</span> will use either the Left or Right analog stick of the Gamepad device, depending on the circumstances and/or whether <span style=" font-style:italic;">Gamepad Output Mode</span> is set via Serial. The other two settings will translate the stick\'s analog movements into either digital <span style=" font-weight:700;">Gamepad D-Pad</span> or <span style=" font-weight:700;">Keyboard Arrow Key</span> presses.</p><p><span style=" font-weight:700; font-style:italic;">Default:</span><span style=" font-style:italic;"> Gamepad Analog Stick</span></p></body></html>';
 
+    const INVERT_X_HELP = '<html><head/><body><p>Reverses the <span style=" font-weight:700;">left/right</span> direction of the analog stick.</p><p>Enable it if pushing the stick to the left gives a movement to the right. It applies to all three <span style=" font-style:italic;">Send Analog Stick As</span> options, and the stick shown in the <span style=" font-style:italic;">Gun Tests</span> tab follows it.</p><p><span style=" font-weight:700; font-style:italic;">Default:</span><span style=" font-style:italic;"> Disabled</span></p></body></html>';
+    const INVERT_Y_HELP = '<html><head/><body><p>Reverses the <span style=" font-weight:700;">up/down</span> direction of the analog stick.</p><p>Enable it if pushing the stick up gives a downward movement. It applies to all three <span style=" font-style:italic;">Send Analog Stick As</span> options, and the stick shown in the <span style=" font-style:italic;">Gun Tests</span> tab follows it.</p><p><span style=" font-weight:700; font-style:italic;">Default:</span><span style=" font-style:italic;"> Disabled</span></p></body></html>';
+
     function build(app) {
-        const { el, t, select } = OF.UI;
+        const { el, t, select, checkbox } = OF.UI;
         const state = app.state;
         const S = state.S;
         const E = state.E;
+        const B = state.B;
         const M = OF.Maps;
         const names = M.functionNames(S);
         const desc = new OF.UI.DescriptionBox(t(TAB_HELP));
@@ -110,8 +114,17 @@
             app.refresh();
         }, { attrs: { 'aria-label': t('Analog Stick Output Mode') } });
         desc.track(aStickMode, t('Analog Stick Output Mode'), t(ASTICK_HELP));
+        // Qt: aStickInvertXToggle / aStickInvertYToggle, for sticks wired or mounted the other way round.
+        const invertToggle = (label, index, help) => {
+            const node = checkbox(t(label), false, (on) => { state.setToggle(index, on); app.refresh(); });
+            desc.track(node, t(label), t(help));
+            return node;
+        };
+        const aStickInvertX = invertToggle('Invert X Axis', B.analogInvertX, INVERT_X_HELP);
+        const aStickInvertY = invertToggle('Invert Y Axis', B.analogInvertY, INVERT_Y_HELP);
         const aStickBox = el('fieldset', { class: 'group' }, el('legend', { text: t('Analog Stick') }),
-            el('div', { class: 'row center' }, el('label', { text: t('Send Analog Stick As:') }), aStickMode));
+            el('div', { class: 'row center wrap' }, el('label', { class: 'field-label', text: t('Send Analog Stick As:') }), aStickMode),
+            el('div', { class: 'row center wrap' }, aStickInvertX, aStickInvertY));
 
         const rootNode = el('div', { class: 'tab-body' },
             el('div', { class: 'tab-scroll' },
@@ -131,6 +144,8 @@
             }
             aStickBox.disabled = !(state.pinMapped(E.analogX) && state.pinMapped(E.analogY));
             aStickMode.value = String(state.setting(state.T.analogMode));
+            aStickInvertX.input.checked = state.toggle(B.analogInvertX);
+            aStickInvertY.input.checked = state.toggle(B.analogInvertY);
         }
 
         return { root: rootNode, update, onShow() { desc.reset(); } };

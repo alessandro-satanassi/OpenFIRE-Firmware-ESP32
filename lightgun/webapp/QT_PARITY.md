@@ -13,7 +13,7 @@ Tests: `tests/*.test.js` (Node) and `tests/browser-e2e.js` (browser, simulated l
 | `BoxesUpdate`, `pinBoxes_currentIndexChanged` (dedupe, I2C rules, enables) | `state.js` `setCustomPins`, `changePin`, `_setPin`; enables in `tab-settings.js` / `tab-buttons.js` `update` |
 | `on_customPinsEnabled_stateChanged`, `on_presetsBox_currentIndexChanged` | `state.js` `setCustomPins`, `applyAltPreset` |
 | `on_actionImport_Custom_Layout_triggered`, `on_actionExport_Custom_Layout_triggered` (.ofl) | `tab-pins.js` User Layouts menu, `state.js` `importLayout` / `exportLayout` |
-| `btnFuncTypeBox_currentIndexChanged`, `btnFuncBox_currentTextChanged`, `on_aStickModeBox_currentIndexChanged` | `tab-buttons.js`, `state.js` `setButtonType` / `setButtonValue` |
+| `btnFuncTypeBox_currentIndexChanged`, `btnFuncBox_currentTextChanged`, `on_aStickModeBox_currentIndexChanged`, `on_aStickInvertXToggle_stateChanged`, `on_aStickInvertYToggle_stateChanged` | `tab-buttons.js`, `state.js` `setButtonType` / `setButtonValue` / `setToggle` |
 | `on_*Toggle_stateChanged` (rumble, solenoid, rumble FF, autofire, pause, anode, low buttons, OLED...) | `state.js` `setToggle` (same cascade), `tab-settings.js` |
 | `on_*Box_valueChanged` (lengths, intensity, temperatures, NeoPixels) | `tab-settings.js` spin boxes (same ranges), `state.js` `setSetting` |
 | `on_customLEDstaticBtn1..3_clicked`, `on_invertStaticPixelsBox_stateChanged`, `PixelsDiff` | `tab-settings.js` colour buttons, First/Last prefix, power cycle notice |

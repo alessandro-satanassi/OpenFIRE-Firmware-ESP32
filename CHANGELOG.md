@@ -29,6 +29,7 @@ All notable changes to this project will be documented in this file.
 * **Calibration from the gun:** the cursor traces a small circle on each target, so it is easy to spot. With an OLED display, the screen shows where the target is, the step (1/6 to 6/6) and, at the end, how to confirm or repeat.
 * **DFRobot/Wii camera:** the IR test and the calibration check also read the brightness of the light spots.
 * **Save and Send Settings** pulses while there are unsaved changes (WebApp and desktop App).
+* **Analog stick: Invert X Axis and Invert Y Axis** in the **Button Mapping** tab (WebApp and desktop App), for sticks wired or mounted the other way round. They apply to the gamepad stick, the D-pad and the keyboard arrows, and to the stick test; both are off by default, so existing guns behave as before.
 * The **Web Flasher** can switch a gun running 7.0.0 into update mode by itself (the serial port changes once: select the new port and retry).
 * **Project hub** linking the WebApp, the Web Flasher, the tools and the documentation. Each firmware version opens the WebApp made for it.
 
@@ -91,6 +92,7 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 * **Calibrazione dalla pistola:** il cursore descrive un piccolo cerchio su ogni bersaglio, così si individua subito. Con un display OLED lo schermo mostra dove si trova il bersaglio, il passo (da 1/6 a 6/6) e, alla fine, come confermare o ripetere.
 * **Telecamera DFRobot/Wii:** il test IR e il controllo della calibrazione leggono anche la luminosità delle macchie di luce.
 * **Salva e invia impostazioni** pulsa finché ci sono modifiche non salvate (WebApp e App desktop).
+* **Stick analogico: Inverti asse X e Inverti asse Y** nella scheda **Mappatura Pulsanti** (WebApp e App desktop), per stick collegati o montati al contrario. Valgono per lo stick del gamepad, il D-pad e le frecce della tastiera, e anche per il test dello stick; sono disattivate di default, quindi le pistole esistenti funzionano come prima.
 * Il **Web Flasher** può portare da solo in modalità aggiornamento una pistola con la 7.0.0 (la porta seriale cambia una volta: seleziona la nuova porta e riprova).
 * **Portale del progetto** con WebApp, Web Flasher, strumenti e documentazione. Ogni versione del firmware apre la WebApp della stessa versione.
 

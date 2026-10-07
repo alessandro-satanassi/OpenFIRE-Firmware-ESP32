@@ -172,6 +172,8 @@ public:
         false,          // i2c OLED enabled
         false,          // i2c OLED alt address
         false,          // wireless pedal: look for one when no pedal pin is set
+        false,          // analog stick: invert the X axis
+        false,          // analog stick: invert the Y axis
     };
 
     /// @brief Pin functions array

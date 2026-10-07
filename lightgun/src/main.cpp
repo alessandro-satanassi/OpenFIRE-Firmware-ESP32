@@ -1821,6 +1821,18 @@ void ExecGunModeDocked()
                     uint16_t analogValueX = analogRead(OF_Prefs::pins[OF_Const::analogX]);
                     uint16_t analogValueY = analogRead(OF_Prefs::pins[OF_Const::analogY]);
                     #endif // esp32/rp2040
+
+                    // Same optional inversion as AnalogStickPoll(), so the test view shows
+                    // the direction actually sent. / Stessa inversione opzionale di
+                    // AnalogStickPoll(): il test mostra la direzione realmente inviata.
+                    #ifdef ARDUINO_ARCH_ESP32
+                    // The resting centre stays exactly at the centre. / Il centro a riposo resta esatto.
+                    if(OF_Prefs::toggles[OF_Const::analogInvertX] && analogValueX != ANALOG_STICK_CENTER_X) analogValueX = (uint16_t)(4095 - analogValueX);
+                    if(OF_Prefs::toggles[OF_Const::analogInvertY] && analogValueY != ANALOG_STICK_CENTER_Y) analogValueY = (uint16_t)(4095 - analogValueY);
+                    #else  // rp2040
+                    if(OF_Prefs::toggles[OF_Const::analogInvertX]) analogValueX = (uint16_t)(4095 - analogValueX);
+                    if(OF_Prefs::toggles[OF_Const::analogInvertY]) analogValueY = (uint16_t)(4095 - analogValueY);
+                    #endif // esp32/rp2040
                     
                     memcpy(&buf[0], (uint8_t*)&analogValueX, sizeof(uint16_t));
                     memcpy(&buf[2], (uint8_t*)&analogValueY, sizeof(uint16_t));
@@ -1961,6 +1973,16 @@ void AnalogStickPoll()
         analogValueY = ANALOG_STICK_CENTER_Y;
     }
 
+    // 2b. OPTIONAL AXIS INVERSION / INVERSIONE OPZIONALE DEGLI ASSI
+    // For sticks wired or mounted the other way round. Applied before every output,
+    // so stick, D-pad, arrow keys and the test view all follow the same direction.
+    // /
+    // Per stick collegati o montati al contrario. Applicata prima di ogni uscita:
+    // stick, D-pad, frecce e test seguono tutti la stessa direzione.
+    // The resting centre stays exactly at the centre. / Il centro a riposo resta esatto.
+    if(OF_Prefs::toggles[OF_Const::analogInvertX] && analogValueX != ANALOG_STICK_CENTER_X) analogValueX = (uint16_t)(4095 - analogValueX);
+    if(OF_Prefs::toggles[OF_Const::analogInvertY] && analogValueY != ANALOG_STICK_CENTER_Y) analogValueY = (uint16_t)(4095 - analogValueY);
+
     // 3. OUTPUT MANAGEMENT / GESTIONE OUTPUT
     if(OF_Prefs::settings[OF_Const::analogMode] == OF_Const::analogModeStick) {
         Gamepad16.moveStick(analogValueX, analogValueY);
@@ -1975,7 +1997,7 @@ void AnalogStickPoll()
         // Usando analogValueX/Y le soglie sono fisse, sicure e simmetriche.
         // Niente cast, niente underflow, nessun tasto bloccato.
 
-        // TODO: need to consider inverted axis toggle, currently assumes axises are inverted by default
+        // Directions assume the default inverted axes; the AnalogInvertX/Y toggles are applied above.
         // would this also benefit from custom Analog->Digital deadzone?
 
         if(analogValueY < 1200)      newPos = 2; // down
@@ -2014,6 +2036,10 @@ void AnalogStickPoll()
 {
     int analogValueX = analogRead(OF_Prefs::pins[OF_Const::analogX]);
     int analogValueY = analogRead(OF_Prefs::pins[OF_Const::analogY]);
+
+    // Optional axis inversion, as on ESP32. / Inversione opzionale degli assi, come su ESP32.
+    if(OF_Prefs::toggles[OF_Const::analogInvertX]) analogValueX = 4095 - analogValueX;
+    if(OF_Prefs::toggles[OF_Const::analogInvertY]) analogValueY = 4095 - analogValueY;
     
     if(OF_Prefs::settings[OF_Const::analogMode] == OF_Const::analogModeStick) {
         // Analog stick deadzone should help mitigate overwriting USB commands for the other input channels.
@@ -2027,7 +2053,7 @@ void AnalogStickPoll()
     } else {
         uint32_t newPos = 0;
 
-        // TODO: need to consider inverted axis toggle, currently assumes axises are inverted by default
+        // Directions assume the default inverted axes; the AnalogInvertX/Y toggles are applied above.
         // would this also benefit from custom Analog->Digital deadzone?
         if(analogValueY < 1200)
             newPos = 2; // down
