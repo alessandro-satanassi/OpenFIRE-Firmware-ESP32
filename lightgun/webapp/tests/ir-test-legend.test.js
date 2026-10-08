@@ -108,10 +108,10 @@ test('every static legend phrase is explicitly translated in English and Italian
     }
 });
 
-test('vertical legend keeps the lower-left anchor, sample spacing and translations on resize', () => {
+test('horizontal legend stays centred below ESC, retaining sample spacing and translations on resize', () => {
     const css = fs.readFileSync(path.join(__dirname, '../style.css'), 'utf8');
-    assert.match(css, /\.ir-test-legend\s*\{[^}]*width:\s*250px;\s*height:\s*540px;/);
-    assert.match(css, /\.ir-test-legend \.ir-measures\s*\{[^}]*grid-template-columns:\s*1fr;/);
+    assert.match(css, /\.ir-test-legend\s*\{[^}]*width:\s*1010px;\s*height:\s*184px;/);
+    assert.match(css, /\.ir-test-legend \.ir-legend-body\s*\{[^}]*grid-template-columns:\s*230px 1px 214px 214px 1px 254px;/);
     assert.match(css, /\.ir-test-legend \.ir-signal-samples, \.ir-test-legend \.ir-size-samples\s*\{[^}]*width:\s*164\.5px;/);
     const keys = Array.from(source.matchAll(/data-ir-key="([^"]+)"/g), m => m[1]);
     for (const language of ['en', 'it']) {
@@ -120,18 +120,31 @@ test('vertical legend keeps the lower-left anchor, sample spacing and translatio
         const attrs = {}, legend = { style: {}, setAttribute: (key, value) => { attrs[key] = value; },
             querySelectorAll: selector => selector === '[data-ir-key]' ? translated : [] };
         win.irTestLegend = legend;
-        for (const [width, height] of [[1920, 1080], [1280, 720], [1024, 768], [800, 600], [640, 480], [2560, 1080]]) {
+        for (const [width, height] of [[1920, 1080], [1280, 720], [1024, 768], [800, 600], [640, 480], [320, 568], [2560, 1080]]) {
             win.width = width; win.height = height;
-            win._updateIRTestLegend();
+            const exitY = win._updateIRTestLegend();
             const scale = Number(legend.style.transform.match(/scale\(([^)]+)\)/)[1]);
             const left = parseFloat(legend.style.left), bottom = parseFloat(legend.style.bottom);
             assert(scale > 0 && scale <= 1);
-            assert.equal(left, Math.min(24, width / 80));
-            assert(left + 250 * scale <= width && bottom + 540 * scale <= height);
-            if (width === 1920) { assert.equal(scale, 1); assert.equal(bottom, 24); }
+            assert.equal(left, (width - 1010 * scale) / 2);
+            assert(left >= 0 && left + 1010 * scale <= width && bottom + 184 * scale <= height);
+            assert.equal(bottom, Math.min(40, height / 27));
+            assert(exitY >= 0 && exitY < height - bottom - 184 * scale);
+            if (width === 1920) { assert.equal(scale, 1); assert.equal(bottom, 40); assert.equal(left, 455); assert.equal(exitY, 808); }
             assert.equal(legend.lang, language);
             assert.equal(attrs['aria-label'], root.OF.i18n.t('IR Camera Test Legend'));
             translated.forEach(el => assert.equal(el.textContent, root.OF.i18n.t(el.dataset.irKey)));
         }
     }
+});
+
+test('ESC is drawn at the legend-provided position, once per frame, even without IR data', () => {
+    const { win, ctx } = setup(); let updated = 0;
+    const texts = [];
+    win._updateIRTestLegend = () => { ++updated; return 808; };
+    win._centered = (context, text, y) => texts.push({ text: Array.from(text), y });
+    win._drawIRTest(ctx);
+    assert.equal(updated, 1);
+    assert.deepEqual(texts.at(-1), { text: ['Press ESC to exit test mode.'], y: 808 });
+    assert.equal(win.coords, null);
 });

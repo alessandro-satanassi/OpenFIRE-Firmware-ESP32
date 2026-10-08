@@ -57,8 +57,8 @@
     const IRTEST_BLOBS_VERSION = 1;
     const IRTEST_BLOBS_LENGTH = 21;
     const IRTEST_NOT_SEEN_COLOR = '#ff3030';
-    const IRTEST_LEGEND_WIDTH = 250;
-    const IRTEST_LEGEND_HEIGHT = 540; // vertical panel; room for either language
+    const IRTEST_LEGEND_WIDTH = 1010;
+    const IRTEST_LEGEND_HEIGHT = 184; // horizontal panel, centred below the ESC instruction
     const IRTEST_AIM_SCALE = 25 / 24.42; // calibration geometry, with the existing 50 px circle
     const IRTEST_BLOB_WEAK = 0x02;          // sTestBlobs flag: emitter seen but weak (firmware IR_WEAK_MAX_BRIGHTNESS)
 
@@ -1146,23 +1146,24 @@
         _createIRTestLegend() {
             const legend = doc.createElement('aside');
             legend.className = 'ir-test-legend';
-            legend.innerHTML = `<h3 data-ir-key="IR Camera Test Legend"></h3>
+            legend.innerHTML = `<h3><span data-ir-key="IR Camera Test Legend"></span> - <span class="ir-note" data-ir-key="Green and cyan identify emitter positions, not signal quality."></span></h3>
                 <div class="ir-legend-body">
                     <div class="ir-layouts">
                         <div class="ir-layout" data-layout="square"><span>Square</span><div class="ir-layout-map ir-map-square" aria-hidden="true"><i class="ir-led ir-green ir-tl"></i><i class="ir-led ir-green ir-tr"></i><i class="ir-led ir-cyan ir-bl"></i><i class="ir-led ir-cyan ir-br"></i></div></div>
                         <div class="ir-layout" data-layout="diamond"><span>Diamond</span><div class="ir-layout-map ir-map-diamond" aria-hidden="true"><i class="ir-led ir-green ir-top"></i><i class="ir-led ir-green ir-left"></i><i class="ir-led ir-cyan ir-bottom"></i><i class="ir-led ir-cyan ir-right"></i></div></div>
                     </div>
-                    <div class="ir-measures">
-                        <section><h4 data-ir-key="IR signal intensity"></h4><div class="ir-signal-samples" aria-hidden="true"></div><div class="ir-signal-samples ir-signal-cyan" aria-hidden="true"></div><div class="ir-axis"><span data-ir-key="Weak"></span><span data-ir-key="Strong"></span></div></section>
+                    <div class="ir-v-divider" aria-hidden="true"></div>
+                    <section class="ir-intensity"><h4 data-ir-key="IR signal intensity"></h4><div class="ir-signal-samples" aria-hidden="true"></div><div class="ir-signal-samples ir-signal-cyan" aria-hidden="true"></div><div class="ir-axis"><span data-ir-key="Weak"></span><span data-ir-key="Strong"></span></div></section>
+                    <div class="ir-size-group">
                         <section><h4 data-ir-key="IR point size"></h4><div class="ir-size-samples" aria-hidden="true"></div><div class="ir-axis"><span data-ir-key="Small"></span><span data-ir-key="Large"></span></div></section>
+                        <div class="ir-missing-key"><div class="ir-missing-samples" aria-hidden="true"><span class="ir-mark ir-green"><i></i><i></i></span><span class="ir-mark ir-cyan"><i></i><i></i></span></div><div><strong data-ir-key="Emitter not detected"></strong><small data-ir-key="Reconstructed position"></small></div></div>
                     </div>
-                    <div class="ir-missing-key"><div class="ir-missing-samples" aria-hidden="true"><span class="ir-mark ir-green"><i></i><i></i></span><span class="ir-mark ir-cyan"><i></i><i></i></span></div><div><strong data-ir-key="Emitter not detected"></strong><small data-ir-key="Reconstructed position"></small></div></div>
+                    <div class="ir-v-divider" aria-hidden="true"></div>
                     <div class="ir-references">
                         <div><img class="ir-aim-key" alt=""><span data-ir-key="Lightgun aim"></span></div>
                         <div><span class="ir-ring ir-red" aria-hidden="true"></span><span data-ir-key="Emitter centre"></span></div>
                         <div><span class="ir-outline" aria-hidden="true"></span><span data-ir-key="Lines joining IR points"></span></div>
                     </div>
-                    <p class="ir-note" data-ir-key="Green and cyan identify emitter positions, not signal quality."></p>
                 </div>`;
             for (const row of legend.querySelectorAll('.ir-signal-samples')) {
                 for (let i = 0; i < 5; ++i) row.append(doc.createElement('i'));
@@ -1177,14 +1178,10 @@
         _updateIRTestLegend() {
             const legend = this.irTestLegend;
             if (!legend) return;
-            const margin = Math.min(24, this.width / 80);
-            const scale = Math.min(1, this.width * 0.26 / IRTEST_LEGEND_WIDTH,
-                this.height * 0.54 / IRTEST_LEGEND_HEIGHT);
-            // Only on narrow windows, keep the panel above the existing ESC instruction.
-            const exitWidth = textSize(lines('Press ESC to exit test mode.'), this.textScale('sub')).width;
-            const bottom = margin + IRTEST_LEGEND_WIDTH * scale + 8 > (this.width - exitWidth) / 2 ?
-                Math.max(margin, this.height * 0.15 + 8) : margin;
-            legend.style.left = `${margin}px`;
+            const scale = Math.min(1, this.width * 0.8 / IRTEST_LEGEND_WIDTH,
+                this.height * 0.22 / IRTEST_LEGEND_HEIGHT);
+            const bottom = Math.min(40, this.height / 27);
+            legend.style.left = `${(this.width - IRTEST_LEGEND_WIDTH * scale) / 2}px`;
             legend.style.bottom = `${bottom}px`;
             legend.style.transform = `scale(${scale})`;
             const language = OF.i18n.currentLang;
@@ -1201,6 +1198,9 @@
                 if (active) el.setAttribute('aria-current', 'true');
                 else el.removeAttribute('aria-current');
             });
+            // Keep the ESC instruction above the panel, including on smaller windows.
+            return Math.max(0, this.height - bottom - IRTEST_LEGEND_HEIGHT * scale -
+                Math.max(8, 24 * scale) - textSize(lines('Press ESC to exit test mode.'), this.textScale('sub')).height);
         }
 
         /** Same crosshair as calibration, without the separate rotating ring. */
@@ -1239,8 +1239,8 @@
                 '   The colored points should move opposite to   ', '    your aim, and the gray crosshair should be  ', '          lining up with your gun sight.        ');
             const headerSize = textSize(header, heading);
             this._centered(ctx, header, h * 0.1 - headerSize.height / 2, heading);
-            this._centered(ctx, lines('Press ESC to exit test mode.'), h * 0.85, sub);
-            this._updateIRTestLegend();
+            const exitY = this._updateIRTestLegend();
+            this._centered(ctx, lines('Press ESC to exit test mode.'), Number.isFinite(exitY) ? exitY : h * 0.85, sub);
 
             const c = this.coords;
             if (!c) return;
