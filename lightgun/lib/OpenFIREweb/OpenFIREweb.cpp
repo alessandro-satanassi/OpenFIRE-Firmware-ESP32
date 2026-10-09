@@ -78,18 +78,6 @@ WebAppLink WebAppSerial::link = WebAppLink::SerialPort;
 // la radio gia' sintonizzata. OPENFIRE_ESPNOW_WIFI_CHANNEL e' definita dentro
 // OpenFIRE_Wireless.cpp e qui non si vede, ma la libreria espone il canale in
 // uso come variabile (che contiene anche un canale negoziato a run time).
-/*
-#ifndef WEBAPP_AP_DEFAULT_CHANNEL
-    #define WEBAPP_AP_CHANNEL_FROM_LINK
-    #define WEBAPP_AP_DEFAULT_CHANNEL 1
-#endif
-*/
-
-/*
-#if defined(WEBAPP_AP_CHANNEL_FROM_LINK) && defined(OPENFIRE_WIRELESS_ENABLE)
-extern uint8_t espnow_wifi_channel;   // OpenFIRE_Wireless.h
-#endif
-*/
 
 static httpd_handle_t web_server = NULL;
 static DNSServer dnsServer;
@@ -587,25 +575,6 @@ void WebApp_Init() {
     //    with the IDF API, without going through the Arduino WiFi class, whose
     //    mode would still read OFF.
     
-    /*
-    uint8_t apChannel = WEBAPP_AP_DEFAULT_CHANNEL;
-    #if defined(WEBAPP_AP_CHANNEL_FROM_LINK) && defined(OPENFIRE_WIRELESS_ENABLE)
-        if (espnow_wifi_channel >= 1 && espnow_wifi_channel <= 13)
-            apChannel = espnow_wifi_channel;
-    #endif
-    */
-    /*
-    bool linkRunning = false;
-    {
-        uint8_t primary = 0;
-        wifi_second_chan_t second = WIFI_SECOND_CHAN_NONE;
-        if (esp_wifi_get_channel(&primary, &second) == ESP_OK && primary >= 1 && primary <= 13) {
-            apChannel = primary;
-            linkRunning = true;
-        }
-    }
-    */
-    
     // With the ESP-NOW link already configured and running, nothing of the radio
     // is touched: only the access point interface is added, on the channel that
     // link is already on. Protocol, bandwidth and power stay as the wireless
@@ -631,21 +600,6 @@ void WebApp_Init() {
     // modem che dorme perde i pacchetti ESP-NOW in ricezione. Dirglielo qui prima
     // non cambia la configurazione: e' lo stesso valore impostato dalla libreria.
     
-    //WiFi.setSleep(false);   // WIFI_PS_NONE, come la libreria wireless
-    
-    
-    //WiFi.persistent(false);
-    //WiFi.mode(WIFI_AP_STA);
-    //WiFi.softAPdisconnect();
-    //esp_err_t err;
-    //err = esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_11G);
-    //err = esp_wifi_set_bandwidth(WIFI_IF_AP, WIFI_BW_HT20);
-    //err = esp_wifi_set_ps(WIFI_PS_NONE); // non dovrebbe servire
-    //WiFi.softAP(WEBAPP_AP_SSID, NULL, apChannel);
-    //WiFi.softAP(WEBAPP_AP_SSID, NULL, 13);
-    //esp_err_t err;
-    //err = esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_11G);
-    //err = esp_wifi_set_bandwidth(WIFI_IF_AP, WIFI_BW_HT20);
     SerialWireless.startAccessPoint(WEBAPP_AP_SSID);   // rete aperta, canale di ESP-NOW
 
     // 2. Lightweight native ESP-IDF HTTP/WebSocket server
@@ -681,27 +635,10 @@ void WebApp_Init() {
     
     // 4. DNS server for the captive portal
     dnsServer.start(53, "*", SerialWireless.ipAddressAP());
-    //dnsServer.start(53, "*", WiFi.softAPIP());
-    
-
-    /*
-    // 4. DNS server for the captive portal
-    IPAddress dnsIP = SerialWireless.ipAddressAP();
-    if (dnsIP == IPAddress(0, 0, 0, 0)) {
-        dnsIP = IPAddress(192, 168, 7, 1);
-    }
-    dnsServer.start(53, "*", dnsIP);
-    */
 
     // 5. DNS task on Core 0 so it does not interfere with the main loop
     xTaskCreatePinnedToCore(dns_server_task, "dns_task", 2048, NULL, 1, NULL, 0);
 
-    /*
-    // With no ESP-NOW link there is nothing to preserve: power saving off, so the
-    // App page is as responsive as it is on the cable.
-    if (!linkRunning)
-        esp_wifi_set_ps(WIFI_PS_NONE);
-    */
 }
 
 void WebApp_Loop() {

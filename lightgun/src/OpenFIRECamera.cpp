@@ -163,25 +163,6 @@ bool OpenFIRECamera::Begin()
     ready = activeOps->begin(sensitivity);
     return ready;
 }
-/*
-bool OpenFIRECamera::Begin(Sensitivity_e sensitivity,
-                           DataFormat_e format) {
-    if (activeOps == nullptr || activeProfile == nullptr) {
-        return false;
-    }
-
-    if (format != DataFormat_Basic && format != DataFormat_Extended) {
-        return false;
-    }
-
-    activeFormat = format;
-    activeRead = (format == DataFormat_Extended) ? activeOps->readExtended : activeOps->readBasic;
-    ClearObjectData();
-
-    ready = activeOps->begin(ClampSensitivity((uint8_t)sensitivity));
-    return ready;
-}
-*/
 
 void OpenFIRECamera::End() {
     if (activeOps != nullptr) {
@@ -282,23 +263,9 @@ bool OpenFIRECamera::BeginDFRobot(uint8_t sensitivity) {
         pwm_set_enabled(slice_num, true);
         activeWiiClockPin = pin_wiiClock;
     } 
-    /*
-    else {
-        set_sys_clock_khz(133000, true);
-        //pwm_set_enabled(pwm_gpio_to_slice_num(pin_wiiClock), false);
-        //gpio_set_function(pin_wiiClock, GPIO_FUNC_SIO);
-        //gpio_put(pin_wiiClock, 0);
-        //gpio_set_dir(pin_wiiClock, GPIO_IN);
-    }
-    */
    #endif
 #endif
     
-    /*
-    if (dfrCamera == nullptr) {
-        return false;
-    }
-    */
     if (dfrCamera == nullptr) {
         EndDFRobot();
         return false;
@@ -308,16 +275,6 @@ bool OpenFIRECamera::BeginDFRobot(uint8_t sensitivity) {
         (activeFormat == DataFormat_Extended)
             ? DFRobotIRPositionEx::DataFormat_Full
             : DFRobotIRPositionEx::DataFormat_Basic;
-
-    /*
-    if (!dfrCamera->begin(activeProfile->busClock,
-                          format,
-                          (DFRobotIRPositionEx::Sensitivity_e)sensitivity)) {
-        delete dfrCamera;
-        dfrCamera = nullptr;
-        return false;
-    }
-    */
 
     if (!dfrCamera->begin(activeProfile->busClock,
                           format,
@@ -518,12 +475,7 @@ bool OpenFIRECamera::BeginPAJ7025(uint8_t sensitivity) {
         return false;
     }
     if (pajCamera == nullptr) pajCamera = new PAJ7025();
-    /*
-    if (!pajCamera->begin(&pajSPI, pin_spiCs, activeProfile->busClock)) {
-        EndPAJ7025();
-        return false;
-    }
-    */
+
     if (pajCamera == nullptr || !pajCamera->begin(&pajSPI, pin_spiCs, activeProfile->busClock)) {
         EndPAJ7025();
         return false;
@@ -568,19 +520,6 @@ bool OpenFIRECamera::BeginPAJ7025(uint8_t sensitivity) {
         return false;
     }
 
-    /*
-    SPI.setSCK(pin_spiSck);
-    SPI.setMISO(pin_spiMiso);
-    SPI.setMOSI(pin_spiMosi);
-    SPI.setCS(pin_spiCs);
-    activeSPI = &SPI;
-    activeSPI->begin();
-    if (pajCamera == nullptr) pajCamera = new PAJ7025();
-    if (pajCamera == nullptr || !pajCamera->begin(activeSPI, pin_spiCs, activeProfile->busClock)) {
-        EndPAJ7025();
-        return false;
-    }
-    */
 #endif
 
 

@@ -168,8 +168,6 @@ static uint8_t GetBootModeHeld(const int fwPin1, const int fwPin2,
         delay(10);
     }
 
-    // --- LA NOVITÀ È QUI ---
-    // Invece di decidere chi vince, combiniamo i risultati
     uint8_t result = BOOT_FLAG_NORMAL;
     
     if (checkFw)  result |= BOOT_FLAG_FIRMWARE; // Aggiunge il flag Firmware
@@ -187,75 +185,15 @@ static void CheckBootRequests()
         1500UL
     );
 
-    // Esempio 1: Gestione se li preme entrambi
-    /*
-    if ((bootResult & BOOT_FLAG_FIRMWARE) && (bootResult & BOOT_FLAG_WEBAPP)) {
-        // Ha tenuto premuto tutto! Fai lampeggiare i led di errore o scegli un 3° avvio
-    }
-    */
-
-    // Esempio 2 (Quello che chiedevi): Precedenza stabilita dall'ordine degli if
     // Se metti prima FIRMWARE, vince Firmware. 
-    // Se un domani vuoi dare precedenza alla WEBAPP, ti basta invertire questi due blocchi!
+    // Se un domani vuoi dare precedenza alla WEBAPP, basta invertire questi due blocchi!
     if (bootResult & BOOT_FLAG_FIRMWARE) {
         FW_Common::RebootToBootloader();
     } 
     else if (bootResult & BOOT_FLAG_WEBAPP) {
         OF_WebConfigModeActive = true;
-        //AvviaConfiguratoreWebApp();
     }
 }
-
-/*
-/// @brief True when both buttons are held, uninterrupted, for holdMs at boot.
-static bool BootButtonsHeld(const int firstPin, const int secondPin, const unsigned long holdMs)
-{
-    // Both buttons must be configured on different GPIOs.
-    if(firstPin < 0 || secondPin < 0 || firstPin == secondPin)
-        return false;
-
-    // Allow mechanical contacts to settle before the first reading.
-    delay(50);
-
-    // Buttons use INPUT_PULLUP: LOW means pressed.
-    if(digitalRead(firstPin) != LOW ||
-       digitalRead(secondPin) != LOW)
-        return false;
-
-    const unsigned long holdStart = millis();
-
-    // Both buttons must remain continuously pressed for the whole interval.
-    while((millis() - holdStart) < holdMs) {
-        if(digitalRead(firstPin) != LOW ||
-           digitalRead(secondPin) != LOW)
-            return false;
-
-        delay(10);
-    }
-
-    // Perform one final reading at the end of the hold interval.
-    return digitalRead(firstPin) == LOW &&
-           digitalRead(secondPin) == LOW;
-}
-
-static void CheckFirmwareUpdateRequest()
-{
-    if(BootButtonsHeld(OF_Prefs::pins[OF_Const::btnTrigger],
-                       OF_Prefs::pins[OF_Const::btnGunA], 1500UL))
-        FW_Common::RebootToBootloader();
-}
-*/
-
-/// @brief Web configuration mode, requested at boot with the buttons above.
-///        Not used: CheckBootRequests() already sets OF_WebConfigModeActive (B held at startup).
-/// /      Non usata: CheckBootRequests() imposta gia' OF_WebConfigModeActive (B premuto all'avvio).
-/*
-static bool CheckWebConfigRequest()
-{
-    return BootButtonsHeld(OF_Prefs::pins[WEBCONFIG_COMBO_BUTTON_1],
-                           OF_Prefs::pins[WEBCONFIG_COMBO_BUTTON_2], 1500UL);
-}
-*/
 
 // Sets up the environment
 void setup() {
@@ -263,15 +201,6 @@ void setup() {
     #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_USB_NCM)
         Serial_OpenFIRE_Stream = &OpenFIREUsbSerial();
     #endif
-
-    // Temporary source for the saved camera setting. Replace only the RHS with
-    // the value loaded by the App/configuration layer. A camera change always reboots.
-    /*
-    const CameraModel selectedCamera = CameraModel::PixArt_PAJ7025R2;
-    FW_Common::CameraSelect(selectedCamera);
-    */
-    //const CameraModel selectedCamera = CAMERA_DEFAULT; //OF_Const::PixArt_PAJ7025R2;
-    //FW_Common::CameraSelect(selectedCamera);
 
     // ======== [ESP32_PORT] =========== X AVVIO DUAL CORE ESP32 =================================== 
     #if defined(ARDUINO_ARCH_ESP32) && defined(DUAL_CORE)
@@ -486,9 +415,7 @@ void setup() {
     FW_Common::UpdateBindings(true);
 
     /*FW_Common::FeedbackSet();*/
-    // Initialize DFRobot Camera Wires & Object
-    //const CameraModel selectedCamera = CAMERA_DEFAULT; //OF_Const::PixArt_PAJ7025R2;
-    /////////////////////OF_Prefs::settings[OF_Const::cameraModel] = CAMERA_DEFAULT;
+
     FW_Common::CameraSet();
 
     // initialize buttons & feedback devices
@@ -504,7 +431,6 @@ void setup() {
     #endif // LED_ENABLE
 // ====== [ESP32_PORT] ==== End initialize camera before the connection / fine del blocco che per opportunità è spostato sopra prima della connessione =======
 
-//CheckFirmwareUpdateRequest();
 CheckBootRequests();
 #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_USB_NCM)
     // Boot choice is final: compose HID + CDC or HID + NCM, then enumerate.
@@ -512,13 +438,6 @@ CheckBootRequests();
     OpenFIREUsbBegin(OF_WebConfigModeActive, POLL_RATE);
     Serial_OpenFIRE_Stream = &OpenFIREUsbSerial();
 #endif
-//OF_WebConfigModeActive = true;
-//OF_WebConfigModeActive = false;
-
-// The web configuration mode has already been chosen by CheckBootRequests() (B held
-// at startup). / La modalita' di configurazione web e' gia' stata scelta da
-// CheckBootRequests() (B premuto all'avvio).
-// const bool webConfigRequested = CheckWebConfigRequest();
 
 // ===================================================================================
 // EMPIRICAL HARDWARE CALIBRATION OF ANALOG STICKS / CALIBRAZIONE EMPIRICA HARDWARE DEGLI STICK ANALOGICI
@@ -806,43 +725,11 @@ CheckBootRequests();
     // Funziona sia via cavo sia con il dongle:
     // WebApp_Init() usa un canale fisso quando la radio e' libera e il canale del
     // collegamento ESP-NOW (dongle o pedale wireless) quando e' gia' in uso.
-    //OF_WebConfigModeActive = true;
-    ///////////////////if (OF_WebConfigModeActive) WebApp_Init();
     
     if (OF_WebConfigModeActive) {
         WebApp_Init();
-
-
     }
     
-    /*
-    // ================== avvia webapp ======================
-    if (OF_WebConfigModeActive) {
-        WebApp_Init();
-
-        // --- INIZIO BLOCCO ATTESA WINDOWS ---
-        if (TinyUSBDevice.mounted()) {
-            // Blocca l'esecuzione finché Windows non carica il driver usbncm.sys 
-            // e non apre i canali di comunicazione dati (SET_INTERFACE 1)
-            while (!OF_NcmDataInterfaceReady) {
-                delay(10); // Il delay è vitale per far lavorare in background il task USB!
-            }
-            
-            // Windows è pronto. Diamogli 1 secondo per finire di stabilizzarsi internamente.
-            delay(1000); 
-            
-            // Inviamo a Windows il segnale per svegliare la scheda (finto stacca-attacca)
-            tud_network_link_state(0, false);
-            delay(50);
-            tud_network_link_state(0, true);
-        }
-        // --- FINE BLOCCO ATTESA WINDOWS ---
-    }
-    // ======================================================
-    */
-    // ======================================================
-
-
 // ===================================================================================
 // POLYMORPHIC I/O: THE VIRTUAL SERIAL PORT TRICK / IL TRUCCO DELLA SERIALE VIRTUALE
 // ===================================================================================
@@ -889,13 +776,6 @@ CheckBootRequests();
     // quindi l'ho impostata uguale ovvero 209Hz che corrisponde a circa 5ms
     if (TinyUSBDevices.onBattery) startIrCamTimer(OpenFIRECamera::Profile().fps);  // set to 5ms for wireless too... e.g., 100->10ms, 66->15ms for wireless connection / impostato a 5ms anche per wireless ... es. 100->10ms 66 -> 15ms per connessione wireless
       else startIrCamTimer(OpenFIRECamera::Profile().fps); // 5ms for wired connection / 5ms per connessione via cavo
-    
-    /*
-    FW_Common::OpenFIREper.source(OF_Prefs::profiles[OF_Prefs::currentProfile].adjX,
-                                  OF_Prefs::profiles[OF_Prefs::currentProfile].adjY);
-    FW_Common::OpenFIREper.deinit(0);
-    */
-
 
     // First boot sanity checks; all zeroes are initial config
     if((OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset    == 0 &&
@@ -1121,7 +1001,7 @@ void loop1()
                 }
             }
         }
-        #ifndef COMMENTO
+        
         #if defined(ARDUINO_ARCH_ESP32) && defined(DUAL_CORE)
         // Block this task for 1 millisecond (or 1 tick). 
         // This allows the Idle Task (priority 0) to run,
@@ -1133,7 +1013,7 @@ void loop1()
         vTaskDelay(pdMS_TO_TICKS(1));
         //yield();
         #endif // defined(ARDUINO_ARCH_ESP32) && defined(DUAL_CORE)
-        #endif // COMMENTO
+        
     }
 }
 #endif // DUAL_CORE

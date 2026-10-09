@@ -250,9 +250,6 @@ public:
 
 #ifdef ARDUINO_ARCH_ESP32
 
-// #include <Arduino.h>
-// #include <freertos/FreeRTOS.h>
-// #include <freertos/queue.h>
 
 // funzione per esp32 per emulare il comportamento di rp2040.fifo per la comunicazione multicore
 
