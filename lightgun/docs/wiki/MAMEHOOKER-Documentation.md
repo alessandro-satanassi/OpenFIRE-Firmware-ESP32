@@ -166,7 +166,7 @@ Again, does what it says on the tin; signals the gun to exit serial mode and go 
 ### `M` - Mode Commands
 These set different parameters on the gun to tell it how it should behave in the game. The different "modes" are:
  * `M0` - Device Output Mode
-   * `x0` - Mouse & Keyboard
+   * `x0` - Mouse & Keyboard (on OpenFIRE ESP32 an analog stick used as a gamepad stick also goes back to the left stick, as at startup)
    * `x1` - Gamepad, w/ Camera mapped to Right Stick
      * `L` - Maps Camera to Left Stick instead (**OpenFIRE exclusive**)
    * `x2` - 'Hybrid'

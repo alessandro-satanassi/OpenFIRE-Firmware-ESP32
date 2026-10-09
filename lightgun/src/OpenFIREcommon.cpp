@@ -272,11 +272,17 @@ void FW_Common::CameraSet()
 
 
 
-// Serial command M0xN picks the output at will; this is the value the board
-// starts from, and returns to when the host hands control back with 'E'.
+// Output the board starts with. The serial command M0xN and the pause menus can
+// switch it until the board is switched off; 'E' (end of serial handoff) leaves it as it is.
 void FW_Common::ApplyBootOutputMode()
 {
-    switch(OF_Prefs::settings[OF_Const::bootOutputMode]) {
+    SetOutputMode(OF_Prefs::settings[OF_Const::bootOutputMode]);
+}
+
+// Also used by the pause menu; the serial M0xN command sets the same two fields.
+void FW_Common::SetOutputMode(const uint32_t &mode)
+{
+    switch(mode) {
     case OF_Const::bootOutputGamepadRight:
         buttons.analogOutput = true;
         Gamepad16.stickRight = false;   // aim on the right stick, as M0x1 does
@@ -290,6 +296,13 @@ void FW_Common::ApplyBootOutputMode()
         Gamepad16.stickRight = false;   // the physical stick goes back on the left
         break;
     }
+}
+
+uint8_t FW_Common::GetOutputMode()
+{
+    if(!buttons.analogOutput)
+        return OF_Const::bootOutputMouse;
+    return Gamepad16.stickRight ? OF_Const::bootOutputGamepadLeft : OF_Const::bootOutputGamepadRight;
 }
 
 void FW_Common::SetMode(const FW_Const::GunMode_e &newMode)

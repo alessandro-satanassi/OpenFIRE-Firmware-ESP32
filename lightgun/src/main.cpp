@@ -1046,6 +1046,7 @@ void loop()
 
         pauseHoldStarted = false;
         pauseModeSelectingProfile = false;
+        pauseModeSelectingOutput = false;
     }
 
     #ifdef MAMEHOOKER
@@ -1062,7 +1063,52 @@ void loop()
     switch(FW_Common::gunMode) {
         case FW_Const::GunMode_Pause:
             if(OF_Prefs::toggles[OF_Const::simplePause]) {
-                if(pauseModeSelectingProfile) {
+                if(pauseModeSelectingOutput) {
+                    if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_A ||
+                       FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Up) {
+                        SetOutputModeSelection(false);
+                    } else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_B ||
+                              FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Down) {
+                        SetOutputModeSelection(true);
+                    } else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Trigger) {
+                        OutputModeChange(outputModeSelection);
+                        pauseModeSelectingOutput = false;
+                        FW_Common::pauseModeSelection = FW_Const::PauseMode_OutputMode;
+
+                        if(!OF_Serial::serialMode)
+                            Serial.println("Going back to the main menu...");
+
+                        #ifdef LED_ENABLE
+                            OF_RGB::LedUpdate(0,100,200);
+                        #endif // LED_ENABLE
+
+                        #ifdef USES_DISPLAY
+                            FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_OutputMode);
+                        #endif // USES_DISPLAY
+
+                    } else if(FW_Common::buttons.pressedReleased & FW_Const::ExitPauseModeBtnMask) {
+                        if(!OF_Serial::serialMode)
+                            Serial.println("Exiting output mode selection.");
+
+                        pauseModeSelectingOutput = false;
+
+                        #ifdef LED_ENABLE
+                            for(uint i = 0; i < 2; ++i) {
+                                OF_RGB::LedUpdate(180,180,180);
+                                delay(125);
+                                OF_RGB::LedOff();
+                                delay(100);
+                            }
+                            OF_RGB::LedUpdate(0,100,200);
+                        #endif // LED_ENABLE
+
+                        FW_Common::pauseModeSelection = FW_Const::PauseMode_OutputMode;
+
+                        #ifdef USES_DISPLAY
+                            FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_OutputMode);
+                        #endif // USES_DISPLAY
+                    }
+                } else if(pauseModeSelectingProfile) {
                     //if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_A) {
                     if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_A ||
                        FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Up) {
@@ -1139,6 +1185,21 @@ void loop()
                           #endif // USES_DISPLAY
                           #ifdef LED_ENABLE
                               OF_RGB::SetLedPackedColor(OF_Prefs::profiles[OF_Prefs::currentProfile].color);
+                          #endif // LED_ENABLE
+                          break;
+                        case FW_Const::PauseMode_OutputMode:
+                          outputModeSelection = FW_Common::GetOutputMode();
+                          if(!OF_Serial::serialMode) {
+                              Serial.println("Pick an output mode!");
+                              Serial.print("Current output mode: ");
+                              Serial.println(FW_Const::OutputModeLabels[outputModeSelection]);
+                          }
+                          pauseModeSelectingOutput = true;
+                          #ifdef USES_DISPLAY
+                              FW_Common::OLED.PauseOutputModeUpdate(outputModeSelection, outputModeSelection);
+                          #endif // USES_DISPLAY
+                          #ifdef LED_ENABLE
+                              OutputModeLed(outputModeSelection);
                           #endif // LED_ENABLE
                           break;
                         case FW_Const::PauseMode_Save:
@@ -1257,6 +1318,8 @@ void loop()
                         while(FW_Common::buttons.debounced)
                             FW_Common::buttons.Poll(1);
 
+                        pauseModeSelectingProfile = false;
+                        pauseModeSelectingOutput = false;
                         FW_Common::SetMode(FW_Const::GunMode_Run);
                         pauseExitHoldStarted = false;
                     }
@@ -1280,6 +1343,10 @@ void loop()
                 DecreaseIrSensitivity(OF_Prefs::profiles[OF_Prefs::currentProfile].irSens);
             } else if(FW_Common::buttons.pressedReleased == FW_Const::SaveBtnMask) {
                 FW_Common::SavePreferences();
+            } else if(FW_Common::buttons.pressedReleased == FW_Const::OutputModeNextBtnMask) {
+                OutputModeChange((uint8_t)((FW_Common::GetOutputMode() + 1) % FW_Const::OutputModeCount));
+            } else if(FW_Common::buttons.pressedReleased == FW_Const::OutputModePrevBtnMask) {
+                OutputModeChange((uint8_t)((FW_Common::GetOutputMode() + FW_Const::OutputModeCount - 1) % FW_Const::OutputModeCount));
             #ifdef USES_RUMBLE
                 // Software toggle only without a hardware switch (the switch would override it in
                 // run mode) and with a rumble pin, as in the Simple Pause Menu.
@@ -2066,6 +2133,12 @@ void SetPauseModeSelection(const bool &isIncrement)
               OF_RGB::LedUpdate(200,50,0);
           #endif // LED_ENABLE
           break;
+        case FW_Const::PauseMode_OutputMode:
+          Serial.println("Selecting: Switch output mode");
+          #ifdef LED_ENABLE
+              OF_RGB::LedUpdate(0,100,200);
+          #endif // LED_ENABLE
+          break;
         case FW_Const::PauseMode_Save:
           Serial.println("Selecting: Save Settings");
           #ifdef LED_ENABLE
@@ -2158,6 +2231,89 @@ void SelectCalProfileFromBtnMask(const uint32_t &mask)
         }
     }
 }
+
+// Simple Pause Mode - scrolls up/down output modes list
+// Bool determines if it's incrementing or decrementing the list
+void SetOutputModeSelection(const bool &isIncrement)
+{
+    if(isIncrement) {
+        if(outputModeSelection >= FW_Const::OutputModeCount - 1)
+            outputModeSelection = 0;
+        else outputModeSelection++;
+    } else {
+        if(outputModeSelection == 0)
+            outputModeSelection = FW_Const::OutputModeCount - 1;
+        else outputModeSelection--;
+    }
+
+    #ifdef LED_ENABLE
+        OutputModeLed(outputModeSelection);
+    #endif // LED_ENABLE
+
+    #ifdef USES_DISPLAY
+        FW_Common::OLED.PauseOutputModeUpdate(outputModeSelection, FW_Common::GetOutputMode());
+    #endif // USES_DISPLAY
+
+    if(!OF_Serial::serialMode) {
+        Serial.print("Selecting output mode: ");
+        Serial.println(FW_Const::OutputModeLabels[outputModeSelection]);
+    }
+}
+
+// Pause mode output switch (absolute mouse / gamepad right stick / gamepad left stick),
+// the same as the serial M0xN command: it lasts until the gun is switched off or
+// something switches it again, the startup output stays the one set in the App.
+void OutputModeChange(const uint8_t &mode)
+{
+    if(mode >= FW_Const::OutputModeCount)
+        return;
+
+    FW_Common::SetOutputMode(mode);
+    FW_Common::buttons.ReleaseAll();
+
+    if(!OF_Serial::serialMode) {
+        Serial.print("Output mode: ");
+        Serial.println(FW_Const::OutputModeLabels[mode]);
+    }
+
+    #ifdef USES_DISPLAY
+        FW_Common::OLED.TopPanelUpdate(FW_Const::OutputModeLabels[mode]);
+    #endif // USES_DISPLAY
+
+    #ifdef LED_ENABLE
+        for(uint32_t i = 0; i < 2; ++i) {
+            OutputModeLed(mode);
+            delay(150);
+            OF_RGB::LedOff();
+            delay(100);
+        }
+        OF_RGB::SetLedPackedColor(OF_Prefs::profiles[OF_Prefs::currentProfile].color);
+    #elif defined(USES_DISPLAY)
+        delay(500); // keep the message readable
+    #endif // LED_ENABLE
+
+    #ifdef USES_DISPLAY
+        FW_Common::OLED.TopPanelUpdate("Using ", OF_Prefs::profiles[OF_Prefs::currentProfile].name);
+    #endif // USES_DISPLAY
+}
+
+#ifdef LED_ENABLE
+// LED colour of each output mode in the pause menus
+void OutputModeLed(const uint8_t &mode)
+{
+    switch(mode) {
+    case OF_Const::bootOutputGamepadRight:
+        OF_RGB::SetLedPackedColor(WikiColor::Blue);
+        break;
+    case OF_Const::bootOutputGamepadLeft:
+        OF_RGB::SetLedPackedColor(WikiColor::Cyan);
+        break;
+    default:
+        OF_RGB::SetLedPackedColor(WikiColor::Green);
+        break;
+    }
+}
+#endif // LED_ENABLE
 
 void IncreaseIrSensitivity(const uint32_t &sens)
 {

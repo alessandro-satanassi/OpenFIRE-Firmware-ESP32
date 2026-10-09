@@ -91,6 +91,7 @@ public:
     enum PauseModeSelection_e {
         PauseMode_Calibrate = 0,
         PauseMode_ProfileSelect,
+        PauseMode_OutputMode,
         PauseMode_Save,
         #ifdef USES_RUMBLE
         PauseMode_RumbleToggle,
@@ -139,6 +140,18 @@ public:
 
     // button combination to toggle solenoid in software:
     static inline constexpr uint32_t SolenoidToggleBtnMask = BtnMask_Right;
+
+    // button combinations to switch the output mode (next / previous) in hotkey pause mode
+    static inline constexpr uint32_t OutputModeNextBtnMask = BtnMask_Select | BtnMask_Up;
+    static inline constexpr uint32_t OutputModePrevBtnMask = BtnMask_Select | BtnMask_Down;
+
+    // output modes, in the order of the OF_Const bootOutput* values
+    static inline constexpr uint8_t OutputModeCount = 3;
+    static inline const char* OutputModeLabels[OutputModeCount] = {
+        "Absolute Mouse",
+        "Gamepad Right Stick",
+        "Gamepad Left Stick"
+    };
 
     static inline const char* RunModeLabels[RunMode_Count] = {
         "Normal",

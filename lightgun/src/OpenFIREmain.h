@@ -47,6 +47,10 @@
 uint8_t profileModeSelection = 0;
 // Flag to tell if we're in the profile selector submenu of the simple pause menu.
 bool pauseModeSelectingProfile = false;
+// Selector for which output mode in the output mode selector of the simple pause menu you're picking.
+uint8_t outputModeSelection = 0;
+// Flag to tell if we're in the output mode selector submenu of the simple pause menu.
+bool pauseModeSelectingOutput = false;
 
 // Timestamp of when we started holding a buttons combo.
 unsigned long pauseHoldStartstamp;
@@ -99,6 +103,9 @@ void AnalogStickPoll();
 void SendEscapeKey();
 void SetProfileSelection(const bool &isIncrement);
 void SetPauseModeSelection(const bool &isIncrement);
+void SetOutputModeSelection(const bool &isIncrement);
+void OutputModeChange(const uint8_t &mode);
+void OutputModeLed(const uint8_t &mode);
 void RumbleToggle();
 void SolenoidToggle();
 void IncreaseIrSensitivity(const uint32_t &sens);

@@ -91,6 +91,7 @@ void OF_Serial::SerialProcessing()
                     case '2': // "hybrid" - just use the default m&kb mode
                     case '0': // mouse & kb 
                       FW_Common::buttons.analogOutput = false;
+                      Gamepad16.stickRight = false;   // the physical stick goes back on the left, as at startup and in the pause menus
                       break;
                     // gamepad
                     case '1':

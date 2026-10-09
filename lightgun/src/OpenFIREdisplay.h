@@ -78,6 +78,10 @@ public:
     /// @brief Update simple pause mode profiles list on screen
     void PauseProfileUpdate(const int &selection, const char* name1, const char* name2, const char* name3, const char* name4);
 
+    /// @brief Update simple pause mode output modes list on screen
+    /// @details The mode in use is marked with an asterisk
+    void PauseOutputModeUpdate(const int &selection, const int &current);
+
     /// @brief Print save status message
     void SaveScreen(const int &status);
 
@@ -106,6 +110,7 @@ public:
     enum ScreenPauseList_e {
         ScreenPause_Calibrate = 0,
         ScreenPause_ProfileSelect,
+        ScreenPause_OutputMode,
         ScreenPause_Save,
         ScreenPause_Rumble,
         ScreenPause_Solenoid,

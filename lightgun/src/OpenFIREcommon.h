@@ -77,14 +77,21 @@ public:
 
     /// @brief    Applies the output mode saved as the startup default
     /// @details  Run once at boot, and never again: from then on the mode belongs
-    ///           to whoever sets it. Serial command M0xN changes it at will and
-    ///           it stays changed until the next M0xN, exactly as it always has.
+    ///           to whoever sets it. Serial command M0xN and the pause menus change
+    ///           it at will and it stays changed until the next change, as it always has.
     ///           Nothing puts this value back, on purpose: M0x9 (MiSTer) also
     ///           rewrites the gamepad button map in RAM, so restoring these two
     ///           flags alone would leave the board half in one mode and half in
     ///           the other. The default is the absolute mouse, so a board whose
     ///           setting was never changed starts exactly as it always did.
     static void ApplyBootOutputMode();
+
+    /// @brief Switch the output presented to the host, as the OF_Const bootOutput* values
+    /// @details Out of range values select the absolute mouse
+    static void SetOutputMode(const uint32_t &mode);
+
+    /// @brief Output in use, as the OF_Const bootOutput* values
+    static uint8_t GetOutputMode();
 
     /// @brief    Set new IR mode and apply it to the selected profile.
     /// @param    RunMode_e

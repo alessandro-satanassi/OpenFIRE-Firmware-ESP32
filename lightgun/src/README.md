@@ -127,7 +127,7 @@ When installing, choose the file for your **board and its flash/PSRAM variant**;
 
 - **Camera:** in **Gun Settings → CAMERA Model**, choose **DFRobot SEN0158 / Wii**, **PAJ7025R2** or **PAJ7025R3** to match your camera (enable **Unlock CAMERA Modification** if the choice is locked). Then assign its pins in **Board Layout**: **Camera SDA** and **Camera SCL** for the DFRobot/Wii, or **Camera SPI MISO**, **MOSI**, **SCK** and **CS** for the PixArt cameras, besides power and ground. Save, and calibrate again after changing camera, lens or emitter placement. The R3's wider lens helps when playing close to the screen; it does not by itself give more accuracy or range. After a clean installation the camera is set to **DFRobot SEN0158 / Wii**: with a PAJ7025R2 or R3, select it and set its pins before calibrating, otherwise the WebApp reports **Device Error: Camera not available!**
 - **OLED display:** disabled by default. Enable **Enable OLED Display (SSD1306 128x64)** in **Gun Settings → I2C Peripherals**, assign **Peripherals SDA** and **Peripherals SCL** in **Board Layout** to the pins the display is wired to, then save and restart. If the display stays blank, try **Use Alternative Device Address**.
-- **Startup mode:** choose **Absolute Mouse** (default), **Gamepad (right stick)** or **Gamepad (left stick)** in **Gun Settings → Input / Output**, then save. This is the output used at the next normal startup; a force feedback program can still change it during a game.
+- **Startup mode:** choose **Absolute Mouse** (default), **Gamepad (right stick)** or **Gamepad (left stick)** in **Gun Settings → Input / Output**, then save. This is the output used at the next normal startup; you can still change it from pause mode, until the gun is switched off, and a force feedback program or a script can change it with the serial commands `M0x0` (absolute mouse), `M0x1` (gamepad, right stick) and `M0x1L` (gamepad, left stick).
 - **Wireless pedal** (**Gun Settings → Input / Output**): enable it only if you use the wireless pedal, and leave both wired pedal inputs unmapped; otherwise disable it, so the gun does not search for a pedal at every start. A mapped wired pedal always takes priority. The wireless pedal works when the gun plays through the dongle; with the gun connected to the computer by USB cable, use a wired pedal.
 
 ## First-time Setup
@@ -140,7 +140,7 @@ After a new installation, or a clean installation, the gun has no calibration ye
 If the camera is not available (for example because the wrong model is selected), pulling the trigger does not start the calibration: fix the camera settings in the WebApp first.
 
 ## Operations Manual
-The gun works as an absolute-positioning mouse: wherever you aim, the pointer goes. You can choose a gamepad output instead with the **Startup mode** setting, and a force feedback program such as MAMEHOOKER can switch it during a game (see [Serial Handoff](#serial-handoff-mame-hooker-mode)).
+The gun works as an absolute-positioning mouse: wherever you aim, the pointer goes. You can choose a gamepad output instead with the **Startup mode** setting, and a force feedback program such as MAMEHOOKER can switch it during a game (see [Serial Handoff](#serial-handoff-mame-hooker-mode)). You can also switch it from pause mode, until the gun is switched off.
 
 **How the computer sees the gun:** the gun, or its dongle, appears as standard USB devices (an absolute-positioning mouse, a keyboard and a gamepad), so no drivers are needed and games and emulators use it like any mouse or controller. The position is updated 209 times per second, about every 4.8 ms, over USB and wirelessly alike. To make the solenoid, rumble, LEDs and OLED counters follow what happens in the game, you also need a force feedback program such as MAMEHOOKER; without it, force feedback reacts to the trigger only.
 
@@ -200,6 +200,7 @@ The averaging modes slightly reduce jitter without adding noticeable lag. The ES
 - Right: solenoid on/off *(only without a solenoid hardware switch)*
 - Trigger: start calibration
 - Start + Select: save settings to the gun's memory
+- Select + Up / Select + Down: next / previous output mode (Absolute Mouse, Gamepad right stick, Gamepad left stick). The top line of the OLED display and the LED show the new mode (green: mouse, blue: right stick, cyan: left stick); it lasts until the gun is switched off and is not saved.
 
 #### Controls for Simple Pause Menu
 - A or Up: move up
@@ -212,6 +213,8 @@ Options, from first to last before the list starts again:
 * Calibrate current profile (always the first option)
 * Switch profiles (submenu)
   * Choose profile 1-4 with the navigation buttons and the trigger, or press C to go back.
+* Output Mode (submenu)
+  * Choose Absolute Mouse, Gamepad Right Stick or Gamepad Left Stick with the navigation buttons and the trigger, or press C to go back. The mode in use is marked with an asterisk. It lasts until the gun is switched off and Save Settings does not store it: the startup mode is set in the WebApp.
 * Save Settings (to the gun's memory)
 * Rumble on/off *(when rumble is enabled and no switch is fitted)*
 * Solenoid on/off *(when the solenoid is enabled and no switch is fitted)*
@@ -485,7 +488,7 @@ Per l'installazione scegli il file della tua **scheda e della sua variante flash
 
 - **Telecamera:** in **Impostazioni Gun → Modello TELECAMERA** scegli **DFRobot SEN0158 / Wii**, **PAJ7025R2** o **PAJ7025R3** secondo la tua telecamera (attiva **Sblocca modifica TELECAMERA** se la scelta è bloccata). Poi assegna i suoi pin nel **Layout Scheda**: **SDA telecamera** e **SCL telecamera** per la DFRobot/Wii, oppure **SPI MISO**, **MOSI**, **SCK** e **CS telecamera** per le PixArt, oltre ad alimentazione e massa. Salva, e calibra di nuovo dopo aver cambiato telecamera, lente o posizione degli emettitori. L'ottica grandangolare della R3 aiuta quando si gioca vicino allo schermo; da sola non garantisce più precisione o portata. Dopo un'installazione pulita la telecamera impostata è **DFRobot SEN0158 / Wii**: con una PAJ7025R2 o R3 selezionala e imposta i suoi pin prima di calibrare, altrimenti la WebApp segnala **Errore dispositivo: Fotocamera non disponibile!**
 - **Display OLED:** disattivato per impostazione predefinita. Attiva **Abilita Display OLED (SSD1306 128x64)** in **Impostazioni Gun → Periferiche I2C**, assegna nel **Layout Scheda** **SDA periferiche** e **SCL periferiche** ai pin a cui è collegato il display, poi salva e riavvia. Se il display resta spento, prova **Usa Indirizzo Dispositivo Alternativo**.
-- **Modalità all'avvio:** scegli **Mouse assoluto** (predefinito), **Gamepad (stick destro)** o **Gamepad (stick sinistro)** in **Impostazioni Gun → Input / Output**, poi salva. È l'uscita usata al successivo avvio normale; un programma di force feedback può comunque cambiarla durante il gioco.
+- **Modalità all'avvio:** scegli **Mouse assoluto** (predefinito), **Gamepad (stick destro)** o **Gamepad (stick sinistro)** in **Impostazioni Gun → Input / Output**, poi salva. È l'uscita usata al successivo avvio normale; puoi comunque cambiarla dalla modalità pausa, fino allo spegnimento, e un programma di force feedback o uno script possono cambiarla con i comandi seriali `M0x0` (mouse assoluto), `M0x1` (gamepad, stick destro) e `M0x1L` (gamepad, stick sinistro).
 - **Pedale wireless** (**Impostazioni Gun → Input / Output**): attivalo solo se usi il pedale wireless e lascia non assegnati entrambi gli ingressi dei pedali cablati; altrimenti disattivalo, così la pistola non cerca un pedale a ogni avvio. Un pedale cablato mappato ha sempre la precedenza. Il pedale wireless funziona quando la pistola gioca tramite il dongle; con la pistola collegata al computer via cavo USB, usa un pedale cablato.
 
 <a id="prima-configurazione-italiano"></a>
@@ -502,7 +505,7 @@ Se la telecamera non è disponibile (ad esempio perché è selezionato il modell
 <a id="manuale-operativo-italiano"></a>
 
 ## Manuale Operativo
-La pistola funziona come un mouse a posizionamento assoluto: dove miri, va il puntatore. Con l'impostazione **Modalità all'avvio** puoi scegliere invece un'uscita gamepad, e un programma di force feedback come MAMEHOOKER può cambiarla durante il gioco (vedi [Modalità Serial Handoff](#modalità-serial-handoff-mame-hooker-italiano)).
+La pistola funziona come un mouse a posizionamento assoluto: dove miri, va il puntatore. Con l'impostazione **Modalità all'avvio** puoi scegliere invece un'uscita gamepad, e un programma di force feedback come MAMEHOOKER può cambiarla durante il gioco (vedi [Modalità Serial Handoff](#modalità-serial-handoff-mame-hooker-italiano)). Puoi cambiarla anche dalla modalità pausa, fino allo spegnimento.
 
 **Come il computer vede la pistola:** la pistola, o il suo dongle, viene riconosciuta come normali dispositivi USB (un mouse a posizionamento assoluto, una tastiera e un gamepad): non servono driver e giochi ed emulatori la usano come un qualsiasi mouse o controller. La posizione viene aggiornata 209 volte al secondo, circa ogni 4,8 ms, sia via USB sia senza fili. Per far seguire a solenoide, rumble, LED e contatori dell'OLED quello che accade nel gioco serve anche un programma di force feedback come MAMEHOOKER; senza, il force feedback reagisce solo al grilletto.
 
@@ -568,6 +571,7 @@ La **Modalità pulsanti 'fuori schermo'** (**Impostazioni Gun → Input / Output
 - **Destra:** attiva/disattiva il solenoide *(solo senza interruttore fisico per il solenoide)*.
 - **Grilletto:** avvia la calibrazione.
 - **Start + Select:** salva le impostazioni nella memoria della pistola.
+- **Select + Su / Select + Giù:** modalità di uscita successiva / precedente (Mouse assoluto, Gamepad stick destro, Gamepad stick sinistro). La riga in alto del display OLED e il LED mostrano la nuova modalità (verde: mouse, blu: stick destro, azzurro: stick sinistro); vale fino allo spegnimento e non viene salvata.
 
 <a id="controlli-per-il-menu-di-pausa-semplificato-italiano"></a>
 
@@ -582,6 +586,8 @@ Le opzioni, dalla prima all'ultima, prima che l'elenco ricominci:
 * Calibra il profilo corrente (sempre la prima opzione)
 * Cambia profilo (sottomenu)
   * Scegli il profilo 1-4 con i pulsanti di navigazione e il grilletto, oppure premi C per tornare indietro.
+* Output Mode (modalità di uscita, sottomenu)
+  * Scegli Mouse assoluto (Absolute Mouse), Gamepad stick destro (Gamepad Right Stick) o Gamepad stick sinistro (Gamepad Left Stick) con i pulsanti di navigazione e il grilletto, oppure premi C per tornare indietro. La modalità in uso è segnata con un asterisco. Vale fino allo spegnimento e Save Settings non la memorizza: la modalità all'avvio si imposta nella WebApp.
 * Save Settings (salva le impostazioni nella memoria della pistola)
 * Attiva/disattiva il rumble *(quando è abilitato e non c'è l'interruttore fisico)*
 * Attiva/disattiva il solenoide *(quando è abilitato e non c'è l'interruttore fisico)*

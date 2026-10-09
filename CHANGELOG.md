@@ -31,6 +31,7 @@ All notable changes to this project will be documented in this file.
 * **Save and Send Settings** pulses while there are unsaved changes (WebApp and desktop App).
 * **Analog stick: Invert X Axis and Invert Y Axis** in the **Button Mapping** tab (WebApp and desktop App), for sticks wired or mounted the other way round. They apply to the gamepad stick, the D-pad and the keyboard arrows, and to the stick test; both are off by default, so existing guns behave as before.
 * **Hardware switches** for rumble, solenoid and rapid fire now work in the ready-made firmware: wire them to GND and assign their pins in **Board Layout**.
+* **Output mode from pause mode:** the Simple Pause Menu has a new **Output Mode** submenu and, in Hotkey pause mode, Select + Up / Select + Down switch to the next or previous mode (Absolute Mouse, Gamepad right stick, Gamepad left stick), with no serial commands. The change lasts until the gun is switched off; the startup mode stays the one set in the WebApp.
 * The **Web Flasher** can switch a gun running 7.0.0 into update mode by itself (the serial port changes once: select the new port and retry).
 * **Project hub** linking the WebApp, the Web Flasher, the tools and the documentation. Each firmware version opens the WebApp made for it.
 
@@ -46,6 +47,7 @@ All notable changes to this project will be documented in this file.
 
 * Hotkey pause mode: the Left/Right rumble and solenoid toggles now work when no hardware switch is fitted, as in the Simple Pause Menu, and are ignored when a hardware switch is fitted or the rumble/solenoid output is not mapped.
 * After the first calibration started from the gun on a new or clean-installed board, the gun returns to normal operation as soon as you confirm the calibration. As before, this first calibration is saved automatically; calibrations started from pause mode must be saved separately.
+* Serial command `M0x0` (and `M0x2`): an analog stick used as a gamepad stick goes back to the left stick, as at startup and with the pause menu. Before, after `M0x1L` it stayed on the right stick.
 
 ### Migration from 6.2.1
 
@@ -95,6 +97,7 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 * **Salva e invia impostazioni** pulsa finché ci sono modifiche non salvate (WebApp e App desktop).
 * **Stick analogico: Inverti asse X e Inverti asse Y** nella scheda **Mappatura Pulsanti** (WebApp e App desktop), per stick collegati o montati al contrario. Valgono per lo stick del gamepad, il D-pad e le frecce della tastiera, e anche per il test dello stick; sono disattivate di default, quindi le pistole esistenti funzionano come prima.
 * Gli **interruttori fisici** per rumble, solenoide e fuoco rapido ora funzionano nel firmware pronto da scaricare: collegali a GND e assegna i loro pin in **Layout Scheda**.
+* **Modalità di uscita dalla pausa:** il Menu di Pausa Semplificato ha il nuovo sottomenu **Output Mode** e, nella modalità pausa Hotkey, Select + Su / Select + Giù passano alla modalità successiva o precedente (Mouse assoluto, Gamepad stick destro, Gamepad stick sinistro), senza comandi seriali. Il cambio dura fino allo spegnimento; la modalità all'avvio resta quella impostata nella WebApp.
 * Il **Web Flasher** può portare da solo in modalità aggiornamento una pistola con la 7.0.0 (la porta seriale cambia una volta: seleziona la nuova porta e riprova).
 * **Portale del progetto** con WebApp, Web Flasher, strumenti e documentazione. Ogni versione del firmware apre la WebApp della stessa versione.
 
@@ -110,6 +113,7 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 
 * Modalità pausa Hotkey: i comandi Sinistra/Destra per attivare/disattivare rumble e solenoide ora funzionano quando non è montato un interruttore fisico, come nel Menu di Pausa Semplificato, e vengono ignorati se l'interruttore fisico è montato o se l'uscita rumble/solenoide non è mappata.
 * Dopo la prima calibrazione avviata dalla pistola su una scheda nuova o dopo un'installazione pulita, la pistola torna al funzionamento normale appena confermi la calibrazione. Come in precedenza, questa prima calibrazione viene salvata automaticamente; quelle avviate dalla pausa vanno salvate separatamente.
+* Comando seriale `M0x0` (e `M0x2`): uno stick analogico usato come stick del gamepad torna sullo stick sinistro, come all'avvio e con il menu di pausa. Prima, dopo `M0x1L`, restava sullo stick destro.
 
 ### Passaggio dalla 6.2.1
 

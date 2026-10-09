@@ -552,12 +552,23 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             display->println(" Profile Select ");
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 47);
+            display->println(" Output Mode ");
+            break;
+          case ScreenPause_OutputMode:
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 25);
+            display->println(" Profile Select ");
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 36);
+            display->println(" Output Mode ");
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 47);
             display->println(" Save Gun Settings ");
             break;
           case ScreenPause_Save:
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 25);
-            display->println(" Profile Select ");
+            display->println(" Output Mode ");
             display->setTextColor(BLACK, WHITE);
             display->setCursor(0, 36);
             display->println(" Save Gun Settings ");
@@ -720,6 +731,28 @@ void ExtDisplay::PauseProfileUpdate(const int &selection, const char* name1, con
             display->setCursor(4, 47);
             display->println(name1);
             break;
+        }
+        display->display();
+    }
+}
+
+void ExtDisplay::PauseOutputModeUpdate(const int &selection, const int &current)
+{
+    if(display != nullptr && selection >= 0 && selection < FW_Const::OutputModeCount) {
+        display->fillRect(0, 16, 128, 48, BLACK);
+        display->drawBitmap(60, 18, upArrowGlyph, ARROW_WIDTH, ARROW_HEIGHT, WHITE);
+        display->drawBitmap(60, 59, downArrowGlyph, ARROW_WIDTH, ARROW_HEIGHT, WHITE);
+        display->setTextSize(1);
+        // previous, selected and next mode, wrapping around the list
+        for(int32_t row = 0; row < 3; ++row) {
+            const int32_t mode = (selection + row + FW_Const::OutputModeCount - 1) % FW_Const::OutputModeCount;
+            if(row == 1)
+                 display->setTextColor(BLACK, WHITE);
+            else display->setTextColor(WHITE, BLACK);
+            display->setCursor(4, 25 + (row * 11));
+            display->print(FW_Const::OutputModeLabels[mode]);
+            if(mode == current)
+                display->print("*");
         }
         display->display();
     }

@@ -32,11 +32,13 @@ New to OpenFIRE? Start from [Getting Started](https://github.com/alessandro-sata
 * Saved mouse/gamepad startup mode, wireless pedal option and Up/Down navigation in the pause menu.
 * Analog stick: **Invert X Axis** and **Invert Y Axis** in the Button Mapping tab, for sticks wired or mounted the other way round (off by default).
 * Hardware switches for rumble, solenoid and rapid fire now work in the ready-made firmware: assign their pins in Board Layout.
+* Output mode (mouse / gamepad right stick / gamepad left stick) can be switched from pause mode: **Output Mode** in the Simple Pause Menu, Select + Up / Select + Down in Hotkey mode. It lasts until the gun is switched off.
 
 ### Improvements and Fixes
 
 * Refined IR tracking and faster recovery of temporarily hidden LEDs; the Square layout supports vertical and wide rectangles.
 * Hotkey pause mode: the rumble/solenoid toggles now work when no hardware switch is fitted.
+* Serial command `M0x0`: an analog stick used as a gamepad stick goes back to the left stick, as at startup.
 * After the first calibration started from the gun on a new board, the gun returns to normal operation once you confirm it. As before, this first calibration is saved automatically; calibrations started from pause mode must be saved separately.
 * Rewritten bilingual user guides: see the [operating manual](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/lightgun/src/README.md#english-version).
 
@@ -252,11 +254,13 @@ Non conosci ancora OpenFIRE? Parti dai [Primi passi](https://github.com/alessand
 * Modalità mouse/gamepad salvabile per l'avvio, opzione pedale wireless e navigazione Su/Giù nel menu di pausa.
 * Stick analogico: **Inverti asse X** e **Inverti asse Y** nella scheda Mappatura Pulsanti, per stick collegati o montati al contrario (disattivate di default).
 * Gli interruttori fisici per rumble, solenoide e fuoco rapido ora funzionano nel firmware pronto da scaricare: assegna i loro pin in Layout Scheda.
+* La modalità di uscita (mouse / gamepad stick destro / gamepad stick sinistro) si cambia anche dalla pausa: **Output Mode** nel Menu di Pausa Semplificato, Select + Su / Select + Giù in modalità Hotkey. Vale fino allo spegnimento.
 
 ### Miglioramenti e correzioni
 
 * Tracciamento IR affinato e recupero più rapido dei LED temporaneamente nascosti; il layout Square supporta rettangoli verticali e larghi.
 * Modalità pausa Hotkey: i comandi per rumble e solenoide ora funzionano quando non è montato un interruttore fisico.
+* Comando seriale `M0x0`: uno stick analogico usato come stick del gamepad torna sullo stick sinistro, come all'avvio.
 * Dopo la prima calibrazione avviata dalla pistola su una scheda nuova, la pistola torna al funzionamento normale appena la confermi. Come in precedenza, questa prima calibrazione viene salvata automaticamente; quelle avviate dalla pausa vanno salvate separatamente.
 * Guide utente bilingui riscritte: consulta il [manuale operativo](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/lightgun/src/README.md#versione-italiana).
 
