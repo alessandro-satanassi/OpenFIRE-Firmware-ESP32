@@ -30,6 +30,7 @@ All notable changes to this project will be documented in this file.
 * **DFRobot/Wii camera:** the IR test and the calibration check also read the brightness of the light spots.
 * **Save and Send Settings** pulses while there are unsaved changes (WebApp and desktop App).
 * **Analog stick: Invert X Axis and Invert Y Axis** in the **Button Mapping** tab (WebApp and desktop App), for sticks wired or mounted the other way round. They apply to the gamepad stick, the D-pad and the keyboard arrows, and to the stick test; both are off by default, so existing guns behave as before.
+* **Hardware switches** for rumble, solenoid and rapid fire now work in the ready-made firmware: wire them to GND and assign their pins in **Board Layout**.
 * The **Web Flasher** can switch a gun running 7.0.0 into update mode by itself (the serial port changes once: select the new port and retry).
 * **Project hub** linking the WebApp, the Web Flasher, the tools and the documentation. Each firmware version opens the WebApp made for it.
 
@@ -93,6 +94,7 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 * **Telecamera DFRobot/Wii:** il test IR e il controllo della calibrazione leggono anche la luminosità delle macchie di luce.
 * **Salva e invia impostazioni** pulsa finché ci sono modifiche non salvate (WebApp e App desktop).
 * **Stick analogico: Inverti asse X e Inverti asse Y** nella scheda **Mappatura Pulsanti** (WebApp e App desktop), per stick collegati o montati al contrario. Valgono per lo stick del gamepad, il D-pad e le frecce della tastiera, e anche per il test dello stick; sono disattivate di default, quindi le pistole esistenti funzionano come prima.
+* Gli **interruttori fisici** per rumble, solenoide e fuoco rapido ora funzionano nel firmware pronto da scaricare: collegali a GND e assegna i loro pin in **Layout Scheda**.
 * Il **Web Flasher** può portare da solo in modalità aggiornamento una pistola con la 7.0.0 (la porta seriale cambia una volta: seleziona la nuova porta e riprova).
 * **Portale del progetto** con WebApp, Web Flasher, strumenti e documentazione. Ogni versione del firmware apre la WebApp della stessa versione.
 

@@ -31,6 +31,7 @@ New to OpenFIRE? Start from [Getting Started](https://github.com/alessandro-sata
 * Clearer IR camera test: each emitter circle shows the size and brightness of the light spot seen by the camera; emitters not seen are marked with a red X, and a legend explains every symbol.
 * Saved mouse/gamepad startup mode, wireless pedal option and Up/Down navigation in the pause menu.
 * Analog stick: **Invert X Axis** and **Invert Y Axis** in the Button Mapping tab, for sticks wired or mounted the other way round (off by default).
+* Hardware switches for rumble, solenoid and rapid fire now work in the ready-made firmware: assign their pins in Board Layout.
 
 ### Improvements and Fixes
 
@@ -250,6 +251,7 @@ Non conosci ancora OpenFIRE? Parti dai [Primi passi](https://github.com/alessand
 * Test della telecamera IR più chiaro: ogni cerchio degli emettitori mostra grandezza e luminosità della macchia di luce vista dalla telecamera; gli emettitori non visti sono segnati con una X rossa e una legenda spiega ogni simbolo.
 * Modalità mouse/gamepad salvabile per l'avvio, opzione pedale wireless e navigazione Su/Giù nel menu di pausa.
 * Stick analogico: **Inverti asse X** e **Inverti asse Y** nella scheda Mappatura Pulsanti, per stick collegati o montati al contrario (disattivate di default).
+* Gli interruttori fisici per rumble, solenoide e fuoco rapido ora funzionano nel firmware pronto da scaricare: assegna i loro pin in Layout Scheda.
 
 ### Miglioramenti e correzioni
 

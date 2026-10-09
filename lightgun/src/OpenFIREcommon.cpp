@@ -1735,7 +1735,7 @@ void FW_Common::SetIrSensitivity(const int &sensitivity)
 
 void FW_Common::SetIrLayout(const int &layout)
 {
-    // TODO: we need an enum for layout types available
+    // Valid layouts are the OF_Const layout enum (layoutSquare, layoutDiamond).
     if(layout >= OF_Const::layoutTypes)
         return;
 

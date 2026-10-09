@@ -247,8 +247,8 @@ static void CheckFirmwareUpdateRequest()
 */
 
 /// @brief Web configuration mode, requested at boot with the buttons above.
-///        Not used yet: OF_WebConfigModeActive is still set by hand below.
-/// /      Non ancora usata: OF_WebConfigModeActive si imposta ancora a mano.
+///        Not used: CheckBootRequests() already sets OF_WebConfigModeActive (B held at startup).
+/// /      Non usata: CheckBootRequests() imposta gia' OF_WebConfigModeActive (B premuto all'avvio).
 /*
 static bool CheckWebConfigRequest()
 {
@@ -515,9 +515,9 @@ CheckBootRequests();
 //OF_WebConfigModeActive = true;
 //OF_WebConfigModeActive = false;
 
-// Here the buttons are still held: the web configuration mode will be asked for
-// at this point. / Qui i tasti sono ancora premuti: la modalita' di
-// configurazione web verra' richiesta da qui.
+// The web configuration mode has already been chosen by CheckBootRequests() (B held
+// at startup). / La modalita' di configurazione web e' gia' stata scelta da
+// CheckBootRequests() (B premuto all'avvio).
 // const bool webConfigRequested = CheckWebConfigRequest();
 
 // ===================================================================================
@@ -795,15 +795,15 @@ CheckBootRequests();
 
 
     // ================== avvia webapp ======================
-    // Web configuration mode (access point + WebSocket). Set by hand for now;
-    // later: OF_WebConfigModeActive = webConfigRequested (buttons held at boot).
+    // Web configuration mode (access point + WebSocket), requested by holding B at
+    // startup: CheckBootRequests() sets OF_WebConfigModeActive.
     // It works both on the cable and with the dongle: WebApp_Init() uses a fixed
     // channel when the radio is free, and the channel of the ESP-NOW link (dongle
     // or wireless pedal) when that link is already using it.
     // /
-    // Modalita' di configurazione web (access point + WebSocket). Per ora si
-    // imposta a mano; in seguito: OF_WebConfigModeActive = webConfigRequested
-    // (tasti premuti all'avvio). Funziona sia via cavo sia con il dongle:
+    // Modalita' di configurazione web (access point + WebSocket), richiesta tenendo
+    // premuto B all'avvio: CheckBootRequests() imposta OF_WebConfigModeActive.
+    // Funziona sia via cavo sia con il dongle:
     // WebApp_Init() usa un canale fisso quando la radio e' libera e il canale del
     // collegamento ESP-NOW (dongle o pedale wireless) quando e' gia' in uso.
     //OF_WebConfigModeActive = true;

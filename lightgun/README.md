@@ -79,7 +79,7 @@ Besides the trigger, the firmware handles up to 13 buttons, all assignable in th
 * **Temperature Sensor (TMP36):** placed against the solenoid, it protects it from overheating during long sessions.
   * *Wiring tip:* give the sensor its own ground (GND) wire straight to a GND pin of the board, not shared with the camera or other modules. Current flowing through a shared ground wire makes the sensor read too high (for example about 90 °C instead of 20 °C). A 0.1 µF capacitor between its VCC and GND pins, close to the sensor, makes the reading steadier.
 * **Rumble Motor (5V):** any gamepad vibration motor with a basic driver board.
-* **2-way SPDT Switches:** to turn Rumble, Solenoid or Rapid Fire on and off with a physical switch. These switches are **not enabled in the ready-made firmware**: they require a custom build ([build guide](docs/COMPILING.md#english-version)). With the standard firmware, rumble and solenoid are controlled from the pause menu.
+* **2-way SPDT Switches:** to turn Rumble, Solenoid or Rapid Fire on and off with a physical switch. Wire each switch between its pin and GND, then assign the pin (**Rumble Switch**, **Solenoid Switch** or **Autofire Switch**) in **Board Layout**: closed is on, open is off, and the switch has priority over the pause menu. Without switches, rumble and solenoid are controlled from the pause menu.
 
 **Lighting and Display:**
 * **NeoPixel:** WS2812B NeoPixel modules for lighting that reacts to the game in real time.
@@ -308,7 +308,7 @@ Oltre al grilletto il firmware gestisce fino a 13 pulsanti, tutti assegnabili ne
 * **Sensore di Temperatura (TMP36):** posizionato a contatto con il solenoide, lo protegge dal surriscaldamento durante le sessioni lunghe.
   * *Consiglio di cablaggio:* collega il GND del sensore con un filo dedicato direttamente a un pin GND della scheda, non condiviso con la telecamera o altri moduli. La corrente che scorre in un filo di massa in comune fa leggere al sensore valori troppo alti (ad esempio circa 90 °C invece di 20 °C). Un condensatore da 0,1 µF tra i suoi pin VCC e GND, vicino al sensore, rende la lettura più stabile.
 * **Motore Rumble (5V):** qualsiasi motorino di vibrazione per gamepad con una semplice scheda driver.
-* **Interruttori SPDT a 2 vie:** per accendere e spegnere Rumble, Solenoide o Fuoco Rapido con un interruttore fisico. Questi interruttori **non sono abilitati nel firmware pronto da scaricare**: richiedono una compilazione personalizzata ([guida alla compilazione](docs/COMPILING.md#versione-italiana)). Con il firmware standard, rumble e solenoide si comandano dal menu di pausa.
+* **Interruttori SPDT a 2 vie:** per accendere e spegnere Rumble, Solenoide o Fuoco Rapido con un interruttore fisico. Collega ogni interruttore tra il suo pin e GND, poi assegna il pin (**Interruttore Rumble**, **Interruttore Solenoide** o **Interruttore Autofire**) in **Layout Scheda**: chiuso è acceso, aperto è spento, e l'interruttore ha la precedenza sul menu di pausa. Senza interruttori, rumble e solenoide si comandano dal menu di pausa.
 
 **Illuminazione e Display:**
 * **NeoPixel:** moduli NeoPixel WS2812B per luci che reagiscono al gioco in tempo reale.
