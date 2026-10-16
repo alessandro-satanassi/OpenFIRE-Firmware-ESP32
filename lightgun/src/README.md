@@ -117,7 +117,7 @@ Buttons, pedals and switches are normally open: they connect their pin to GND wh
 2. Tick **Edit NC Inputs**: it unlocks the **NC** boxes next to the pins. It is not saved and goes off at every connection, so the inversions cannot be changed by mistake.
 3. Tick **NC** next to the input, then **Save and Send Settings**.
 
-The **NC** box appears only for buttons, pedals wired to the gun (not the wireless pedal) and the Rumble, Solenoid and Autofire switches. The inversion belongs to the function, so it follows it if you move it to another pin. With the board's default layout (Use Custom Pins off) no input is inverted. The inversion also applies to the startup shortcuts (Trigger + A, B).
+The **NC** box appears only for buttons, pedals wired to the gun (not the wireless pedal) and the Rumble, Solenoid and Autofire switches. The inversion belongs to the function, so it follows it if you move it to another pin. If you take the function off its pin, its NC box is cleared. With the board's default layout (Use Custom Pins off) no input is inverted. The inversion also applies to the startup shortcuts (Trigger + A, B).
 
 <a id="saving-the-pin-layout-to-a-file"></a>
 
@@ -504,7 +504,7 @@ Pulsanti, pedali e interruttori sono normalmente aperti: collegano il loro pin a
 2. Spunta **Modifica ingressi NC**: sblocca le caselle **NC** accanto ai pin. Non viene salvata e si spegne a ogni connessione, così le inversioni non si possono cambiare per errore.
 3. Spunta **NC** accanto all'ingresso, poi **Salva e invia impostazioni**.
 
-La casella **NC** compare solo per pulsanti, pedali collegati alla pistola (non il pedale wireless) e gli interruttori Rumble, Solenoide e Autofire. L'inversione appartiene alla funzione, quindi la segue se la sposti su un altro pin. Con il layout predefinito della scheda (Usa pin personalizzati spento) nessun ingresso è invertito. L'inversione vale anche per le scorciatoie all'avvio (Grilletto + A, B).
+La casella **NC** compare solo per pulsanti, pedali collegati alla pistola (non il pedale wireless) e gli interruttori Rumble, Solenoide e Autofire. L'inversione appartiene alla funzione, quindi la segue se la sposti su un altro pin. Se togli la funzione dal pin, la casella NC si azzera. Con il layout predefinito della scheda (Usa pin personalizzati spento) nessun ingresso è invertito. L'inversione vale anche per le scorciatoie all'avvio (Grilletto + A, B).
 
 <a id="salvare-il-layout-dei-pin-in-un-file"></a>
 

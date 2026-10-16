@@ -250,3 +250,87 @@ test('.ofl layouts: records a later version may add are skipped', () => {
     assert.deepEqual(target.cur.pins, source.cur.pins);
     assert.equal(target.inverted(E.btnTrigger), true);
 });
+
+test('taking a function off its pin clears its inversion; moving it keeps it', () => {
+    const state = loaded({ mask: ((1 << E.btnTrigger) | (1 << E.btnGunA) | (1 << E.btnGunB)) >>> 0 });
+    // Unmapped: cleared, and ticking it again is needed.
+    state.changePin(state.pinOf(E.btnTrigger), 0);
+    assert.equal(state.inverted(E.btnTrigger), false);
+    // Replaced by another function: the one taken off is cleared, the new one is not inverted.
+    const gpioA = state.pinOf(E.btnGunA);
+    state.changePin(gpioA, E.btnHome + 1);
+    assert.equal(state.inverted(E.btnGunA), false);
+    assert.equal(state.inverted(E.btnHome), false);
+    // Moved to another pin: kept.
+    const free = [...Array(state.pinCount).keys()].find((g) => state.functionAt(g) === -1 && !state.functionDisabled(g, E.btnGunB));
+    state.changePin(free, E.btnGunB + 1);
+    assert.equal(state.inverted(E.btnGunB), true);
+    // Mapping the function again does not bring the old inversion back.
+    state.changePin(gpioA, E.btnGunA + 1);
+    assert.equal(state.inverted(E.btnGunA), false);
+});
+
+test('presets and Use Custom Pins: the pins change, so the inversions are cleared', () => {
+    const mask = ((1 << E.btnTrigger) | (1 << E.btnPedal)) >>> 0;
+    const state = loaded({ mask });
+    state.setCustomPins(false);
+    assert.equal(state.cur.settings[T.inputInvertMask], 0, 'default layout: nothing inverted');
+    state.setCustomPins(true);
+    assert.equal(state.cur.settings[T.inputInvertMask], mask, 'back to the saved custom layout: saved inversions');
+    assert.equal(state.isDirty(), false);
+
+    const plain = loaded({ customPins: false });
+    plain.setCustomPins(true);
+    assert.equal(plain.cur.settings[T.inputInvertMask], 0);
+
+    if (state.altPresets.length) {
+        state.applyAltPreset(0);
+        assert.ok(S.invertibleInputs.every((fn) => !state.inverted(fn)), 'preset: nothing inverted');
+    }
+});
+
+test('.ofl layouts: records in function order, then the NC records in the same order', () => {
+    const state = loaded();
+    S.invertibleInputs.forEach((fn) => state.setInverted(fn, true));
+    const bytes = state.exportLayout();
+    const names = [];
+    let at = bytes.indexOf(0x0A) + 1;
+    while (at < bytes.length) {
+        const nul = bytes.indexOf(0, at);
+        names.push(String.fromCharCode(...bytes.subarray(at, nul)));
+        at = nul + 2;
+    }
+    const byValue = [];
+    for (const [name, value] of Object.entries(S.boardInputs_Strings)) byValue[value] = name;
+    const mapped = [...Array(E.boardInputsCount).keys()].filter((fn) => state.pinMapped(fn));
+    assert.deepEqual(names, [
+        ...mapped.map((fn) => byValue[fn]),
+        ...mapped.filter((fn) => S.invertibleInputs.includes(fn)).map((fn) => 'NC:' + byValue[fn]),
+        'Checksum', 'End']);
+});
+
+test('.ofl layouts: a big file that is not a layout is refused without errors', () => {
+    const big = new Uint8Array(4 * 1024 * 1024).fill(0x41);   // no newline
+    assert.equal(loaded().importLayout(big), 'mismatch');
+    const longLine = big.slice(); longLine[longLine.length - 1] = 0x0A;
+    assert.equal(loaded().importLayout(longLine), 'mismatch');
+    const header = [...'rpipico\n'].map((c) => c.charCodeAt(0));
+    const longName = new Uint8Array(header.length + big.length + 2);
+    longName.set(header); longName.set(big, header.length);
+    assert.equal(loaded().importLayout(longName), 'corrupt');
+});
+
+test('.ofl layouts: an NC record of a function with no pin is ignored', () => {
+    const source = loaded();
+    source.changePin(source.pinOf(E.btnHome), 0);
+    const body = Array.from(source.exportLayout()).slice(0, -15);
+    for (const c of 'NC:Home Button') body.push(c.charCodeAt(0));
+    body.push(0, 0);
+    let crc = 0;
+    for (const byte of body) { crc ^= byte; for (let bit = 0; bit < 8; ++bit) crc = (crc & 0x80) ? ((crc << 1) ^ 0x07) & 0xFF : (crc << 1) & 0xFF; }
+    const file = Uint8Array.from([...body, ...[...'Checksum'].map((c) => c.charCodeAt(0)), 0, crc, ...[...'End'].map((c) => c.charCodeAt(0)), 0, 0]);
+    const target = loaded();
+    assert.equal(target.importLayout(file), 'ok');
+    assert.equal(target.pinMapped(E.btnHome), false);
+    assert.equal(target.inverted(E.btnHome), false);
+});

@@ -194,7 +194,12 @@
                 await OF.UI.alert(t('File Read Error'), OF.UI.escape(t('Custom layout file could not be read.')), 'warning', { scope: 'session' });
                 return;
             }
-            const result = state.importLayout(file.bytes);
+            let result;
+            try {
+                result = state.importLayout(file.bytes);
+            } catch (error) {
+                result = 'corrupt';   // not a layout file (for example too big to read)
+            }
             if (result === 'corrupt') {
                 await OF.UI.alert(t('File Read Error'), OF.UI.escape(t('Custom layout file could not be read.')), 'warning', { scope: 'session' });
                 return;

@@ -34,6 +34,14 @@
         return crc;
     }
 
+    /** The bytes as text, one character per byte; in blocks, so a big file can't overflow the stack. */
+    function latin1(bytes) {
+        let text = '';
+        for (let i = 0; i < bytes.length; i += 4096)
+            text += String.fromCharCode.apply(null, bytes.subarray(i, i + 4096));
+        return text;
+    }
+
     /** Ranges of the spin boxes of the Qt App (appmainwindow.ui), by settingsTypes_e name. */
     const SETTING_RANGES = {
         rumbleStrength: [0, 255],
@@ -320,8 +328,20 @@
             const messages = [];
             this.altPresetIndex = -1;
             this._setPin(gpio, index, messages);
+            this._pruneInverts();
             this._pinSideEffects();
             return messages;
+        }
+
+        /** A function taken off its pin loses its inversion (moved to another pin, it keeps it). */
+        _pruneInverts() {
+            for (const fn of this.S.invertibleInputs || [])
+                if (!this.pinMapped(fn)) this.setInverted(fn, false);
+        }
+
+        /** Every inversion off: all the functions were taken off their pins. */
+        _clearInverts() {
+            for (const fn of this.S.invertibleInputs || []) this.setInverted(fn, false);
         }
 
         _setPin(gpio, index, messages) {
@@ -428,6 +448,10 @@
                 this.altPresetIndex = -1;
                 this._applyLayout(this.presetPins, messages);
             }
+            // Back as loaded: the saved inversions; otherwise the pins changed, so none.
+            const mask = this.T.inputInvertMask;
+            if (mask !== undefined)
+                this.cur.settings[mask] = (!!on === !!this.orig.toggles[B.customPins]) ? this.orig.settings[mask] : 0;
             this._pinSideEffects();
             return messages;
         }
@@ -439,6 +463,7 @@
             const messages = [];
             this.cur.toggles[this.B.customPins] = true;
             this._applyLayout(preset.pin, messages);
+            this._clearInverts();
             this._pinSideEffects();
             this.altPresetIndex = index;
             return messages;
@@ -456,8 +481,12 @@
             const push = (text) => { for (const c of text) bytes.push(c.charCodeAt(0) & 0xFF); };
             push(this.board.type + '\n');
             const inverted = [];
-            for (const [name, value] of Object.entries(this.S.boardInputs_Strings)) {
-                if (value > this.E.btnUnmapped && this.pinMapped(value)) {
+            // in function order, like the desktop App
+            const names = [];
+            for (const [name, value] of Object.entries(this.S.boardInputs_Strings)) names[value] = name;
+            for (let value = 0; value < this.E.boardInputsCount; ++value) {
+                const name = names[value];
+                if (name !== undefined && this.pinMapped(value)) {
                     push(name);
                     bytes.push(0, this.pinOf(value) & 0xFF);
                     if (this.invertible(value) && this.inverted(value)) inverted.push(name);
@@ -480,8 +509,7 @@
         importLayout(data) {
             const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
             const newline = bytes.indexOf(0x0A);
-            const firstLine = String.fromCharCode(...bytes.subarray(0, newline < 0 ? bytes.length : newline)).trim();
-            if (newline < 0 || firstLine !== this.board.type) return 'mismatch';
+            if (newline < 0 || latin1(bytes.subarray(0, newline)).trim() !== this.board.type) return 'mismatch';
 
             const layout = new Array(this.pinCount).fill(this.E.btnUnmapped);
             const inverted = [];
@@ -492,7 +520,7 @@
                 const start = offset;
                 const end = bytes.indexOf(0, offset);
                 if (end < 0 || end + 1 >= bytes.length) return 'corrupt';
-                const name = String.fromCharCode(...bytes.subarray(offset, end));
+                const name = latin1(bytes.subarray(offset, end));
                 const gpio = bytes[end + 1];
                 offset = end + 2;
                 if (name === OFL_END) {
@@ -519,8 +547,9 @@
             this.altPresetIndex = -1;
             this._applyLayout(layout, messages);
             this._pinSideEffects();
-            // The inversions come from the file only: none in the file = none inverted.
-            for (const fn of this.S.invertibleInputs || []) this.setInverted(fn, inverted.includes(fn));
+            // The inversions come from the file only: none in the file = none inverted
+            // (and only for the functions that have a pin).
+            for (const fn of this.S.invertibleInputs || []) this.setInverted(fn, inverted.includes(fn) && this.pinMapped(fn));
             // Qt: "recover previous toggles that may have been turned off in the process" (saved values).
             if (this.pinMapped(this.E.solenoidPin)) this.setToggle(this.B.solenoid, this.orig.toggles[this.B.solenoid]);
             if (this.pinMapped(this.E.rumblePin)) this.setToggle(this.B.rumble, this.orig.toggles[this.B.rumble]);
