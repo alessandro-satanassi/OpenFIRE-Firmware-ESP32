@@ -171,7 +171,7 @@
                 const invert = inverts[gpio];
                 const allowed = state.invertible(fn);
                 const inverted = allowed && state.inverted(fn);
-                // Locked: only the inverted inputs show it, as a plain "NC" without the box.
+                // Locked: only the inverted inputs show it, as an orange "NC" tag over the box (style.css).
                 invert.classList.toggle('off', !allowed || (!invertEditing && !inverted));
                 invert.classList.toggle('badge', !invertEditing && inverted);
                 invert.input.disabled = !allowed || !invertEditing;

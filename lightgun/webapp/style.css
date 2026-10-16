@@ -755,8 +755,46 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
 .pins-tab .pins-col { grid-template-columns: auto auto auto; }
 .pin-invert { font-size: 12px; gap: 3px; white-space: nowrap; }
 .pin-invert.off { visibility: hidden; }
-.pin-invert.badge input { display: none; }
-.pin-invert.badge input + .check-label { opacity: 1; cursor: default; }
+/* Locked: an inverted input shows a small orange tag with a switch symbol and "NC", drawn over the
+   box and its label without changing their size, so nothing moves. The tag's content is centered
+   on its own, whatever the width of the system font. */
+.pin-invert.badge { position: relative; cursor: default; }
+.pin-invert.badge input,
+.pin-invert.badge input + .check-label { visibility: hidden; }
+.pin-invert.badge::before {
+    content: '';
+    position: absolute;
+    left: -2px;
+    right: -2px;
+    top: 50%;
+    height: 18px;
+    margin-top: -9px;
+    border-radius: 9px;
+    background: #c96f00;
+}
+/* The icon is the symbol of a switch contact, drawn in white: a line, two circles and the lever
+   rising from the left circle to rest on the right one. Written into the url below, it reads:
+   <svg viewBox='0 3.5 24 9'><g fill='none' stroke='white' stroke-width='1.6' stroke-linecap='round'>
+     <path d='M0.5 8H4 M20 8H23.5 M8 8L18.8 4.6'/>   (line left, line right, lever)
+     <circle cx='6' cy='8' r='2'/><circle cx='18' cy='8' r='2'/></g></svg>
+   The same drawing is in the desktop App (InvertsUpdate in appmainwindow.cpp).
+   text-box trims the text to its capital letters, so "NC" and the icon sit exactly in the middle. */
+.pin-invert.badge::after {
+    content: 'NC';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    padding-left: 18px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 3.5 24 9'%3E%3Cg fill='none' stroke='white' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M0.5 8H4M20 8H23.5M8 8L18.8 4.6'/%3E%3Ccircle cx='6' cy='8' r='2'/%3E%3Ccircle cx='18' cy='8' r='2'/%3E%3C/g%3E%3C/svg%3E") no-repeat 0 50% / 16px 6px;
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    line-height: 1;
+    white-space: nowrap;
+    text-box: trim-both cap alphabetic;
+}
 
 .gpio-label {
     font-size: 12.5px;
