@@ -5,6 +5,7 @@
 - [Overview, hardware and installation](README.md#english-version)
 - [WebApp configuration](src/README.md#configuration-with-the-webapp)
 - [Startup button combinations](src/README.md#special-boot-modes)
+- [Normally closed (NC) inputs](src/README.md#normally-closed-nc-inputs)
 - [Calibration and operating manual](src/README.md#how-to-calibrate)
 - [7.0.0 changelog](../CHANGELOG.md#english-version)
 
@@ -17,5 +18,6 @@
 - [Panoramica, hardware e installazione](README.md#versione-italiana)
 - [Configurazione WebApp](src/README.md#configurazione-con-la-webapp)
 - [Combinazioni di tasti all'avvio](src/README.md#modalita-speciali-allavvio)
+- [Ingressi normalmente chiusi (NC)](src/README.md#ingressi-normalmente-chiusi-nc)
 - [Calibrazione e manuale operativo](src/README.md#come-calibrare-italiano)
 - [Cronologia modifiche 7.0.0](../CHANGELOG.md#versione-italiana)

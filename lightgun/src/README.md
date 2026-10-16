@@ -17,6 +17,7 @@ This manual takes you from a freshly flashed gun to your first game: placing the
  - [Board Configuration](#board-configuration)
    - [Configuration with the WebApp](#configuration-with-the-webapp)
    - [Normally closed (NC) inputs](#normally-closed-nc-inputs)
+   - [Saving the pin layout to a file](#saving-the-pin-layout-to-a-file)
    - [Special boot modes](#special-boot-modes)
    - [Camera, display and startup settings](#camera-display-and-startup-settings)
  - [First-time Setup](#first-time-setup)
@@ -110,13 +111,23 @@ Use one configuration page at a time. When you have finished, save, close the pa
 
 ### Normally closed (NC) inputs
 
-Buttons, pedals and switches are normally open: they connect their pin to GND when pressed or on. A **normally closed** device, such as the loader switch of the Blamcon Vyper, does the opposite. To use one, in **Board Layout**:
+Buttons, pedals and switches are normally open: they connect their pin to GND when pressed or on. A **normally closed** device, such as the loader switch of the Blamcon Vyper, does the opposite. To use one, in **Board Layout** of the WebApp or the desktop App:
 
 1. Tick **Use Custom Pins**.
 2. Tick **Edit NC Inputs**: it unlocks the **NC** boxes next to the pins. It is not saved and goes off at every connection, so the inversions cannot be changed by mistake.
 3. Tick **NC** next to the input, then **Save and Send Settings**.
 
-The **NC** box appears only for buttons, pedals and the Rumble, Solenoid and Autofire switches. The inversion belongs to the function, so it follows it if you move it to another pin. With the board's default layout (Use Custom Pins off) no input is inverted.
+The **NC** box appears only for buttons, pedals wired to the gun (not the wireless pedal) and the Rumble, Solenoid and Autofire switches. The inversion belongs to the function, so it follows it if you move it to another pin. With the board's default layout (Use Custom Pins off) no input is inverted. The inversion also applies to the startup shortcuts (Trigger + A, B).
+
+<a id="saving-the-pin-layout-to-a-file"></a>
+
+### Saving the pin layout to a file
+
+With **Use Custom Pins** ticked, **User Layouts → Export Custom Layout...** in **Board Layout** saves your pin assignment, NC boxes included, to a file. **Import Custom Layout...** loads it back, for example after a clean installation or on another gun with the same board. Importing replaces the pin assignment and the NC boxes with those in the file; then check the pins and click **Save and Send Settings**. The WebApp and the desktop App use the same files.
+
+A file that cannot be used is refused and nothing is changed: **Board Doesn't Match** usually means it was made for another board, **File Read Error** that it is damaged or incomplete.
+
+**Coming from 6.2.1:** version 7.0.0 stores layouts in a new, sturdier format, so layout files exported with 6.2.1 cannot be imported (**File Read Error**). Note your pins before updating, set them again in **Board Layout**, then export a new file.
 
 <a id="special-boot-modes"></a>
 
@@ -323,6 +334,8 @@ The grey crosshair shows where the gun is aiming and the red circle marks the ce
 - **The OLED display stays blank:** it is disabled by default; enable it as explained in [Camera, display and startup settings](#camera-display-and-startup-settings).
 - **The temperature reading is far too high** (for example about 90 °C at room temperature): give the TMP36 its own ground wire to the board, not shared with the camera ([wiring tip](../README.md#optional-modules)).
 - **The wireless connection drops or has a short range:** keep a small clear area around the antenna of the gun's board, with no wires over or right next to it and no metal covering it ([antenna tip](../README.md#mandatory-components-essentials)); the same applies to a home-made dongle or pedal. Also use solenoid power wires of at least 24 AWG, as thinner wires can cause disconnections.
+- **A button always reads as pressed, or a switch works the other way round:** it probably has a normally closed (NC) contact. Tick **NC** next to its pin; see [Normally closed (NC) inputs](#normally-closed-nc-inputs).
+- **Importing a layout file gives "File Read Error" or "Board Doesn't Match":** the file is damaged, was exported with 6.2.1, or was made for another board. Set the pins again and export a new file; see [Saving the pin layout to a file](#saving-the-pin-layout-to-a-file).
 
 Some behaviours are limits of the system rather than faults: see [Known Limitations](#known-limitations).
 
@@ -386,6 +399,7 @@ Questo manuale ti accompagna da una pistola con il firmware appena installato al
  - [Configurazione della Scheda](#configurazione-della-scheda-italiano)
    - [Configurazione con la WebApp](#configurazione-con-la-webapp)
    - [Ingressi normalmente chiusi (NC)](#ingressi-normalmente-chiusi-nc)
+   - [Salvare il layout dei pin in un file](#salvare-il-layout-dei-pin-in-un-file)
    - [Modalità speciali all'avvio](#modalita-speciali-allavvio)
    - [Telecamera, display e impostazioni di avvio](#telecamera-display-e-impostazioni-di-avvio)
  - [Prima Configurazione](#prima-configurazione-italiano)
@@ -484,13 +498,23 @@ Usa una sola pagina di configurazione alla volta. Al termine salva, chiudi la pa
 
 ### Ingressi normalmente chiusi (NC)
 
-Pulsanti, pedali e interruttori sono normalmente aperti: collegano il loro pin a GND quando sono premuti o accesi. Un dispositivo **normalmente chiuso**, come l'interruttore del caricatore della Blamcon Vyper, fa il contrario. Per usarlo, in **Layout Scheda**:
+Pulsanti, pedali e interruttori sono normalmente aperti: collegano il loro pin a GND quando sono premuti o accesi. Un dispositivo **normalmente chiuso**, come l'interruttore del caricatore della Blamcon Vyper, fa il contrario. Per usarlo, in **Layout Scheda** della WebApp o dell'App desktop:
 
 1. Spunta **Usa pin personalizzati**.
 2. Spunta **Modifica ingressi NC**: sblocca le caselle **NC** accanto ai pin. Non viene salvata e si spegne a ogni connessione, così le inversioni non si possono cambiare per errore.
 3. Spunta **NC** accanto all'ingresso, poi **Salva e invia impostazioni**.
 
-La casella **NC** compare solo per pulsanti, pedali e gli interruttori Rumble, Solenoide e Autofire. L'inversione appartiene alla funzione, quindi la segue se la sposti su un altro pin. Con il layout predefinito della scheda (Usa pin personalizzati spento) nessun ingresso è invertito.
+La casella **NC** compare solo per pulsanti, pedali collegati alla pistola (non il pedale wireless) e gli interruttori Rumble, Solenoide e Autofire. L'inversione appartiene alla funzione, quindi la segue se la sposti su un altro pin. Con il layout predefinito della scheda (Usa pin personalizzati spento) nessun ingresso è invertito. L'inversione vale anche per le scorciatoie all'avvio (Grilletto + A, B).
+
+<a id="salvare-il-layout-dei-pin-in-un-file"></a>
+
+### Salvare il layout dei pin in un file
+
+Con **Usa pin personalizzati** spuntato, **Layout Utente → Esporta layout personalizzato...** in **Layout Scheda** salva in un file l'assegnazione dei pin, caselle NC comprese. **Importa layout personalizzato...** la ricarica, per esempio dopo un'installazione pulita o su un'altra pistola con la stessa scheda. L'importazione sostituisce l'assegnazione dei pin e le caselle NC con quelle del file; poi controlla i pin e fai clic su **Salva e invia impostazioni**. La WebApp e l'App desktop usano gli stessi file.
+
+Un file che non si può usare viene rifiutato e non viene cambiato nulla: **La scheda non corrisponde** di solito indica un file creato per un'altra scheda, **Errore di lettura del file** un file danneggiato o incompleto.
+
+**Se arrivi dalla 6.2.1:** la versione 7.0.0 salva i layout in un nuovo formato, più robusto, quindi i file di layout esportati con la 6.2.1 non si possono importare (**Errore di lettura del file**). Annota i pin prima dell'aggiornamento, reimpostali in **Layout Scheda**, poi esporta un nuovo file.
 
 <a id="modalita-speciali-allavvio"></a>
 
@@ -723,6 +747,8 @@ Il mirino grigio indica dove punta la pistola e il cerchio rosso il centro dei q
 - **Il display OLED resta spento:** è disattivato per impostazione predefinita; attivalo come spiegato in [Telecamera, display e impostazioni di avvio](#telecamera-display-e-impostazioni-di-avvio).
 - **La temperatura letta è troppo alta** (ad esempio circa 90 °C a temperatura ambiente): collega il TMP36 alla scheda con un proprio filo di massa, non condiviso con la telecamera ([consiglio di cablaggio](../README.md#moduli-opzionali)).
 - **Il collegamento wireless si interrompe o ha poca portata:** lascia libera una piccola area intorno all'antenna della scheda della pistola, senza fili sopra o a ridosso e senza metallo che la copra ([consiglio sull'antenna](../README.md#componenti-obbligatori-essenziali)); lo stesso vale per un dongle o un pedale autocostruiti. Usa inoltre fili di alimentazione del solenoide di almeno 24 AWG, perché fili più sottili possono causare disconnessioni.
+- **Un pulsante risulta sempre premuto, o un interruttore funziona al contrario:** probabilmente ha un contatto normalmente chiuso (NC). Spunta **NC** accanto al suo pin; vedi [Ingressi normalmente chiusi (NC)](#ingressi-normalmente-chiusi-nc).
+- **L'importazione di un file di layout dà "Errore di lettura del file" o "La scheda non corrisponde":** il file è danneggiato, è stato esportato con la 6.2.1 o è stato creato per un'altra scheda. Reimposta i pin ed esporta un nuovo file; vedi [Salvare il layout dei pin in un file](#salvare-il-layout-dei-pin-in-un-file).
 
 Alcuni comportamenti sono limiti del sistema e non guasti: vedi [Limiti noti](#limiti-noti-italiano).
 

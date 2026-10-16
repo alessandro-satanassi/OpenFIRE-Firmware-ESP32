@@ -31,7 +31,7 @@ All notable changes to this project will be documented in this file.
 * **Save and Send Settings** pulses while there are unsaved changes (WebApp and desktop App).
 * **Analog stick: Invert X Axis and Invert Y Axis** in the **Button Mapping** tab (WebApp and desktop App), for sticks wired or mounted the other way round. They apply to the gamepad stick, the D-pad and the keyboard arrows, and to the stick test; both are off by default, so existing guns behave as before.
 * **Hardware switches** for rumble, solenoid and rapid fire now work in the ready-made firmware: wire them to GND and assign their pins in **Board Layout**.
-* **Normally closed (NC) inputs** in **Board Layout** (WebApp, custom pins only): buttons, pedals and the rumble, solenoid and rapid fire switches can be read inverted, for devices such as the Blamcon Vyper loader. The **NC** boxes are unlocked by **Edit NC Inputs**, which is not saved; nothing is inverted by default, so existing guns behave as before.
+* **Normally closed (NC) inputs** in **Board Layout** (WebApp and desktop App, custom pins only): buttons, pedals and the rumble, solenoid and rapid fire switches can be read inverted, for devices such as the Blamcon Vyper loader. The **NC** boxes are unlocked by **Edit NC Inputs**, which is not saved; nothing is inverted by default, so existing guns behave as before. The inversion also applies to the startup shortcuts.
 * **Output mode from pause mode:** the Simple Pause Menu has a new **Output Mode** submenu and, in Hotkey pause mode, Select + Up / Select + Down switch to the next or previous mode (Absolute Mouse, Gamepad right stick, Gamepad left stick), with no serial commands. The change lasts until the gun is switched off; the startup mode stays the one set in the WebApp.
 * The **Web Flasher** can switch a gun running 7.0.0 into update mode by itself (the serial port changes once: select the new port and retry).
 * **Project hub** linking the WebApp, the Web Flasher, the tools and the documentation. Each firmware version opens the WebApp made for it.
@@ -43,6 +43,7 @@ All notable changes to this project will be documented in this file.
 * The camera test and calibration screens (WebApp, desktop App and OLED) keep the real proportions of the camera image.
 * One firmware file per board, with no separate camera or NoFS/Full files. A clean installation erases the whole flash and writes the same file.
 * New configuration protocol and rewritten user documentation. A compatible desktop App for ESP32 7.x remains available on the Tools page.
+* Custom layout files (**Export/Import Custom Layout...** in **Board Layout**) also keep the NC boxes and are checked when imported: a damaged or incomplete file is refused and nothing is changed. The WebApp and the desktop App use the same files.
 
 ### Fixed
 
@@ -55,6 +56,7 @@ All notable changes to this project will be documented in this file.
 * A clean installation is recommended; note your settings first, then configure and calibrate again. Erasing removes all saved settings and profiles.
 * Use the new WebApp or the compatible ESP32 desktop App; earlier configuration Apps do not work with the new protocol. Game outputs and MAMEHOOKER commands are unchanged.
 * Use lightgun, dongle and pedal firmware from the same release. While the gun runs the offline WebApp (B held at startup), its USB serial port is not available.
+* Layout files exported with 6.2.1 cannot be imported: note your pins before updating, set them again and export a new file.
 
 ---
 
@@ -98,7 +100,7 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 * **Salva e invia impostazioni** pulsa finché ci sono modifiche non salvate (WebApp e App desktop).
 * **Stick analogico: Inverti asse X e Inverti asse Y** nella scheda **Mappatura Pulsanti** (WebApp e App desktop), per stick collegati o montati al contrario. Valgono per lo stick del gamepad, il D-pad e le frecce della tastiera, e anche per il test dello stick; sono disattivate di default, quindi le pistole esistenti funzionano come prima.
 * Gli **interruttori fisici** per rumble, solenoide e fuoco rapido ora funzionano nel firmware pronto da scaricare: collegali a GND e assegna i loro pin in **Layout Scheda**.
-* **Ingressi normalmente chiusi (NC)** in **Layout Scheda** (WebApp, solo con i pin personalizzati): pulsanti, pedali e gli interruttori di rumble, solenoide e fuoco rapido possono essere letti invertiti, per dispositivi come il caricatore della Blamcon Vyper. Le caselle **NC** si sbloccano con **Modifica ingressi NC**, che non viene salvata; per impostazione predefinita nessun ingresso è invertito, quindi le pistole esistenti si comportano come prima.
+* **Ingressi normalmente chiusi (NC)** in **Layout Scheda** (WebApp e App desktop, solo con i pin personalizzati): pulsanti, pedali e gli interruttori di rumble, solenoide e fuoco rapido possono essere letti invertiti, per dispositivi come il caricatore della Blamcon Vyper. Le caselle **NC** si sbloccano con **Modifica ingressi NC**, che non viene salvata; per impostazione predefinita nessun ingresso è invertito, quindi le pistole esistenti si comportano come prima. L'inversione vale anche per le scorciatoie all'avvio.
 * **Modalità di uscita dalla pausa:** il Menu di Pausa Semplificato ha il nuovo sottomenu **Output Mode** e, nella modalità pausa Hotkey, Select + Su / Select + Giù passano alla modalità successiva o precedente (Mouse assoluto, Gamepad stick destro, Gamepad stick sinistro), senza comandi seriali. Il cambio dura fino allo spegnimento; la modalità all'avvio resta quella impostata nella WebApp.
 * Il **Web Flasher** può portare da solo in modalità aggiornamento una pistola con la 7.0.0 (la porta seriale cambia una volta: seleziona la nuova porta e riprova).
 * **Portale del progetto** con WebApp, Web Flasher, strumenti e documentazione. Ogni versione del firmware apre la WebApp della stessa versione.
@@ -110,6 +112,7 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 * Le schermate di test della telecamera e di calibrazione (WebApp, App desktop e OLED) mantengono le proporzioni reali dell'immagine della telecamera.
 * Un solo file firmware per scheda, senza file separati per telecamera o NoFS/Full. L'installazione pulita cancella l'intera flash e scrive lo stesso file.
 * Nuovo protocollo di configurazione e documentazione utente riscritta. Nella pagina Tools resta disponibile un'App desktop compatibile con ESP32 7.x.
+* I file di layout personalizzato (**Esporta/Importa layout personalizzato...** in **Layout Scheda**) conservano anche le caselle NC e vengono controllati all'importazione: un file danneggiato o incompleto viene rifiutato e non viene cambiato nulla. La WebApp e l'App desktop usano gli stessi file.
 
 ### Correzioni
 
@@ -122,6 +125,7 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 * È consigliata un'installazione pulita; annota prima le impostazioni, poi configura e calibra di nuovo. La cancellazione elimina tutte le impostazioni e i profili salvati.
 * Usa la nuova WebApp o l'App desktop ESP32 compatibile; le App di configurazione precedenti non funzionano con il nuovo protocollo. Uscite di gioco e comandi MAMEHOOKER restano invariati.
 * Usa firmware della stessa release per lightgun, dongle e pedale. Mentre la pistola esegue la WebApp offline (B premuto all'avvio), la sua porta seriale USB non è disponibile.
+* I file di layout esportati con la 6.2.1 non si possono importare: annota i pin prima dell'aggiornamento, reimpostali ed esporta un nuovo file.
 
 ---
 

@@ -61,7 +61,7 @@ The gun works with the trigger alone, but most lightgun games also need:
 Add whatever your build needs:
 
 **Switches (Buttons):**
-Besides the trigger, the firmware handles up to 13 buttons, all assignable in the OpenFIRE ESP32 WebApp (see the pinout pictures below for the defaults):
+Besides the trigger, the firmware handles up to 13 buttons, all assignable in the OpenFIRE ESP32 WebApp (see the pinout pictures below for the defaults); normally closed (**NC**) buttons and pedals work too:
 * **C Button:** one more button alongside A and B.
 * **D-Pad Module:** a 5-way navigation switch (Up, Down, Left, Right, and Centre, used as the Home button that enters pause mode).
 * **System Buttons:** 2 buttons for *Start* and *Select*.
@@ -97,7 +97,7 @@ The OpenFIRE project's illustrated guide to wiring the components is also includ
 ## Default Board Pinouts
 
 The pictures below show the default pin assignment of each board.
-> **Note:** the functions of the available pins can be reassigned. If it is easier to solder a component to another suitable pin, change it in the **Board Layout** tab of the **OpenFIRE ESP32 WebApp**; leave pins reserved for USB, startup or other board functions alone.
+> **Note:** the functions of the available pins can be reassigned. If it is easier to solder a component to another suitable pin, change it in the **Board Layout** tab of the **OpenFIRE ESP32 WebApp**; leave pins reserved for USB, startup or other board functions alone. You can also save your layout to a file and load it again later (see [Saving the pin layout to a file](src/README.md#saving-the-pin-layout-to-a-file)).
 
 | ESP32-S3-DevKitC-1 | Waveshare ESP32-S3-PICO | Waveshare ESP32-S3-ZERO |
 | :---: | :---: | :---: |
@@ -290,7 +290,7 @@ La pistola funziona anche con il solo grilletto, ma la maggior parte dei giochi 
 Aggiungi quello che serve alla tua costruzione:
 
 **Interruttori (Pulsanti):**
-Oltre al grilletto il firmware gestisce fino a 13 pulsanti, tutti assegnabili nella WebApp OpenFIRE ESP32 (vedi le immagini dei pinout più sotto per quelli predefiniti):
+Oltre al grilletto il firmware gestisce fino a 13 pulsanti, tutti assegnabili nella WebApp OpenFIRE ESP32 (vedi le immagini dei pinout più sotto per quelli predefiniti); funzionano anche pulsanti e pedali normalmente chiusi (**NC**):
 * **Pulsante C:** un pulsante in più oltre ad A e B.
 * **Modulo D-Pad:** un interruttore di navigazione a 5 vie (Su, Giù, Sinistra, Destra, e Centro, usato come pulsante Home che entra in modalità pausa).
 * **Pulsanti di Sistema:** 2 pulsanti per *Start* e *Select*.
@@ -326,7 +326,7 @@ Link per l'acquisto dei componenti e istruzioni di montaggio passo per passo son
 ## Pinout Predefiniti delle Schede
 
 Le immagini qui sotto mostrano l'assegnazione predefinita dei pin di ogni scheda.
-> **Nota:** puoi riassegnare le funzioni dei pin disponibili. Se è più comodo saldare un componente su un altro pin adatto, cambialo nella sezione **Layout Scheda** della **WebApp OpenFIRE ESP32**; lascia liberi i pin riservati a USB, avvio o altre funzioni della scheda.
+> **Nota:** puoi riassegnare le funzioni dei pin disponibili. Se è più comodo saldare un componente su un altro pin adatto, cambialo nella sezione **Layout Scheda** della **WebApp OpenFIRE ESP32**; lascia liberi i pin riservati a USB, avvio o altre funzioni della scheda. Puoi anche salvare il layout in un file e ricaricarlo in seguito (vedi [Salvare il layout dei pin in un file](src/README.md#salvare-il-layout-dei-pin-in-un-file)).
 
 | ESP32-S3-DevKitC-1 | Waveshare ESP32-S3-PICO | Waveshare ESP32-S3-ZERO |
 | :---: | :---: | :---: |
