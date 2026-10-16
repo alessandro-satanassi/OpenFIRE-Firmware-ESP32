@@ -170,9 +170,12 @@
                 box.disabled = !customOn;
                 const invert = inverts[gpio];
                 const allowed = state.invertible(fn);
-                invert.classList.toggle('off', !allowed);
+                const inverted = allowed && state.inverted(fn);
+                // Locked: only the inverted inputs show it, as a plain "NC" without the box.
+                invert.classList.toggle('off', !allowed || (!invertEditing && !inverted));
+                invert.classList.toggle('badge', !invertEditing && inverted);
                 invert.input.disabled = !allowed || !invertEditing;
-                invert.input.checked = allowed && state.inverted(fn);
+                invert.input.checked = inverted;
             });
             custom.input.checked = customOn;
             invertEdit.hidden = !customOn;

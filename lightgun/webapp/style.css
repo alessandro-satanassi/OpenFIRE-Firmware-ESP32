@@ -755,6 +755,8 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
 .pins-tab .pins-col { grid-template-columns: auto auto auto; }
 .pin-invert { font-size: 12px; gap: 3px; white-space: nowrap; }
 .pin-invert.off { visibility: hidden; }
+.pin-invert.badge input { display: none; }
+.pin-invert.badge input + .check-label { opacity: 1; cursor: default; }
 
 .gpio-label {
     font-size: 12.5px;
