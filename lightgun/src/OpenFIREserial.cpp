@@ -375,7 +375,7 @@ void OF_Serial::SerialProcessing()
               default:
                 Serial.println("SERIALREAD: Internal setting cmd detected, but not valid!");
                 Serial.println("Internally recognized commands are:");
-                Serial.println("I(nterval Autofire)2/3/4 / R(emap)1/2/3/4");
+                Serial.println("I(nterval Autofire)0/1 / R(emap)1/2/3/4");
                 break;
           }
           // End of 'X'

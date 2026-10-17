@@ -47,6 +47,7 @@ New to OpenFIRE? Start from [Getting Started](https://github.com/alessandro-sata
 * Pressing Start or Select while firing switches the solenoid off and ends the rumble as usual.
 * Turning the solenoid hardware switch off during a burst stops the burst.
 * The trigger no longer stays pressed on the computer when the solenoid or rumble hardware switch is turned off, MAMEHOOKER starts or pause mode is entered while it is held.
+* When the temperature sensor reads too hot or reports a fault, the solenoid no longer fires at all, single shots included, and a burst stopped by the temperature no longer resumes by itself.
 * MAMEHOOKER rumble pulses with custom timings now give all the requested pulses.
 * Pause mode: rumble or solenoid changed after a save can be saved again in the same pause.
 * Desktop App, Button Mapping: changing the type of an output gives the gun the output shown.
@@ -58,6 +59,7 @@ New to OpenFIRE? Start from [Getting Started](https://github.com/alessandro-sata
 * A clean installation is recommended when upgrading from 6.2.1: note your settings first, then configure and calibrate again.
 * Use lightgun, dongle and pedal firmware from this same release.
 * Layout files exported with 6.2.1 cannot be imported: note your pins before updating, set them again and export a new file.
+* If the temperature sensor pin is assigned but no TMP36 is fitted, the solenoid does not fire. The default layouts of the ESP32-S3 DevKitC-1 and the Waveshare ESP32-S3 Pico assign this pin: without the sensor, enable **Use Custom Pins** in **Board Layout** and set **Temperature Sensor** to **Unmapped**.
 * Starting the offline WebApp replaces the gun's USB serial port with USB networking, even if you configure over Wi-Fi. While a configuration App is connected, normal play is suspended. Save and restart normally after configuring.
 * The Web Flasher can also restart a gun running 7.0.0 into update mode by itself. After this restart the serial port changes: select the new port and retry.
 
@@ -280,6 +282,7 @@ Non conosci ancora OpenFIRE? Parti dai [Primi passi](https://github.com/alessand
 * Premendo Start o Select mentre si spara, il solenoide si spegne e la vibrazione finisce normalmente.
 * Spegnere l'interruttore fisico del solenoide durante una raffica la interrompe.
 * Il grilletto non resta più premuto sul computer se, mentre lo tieni premuto, spegni l'interruttore fisico del solenoide o della vibrazione, si avvia MAMEHOOKER o entri in pausa.
+* Quando il sensore di temperatura rileva una temperatura troppo alta o segnala un guasto, il solenoide non scatta più, compresi i colpi singoli, e una raffica fermata dalla temperatura non riparte più da sola.
 * Gli impulsi di vibrazione MAMEHOOKER con durate personalizzate ora vengono eseguiti tutti.
 * Menu di pausa: rumble o solenoide cambiati dopo un salvataggio si possono salvare di nuovo nella stessa pausa.
 * App desktop, Mappatura Pulsanti: cambiando il tipo di un'uscita, la pistola riceve l'uscita mostrata.
@@ -291,6 +294,7 @@ Non conosci ancora OpenFIRE? Parti dai [Primi passi](https://github.com/alessand
 * Passando dalla 6.2.1 è consigliata un'installazione pulita: annota prima le impostazioni, poi configura e calibra di nuovo.
 * Usa firmware di questa stessa release per lightgun, dongle e pedale.
 * I file di layout esportati con la 6.2.1 non si possono importare: annota i pin prima dell'aggiornamento, reimpostali ed esporta un nuovo file.
+* Se il pin del sensore di temperatura è assegnato ma il TMP36 non è montato, il solenoide non scatta. I layout predefiniti di ESP32-S3 DevKitC-1 e Waveshare ESP32-S3 Pico assegnano questo pin: senza il sensore, attiva **Usa pin personalizzati** in **Layout Scheda** e imposta **Sensore di temperatura** su **Non assegnato**.
 * L'avvio della WebApp offline sostituisce la porta seriale USB della pistola con la rete USB, anche se configuri via Wi-Fi. Mentre un'App di configurazione è collegata, il gioco normale è sospeso. Al termine della configurazione salva e riavvia normalmente.
 * Il Web Flasher può anche riavviare da solo in modalità aggiornamento una pistola che esegue la 7.0.0. Dopo questo riavvio la porta seriale cambia: seleziona la nuova porta e riprova.
 

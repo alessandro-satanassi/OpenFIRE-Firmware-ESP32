@@ -55,6 +55,7 @@ All notable changes to this project will be documented in this file.
 * Solenoid and rumble: if you press Start or Select while firing, the solenoid switches off and the rumble ends as usual. Before, they could stay on for as long as you held the buttons.
 * Solenoid hardware switch: turning it off during a burst stops the burst. Before, one more shot could start while aiming off screen.
 * Trigger: if you turn off the solenoid or rumble hardware switch, MAMEHOOKER starts or you enter pause mode while holding the trigger, the trigger no longer stays pressed on the computer afterwards.
+* Solenoid temperature sensor: when the sensor reads too hot or reports a fault, the solenoid no longer fires at all, single shots and the first shot of a burst included. Before, single shots ignored the temperature. A burst stopped by the temperature also no longer resumes by itself once the solenoid cools down.
 * MAMEHOOKER rumble pulses with custom timings (`R1x0`/`R1x1`): the gun now gives all the requested pulses. Before, it stopped after the first one and ignored the following pulse commands.
 * Pause mode: if you turn rumble or solenoid on or off after saving, you can save again in the same pause. Before, the second save did nothing.
 * Desktop App, **Button Mapping**: when you change the type of an output (mouse, keyboard, gamepad), the gun gets the output shown. Before, it could get a different one.
@@ -65,6 +66,7 @@ All notable changes to this project will be documented in this file.
 * Use the new WebApp or the compatible ESP32 desktop App; earlier configuration Apps do not work with the new protocol. Game outputs and MAMEHOOKER commands are unchanged.
 * Use lightgun, dongle and pedal firmware from the same release. While the gun runs the offline WebApp (B held at startup), its USB serial port is not available.
 * Layout files exported with 6.2.1 cannot be imported: note your pins before updating, set them again and export a new file.
+* If the temperature sensor pin is assigned but no TMP36 is fitted, the solenoid does not fire (the WebApp shows **Temperature: FAULT**). The default layouts of the ESP32-S3 DevKitC-1 and the Waveshare ESP32-S3 Pico assign this pin: without the sensor, enable **Use Custom Pins** in **Board Layout** and set **Temperature Sensor** to **Unmapped**.
 
 ---
 
@@ -132,6 +134,7 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 * Solenoide e vibrazione: se premi Start o Select mentre spari, il solenoide si spegne e la vibrazione finisce normalmente. Prima potevano restare accesi finché tenevi premuti i tasti.
 * Interruttore fisico del solenoide: spegnerlo durante una raffica la interrompe. Prima poteva partire un altro colpo puntando fuori dallo schermo.
 * Grilletto: se spegni l'interruttore fisico del solenoide o della vibrazione, si avvia MAMEHOOKER o entri in pausa mentre tieni premuto il grilletto, il grilletto non resta più premuto sul computer.
+* Sensore di temperatura del solenoide: quando il sensore rileva una temperatura troppo alta o segnala un guasto, il solenoide non scatta più, compresi i colpi singoli e il primo colpo di una raffica. Prima i colpi singoli ignoravano la temperatura. Inoltre una raffica fermata dalla temperatura non riparte più da sola quando il solenoide si raffredda.
 * Impulsi di vibrazione MAMEHOOKER con durate personalizzate (`R1x0`/`R1x1`): la pistola ora esegue tutti gli impulsi richiesti. Prima si fermava dopo il primo e ignorava i comandi di impulso successivi.
 * Menu di pausa: se attivi o disattivi rumble o solenoide dopo aver salvato, puoi salvare di nuovo nella stessa pausa. Prima il secondo salvataggio non faceva nulla.
 * App desktop, **Mappatura Pulsanti**: quando cambi il tipo di un'uscita (mouse, tastiera, gamepad), la pistola riceve l'uscita mostrata. Prima poteva riceverne un'altra.
@@ -142,6 +145,7 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 * Usa la nuova WebApp o l'App desktop ESP32 compatibile; le App di configurazione precedenti non funzionano con il nuovo protocollo. Uscite di gioco e comandi MAMEHOOKER restano invariati.
 * Usa firmware della stessa release per lightgun, dongle e pedale. Mentre la pistola esegue la WebApp offline (B premuto all'avvio), la sua porta seriale USB non è disponibile.
 * I file di layout esportati con la 6.2.1 non si possono importare: annota i pin prima dell'aggiornamento, reimpostali ed esporta un nuovo file.
+* Se il pin del sensore di temperatura è assegnato ma il TMP36 non è montato, il solenoide non scatta (la WebApp mostra **Temperatura: ERRORE**). I layout predefiniti di ESP32-S3 DevKitC-1 e Waveshare ESP32-S3 Pico assegnano questo pin: senza il sensore, attiva **Usa pin personalizzati** in **Layout Scheda** e imposta **Sensore di temperatura** su **Non assegnato**.
 
 ---
 

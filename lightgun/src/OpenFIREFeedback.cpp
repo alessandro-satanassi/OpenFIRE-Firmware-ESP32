@@ -129,9 +129,11 @@ void OF_FFB::FFBRelease()
 
 void OF_FFB::SolenoidActivation(const int &solenoidFinalInterval)
 {
-    if(solenoidFirstShot) {                                       // If this is the first time we're shooting, it's probably safe to shoot regardless of temps.
+    if(solenoidFirstShot) {                                       // First shot: fire at once, without waiting for the interval timer.
         previousMillisSol = millis();                             // Calibrate the timer for future calcs.
-        OF_FFB::SetSolenoid(HIGH);     // Since we're shooting the first time, just turn it on aaaaand fire.
+        if(OF_Prefs::pins[OF_Const::tempPin] >= 0 && tempStatus == Temp_Fatal)
+            OF_FFB::SetSolenoid(LOW);                             // Too hot, or temperature sensor fault: do not fire.
+        else OF_FFB::SetSolenoid(HIGH);
     } else {
         if(OF_Prefs::pins[OF_Const::tempPin] >= 0) { // If a temp sensor is installed and enabled,
             TemperatureUpdate();
@@ -271,6 +273,8 @@ void OF_FFB::RumbleActivation()
 
 void OF_FFB::BurstFire()
 {
+    if(OF_Prefs::pins[OF_Const::tempPin] >= 0 && tempStatus == Temp_Fatal)
+        burstFireCount = 4;                                       // Too hot: end the burst now, so it does not resume by itself once cooled.
     if(burstFireCount < 4) {  // Are we within the three shots alotted to a burst fire command?
         #ifdef USES_SOLENOID
             if(!OF_FFB::GetSolenoid() &&  // Is the solenoid NOT on right now, and the counter hasn't matched?
