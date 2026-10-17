@@ -50,6 +50,8 @@ All notable changes to this project will be documented in this file.
 * Hotkey pause mode: the Left/Right rumble and solenoid toggles now work when no hardware switch is fitted, as in the Simple Pause Menu, and are ignored when a hardware switch is fitted or the rumble/solenoid output is not mapped.
 * After the first calibration started from the gun on a new or clean-installed board, the gun returns to normal operation as soon as you confirm the calibration. As before, this first calibration is saved automatically; calibrations started from pause mode must be saved separately.
 * Serial command `M0x0` (and `M0x2`): an analog stick used as a gamepad stick goes back to the left stick, as at startup and with the pause menu. Before, after `M0x1L` it stayed on the right stick.
+* Burst fire (serial command `M8x1`): each burst fires exactly three shots, with the set pause between them, and the solenoid always switches off at the end. Before, a fourth shot could start and the solenoid could stay on.
+* Saving from pause mode: if saving fails, you can try again in the same pause. Before, the second try did nothing.
 
 ### Migration from 6.2.1
 
@@ -119,6 +121,8 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 * Modalità pausa Hotkey: i comandi Sinistra/Destra per attivare/disattivare rumble e solenoide ora funzionano quando non è montato un interruttore fisico, come nel Menu di Pausa Semplificato, e vengono ignorati se l'interruttore fisico è montato o se l'uscita rumble/solenoide non è mappata.
 * Dopo la prima calibrazione avviata dalla pistola su una scheda nuova o dopo un'installazione pulita, la pistola torna al funzionamento normale appena confermi la calibrazione. Come in precedenza, questa prima calibrazione viene salvata automaticamente; quelle avviate dalla pausa vanno salvate separatamente.
 * Comando seriale `M0x0` (e `M0x2`): uno stick analogico usato come stick del gamepad torna sullo stick sinistro, come all'avvio e con il menu di pausa. Prima, dopo `M0x1L`, restava sullo stick destro.
+* Fuoco a raffica (comando seriale `M8x1`): ogni raffica spara esattamente tre colpi, con la pausa impostata tra uno e l'altro, e il solenoide si spegne sempre alla fine. Prima poteva partire un quarto colpo e il solenoide poteva restare acceso.
+* Salvataggio dalla pausa: se il salvataggio non riesce, puoi riprovare nella stessa pausa. Prima il secondo tentativo non faceva nulla.
 
 ### Passaggio dalla 6.2.1
 

@@ -276,9 +276,11 @@ void OF_FFB::BurstFire()
             if(!OF_FFB::GetSolenoid() &&  // Is the solenoid NOT on right now, and the counter hasn't matched?
             (burstFireCount == burstFireCountLast)) {
                 burstFireCount++;                                 // Increment the counter.
+                if(burstFireCount > 3)                            // Third shot done: no fourth pulse, the burst ends on the next call.
+                    return;
             }
             if(!OF_FFB::GetSolenoid()) {  // Now, is the solenoid NOT on right now?
-                SolenoidActivation(OF_Prefs::settings[OF_Const::solenoidOffLength] << autofireDoubleLengthWait ? 1 : 0);     // Hold it off a bit longer,
+                SolenoidActivation(OF_Prefs::settings[OF_Const::solenoidOffLength] << (autofireDoubleLengthWait ? 1 : 0));     // Hold it off a bit longer,
             } else {                         // or if it IS on,
                 burstFireCountLast = burstFireCount;              // sync the counters since we completed one bullet cycle,
                 SolenoidActivation(OF_Prefs::settings[OF_Const::solenoidOnLength]);         // And start trying to activate the dingus.
@@ -286,6 +288,9 @@ void OF_FFB::BurstFire()
         #endif // USES_SOLENOID
         return;
     } else {  // If we're at three bullets fired,
+        #ifdef USES_SOLENOID
+            OF_FFB::SetSolenoid(LOW);                             // A burst always ends with the solenoid off,
+        #endif // USES_SOLENOID
         burstFiring = false;                                      // Disable the currently firing tag,
         burstFireCount = 0;                                       // And set the count off.
         return;                                                   // Let's go back.

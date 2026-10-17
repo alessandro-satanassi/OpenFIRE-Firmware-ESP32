@@ -1,6 +1,6 @@
 # OpenFIRE Shared Resources
 
-**For users / Per gli utenti:** configure the 7.0.0 firmware through the WebApp; see the [English manual](../README.md#configuration-with-the-webapp) / [manuale italiano](../README.md#configurazione-con-la-webapp). The notes below describe shared resources and the legacy Qt workflow; the WebApp also uses these board definitions and generates its pictures during its build. / Le note sotto descrivono le risorse condivise e il flusso Qt legacy; anche la WebApp usa queste definizioni e genera le immagini durante la compilazione.
+**For users / Per gli utenti:** configure the 7.0.0 firmware through the WebApp; see the [English manual](../README.md#configuration-with-the-webapp) / [manuale italiano](../README.md#configurazione-con-la-webapp). The notes below describe shared resources and the legacy Qt workflow; the WebApp also uses these board definitions and generates its pictures during its build. / Configura il firmware 7.0.0 tramite la WebApp; consulta il [manuale italiano](../README.md#configurazione-con-la-webapp). Le note sotto descrivono le risorse condivise e il flusso Qt legacy; anche la WebApp usa queste definizioni e genera le immagini durante la compilazione.
 This repository contains resources that can be shared between implementations of the microcontroller Firmware and Applications intended to interface with and configure them on a PC device.
 
 ## `OpenFIREshared.h`

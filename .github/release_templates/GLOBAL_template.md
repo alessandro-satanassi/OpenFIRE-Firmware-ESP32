@@ -32,6 +32,7 @@ New to OpenFIRE? Start from [Getting Started](https://github.com/alessandro-sata
 * Saved mouse/gamepad startup mode, wireless pedal option and Up/Down navigation in the pause menu.
 * Analog stick: **Invert X Axis** and **Invert Y Axis** in the Button Mapping tab, for sticks wired or mounted the other way round (off by default).
 * Hardware switches for rumble, solenoid and rapid fire now work in the ready-made firmware: assign their pins in Board Layout.
+* Normally closed (NC) inputs in Board Layout (custom pins only): buttons, pedals and the rumble, solenoid and rapid fire switches can be read inverted, for devices such as the Blamcon Vyper loader. Unlock the **NC** boxes with **Edit NC Inputs**; nothing is inverted by default.
 * Output mode (mouse / gamepad right stick / gamepad left stick) can be switched from pause mode: **Output Mode** in the Simple Pause Menu, Select + Up / Select + Down in Hotkey mode. It lasts until the gun is switched off.
 
 ### Improvements and Fixes
@@ -40,6 +41,8 @@ New to OpenFIRE? Start from [Getting Started](https://github.com/alessandro-sata
 * Hotkey pause mode: the rumble/solenoid toggles now work when no hardware switch is fitted.
 * Serial command `M0x0`: an analog stick used as a gamepad stick goes back to the left stick, as at startup.
 * After the first calibration started from the gun on a new board, the gun returns to normal operation once you confirm it. As before, this first calibration is saved automatically; calibrations started from pause mode must be saved separately.
+* Burst fire (serial command `M8x1`): exactly three shots, with the correct pause between them, and the solenoid always off at the end.
+* Saving from pause mode can be retried in the same pause if it fails.
 * Rewritten bilingual user guides: see the [operating manual](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/lightgun/src/README.md#english-version).
 
 ### Installation and Usage Notes
@@ -47,6 +50,7 @@ New to OpenFIRE? Start from [Getting Started](https://github.com/alessandro-sata
 * One firmware file per board, whatever the camera. A clean installation uses the same file but erases all settings and calibrations.
 * A clean installation is recommended when upgrading from 6.2.1: note your settings first, then configure and calibrate again.
 * Use lightgun, dongle and pedal firmware from this same release.
+* Layout files exported with 6.2.1 cannot be imported: note your pins before updating, set them again and export a new file.
 * Starting the offline WebApp replaces the gun's USB serial port with USB networking, even if you configure over Wi-Fi. While a configuration App is connected, normal play is suspended. Save and restart normally after configuring.
 * The Web Flasher can also restart a gun running 7.0.0 into update mode by itself. After this restart the serial port changes: select the new port and retry.
 
@@ -254,6 +258,7 @@ Non conosci ancora OpenFIRE? Parti dai [Primi passi](https://github.com/alessand
 * Modalità mouse/gamepad salvabile per l'avvio, opzione pedale wireless e navigazione Su/Giù nel menu di pausa.
 * Stick analogico: **Inverti asse X** e **Inverti asse Y** nella scheda Mappatura Pulsanti, per stick collegati o montati al contrario (disattivate di default).
 * Gli interruttori fisici per rumble, solenoide e fuoco rapido ora funzionano nel firmware pronto da scaricare: assegna i loro pin in Layout Scheda.
+* Ingressi normalmente chiusi (NC) in Layout Scheda (solo con i pin personalizzati): pulsanti, pedali e gli interruttori di rumble, solenoide e fuoco rapido possono essere letti invertiti, per dispositivi come il caricatore della Blamcon Vyper. Le caselle **NC** si sbloccano con **Modifica ingressi NC**; per impostazione predefinita nessun ingresso è invertito.
 * La modalità di uscita (mouse / gamepad stick destro / gamepad stick sinistro) si cambia anche dalla pausa: **Output Mode** nel Menu di Pausa Semplificato, Select + Su / Select + Giù in modalità Hotkey. Vale fino allo spegnimento.
 
 ### Miglioramenti e correzioni
@@ -262,6 +267,8 @@ Non conosci ancora OpenFIRE? Parti dai [Primi passi](https://github.com/alessand
 * Modalità pausa Hotkey: i comandi per rumble e solenoide ora funzionano quando non è montato un interruttore fisico.
 * Comando seriale `M0x0`: uno stick analogico usato come stick del gamepad torna sullo stick sinistro, come all'avvio.
 * Dopo la prima calibrazione avviata dalla pistola su una scheda nuova, la pistola torna al funzionamento normale appena la confermi. Come in precedenza, questa prima calibrazione viene salvata automaticamente; quelle avviate dalla pausa vanno salvate separatamente.
+* Fuoco a raffica (comando seriale `M8x1`): esattamente tre colpi, con la pausa corretta tra uno e l'altro, e solenoide sempre spento alla fine.
+* Il salvataggio dalla pausa si può ripetere nella stessa pausa se non riesce.
 * Guide utente bilingui riscritte: consulta il [manuale operativo](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/lightgun/src/README.md#versione-italiana).
 
 ### Note di installazione e utilizzo
@@ -269,6 +276,7 @@ Non conosci ancora OpenFIRE? Parti dai [Primi passi](https://github.com/alessand
 * Un solo file firmware per scheda, qualunque sia la telecamera. L'installazione pulita usa lo stesso file ma elimina tutte le impostazioni e calibrazioni.
 * Passando dalla 6.2.1 è consigliata un'installazione pulita: annota prima le impostazioni, poi configura e calibra di nuovo.
 * Usa firmware di questa stessa release per lightgun, dongle e pedale.
+* I file di layout esportati con la 6.2.1 non si possono importare: annota i pin prima dell'aggiornamento, reimpostali ed esporta un nuovo file.
 * L'avvio della WebApp offline sostituisce la porta seriale USB della pistola con la rete USB, anche se configuri via Wi-Fi. Mentre un'App di configurazione è collegata, il gioco normale è sospeso. Al termine della configurazione salva e riavvia normalmente.
 * Il Web Flasher può anche riavviare da solo in modalità aggiornamento una pistola che esegue la 7.0.0. Dopo questo riavvio la porta seriale cambia: seleziona la nuova porta e riprova.
 

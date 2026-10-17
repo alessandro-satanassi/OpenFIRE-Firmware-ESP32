@@ -1842,6 +1842,10 @@ int FW_Common::SavePreferences()
 
         return OF_Prefs::Error_Success;
     } else {
+        // Failed: allow another try in the same pause.
+        if(gunMode != FW_Const::GunMode_Docked)
+            stateFlags |= FW_Const::StateFlag_SavePreferencesEn;
+
         #ifdef USES_DISPLAY
             OLED.ScreenModeChange(ExtDisplay::Screen_SaveError);
         #endif // USES_DISPLAY
