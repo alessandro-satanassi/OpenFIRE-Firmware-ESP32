@@ -54,6 +54,7 @@ All notable changes to this project will be documented in this file.
 * Saving from pause mode: if saving fails, you can try again in the same pause. Before, the second try did nothing.
 * Solenoid and rumble: if you press Start or Select while firing, the solenoid switches off and the rumble ends as usual. Before, they could stay on for as long as you held the buttons.
 * Solenoid hardware switch: turning it off during a burst stops the burst. Before, one more shot could start while aiming off screen.
+* Trigger: if you turn off the solenoid or rumble hardware switch, MAMEHOOKER starts or you enter pause mode while holding the trigger, the trigger no longer stays pressed on the computer afterwards.
 * MAMEHOOKER rumble pulses with custom timings (`R1x0`/`R1x1`): the gun now gives all the requested pulses. Before, it stopped after the first one and ignored the following pulse commands.
 * Pause mode: if you turn rumble or solenoid on or off after saving, you can save again in the same pause. Before, the second save did nothing.
 * Desktop App, **Button Mapping**: when you change the type of an output (mouse, keyboard, gamepad), the gun gets the output shown. Before, it could get a different one.
@@ -130,6 +131,7 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 * Salvataggio dalla pausa: se il salvataggio non riesce, puoi riprovare nella stessa pausa. Prima il secondo tentativo non faceva nulla.
 * Solenoide e vibrazione: se premi Start o Select mentre spari, il solenoide si spegne e la vibrazione finisce normalmente. Prima potevano restare accesi finché tenevi premuti i tasti.
 * Interruttore fisico del solenoide: spegnerlo durante una raffica la interrompe. Prima poteva partire un altro colpo puntando fuori dallo schermo.
+* Grilletto: se spegni l'interruttore fisico del solenoide o della vibrazione, si avvia MAMEHOOKER o entri in pausa mentre tieni premuto il grilletto, il grilletto non resta più premuto sul computer.
 * Impulsi di vibrazione MAMEHOOKER con durate personalizzate (`R1x0`/`R1x1`): la pistola ora esegue tutti gli impulsi richiesti. Prima si fermava dopo il primo e ignorava i comandi di impulso successivi.
 * Menu di pausa: se attivi o disattivi rumble o solenoide dopo aver salvato, puoi salvare di nuovo nella stessa pausa. Prima il secondo salvataggio non faceva nulla.
 * App desktop, **Mappatura Pulsanti**: quando cambi il tipo di un'uscita (mouse, tastiera, gamepad), la pistola riceve l'uscita mostrata. Prima poteva riceverne un'altra.

@@ -518,7 +518,7 @@ Manuale hardware: **[Sito Documentazione PICON-AS](https://alessandro-satanassi.
 - [Documentazione MAMEHOOKER](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/wiki/MAMEHOOKER_Documentation_IT): come impostare il force feedback guidato dal gioco.
 - [Comandi seriali OpenFIRE](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/wiki/Serial_Commands_OpenFIRE_IT): i comandi che la pistola accetta dai programmi di force feedback.
 - [Changelog](CHANGELOG.md#versione-italiana): cosa è cambiato in ogni versione.
-- [Guida alla compilazione](lightgun/docs/COMPILING.md): per gli sviluppatori che vogliono compilare da sé il firmware.
+- [Guida alla compilazione](lightgun/docs/COMPILING.md#versione-italiana): per gli sviluppatori che vogliono compilare da sé il firmware.
 
 <a id="community-support-italiano"></a>
 

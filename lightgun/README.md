@@ -46,10 +46,10 @@ To aim and shoot you need:
   * *Waveshare ESP32-S3-PICO*
   * *Waveshare ESP32-S3-ZERO (Mini)*
   * **Antenna:** keep a small clear area around the board's antenna (the printed antenna at the end of the ESP32-S3 module). Do not route wires over it or right next to it, and do not cover it with metal: wires touching the antenna greatly reduce the wireless range and reliability.
-* **Optical Sensor:** a **DFRobot SEN0158 / Wii Cam**, a **PixArt PAJ7025R2** or a **PixArt PAJ7025R3** (wide-angle lens). The same firmware works with all three: select yours in **Gun Settings → CAMERA Model**, assign its pins in **Board Layout**, then save. Calibrate again after changing the camera or lens.
+* **Optical Sensor:** a **DFRobot SEN0158 / Wii Cam**, a **PixArt PAJ7025R2** or a **PixArt PAJ7025R3** (wide-angle lens). The same firmware works with all three: select yours in **Gun Settings → CAMERA Model** (after enabling **Unlock CAMERA Modification**), assign its pins in **Board Layout**, then save. Calibrate again after changing the camera or lens.
   * DFRobot / Wii Cam connects over **I2C** (**Camera SDA**, **Camera SCL**). A bare Wii camera, without the DFRobot board, also needs a clock signal: the gun generates it on the pin you assign to **Wii Cam Clock**.
   * PAJ7025R2 / R3 connect over **SPI** (**Camera SPI MISO**, **MOSI**, **SCK** and **CS**), besides power and ground; follow the wiring and supply of your camera module.
-  * **Which one to choose?** The DFRobot SEN0158 is no longer made; a Wii camera can take its place, with the same **DFRobot SEN0158 / Wii** setting (the default after a clean installation). The PixArt PAJ7025R2 and R3 are the newer, high-performance cameras: they need SPI wiring and 850 nm emitters, and they also measure the brightness of each IR point, shown in the WebApp IR test. The R3's wide-angle lens suits playing close to the screen, though by itself it does not give more accuracy or range. Purchase links and wiring for the supported cameras are on the [PICON-AS site](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/) (currently in Italian).
+  * **Which one to choose?** The DFRobot SEN0158 is no longer made; a Wii camera can take its place, with the same **DFRobot SEN0158 / WiiCam** setting (the default after a clean installation). The PixArt PAJ7025R2 and R3 are the newer, high-performance cameras: they need SPI wiring and 850 nm emitters, and they also measure the brightness of each IR point, shown in the WebApp IR test. The R3's wide-angle lens suits playing close to the screen, though by itself it does not give more accuracy or range. Purchase links and wiring for the supported cameras are on the [PICON-AS site](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/) (currently in Italian).
 * **IR Emitters:** 4 infrared LEDs, **940 nm for DFRobot / Wii Cam** and **850 nm for PixArt PAJ7025R2 / R3**. Wii sensor bars suit the DFRobot/Wii camera only. Give your LEDs a suitable supply and current limiting. Example: the OSRAM SFH 4547 (940 nm) suits DFRobot/Wii, not the PixArt cameras.
 * **Primary Input:** at least 1 switch, used as the trigger.
 
@@ -97,7 +97,9 @@ The OpenFIRE project's illustrated guide to wiring the components is also includ
 ## Default Board Pinouts
 
 The pictures below show the default pin assignment of each board.
-> **Note:** the functions of the available pins can be reassigned. If it is easier to solder a component to another suitable pin, change it in the **Board Layout** tab of the **OpenFIRE ESP32 WebApp**; leave pins reserved for USB, startup or other board functions alone. You can also save your layout to a file and load it again later (see [Saving the pin layout to a file](src/README.md#saving-the-pin-layout-to-a-file)).
+> **Note:** the functions of the available pins can be reassigned. If it is easier to solder a component to another suitable pin, change it in the **Board Layout** tab of the **OpenFIRE ESP32 WebApp**; leave pins reserved for USB, startup or other board functions alone.
+> * **SPI Cameras and OLED on compact boards:** the ESP32-S3-DevKitC-1 includes default pins for both I2C and SPI cameras (PAJ7025 R2/R3). On the Waveshare ESP32-S3-PICO and Waveshare ESP32-S3-ZERO, only the I2C camera pins are mapped by default; if you use a PixArt PAJ7025 R2/R3 SPI camera—or an OLED display on the ZERO—tick **Use Custom Pins** in **Board Layout** and assign them to free pins.
+> * You can also save your layout to a file and load it again later (see [Saving the pin layout to a file](src/README.md#saving-the-pin-layout-to-a-file)).
 
 | ESP32-S3-DevKitC-1 | Waveshare ESP32-S3-PICO | Waveshare ESP32-S3-ZERO |
 | :---: | :---: | :---: |
@@ -109,7 +111,7 @@ The pictures below show the default pin assignment of each board.
 
 #### WEB FLASHER (Recommended for all users)
 The easiest, fastest and safest way to install or update the firmware. Nothing to install: it runs in your browser.
-* **Requirements:** a computer with Google Chrome, Microsoft Edge or Opera.
+* **Requirements:** a computer with Google Chrome, Microsoft Edge or Opera. On boards with two USB ports (such as the *ESP32-S3-DevKitC-1*), connect to the **USB OTG** port (labelled **USB**, in front of the RGB LED) using a USB data cable.
 
 **[LAUNCH OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=en)**
 
@@ -129,7 +131,7 @@ The fastest way, with nothing else to install. Packages are available for **Wind
 
 1. On the **[Releases](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases)** page, download the "Simplified Procedure" ZIP for your board and operating system (e.g. `OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8-windows-64bit.zip`).
 2. Extract the whole ZIP into a folder on your computer.
-3. Connect the board with a USB cable *(a data cable, not a charge-only one)*.
+3. Connect the board with a USB cable *(a data cable, not a charge-only one; on dual-port boards such as DevKitC-1, use the **USB OTG** port labelled **USB**)*.
 4. Run the `flash_firmware` script (`.bat` on Windows, `.sh` on Linux and macOS).
 5. The script finds the serial port by itself and guides you through the installation.
 
@@ -275,10 +277,10 @@ Per mirare e sparare servono:
   * *Waveshare ESP32-S3-PICO*
   * *Waveshare ESP32-S3-ZERO (Mini)*
   * **Antenna:** lascia libera una piccola area intorno all'antenna della scheda (l'antenna stampata all'estremità del modulo ESP32-S3). Non far passare fili sopra o a ridosso e non coprirla con metallo: fili che toccano l'antenna riducono molto la portata e l'affidabilità del collegamento wireless.
-* **Sensore Ottico:** una **DFRobot SEN0158 / Wii Cam**, una **PixArt PAJ7025R2** o una **PixArt PAJ7025R3** (ottica grandangolare). Lo stesso firmware funziona con tutte e tre: seleziona la tua in **Impostazioni Gun → Modello TELECAMERA**, assegna i suoi pin nel **Layout Scheda**, poi salva. Ripeti la calibrazione dopo aver cambiato telecamera o lente.
+* **Sensore Ottico:** una **DFRobot SEN0158 / Wii Cam**, una **PixArt PAJ7025R2** o una **PixArt PAJ7025R3** (ottica grandangolare). Lo stesso firmware funziona con tutte e tre: seleziona la tua in **Impostazioni Gun → Modello TELECAMERA** (dopo aver attivato **Sblocca modifica TELECAMERA**), assegna i suoi pin nel **Layout Scheda**, poi salva. Ripeti la calibrazione dopo aver cambiato telecamera o lente.
   * DFRobot / Wii Cam si collega in **I2C** (**SDA telecamera**, **SCL telecamera**). Una telecamera Wii senza la scheda DFRobot richiede anche un segnale di clock: la pistola lo genera sul pin a cui assegni **Clock Wii Cam**.
   * PAJ7025R2 / R3 si collegano in **SPI** (**SPI MISO**, **MOSI**, **SCK** e **CS telecamera**), oltre ad alimentazione e massa; rispetta cablaggio e alimentazione del tuo modulo telecamera.
-  * **Quale scegliere?** La DFRobot SEN0158 non è più in produzione; al suo posto si può usare una telecamera Wii, con la stessa impostazione **DFRobot SEN0158 / Wii** (quella predefinita dopo un'installazione pulita). Le PixArt PAJ7025R2 e R3 sono le telecamere più recenti e prestanti: richiedono il collegamento SPI ed emettitori da 850 nm, e misurano anche la luminosità di ogni punto IR, mostrata nel test IR della WebApp. L'ottica grandangolare della R3 è adatta a chi gioca vicino allo schermo, anche se da sola non dà più precisione o portata. Link per l'acquisto e collegamenti delle telecamere supportate sono sul [sito PICON-AS](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/).
+  * **Quale scegliere?** La DFRobot SEN0158 non è più in produzione; al suo posto si può usare una telecamera Wii, con la stessa impostazione **DFRobot SEN0158 / WiiCam** (quella predefinita dopo un'installazione pulita). Le PixArt PAJ7025R2 e R3 sono le telecamere più recenti e prestanti: richiedono il collegamento SPI ed emettitori da 850 nm, e misurano anche la luminosità di ogni punto IR, mostrata nel test IR della WebApp. L'ottica grandangolare della R3 è adatta a chi gioca vicino allo schermo, anche se da sola non dà più precisione o portata. Link per l'acquisto e collegamenti delle telecamere supportate sono sul [sito PICON-AS](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/).
 * **Emettitori IR:** 4 LED infrarossi, **da 940 nm per DFRobot / Wii Cam** e **da 850 nm per PixArt PAJ7025R2 / R3**. Le barre sensore Wii vanno bene solo con la telecamera DFRobot/Wii. Dai ai LED un'alimentazione e una limitazione di corrente adatte. Esempio: l'OSRAM SFH 4547 (940 nm) è adatto a DFRobot/Wii, non alle telecamere PixArt.
 * **Input Primario:** almeno 1 interruttore, usato come grilletto.
 
@@ -326,7 +328,9 @@ Link per l'acquisto dei componenti e istruzioni di montaggio passo per passo son
 ## Pinout Predefiniti delle Schede
 
 Le immagini qui sotto mostrano l'assegnazione predefinita dei pin di ogni scheda.
-> **Nota:** puoi riassegnare le funzioni dei pin disponibili. Se è più comodo saldare un componente su un altro pin adatto, cambialo nella sezione **Layout Scheda** della **WebApp OpenFIRE ESP32**; lascia liberi i pin riservati a USB, avvio o altre funzioni della scheda. Puoi anche salvare il layout in un file e ricaricarlo in seguito (vedi [Salvare il layout dei pin in un file](src/README.md#salvare-il-layout-dei-pin-in-un-file)).
+> **Nota:** puoi riassegnare le funzioni dei pin disponibili. Se è più comodo saldare un componente su un altro pin adatto, cambialo nella sezione **Layout Scheda** della **WebApp OpenFIRE ESP32**; lascia liberi i pin riservati a USB, avvio o altre funzioni della scheda.
+> * **Telecamere SPI e OLED su schede compatte:** l'ESP32-S3-DevKitC-1 include pin predefiniti sia per la telecamera I2C sia per quella SPI (PAJ7025 R2/R3). Sulle Waveshare ESP32-S3-PICO ed ESP32-S3-ZERO sono mappati di default solo i pin per la telecamera I2C; se usi una telecamera SPI PixArt PAJ7025 R2/R3—o un display OLED sulla ZERO—attiva **Usa pin personalizzati** in **Layout Scheda** e assegna i pin desiderati tra quelli liberi.
+> * Puoi anche salvare il layout in un file e ricaricarlo in seguito (vedi [Salvare il layout dei pin in un file](src/README.md#salvare-il-layout-dei-pin-in-un-file)).
 
 | ESP32-S3-DevKitC-1 | Waveshare ESP32-S3-PICO | Waveshare ESP32-S3-ZERO |
 | :---: | :---: | :---: |
@@ -338,7 +342,7 @@ Le immagini qui sotto mostrano l'assegnazione predefinita dei pin di ogni scheda
 
 #### WEB FLASHER (Consigliato per qualsiasi utente)
 Il modo più semplice, veloce e sicuro per installare o aggiornare il firmware. Niente da installare: funziona nel browser.
-* **Requisiti:** un computer con Google Chrome, Microsoft Edge o Opera.
+* **Requisiti:** un computer con Google Chrome, Microsoft Edge o Opera. Sulle schede con due porte USB (come l'*ESP32-S3-DevKitC-1*), collegati alla porta **USB OTG** (etichettata **USB**, di fronte al LED RGB) con un cavo dati USB.
 
 **[AVVIA OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=it)**
 
@@ -358,7 +362,7 @@ Il metodo più veloce, senza nient'altro da installare. I pacchetti sono disponi
 
 1. Nella pagina delle **[Releases](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases)** scarica lo ZIP "Procedura Semplificata" per la tua scheda e il tuo sistema operativo (es. `OpenFIRE-LIGHTGUN-ESP32_S3_WROOM1_DevKitC_1_N16R8-windows-64bit.zip`).
 2. Estrai tutto lo ZIP in una cartella del computer.
-3. Collega la scheda con un cavo USB *(un cavo dati, non solo di ricarica)*.
+3. Collega la scheda con un cavo USB *(un cavo dati, non solo di ricarica; su schede con due porte come la DevKitC-1, usa la porta **USB OTG** etichettata **USB**)*.
 4. Esegui lo script `flash_firmware` (`.bat` su Windows, `.sh` su Linux e macOS).
 5. Lo script trova da solo la porta seriale e ti guida nell'installazione.
 
@@ -448,7 +452,7 @@ Il **Manuale Operativo** spiega:
 
 ## Informazioni Tecniche per gli Sviluppatori
 
-Questa guida è per chi costruisce e usa la pistola. Per modificare il firmware o contribuire al progetto, consulta la [guida alla compilazione](docs/COMPILING.md): il firmware si compila con **PlatformIO**, usando la configurazione inclusa in questo repository.
+Questa guida è per chi costruisce e usa la pistola. Per modificare il firmware o contribuire al progetto, consulta la [guida alla compilazione](docs/COMPILING.md#versione-italiana): il firmware si compila con **PlatformIO**, usando la configurazione inclusa in questo repository.
 
 ---
 ### Domande o Problemi?

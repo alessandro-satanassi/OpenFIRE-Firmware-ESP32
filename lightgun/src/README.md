@@ -149,7 +149,7 @@ When installing, choose the file for your **board and its flash/PSRAM variant**;
 
 ### Camera, display and startup settings
 
-- **Camera:** in **Gun Settings → CAMERA Model**, choose **DFRobot SEN0158 / Wii**, **PAJ7025R2** or **PAJ7025R3** to match your camera (enable **Unlock CAMERA Modification** if the choice is locked). Then assign its pins in **Board Layout**: **Camera SDA** and **Camera SCL** for the DFRobot/Wii, or **Camera SPI MISO**, **MOSI**, **SCK** and **CS** for the PixArt cameras, besides power and ground. Save, and calibrate again after changing camera, lens or emitter placement. The R3's wider lens helps when playing close to the screen; it does not by itself give more accuracy or range. After a clean installation the camera is set to **DFRobot SEN0158 / Wii**: with a PAJ7025R2 or R3, select it and set its pins before calibrating, otherwise the WebApp reports **Device Error: Camera not available!**
+- **Camera:** in **Gun Settings → CAMERA Model**, choose **DFRobot SEN0158 / WiiCam**, **PixArt PAJ7025 R2** or **PixArt PAJ7025 R3** to match your camera (enable **Unlock CAMERA Modification** if the choice is locked). Then assign its pins in **Board Layout**: **Camera SDA** and **Camera SCL** for the DFRobot/Wii, or **Camera SPI MISO**, **MOSI**, **SCK** and **CS** for the PixArt cameras, besides power and ground. Save, and calibrate again after changing camera, lens or emitter placement. The R3's wider lens helps when playing close to the screen; it does not by itself give more accuracy or range. After a clean installation the camera is set to **DFRobot SEN0158 / WiiCam**: with a PAJ7025R2 or R3, select it and set its pins before calibrating, otherwise the WebApp reports **Device Error: Camera not available!**
 - **OLED display:** disabled by default. Enable **Enable OLED Display (SSD1306 128x64)** in **Gun Settings → I2C Peripherals**, assign **Peripherals SDA** and **Peripherals SCL** in **Board Layout** to the pins the display is wired to, then save and restart. If the display stays blank, try **Use Alternative Device Address**.
 - **Startup mode:** choose **Absolute Mouse** (default), **Gamepad (right stick)** or **Gamepad (left stick)** in **Gun Settings → Input / Output**, then save. This is the output used at the next normal startup; you can still change it from pause mode, until the gun is switched off, and a force feedback program or a script can change it with the serial commands `M0x0` (absolute mouse), `M0x1` (gamepad, right stick) and `M0x1L` (gamepad, left stick).
 - **Wireless pedal** (**Gun Settings → Input / Output**): enable it only if you use the wireless pedal, and leave both wired pedal inputs unmapped; otherwise disable it, so the gun does not search for a pedal at every start. A mapped wired pedal always takes priority. The wireless pedal works when the gun plays through the dongle; with the gun connected to the computer by USB cable, use a wired pedal.
@@ -186,8 +186,8 @@ You do not need MAMEHOOKER just to aim and shoot. Set up [game-driven force feed
 ### Run Modes
 Each profile has one of these modes:
 1. **Normal** - the position follows every frame of the camera, with no averaging.
-2. **Averaging** - the position is the average of the current and the previous frame.
-3. **Averaging2** - the position is a weighted average of the current frame and the two previous ones.
+2. **Averaging** (**1-Frame Avg** in the WebApp) - the position is the average of the current and the previous frame.
+3. **Averaging2** (**2-Frame Avg** in the WebApp) - the position is a weighted average of the current frame and the two previous ones.
 
 The averaging modes slightly reduce jitter without adding noticeable lag. The ESP32 port already filters jitter on its own, so **Normal** is the recommended mode.
 
@@ -234,15 +234,15 @@ The averaging modes slightly reduce jitter without adding noticeable lag. The ES
   - Holding A or B for half the hold-to-pause time (just over a second with the default 2.5 seconds) also exits the menu.
 
 Options, from first to last before the list starts again:
-* Calibrate current profile (always the first option)
-* Switch profiles (submenu)
+* **Calibrate** - calibrate the current profile (always the first option)
+* **Profile Select** (submenu)
   * Choose profile 1-4 with the navigation buttons and the trigger, or press C to go back.
-* Output Mode (submenu)
-  * Choose Absolute Mouse, Gamepad Right Stick or Gamepad Left Stick with the navigation buttons and the trigger, or press C to go back. The mode in use is marked with an asterisk. It lasts until the gun is switched off and Save Settings does not store it: the startup mode is set in the WebApp.
-* Save Settings (to the gun's memory)
-* Rumble on/off *(when rumble is enabled and no switch is fitted)*
-* Solenoid on/off *(when the solenoid is enabled and no switch is fitted)*
-* Send the Esc key to the PC
+* **Output Mode** (submenu)
+  * Choose Absolute Mouse, Gamepad Right Stick or Gamepad Left Stick with the navigation buttons and the trigger, or press C to go back. The mode in use is marked with an asterisk. It lasts until the gun is switched off and Save Gun Settings does not store it: the startup mode is set in the WebApp.
+* **Save Gun Settings** - save settings to the gun's memory
+* **Rumble Toggle** - rumble on/off *(when rumble is enabled and no switch is fitted)*
+* **Solenoid Toggle** - solenoid on/off *(when the solenoid is enabled and no switch is fitted)*
+* **Send Escape Keypress** - send the Esc key to the PC
 
 ### How to Calibrate
 
@@ -324,7 +324,7 @@ The grey crosshair shows where the gun is aiming and the red circle marks the ce
 
 - **After the installation the gun does nothing and the pointer does not move:** a new or clean-installed gun waits for its first calibration (the board's RGB LED, if present, blinks orange). Pull the trigger to calibrate, or calibrate from the WebApp; see [First-time Setup](#first-time-setup).
 - **The WebApp does not find the gun's port:** use a USB **data** cable (some cables only charge) and Chrome or Edge on a computer; other browsers can use the [offline WebApp](#configuration-with-the-webapp), and for a browser too old for both see the desktop App in [Board Configuration](#board-configuration). On boards with two USB connectors use the one wired to the ESP32-S3's own USB (OTG): on the DevKitC-1, seen from above with the connectors pointing away from you, it is the one on the right, in front of the built-in NeoPixel LED (the board picture in the WebApp's **Board Layout** tab labels it **USB OTG**). Close other WebApp pages, serial monitors and MAMEHOOKER, which can keep the port busy. If the gun was started holding **B**, its serial port is replaced by the offline WebApp network: restart without holding any buttons.
-- **WebApp message "Device Error: Camera not available!":** after a clean installation the camera is set to **DFRobot SEN0158 / Wii**. With a PAJ7025R2 or R3, select it in **Gun Settings → CAMERA Model**, set its pins in **Board Layout**, then save and restart. Otherwise check the camera power and that its wires are neither swapped nor assigned to other functions.
+- **WebApp message "Device Error: Camera not available!":** after a clean installation the camera is set to **DFRobot SEN0158 / WiiCam**. With a PAJ7025R2 or R3, select it in **Gun Settings → CAMERA Model**, set its pins in **Board Layout**, then save and restart. Otherwise check the camera power and that its wires are neither swapped nor assigned to other functions.
 - **No IR points in the test, or some are missing:** check that the emitters are on and suit the camera (940 nm for DFRobot/Wii, 850 nm for PAJ7025R2/R3), that the camera can see the whole layout, and that the sensitivity is not too low. Save the sensitivity before opening the test.
 - **Calibration does not move on to the next target:** in the WebApp or desktop App a target shot is refused while the camera does not see all four emitters (red crosshair). In the IR LEDs panel, an emitter marked with a red X must come back into view (step back if it leaves the view at the screen edges); also check that emitter, your distance and the [camera sensitivity](#ir-camera-sensitivity). See [How to calibrate](#how-to-calibrate).
 - **The pointer does not follow the sight:** calibrate again standing in front of the centre of the screen, without rotating the gun, and check that the profile uses the right IR layout (Square or Diamond).
@@ -431,7 +431,7 @@ La pistola punta osservando quattro emettitori a infrarossi posizionati intorno 
  - **Layout Square / rettangolare (consigliato):** due LED sopra e due sotto lo schermo, allineati su due colonne. La disposizione migliore usa due coppie centrate sui bordi superiore e inferiore, che formano un rettangolo verticale (più alto che largo), come mostra l'assistente di allineamento. Funziona anche un rettangolo più largo con i quattro LED agli angoli dello schermo. Evita un quadrato perfetto.
  - **Layout Diamond / a rombo:** un LED al centro di ciascun lato dello schermo (alto, basso, sinistra e destra), non agli angoli.
 
-**Se sposti gli emettitori Square agli angoli dello schermo:** mantieni **Square** selezionato nel profilo, calibra di nuovo e salva. Non c'è un'impostazione separata per il rettangolo verticale o largo: la pistola lo ricava dalla calibrazione.
+**Se sposti gli emettitori Square agli angoli dello schermo:** mantieni **Quadrato** (Square) selezionato nel profilo, calibra di nuovo e salva. Non c'è un'impostazione separata per il rettangolo verticale o largo: la pistola lo ricava dalla calibrazione.
 
 Usa **emettitori IR da 940 nm per DFRobot/Wii** e **da 850 nm per PAJ7025R2/R3**. La lunghezza d'onda deve corrispondere alla telecamera: aumentare la sensibilità non rimedia a LED sbagliati o a un posizionamento scorretto.
 
@@ -536,7 +536,7 @@ Per l'installazione scegli il file della tua **scheda e della sua variante flash
 
 ### Telecamera, display e impostazioni di avvio
 
-- **Telecamera:** in **Impostazioni Gun → Modello TELECAMERA** scegli **DFRobot SEN0158 / Wii**, **PAJ7025R2** o **PAJ7025R3** secondo la tua telecamera (attiva **Sblocca modifica TELECAMERA** se la scelta è bloccata). Poi assegna i suoi pin nel **Layout Scheda**: **SDA telecamera** e **SCL telecamera** per la DFRobot/Wii, oppure **SPI MISO**, **MOSI**, **SCK** e **CS telecamera** per le PixArt, oltre ad alimentazione e massa. Salva, e calibra di nuovo dopo aver cambiato telecamera, lente o posizione degli emettitori. L'ottica grandangolare della R3 aiuta quando si gioca vicino allo schermo; da sola non garantisce più precisione o portata. Dopo un'installazione pulita la telecamera impostata è **DFRobot SEN0158 / Wii**: con una PAJ7025R2 o R3 selezionala e imposta i suoi pin prima di calibrare, altrimenti la WebApp segnala **Errore dispositivo: Fotocamera non disponibile!**
+- **Telecamera:** in **Impostazioni Gun → Modello TELECAMERA** scegli **DFRobot SEN0158 / WiiCam**, **PixArt PAJ7025 R2** o **PixArt PAJ7025 R3** secondo la tua telecamera (attiva **Sblocca modifica TELECAMERA** se la scelta è bloccata). Poi assegna i suoi pin nel **Layout Scheda**: **SDA telecamera** e **SCL telecamera** per la DFRobot/Wii, oppure **SPI MISO**, **MOSI**, **SCK** e **CS telecamera** per le PixArt, oltre ad alimentazione e massa. Salva, e calibra di nuovo dopo aver cambiato telecamera, lente o posizione degli emettitori. L'ottica grandangolare della R3 aiuta quando si gioca vicino allo schermo; da sola non garantisce più precisione o portata. Dopo un'installazione pulita la telecamera impostata è **DFRobot SEN0158 / WiiCam**: con una PAJ7025R2 o R3 selezionala e imposta i suoi pin prima di calibrare, altrimenti la WebApp segnala **Errore dispositivo: Fotocamera non disponibile!**
 - **Display OLED:** disattivato per impostazione predefinita. Attiva **Abilita Display OLED (SSD1306 128x64)** in **Impostazioni Gun → Periferiche I2C**, assegna nel **Layout Scheda** **SDA periferiche** e **SCL periferiche** ai pin a cui è collegato il display, poi salva e riavvia. Se il display resta spento, prova **Usa Indirizzo Dispositivo Alternativo**.
 - **Modalità all'avvio:** scegli **Mouse assoluto** (predefinito), **Gamepad (stick destro)** o **Gamepad (stick sinistro)** in **Impostazioni Gun → Input / Output**, poi salva. È l'uscita usata al successivo avvio normale; puoi comunque cambiarla dalla modalità pausa, fino allo spegnimento, e un programma di force feedback o uno script possono cambiarla con i comandi seriali `M0x0` (mouse assoluto), `M0x1` (gamepad, stick destro) e `M0x1L` (gamepad, stick sinistro).
 - **Pedale wireless** (**Impostazioni Gun → Input / Output**): attivalo solo se usi il pedale wireless e lascia non assegnati entrambi gli ingressi dei pedali cablati; altrimenti disattivalo, così la pistola non cerca un pedale a ogni avvio. Un pedale cablato mappato ha sempre la precedenza. Il pedale wireless funziona quando la pistola gioca tramite il dongle; con la pistola collegata al computer via cavo USB, usa un pedale cablato.
@@ -578,11 +578,11 @@ Per mirare e sparare non serve MAMEHOOKER. Puoi configurare in seguito il [force
 
 ### Modalità di Funzionamento
 Ogni profilo usa una di queste modalità:
-1. **Normal** - la posizione segue ogni frame della telecamera, senza medie.
-2. **Averaging** - la posizione è la media del frame attuale e di quello precedente.
-3. **Averaging2** - la posizione è una media ponderata del frame attuale e dei due precedenti.
+1. **Normale** (**Normal**) - la posizione segue ogni frame della telecamera, senza medie.
+2. **Media 1 frame** (**Averaging**) - la posizione è la media del frame attuale e di quello precedente.
+3. **Media 2 frame** (**Averaging2**) - la posizione è una media ponderata del frame attuale e dei due precedenti.
 
-Le modalità *Averaging* riducono un po' il tremolio senza aggiungere ritardo percepibile. Il porting ESP32 filtra già il tremolio da solo, quindi la modalità consigliata è **Normal**.
+Le modalità con media riducono un po' il tremolio senza aggiungere ritardo percepibile. Il porting ESP32 filtra già il tremolio da solo, quindi la modalità consigliata è **Normale** (**Normal**).
 
 <a id="pulsanti-predefiniti-italiano"></a>
 
@@ -633,15 +633,15 @@ La **Modalità pulsanti 'fuori schermo'** (**Impostazioni Gun → Input / Output
   - *Tenendo premuto A o B per metà del tempo di pausa con pressione prolungata (poco più di un secondo con i 2,5 secondi predefiniti) si esce anche dal menu.*
 
 Le opzioni, dalla prima all'ultima, prima che l'elenco ricominci:
-* Calibra il profilo corrente (sempre la prima opzione)
-* Cambia profilo (sottomenu)
+* **Calibrate** - calibra il profilo corrente (sempre la prima opzione)
+* **Profile Select** - cambia profilo (sottomenu)
   * Scegli il profilo 1-4 con i pulsanti di navigazione e il grilletto, oppure premi C per tornare indietro.
-* Output Mode (modalità di uscita, sottomenu)
-  * Scegli Mouse assoluto (Absolute Mouse), Gamepad stick destro (Gamepad Right Stick) o Gamepad stick sinistro (Gamepad Left Stick) con i pulsanti di navigazione e il grilletto, oppure premi C per tornare indietro. La modalità in uso è segnata con un asterisco. Vale fino allo spegnimento e Save Settings non la memorizza: la modalità all'avvio si imposta nella WebApp.
-* Save Settings (salva le impostazioni nella memoria della pistola)
-* Attiva/disattiva il rumble *(quando è abilitato e non c'è l'interruttore fisico)*
-* Attiva/disattiva il solenoide *(quando è abilitato e non c'è l'interruttore fisico)*
-* Invia il tasto Esc al PC
+* **Output Mode** - modalità di uscita (sottomenu)
+  * Scegli Mouse assoluto (Absolute Mouse), Gamepad stick destro (Gamepad Right Stick) o Gamepad stick sinistro (Gamepad Left Stick) con i pulsanti di navigazione e il grilletto, oppure premi C per tornare indietro. La modalità in uso è segnata con un asterisco. Vale fino allo spegnimento e **Save Gun Settings** non la memorizza: la modalità all'avvio si imposta nella WebApp.
+* **Save Gun Settings** - salva le impostazioni nella memoria della pistola
+* **Rumble Toggle** - attiva/disattiva il rumble *(quando il rumble è abilitato e non c'è l'interruttore fisico)*
+* **Solenoid Toggle** - attiva/disattiva il solenoide *(quando il solenoide è abilitato e non c'è l'interruttore fisico)*
+* **Send Escape Keypress** - invia il tasto Esc al PC
 
 <a id="come-calibrare-italiano"></a>
 
@@ -737,10 +737,10 @@ Il mirino grigio indica dove punta la pistola e il cerchio rosso il centro dei q
 
 - **Dopo l'installazione la pistola non fa nulla e il puntatore non si muove:** una pistola nuova o dopo un'installazione pulita attende la prima calibrazione (il LED RGB della scheda, se presente, lampeggia in arancione). Premi il grilletto per calibrare, oppure calibra dalla WebApp; vedi [Prima Configurazione](#prima-configurazione-italiano).
 - **La WebApp non trova la porta della pistola:** usa un cavo USB **dati** (alcuni cavi servono solo per la ricarica) e Chrome o Edge su computer; gli altri browser possono usare la [WebApp offline](#configurazione-con-la-webapp), e per un browser troppo vecchio per entrambe vedi l'App desktop in [Configurazione della Scheda](#configurazione-della-scheda-italiano). Sulle schede con due connettori USB usa quello collegato all'USB dell'ESP32-S3 (OTG): sulla DevKitC-1, vista dall'alto con i connettori rivolti lontano da te, è quello a destra, davanti al LED NeoPixel integrato (l'immagine della scheda nella sezione **Layout Scheda** della WebApp lo indica come **USB OTG**). Chiudi le altre pagine della WebApp, i monitor seriali e MAMEHOOKER, che possono tenere occupata la porta. Se la pistola è stata avviata tenendo premuto **B**, la sua porta seriale è sostituita dalla rete della WebApp offline: riavvia senza tenere premuti pulsanti.
-- **Messaggio della WebApp "Errore dispositivo: Fotocamera non disponibile!":** dopo un'installazione pulita la telecamera impostata è **DFRobot SEN0158 / Wii**. Con una PAJ7025R2 o R3 selezionala in **Impostazioni Gun → Modello TELECAMERA**, imposta i suoi pin nel **Layout Scheda**, poi salva e riavvia. Altrimenti controlla l'alimentazione della telecamera e che i suoi fili non siano invertiti né assegnati ad altre funzioni.
+- **Messaggio della WebApp "Errore dispositivo: Fotocamera non disponibile!":** dopo un'installazione pulita la telecamera impostata è **DFRobot SEN0158 / WiiCam**. Con una PAJ7025R2 o R3 selezionala in **Impostazioni Gun → Modello TELECAMERA**, imposta i suoi pin nel **Layout Scheda**, poi salva e riavvia. Altrimenti controlla l'alimentazione della telecamera e che i suoi fili non siano invertiti né assegnati ad altre funzioni.
 - **Nessun punto IR nel test, o ne manca qualcuno:** controlla che gli emettitori siano accesi e adatti alla telecamera (940 nm per DFRobot/Wii, 850 nm per PAJ7025R2/R3), che la telecamera veda tutta la disposizione e che la sensibilità non sia troppo bassa. Salva la sensibilità prima di aprire il test.
 - **La calibrazione non passa al bersaglio successivo:** nella WebApp o nell'App desktop un tiro su un bersaglio viene rifiutato finché la telecamera non vede tutti e quattro gli emettitori (mirino rosso). Nel riquadro LED IR, un emettitore segnato con una X rossa deve tornare in vista (allontanati se ai bordi dello schermo esce dalla vista); controlla anche quell'emettitore, la distanza e la [sensibilità della telecamera](#sensibilità-della-telecamera-ir-italiano). Vedi [Come Calibrare](#come-calibrare-italiano).
-- **Il puntatore non segue il mirino della pistola:** calibra di nuovo stando di fronte al centro dello schermo, senza ruotare la pistola, e controlla che il profilo usi il layout IR giusto (Square o Diamond).
+- **Il puntatore non segue il mirino della pistola:** calibra di nuovo stando di fronte al centro dello schermo, senza ruotare la pistola, e controlla che il profilo usi il layout IR giusto (**Quadrato** / Square o **Rombo** / Diamond).
 - **Il puntatore salta o trema:** di solito è un riflesso o un'altra sorgente di luce (finestra, lampada, superficie lucida) vista come un punto IR in più. Cercalo nel [test IR](#modalità-di-test-italiano), eliminalo o coprilo, oppure riduci la [sensibilità della telecamera](#sensibilità-della-telecamera-ir-italiano). Calibra di nuovo dopo aver spostato gli emettitori.
 - **La pistola non si associa al dongle:** inserisci prima il dongle e attendi circa 15 secondi, poi accendi la pistola senza il cavo USB collegato al computer (con il cavo gioca via cavo). Dopo aver scollegato o riavviato il dongle, riavvia anche la pistola. Usa un dongle per ogni pistola, con firmware della stessa release per lightgun e dongle ([guida dongle](../../dongle/README.md#versione-italiana)).
 - **Il pedale wireless non viene trovato:** funziona solo con una pistola che gioca tramite il dongle. Attiva **Pedale wireless**, lascia non assegnati entrambi gli ingressi dei pedali cablati e salva; accendi il pedale prima della pistola. Dopo aver riavviato il pedale, riavvia anche la pistola.

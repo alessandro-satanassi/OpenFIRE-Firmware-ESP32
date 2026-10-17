@@ -15,12 +15,12 @@
 ```
 
 ;                                     ______(*USB*)______     
-;                           (GPIO 11) |-)  1  PIN  40 (-| (VBUS)
-;                           (GPIO 12) |-)  2       39 (-| (VSYS)
+;                           (GPIO 11) |-)  1  PIN  40 (p| (VBUS)
+;                           (GPIO 12) |-)  2       39 (p| (VSYS)
 ;                               (GND) |x)  3       38 (x| (GND)
 ;                           (GPIO 13) |-)  4       37 (x| (EN)
 ;                           (GPIO 14) |-)  5       36 (p| (3V3 OUT)                    
-;                           (GPIO 15) |-)  6       35 (x| (GPIO 10)   
+;                           (GPIO 15) |-)  6       35 (-| (GPIO 10)   
 ;                           (GPIO 16) |-)  7       34 (-| (GPIO 09)
 ;                               (GND) |x)  8       33 (x| (GND) 
 ;                           (GPIO 17) |-)  9       32 (-| (GPIO 08)
@@ -45,7 +45,7 @@
 ;                                          SER     OTG
 ;                                      ___(USB)___(USB)___  
 ;                                (GND) |x)  1  PIN  44 (x| (GND)
-;                                (GND) |x)  2       43 (-| (5V OUT-IN)
+;                                (GND) |x)  2       43 (p| (5V OUT-IN)
 ;                            (GPIO 19) |-)  3       42 (-| (GPIO 14)
 ;                            (GPIO 20) |-)  4       41 (-| (GPIO 13) 
 ;                            (GPIO 21) |-)  5       40 (-| (GPIO 12) 
@@ -63,7 +63,7 @@
 ;                            (GPIO 42) |-) 17       28 (-| (GPIO 06)
 ;                            (GPIO 02) |-) 18       27 (-| (GPIO 05)
 ;                            (GPIO 01) |-) 19       26 (-| (GPIO 04)
-;                                 (RX) |-) 20       25 (-| (RST)
+;                                 (RX) |-) 20       25 (x| (RST)
 ;                                 (TX) |-) 21       24 (p| (3V3 OUT)
 ;                                (GND) |x) 22  PIN  23 (p| (3V3 OUT)
 ;                                      |_________________|  
@@ -76,7 +76,7 @@
 ```
 
 ;                                     ______(*USB*)______     
-;                                (5V) |-)  1  PIN  18 (-| (TX)
+;                                (5V) |p)  1  PIN  18 (-| (TX)
 ;                               (GND) |x)  2       17 (-| (RX)
 ;                           (3V3 OUT) |p)  3       16 (-| (GPIO 13)
 ;                           (GPIO 01) |-)  4       15 (-| (GPIO 12)

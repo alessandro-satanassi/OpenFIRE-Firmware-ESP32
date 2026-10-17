@@ -956,6 +956,9 @@ void loop1()
         if(OF_WebConfigModeActive && OF_Serial::AppSerialWebDockPending())
             OF_Serial::SerialProcessingWebDock();
 
+        if(FW_Common::gunMode != FW_Const::GunMode_Run)
+            break;
+
         #ifdef MAMEHOOKER
             if(OF_Serial::serialMode) OF_Serial::SerialHandling();                                   // Process the force feedback from the current queue.
         #endif // MAMEHOOKER
@@ -1407,6 +1410,9 @@ void loop()
 /* --------------------------- METHODS ------------------------- */
 /*        -----------------------------------------------        */
 
+// Set while the PC has the trigger pressed. Kept apart from OF_FFB::triggerHeld, which FFBShutdown() clears.
+bool triggerHidPressed = false;
+
 // Main core loop
 void ExecRunMode()
 {
@@ -1416,6 +1422,8 @@ void ExecRunMode()
 #endif
 
     FW_Common::buttons.ReportEnable();
+    triggerHidPressed = false;                              // Leaving Run released all the buttons.
+    FW_Common::triggerPressedOffscreen = false;
     if(FW_Common::justBooted) {
         // center the joystick so RetroArch doesn't throw a hissy fit about uncentered joysticks
         delay(100);  // Exact time needed to wait seems to vary, so make a safe assumption here.
@@ -1529,6 +1537,9 @@ void ExecRunMode()
         // Web configuration mode: an App can also dock through the WebSocket.
         if(OF_WebConfigModeActive && OF_Serial::AppSerialWebDockPending())
             OF_Serial::SerialProcessingWebDock();
+
+        if(FW_Common::gunMode != FW_Const::GunMode_Run)
+            return;
 
         #ifdef MAMEHOOKER
             if(OF_Serial::serialMode) OF_Serial::SerialHandling();                                   // Process the force feedback from the current queue.
@@ -1831,7 +1842,7 @@ void SetModeWaitNoButtons(const FW_Const::GunMode_e &newMode, const unsigned lon
 void TriggerFire()
 {
     if(!FW_Common::buttons.offScreen) {
-        if(!OF_FFB::triggerHeld) {
+        if(!triggerHidPressed) {
             if(FW_Common::buttons.analogOutput) // this should only ever be gamepad outputs
                 Gamepad16.press(LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportCode3);
             else switch(LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportType) {
@@ -1840,6 +1851,8 @@ void TriggerFire()
                 case LightgunButtons::ReportType_Gamepad: Gamepad16.press(LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportCode); break;
                 default: break;
             }
+            FW_Common::triggerPressedOffscreen = false;
+            triggerHidPressed = true;
         }
 
         if(!OF_Serial::serialMode && 
@@ -1855,7 +1868,7 @@ void TriggerFire()
     // We're shooting outside of the screen boundaries!
     } else {  
         // If we are in offscreen button mode (and aren't dragging a shot offscreen)
-        if(!OF_FFB::triggerHeld) {
+        if(!triggerHidPressed) {
             if(FW_Common::buttons.analogOutput) // always uses the same button
                 Gamepad16.press(LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportCode3);
             else switch(LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportType2) {
@@ -1866,6 +1879,7 @@ void TriggerFire()
             }
 
             FW_Common::triggerPressedOffscreen = true;
+            triggerHidPressed = true;
         }
 
         if(!OF_Serial::serialMode) OF_FFB::FFBOffScreen();
@@ -1876,7 +1890,7 @@ void TriggerFire()
 // Handles events when trigger is released
 void TriggerNotFire()
 {
-    if(OF_FFB::triggerHeld) {
+    if(triggerHidPressed) {
         if(FW_Common::buttons.analogOutput)
             Gamepad16.release(LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportCode3);
         else if(FW_Common::triggerPressedOffscreen) {
@@ -1897,6 +1911,7 @@ void TriggerNotFire()
         }
     }
 
+    triggerHidPressed = false;
     OF_FFB::triggerHeld = false;
 
     if(!OF_Serial::serialMode) OF_FFB::FFBRelease();
