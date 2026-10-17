@@ -1455,7 +1455,7 @@ void ExecRunMode()
                     #ifdef MAMEHOOKER
                     if(!OF_Serial::serialMode) {
                     #endif // MAMEHOOKER
-                        if(!OF_Prefs::toggles[OF_Const::solenoid] && OF_FFB::GetSolenoid()) {
+                        if(!OF_Prefs::toggles[OF_Const::solenoid] && (OF_FFB::GetSolenoid() || OF_FFB::burstFiring)) {  // also ends a burst between two shots
                             OF_FFB::FFBShutdown();
                         }
                     #ifdef MAMEHOOKER
@@ -1846,6 +1846,12 @@ void TriggerFire()
            !bitRead(FW_Common::buttons.debounced, FW_Const::BtnIdx_Start) &&
            !bitRead(FW_Common::buttons.debounced, FW_Const::BtnIdx_Select))
             OF_FFB::FFBOnScreen();
+        else if(!OF_Serial::serialMode) {                    // Start or Select held: no new effects, but end the running ones.
+            if(OF_FFB::GetSolenoid())
+                OF_FFB::SetSolenoid(LOW);
+            if(OF_FFB::rumbleHappening)
+                OF_FFB::RumbleActivation();
+        }
     // We're shooting outside of the screen boundaries!
     } else {  
         // If we are in offscreen button mode (and aren't dragging a shot offscreen)
@@ -2408,6 +2414,7 @@ void BurstFireToggle()
 void RumbleToggle()
 {
     OF_Prefs::toggles[OF_Const::rumble] = !OF_Prefs::toggles[OF_Const::rumble];
+    FW_Common::stateFlags |= FW_Const::StateFlag_SavePreferencesEn;  // Changed: allow saving it again in this pause.
     if(OF_Prefs::toggles[OF_Const::rumble]) {
         if(!OF_Serial::serialMode) 
             Serial.println("Rumble enabled!");
@@ -2467,6 +2474,7 @@ void RumbleToggle()
 void SolenoidToggle()
 {
     OF_Prefs::toggles[OF_Const::solenoid] = !OF_Prefs::toggles[OF_Const::solenoid];                             // Toggle
+    FW_Common::stateFlags |= FW_Const::StateFlag_SavePreferencesEn;  // Changed: allow saving it again in this pause.
     if(OF_Prefs::toggles[OF_Const::solenoid]) {                                          // If we turned ON this mode,
         if(!OF_Serial::serialMode)
             Serial.println("Solenoid enabled!");

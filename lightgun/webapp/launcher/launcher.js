@@ -259,6 +259,13 @@
         node.appendChild(root.document.createTextNode(extra.after || ''));
     }
 
+    /** Says a line and remembers it, so that a language change says it again. */
+    let lastLine = null;
+    function tell(line) {
+        lastLine = line;
+        line();
+    }
+
     /** La frase sulla serie 6.x, con il rimando alla pagina degli strumenti. */
     const sixSeries = () => ({
         before: t('sixBefore'), link: t('toolsLink'),
@@ -365,7 +372,7 @@
     async function connect() {
         const button = byId('connect');
         if (!OF.WebSerialTransport.isSupported()) {
-            say(t('noBrowser'), true);
+            tell(() => say(t('noBrowser'), true));
             const list = await published();
             if (list) showVersions(list);
             return;
@@ -380,25 +387,25 @@
         if (!port) return;                       // the chooser was closed: nothing to say
 
         button.disabled = true;
-        say(t('reading'));
+        tell(() => say(t('reading')));
         try {
             const answer = await readVersion(port);
             if (answer.error) {
                 // Chi ha ancora la serie 6.x arriva qui: la lightgun c'e' e il cavo pure,
                 // ma parla un protocollo che questa pagina non sa leggere.
-                say(t(answer.error), true, answer.error === 'noAnswer' ? sixSeries() : null);
+                tell(() => say(t(answer.error), true, answer.error === 'noAnswer' ? sixSeries() : null));
                 return;
             }
             const board = answer.board;
             const list = await published();
             if (!list) {
-                say(t('noList'), true);
+                tell(() => say(t('noList'), true));
                 return;
             }
             const entry = entryFor(list, board);
             const label = String((board.versionFull || '').trim() || board.version);
             if (!entry) {
-                say(t('notPublished', label), true);
+                tell(() => say(t('notPublished', label), true));
                 showVersions(list, t('pickOne'));
                 return;
             }
@@ -410,7 +417,7 @@
                 latestLabel: String((list.versions.find((item) => String(item.id) === String(list.latest)) || {}).label || list.latest || ''),
                 port: OF.WebSerialTransport.describePort(port)
             }));
-            say(t('opening', label));
+            tell(() => say(t('opening', label)));
             root.location.href = 'v/' + encodeURIComponent(entry.id) + '/' + suffix();
         } finally {
             button.disabled = false;
@@ -443,6 +450,7 @@
         buildControls();
         applyTheme();
         if (shownList) showVersions(shownList.list, shownList.lead);
+        if (lastLine) lastLine();
 
         // The address says which language is shown: it can be copied and passed on.
         try {
@@ -462,7 +470,7 @@
         byId('show-versions').addEventListener('click', async () => {
             const list = await published();
             if (list) showVersions(list);
-            else say(t('noList'), true);
+            else tell(() => say(t('noList'), true));
         });
         // A click anywhere, or Escape, closes the theme menu.
         root.document.addEventListener('click', () => {

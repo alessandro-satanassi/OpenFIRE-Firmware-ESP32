@@ -33,16 +33,22 @@ New to OpenFIRE? Start from [Getting Started](https://github.com/alessandro-sata
 * Analog stick: **Invert X Axis** and **Invert Y Axis** in the Button Mapping tab, for sticks wired or mounted the other way round (off by default).
 * Hardware switches for rumble, solenoid and rapid fire now work in the ready-made firmware: assign their pins in Board Layout.
 * Normally closed (NC) inputs in Board Layout (custom pins only): buttons, pedals and the rumble, solenoid and rapid fire switches can be read inverted, for devices such as the Blamcon Vyper loader. Unlock the **NC** boxes with **Edit NC Inputs**; nothing is inverted by default.
+* Custom layout files also keep the NC boxes; a damaged or incomplete file is refused when imported.
 * Output mode (mouse / gamepad right stick / gamepad left stick) can be switched from pause mode: **Output Mode** in the Simple Pause Menu, Select + Up / Select + Down in Hotkey mode. It lasts until the gun is switched off.
 
 ### Improvements and Fixes
 
 * Refined IR tracking and faster recovery of temporarily hidden LEDs; the Square layout supports vertical and wide rectangles.
 * Hotkey pause mode: the rumble/solenoid toggles now work when no hardware switch is fitted.
-* Serial command `M0x0`: an analog stick used as a gamepad stick goes back to the left stick, as at startup.
+* Serial command `M0x0` (and `M0x2`): an analog stick used as a gamepad stick goes back to the left stick, as at startup.
 * After the first calibration started from the gun on a new board, the gun returns to normal operation once you confirm it. As before, this first calibration is saved automatically; calibrations started from pause mode must be saved separately.
 * Burst fire (serial command `M8x1`): exactly three shots, with the correct pause between them, and the solenoid always off at the end.
 * Saving from pause mode can be retried in the same pause if it fails.
+* Pressing Start or Select while firing switches the solenoid off and ends the rumble as usual.
+* Turning the solenoid hardware switch off during a burst stops the burst.
+* MAMEHOOKER rumble pulses with custom timings now give all the requested pulses.
+* Pause mode: rumble or solenoid changed after a save can be saved again in the same pause.
+* Desktop App, Button Mapping: changing the type of an output gives the gun the output shown.
 * Rewritten bilingual user guides: see the [operating manual](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/lightgun/src/README.md#english-version).
 
 ### Installation and Usage Notes
@@ -259,16 +265,22 @@ Non conosci ancora OpenFIRE? Parti dai [Primi passi](https://github.com/alessand
 * Stick analogico: **Inverti asse X** e **Inverti asse Y** nella scheda Mappatura Pulsanti, per stick collegati o montati al contrario (disattivate di default).
 * Gli interruttori fisici per rumble, solenoide e fuoco rapido ora funzionano nel firmware pronto da scaricare: assegna i loro pin in Layout Scheda.
 * Ingressi normalmente chiusi (NC) in Layout Scheda (solo con i pin personalizzati): pulsanti, pedali e gli interruttori di rumble, solenoide e fuoco rapido possono essere letti invertiti, per dispositivi come il caricatore della Blamcon Vyper. Le caselle **NC** si sbloccano con **Modifica ingressi NC**; per impostazione predefinita nessun ingresso è invertito.
+* I file di layout personalizzato conservano anche le caselle NC; un file danneggiato o incompleto viene rifiutato all'importazione.
 * La modalità di uscita (mouse / gamepad stick destro / gamepad stick sinistro) si cambia anche dalla pausa: **Output Mode** nel Menu di Pausa Semplificato, Select + Su / Select + Giù in modalità Hotkey. Vale fino allo spegnimento.
 
 ### Miglioramenti e correzioni
 
 * Tracciamento IR affinato e recupero più rapido dei LED temporaneamente nascosti; il layout Square supporta rettangoli verticali e larghi.
 * Modalità pausa Hotkey: i comandi per rumble e solenoide ora funzionano quando non è montato un interruttore fisico.
-* Comando seriale `M0x0`: uno stick analogico usato come stick del gamepad torna sullo stick sinistro, come all'avvio.
+* Comando seriale `M0x0` (e `M0x2`): uno stick analogico usato come stick del gamepad torna sullo stick sinistro, come all'avvio.
 * Dopo la prima calibrazione avviata dalla pistola su una scheda nuova, la pistola torna al funzionamento normale appena la confermi. Come in precedenza, questa prima calibrazione viene salvata automaticamente; quelle avviate dalla pausa vanno salvate separatamente.
 * Fuoco a raffica (comando seriale `M8x1`): esattamente tre colpi, con la pausa corretta tra uno e l'altro, e solenoide sempre spento alla fine.
 * Il salvataggio dalla pausa si può ripetere nella stessa pausa se non riesce.
+* Premendo Start o Select mentre si spara, il solenoide si spegne e la vibrazione finisce normalmente.
+* Spegnere l'interruttore fisico del solenoide durante una raffica la interrompe.
+* Gli impulsi di vibrazione MAMEHOOKER con durate personalizzate ora vengono eseguiti tutti.
+* Menu di pausa: rumble o solenoide cambiati dopo un salvataggio si possono salvare di nuovo nella stessa pausa.
+* App desktop, Mappatura Pulsanti: cambiando il tipo di un'uscita, la pistola riceve l'uscita mostrata.
 * Guide utente bilingui riscritte: consulta il [manuale operativo](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/lightgun/src/README.md#versione-italiana).
 
 ### Note di installazione e utilizzo

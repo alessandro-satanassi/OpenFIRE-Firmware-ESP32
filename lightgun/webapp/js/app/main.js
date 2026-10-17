@@ -142,7 +142,7 @@
             OF.UI.closeMenus();
 
             // Menu bar
-            const menubar = el('nav', { class: 'menubar', attrs: { 'aria-label': 'Menu' } },
+            const menubar = el('nav', { class: 'menubar', attrs: { 'aria-label': t('Menu') } },
                 el('span', { class: 'menubar-logo', html: OF.LOGO_SVG, attrs: { 'aria-hidden': 'true' } }),
                 this.isDevice ? null : el('button', { class: 'menu-button', text: t('Board Previews'), on: { click: () => OF.Windows.openPreviewer(this.state.board && this.state.board.type) } }),
                 el('button', { class: 'menu-button', text: t('Emitter Alignment'), on: { click: () => this.openAlignment() } }),
@@ -251,8 +251,8 @@
         }
 
         languageSelector() {
-            const { el } = OF.UI;
-            const select = el('select', { class: 'lang-selector', attrs: { 'aria-label': 'Language' } });
+            const { el, t } = OF.UI;
+            const select = el('select', { class: 'lang-selector', attrs: { 'aria-label': t('Language') } });
             for (const code of OF.i18n.languages())
                 select.append(el('option', { value: code, text: OF.i18n.languageName(code) }));
             select.value = OF.i18n.currentLang;

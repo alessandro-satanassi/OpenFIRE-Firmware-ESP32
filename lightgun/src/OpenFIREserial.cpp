@@ -828,7 +828,7 @@ void OF_Serial::SerialHandling()
                   if(serialRumbCustomHoldLength && serialRumbCustomPauseLength) {
                       if(!serialRumbPulseStage) {
                           if(millis() - serialRumbPulsesLastUpdate > serialRumbCustomHoldLength) {
-                              serialRumbPulseStage = 0;
+                              serialRumbPulseStage = 1;
                               #ifdef ARDUINO_ARCH_ESP32
                                 analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0); // [ESP32_PORT] per ESP32
                               #else //rp2040
@@ -836,10 +836,12 @@ void OF_Serial::SerialHandling()
                               #endif
                               if(serialRumbPulsesLast >= serialRumbPulses)
                                   serialQueue[SerialQueue_RumbPulse] = false;
+                              else serialRumbPulsesLast++, serialRumbPulsesLastUpdate = millis();  // Timestamp our last pulse event.
                           }
                       } else if(millis() - serialRumbPulsesLastUpdate > serialRumbCustomPauseLength) {
-                          serialRumbPulseStage++;
+                          serialRumbPulseStage = 0;
                           analogWrite(OF_Prefs::pins[OF_Const::rumblePin], OF_Prefs::settings[OF_Const::rumbleStrength]);
+                          serialRumbPulsesLastUpdate = millis();          // Timestamp our last pulse event.
                       }
                   // OF-style analog ramping
                   } else if(millis() - serialRumbPulsesLastUpdate > serialRumbPulsesLength) { // have we waited enough time between pulse stages?

@@ -52,8 +52,8 @@ Tests: `tests/*.test.js` (Node) and `tests/browser-e2e.js` (browser, simulated l
 - File dialogs: the browser file chooser and download replace "Open New Layout" / "Save New Layout"; a download cannot be cancelled, so "Canceled custom layout save operation." does not exist.
 - Device list: Web Serial only lists ports the user allowed, hence "Add a Device...".
 - Menu bar: View, Help and About with the Qt entries; "Board Previews" and "Emitter Alignment" (also in Help) are added as buttons, with the language and theme selectors. "OpenFIRE on the Web" (a disabled placeholder in the Qt menu) is not shown; About opens directly (the Qt About menu has only "About OpenFIRE...").
-- Turning custom pins off/on or choosing an alternative preset keeps the rumble/solenoid toggles when their pins are mapped again: the Qt App turns them off as a side effect of clearing the pin boxes one by one. Importing a layout gives rumble and solenoid back their saved values, exactly like the Qt App.
-- Changing the output type of a button selects the first output of the new list (the Qt App showed it but kept the previous value).
+- Turning custom pins off/on or choosing an alternative preset keeps the rumble/solenoid toggles when their pins are mapped again, in both Apps. Importing a layout gives rumble and solenoid back their saved values, exactly like the Qt App.
+- Changing the output type of a button selects the first output of the new list, in both Apps; going back to the saved type gives back the saved output.
 - Renaming a profile starts from the current name (selected, typing replaces it); the Qt box starts empty. Characters outside Latin-1 are refused like in the product name.
 - After Clear Save Memory the confirmation is shown as soon as the command is delivered: the firmware restarts without answering.
 - Fullscreen screens: the browser owns fullscreen mode, so leaving it (ESC, F11, browser gesture) closes the screen like ESC; the page behind cannot be used meanwhile. If the browser refuses fullscreen mode, a button asks for it again.

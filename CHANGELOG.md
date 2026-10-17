@@ -52,6 +52,11 @@ All notable changes to this project will be documented in this file.
 * Serial command `M0x0` (and `M0x2`): an analog stick used as a gamepad stick goes back to the left stick, as at startup and with the pause menu. Before, after `M0x1L` it stayed on the right stick.
 * Burst fire (serial command `M8x1`): each burst fires exactly three shots, with the set pause between them, and the solenoid always switches off at the end. Before, a fourth shot could start and the solenoid could stay on.
 * Saving from pause mode: if saving fails, you can try again in the same pause. Before, the second try did nothing.
+* Solenoid and rumble: if you press Start or Select while firing, the solenoid switches off and the rumble ends as usual. Before, they could stay on for as long as you held the buttons.
+* Solenoid hardware switch: turning it off during a burst stops the burst. Before, one more shot could start while aiming off screen.
+* MAMEHOOKER rumble pulses with custom timings (`R1x0`/`R1x1`): the gun now gives all the requested pulses. Before, it stopped after the first one and ignored the following pulse commands.
+* Pause mode: if you turn rumble or solenoid on or off after saving, you can save again in the same pause. Before, the second save did nothing.
+* Desktop App, **Button Mapping**: when you change the type of an output (mouse, keyboard, gamepad), the gun gets the output shown. Before, it could get a different one.
 
 ### Migration from 6.2.1
 
@@ -103,7 +108,7 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 * **Stick analogico: Inverti asse X e Inverti asse Y** nella scheda **Mappatura Pulsanti** (WebApp e App desktop), per stick collegati o montati al contrario. Valgono per lo stick del gamepad, il D-pad e le frecce della tastiera, e anche per il test dello stick; sono disattivate di default, quindi le pistole esistenti funzionano come prima.
 * Gli **interruttori fisici** per rumble, solenoide e fuoco rapido ora funzionano nel firmware pronto da scaricare: collegali a GND e assegna i loro pin in **Layout Scheda**.
 * **Ingressi normalmente chiusi (NC)** in **Layout Scheda** (WebApp e App desktop, solo con i pin personalizzati): pulsanti, pedali e gli interruttori di rumble, solenoide e fuoco rapido possono essere letti invertiti, per dispositivi come il caricatore della Blamcon Vyper. Le caselle **NC** si sbloccano con **Modifica ingressi NC**, che non viene salvata; per impostazione predefinita nessun ingresso è invertito, quindi le pistole esistenti si comportano come prima. L'inversione vale anche per le scorciatoie all'avvio.
-* **Modalità di uscita dalla pausa:** il Menu di Pausa Semplificato ha il nuovo sottomenu **Output Mode** e, nella modalità pausa Hotkey, Select + Su / Select + Giù passano alla modalità successiva o precedente (Mouse assoluto, Gamepad stick destro, Gamepad stick sinistro), senza comandi seriali. Il cambio dura fino allo spegnimento; la modalità all'avvio resta quella impostata nella WebApp.
+* **Cambio della modalità di uscita (mouse/gamepad) dalla pausa:** il Menu di Pausa Semplificato ha il nuovo sottomenu **Output Mode** e, nella modalità pausa Hotkey, Select + Su / Select + Giù passano alla modalità successiva o precedente (Mouse assoluto, Gamepad stick destro, Gamepad stick sinistro), senza comandi seriali. Il cambio dura fino allo spegnimento; la modalità all'avvio resta quella impostata nella WebApp.
 * Il **Web Flasher** può portare da solo in modalità aggiornamento una pistola con la 7.0.0 (la porta seriale cambia una volta: seleziona la nuova porta e riprova).
 * **Portale del progetto** con WebApp, Web Flasher, strumenti e documentazione. Ogni versione del firmware apre la WebApp della stessa versione.
 
@@ -123,6 +128,11 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 * Comando seriale `M0x0` (e `M0x2`): uno stick analogico usato come stick del gamepad torna sullo stick sinistro, come all'avvio e con il menu di pausa. Prima, dopo `M0x1L`, restava sullo stick destro.
 * Fuoco a raffica (comando seriale `M8x1`): ogni raffica spara esattamente tre colpi, con la pausa impostata tra uno e l'altro, e il solenoide si spegne sempre alla fine. Prima poteva partire un quarto colpo e il solenoide poteva restare acceso.
 * Salvataggio dalla pausa: se il salvataggio non riesce, puoi riprovare nella stessa pausa. Prima il secondo tentativo non faceva nulla.
+* Solenoide e vibrazione: se premi Start o Select mentre spari, il solenoide si spegne e la vibrazione finisce normalmente. Prima potevano restare accesi finché tenevi premuti i tasti.
+* Interruttore fisico del solenoide: spegnerlo durante una raffica la interrompe. Prima poteva partire un altro colpo puntando fuori dallo schermo.
+* Impulsi di vibrazione MAMEHOOKER con durate personalizzate (`R1x0`/`R1x1`): la pistola ora esegue tutti gli impulsi richiesti. Prima si fermava dopo il primo e ignorava i comandi di impulso successivi.
+* Menu di pausa: se attivi o disattivi rumble o solenoide dopo aver salvato, puoi salvare di nuovo nella stessa pausa. Prima il secondo salvataggio non faceva nulla.
+* App desktop, **Mappatura Pulsanti**: quando cambi il tipo di un'uscita (mouse, tastiera, gamepad), la pistola riceve l'uscita mostrata. Prima poteva riceverne un'altra.
 
 ### Passaggio dalla 6.2.1
 
