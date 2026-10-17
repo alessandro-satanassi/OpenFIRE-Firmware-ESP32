@@ -41,7 +41,7 @@
   <br><br>
   <a href="https://youtu.be/knk8naJV2zQ"><img src="https://img.youtube.com/vi/knk8naJV2zQ/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 4" width="260"></a>
   &nbsp;&nbsp;&nbsp;
-  <a href="https://youtu.be/KKNKWcoDJ_o"><img src="https://img.youtube.com/vi/KKNKWcoDJ_o/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 5" width="260"></a>
+  <a href="https://youtu.be/WzNxs4hhthE"><img src="https://img.youtube.com/vi/WzNxs4hhthE/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 5" width="260"></a>
 </p>
 
 ---
@@ -343,7 +343,7 @@ The official firmware downloads are **free of charge**; you do not need to buy a
   <br><br>
   <a href="https://youtu.be/knk8naJV2zQ"><img src="https://img.youtube.com/vi/knk8naJV2zQ/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 4" width="260"></a>
   &nbsp;&nbsp;&nbsp;
-  <a href="https://youtu.be/KKNKWcoDJ_o"><img src="https://img.youtube.com/vi/KKNKWcoDJ_o/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 5" width="260"></a>
+  <a href="https://youtu.be/WzNxs4hhthE"><img src="https://img.youtube.com/vi/WzNxs4hhthE/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 5" width="260"></a>
 </p>
 
 ---
