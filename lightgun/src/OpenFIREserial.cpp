@@ -752,6 +752,10 @@ void OF_Serial::SerialHandling()
 
     #ifdef USES_SOLENOID
       if(OF_Prefs::toggles[OF_Const::solenoid]) {
+          #ifdef USES_TEMP
+          if(OF_Prefs::pins[OF_Const::tempPin] >= 0 && OF_FFB::tempStatus == OF_FFB::Temp_Fatal)
+              serialQueue[SerialQueue_Solenoid] = false, serialQueue[SerialQueue_SolPulse] = false;  // Too hot, or sensor fault: cancel the requests (forced off below), so they do not resume by themselves once cooled.
+          #endif // USES_TEMP
           // Solenoid "on" command
           if(serialQueue[SerialQueue_Solenoid]) {
               if(OF_FFB::GetSolenoid()) {

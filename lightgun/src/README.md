@@ -114,7 +114,7 @@ Use one configuration page at a time. When you have finished, save, close the pa
 Buttons, pedals and switches are normally open: they connect their pin to GND when pressed or on. A **normally closed** device, such as the loader switch of the Blamcon Vyper, does the opposite. To use one, in **Board Layout** of the WebApp or the desktop App:
 
 1. Tick **Use Custom Pins**.
-2. Tick **Edit NC Inputs**: it shows the **NC** boxes next to the pins. When it is off, the inverted pins only show the word **NC**. It is not saved and goes off at every connection, so the inversions cannot be changed by mistake.
+2. Turn on **View > Show Unsafe Settings**, then tick **Edit NC Inputs**: it shows the **NC** boxes next to the pins. When it is off, the inverted pins only show the word **NC**. It is not saved and goes off at every connection and when **Show Unsafe Settings** is turned off, so the inversions cannot be changed by mistake. Turning it off does not clear the inversions already set.
 3. Tick **NC** next to the input, then **Save and Send Settings**.
 
 The **NC** box appears only for buttons, pedals wired to the gun (not the wireless pedal) and the Rumble, Solenoid and Autofire switches. The inversion belongs to the function, so it follows it if you move it to another pin. If you take the function off its pin, its NC box is cleared. With the board's default layout (Use Custom Pins off) no input is inverted. The inversion also applies to the startup shortcuts (Trigger + A, B).
@@ -501,7 +501,7 @@ Usa una sola pagina di configurazione alla volta. Al termine salva, chiudi la pa
 Pulsanti, pedali e interruttori sono normalmente aperti: collegano il loro pin a GND quando sono premuti o accesi. Un dispositivo **normalmente chiuso**, come l'interruttore del caricatore della Blamcon Vyper, fa il contrario. Per usarlo, in **Layout Scheda** della WebApp o dell'App desktop:
 
 1. Spunta **Usa pin personalizzati**.
-2. Spunta **Modifica ingressi NC**: fa comparire le caselle **NC** accanto ai pin. Quando è spenta, sui pin invertiti compare solo la scritta **NC**. Non viene salvata e si spegne a ogni connessione, così le inversioni non si possono cambiare per errore.
+2. Attiva **Visualizza > Mostra Impostazioni Non Sicure**, poi spunta **Modifica ingressi NC**: fa comparire le caselle **NC** accanto ai pin. Quando è spenta, sui pin invertiti compare solo la scritta **NC**. Non viene salvata e si spegne a ogni connessione e quando spegni **Mostra Impostazioni Non Sicure**, così le inversioni non si possono cambiare per errore. Spegnerla non cancella le inversioni già impostate.
 3. Spunta **NC** accanto all'ingresso, poi **Salva e invia impostazioni**.
 
 La casella **NC** compare solo per pulsanti, pedali collegati alla pistola (non il pedale wireless) e gli interruttori Rumble, Solenoide e Autofire. L'inversione appartiene alla funzione, quindi la segue se la sposti su un altro pin. Se togli la funzione dal pin, la casella NC si azzera. Con il layout predefinito della scheda (Usa pin personalizzati spento) nessun ingresso è invertito. L'inversione vale anche per le scorciatoie all'avvio (Grilletto + A, B).

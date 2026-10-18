@@ -47,7 +47,7 @@ New to OpenFIRE? Start from [Getting Started](https://github.com/alessandro-sata
 * Pressing Start or Select while firing switches the solenoid off and ends the rumble as usual.
 * Turning the solenoid hardware switch off during a burst stops the burst.
 * The trigger no longer stays pressed on the computer when the solenoid or rumble hardware switch is turned off, MAMEHOOKER starts or pause mode is entered while it is held.
-* When the temperature sensor reads too hot or reports a fault, the solenoid no longer fires at all, single shots included, and a burst stopped by the temperature no longer resumes by itself.
+* When the temperature sensor reads too hot or reports a fault, the solenoid no longer fires at all, single shots included, and a burst stopped by the temperature no longer resumes by itself. The same applies to the MAMEHOOKER solenoid commands.
 * MAMEHOOKER rumble pulses with custom timings now give all the requested pulses.
 * Pause mode: rumble or solenoid changed after a save can be saved again in the same pause.
 * Desktop App, Button Mapping: changing the type of an output gives the gun the output shown.
@@ -282,7 +282,7 @@ Non conosci ancora OpenFIRE? Parti dai [Primi passi](https://github.com/alessand
 * Premendo Start o Select mentre si spara, il solenoide si spegne e la vibrazione finisce normalmente.
 * Spegnere l'interruttore fisico del solenoide durante una raffica la interrompe.
 * Il grilletto non resta più premuto sul computer se, mentre lo tieni premuto, spegni l'interruttore fisico del solenoide o della vibrazione, si avvia MAMEHOOKER o entri in pausa.
-* Quando il sensore di temperatura rileva una temperatura troppo alta o segnala un guasto, il solenoide non scatta più, compresi i colpi singoli, e una raffica fermata dalla temperatura non riparte più da sola.
+* Quando il sensore di temperatura rileva una temperatura troppo alta o segnala un guasto, il solenoide non scatta più, compresi i colpi singoli, e una raffica fermata dalla temperatura non riparte più da sola. Lo stesso vale per i comandi del solenoide di MAMEHOOKER.
 * Gli impulsi di vibrazione MAMEHOOKER con durate personalizzate ora vengono eseguiti tutti.
 * Menu di pausa: rumble o solenoide cambiati dopo un salvataggio si possono salvare di nuovo nella stessa pausa.
 * App desktop, Mappatura Pulsanti: cambiando il tipo di un'uscita, la pistola riceve l'uscita mostrata.
