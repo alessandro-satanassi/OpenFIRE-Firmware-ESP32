@@ -29,7 +29,7 @@ Tests: `tests/*.test.js` (Node) and `tests/browser-e2e.js` (browser, simulated l
 | `serialPort_progressSet`, `serialPort_progressUpdate` | `main.js` `onProgress`, status bar progress |
 | `on_confirmButton_clicked`, `DiffUpdate`, `CommitRecoveryUiUpdate` | `main.js` `save`, `refresh`; `state.js` `isDirty` / `commitDone` |
 | `on_tabWidget_currentChanged` (reset description boxes) | `main.js` `selectTab` -> tab `onShow` |
-| `on_actionShow_Unsafe_Settings_toggled` | View > Show Unsafe Settings (not remembered, like Qt) |
+| `on_actionShow_Unsafe_Settings_toggled` | View > Show Unsafe Settings (not remembered, like Qt; also shows Edit NC Inputs) |
 | `on_actionCompatible_Boards_triggered`, `on_actionAbout_UI_triggered` | `windows.js` `openPreviewer`, `openAbout` |
 | `on_actionOpenFIRE_Documentation_triggered` (Alt+D), `on_actionOpenFIRE_Serial_Usage_triggered` (Alt+S) | Help menu and the same shortcuts |
 | `on_actionOpen_IR_Emitter_Alignment_Assistant_triggered` | Emitter Alignment / Help menu |

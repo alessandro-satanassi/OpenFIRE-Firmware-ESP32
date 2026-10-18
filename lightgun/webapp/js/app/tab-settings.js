@@ -333,10 +333,12 @@
             ...number('label_14', 'tempWarningBox', T.tempWarning),
             ...number('label_16', 'tempShutoffBox', T.tempShutdown));
 
-        const solenoidSettings = plain('solenoidSettingsBox', 'grid-4',
-            ...number('label_7', 'solenoidOnLengthBox', T.solenoidOnLength),
-            ...number('label_8', 'solenoidOffLengthBox', T.solenoidOffLength),
-            el('div', { class: 'grid-row-center' }, ...number('label_9', 'solenoidHoldLengthBox', T.solenoidHoldLength)),
+        // The temperature box stays outside the grid of the timings: shown or hidden, it must not change their columns.
+        const solenoidSettings = plain('solenoidSettingsBox', '',
+            el('div', { class: 'grid-4' },
+                ...number('label_7', 'solenoidOnLengthBox', T.solenoidOnLength),
+                ...number('label_8', 'solenoidOffLengthBox', T.solenoidOffLength),
+                el('div', { class: 'grid-row-center' }, ...number('label_9', 'solenoidHoldLengthBox', T.solenoidHoldLength))),
             solenoidTemp);
 
         const rumbleSettings = plain('rumbleSettingsBox', 'grid-4',

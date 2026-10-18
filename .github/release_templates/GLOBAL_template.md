@@ -32,7 +32,7 @@ New to OpenFIRE? Start from [Getting Started](https://github.com/alessandro-sata
 * Saved mouse/gamepad startup mode, wireless pedal option and Up/Down navigation in the pause menu.
 * Analog stick: **Invert X Axis** and **Invert Y Axis** in the Button Mapping tab, for sticks wired or mounted the other way round (off by default).
 * Hardware switches for rumble, solenoid and rapid fire now work in the ready-made firmware: assign their pins in Board Layout.
-* Normally closed (NC) inputs in Board Layout (custom pins only): buttons, pedals and the rumble, solenoid and rapid fire switches can be read inverted, for devices such as the Blamcon Vyper loader. Unlock the **NC** boxes with **Edit NC Inputs**; nothing is inverted by default.
+* Normally closed (NC) inputs in Board Layout (custom pins only): buttons, pedals and the rumble, solenoid and rapid fire switches can be read inverted, for devices such as the Blamcon Vyper loader. Unlock the **NC** boxes with **Edit NC Inputs** (shown with **View > Show Unsafe Settings**); nothing is inverted by default.
 * Custom layout files also keep the NC boxes; a damaged or incomplete file is refused when imported.
 * Output mode (mouse / gamepad right stick / gamepad left stick) can be switched from pause mode: **Output Mode** in the Simple Pause Menu, Select + Up / Select + Down in Hotkey mode. It lasts until the gun is switched off.
 
@@ -267,7 +267,7 @@ Non conosci ancora OpenFIRE? Parti dai [Primi passi](https://github.com/alessand
 * Modalità mouse/gamepad salvabile per l'avvio, opzione pedale wireless e navigazione Su/Giù nel menu di pausa.
 * Stick analogico: **Inverti asse X** e **Inverti asse Y** nella scheda Mappatura Pulsanti, per stick collegati o montati al contrario (disattivate di default).
 * Gli interruttori fisici per rumble, solenoide e fuoco rapido ora funzionano nel firmware pronto da scaricare: assegna i loro pin in Layout Scheda.
-* Ingressi normalmente chiusi (NC) in Layout Scheda (solo con i pin personalizzati): pulsanti, pedali e gli interruttori di rumble, solenoide e fuoco rapido possono essere letti invertiti, per dispositivi come il caricatore della Blamcon Vyper. Le caselle **NC** si sbloccano con **Modifica ingressi NC**; per impostazione predefinita nessun ingresso è invertito.
+* Ingressi normalmente chiusi (NC) in Layout Scheda (solo con i pin personalizzati): pulsanti, pedali e gli interruttori di rumble, solenoide e fuoco rapido possono essere letti invertiti, per dispositivi come il caricatore della Blamcon Vyper. Le caselle **NC** si sbloccano con **Modifica ingressi NC** (compare con **Visualizza > Mostra Impostazioni Non Sicure**); per impostazione predefinita nessun ingresso è invertito.
 * I file di layout personalizzato conservano anche le caselle NC; un file danneggiato o incompleto viene rifiutato all'importazione.
 * La modalità di uscita (mouse / gamepad stick destro / gamepad stick sinistro) si cambia anche dalla pausa: **Output Mode** nel Menu di Pausa Semplificato, Select + Su / Select + Giù in modalità Hotkey. Vale fino allo spegnimento.
 

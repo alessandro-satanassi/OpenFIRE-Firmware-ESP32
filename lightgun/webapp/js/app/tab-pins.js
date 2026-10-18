@@ -36,7 +36,7 @@
         }, { title: t('Enable to use custom pins mapping, or disable to use the default mappings for the current board.') });
 
         // Unlocks the NC checkboxes of the pins, against changes made by mistake. Never saved:
-        // it starts off at every load and goes off when custom pins are turned off.
+        // it starts off at every load and goes off when custom pins or Show Unsafe Settings are turned off.
         let invertEditing = false;
         const invertEdit = checkbox(t('Edit NC Inputs'), false, (on) => {
             invertEditing = on;
@@ -162,7 +162,7 @@
             if (!state.loaded) return;
             if (state.board.type !== loadedBoard || !boxes.length) { populate(); fit(); }
             const customOn = state.customPins;
-            if (!customOn) invertEditing = false;
+            if (!customOn || !app.showUnsafe) invertEditing = false;
             boxes.forEach((box, gpio) => {
                 if (!box) return;
                 const fn = state.functionAt(gpio);
@@ -178,7 +178,7 @@
                 invert.input.checked = inverted;
             });
             custom.input.checked = customOn;
-            invertEdit.hidden = !customOn;
+            invertEdit.hidden = !customOn || !app.showUnsafe;
             invertEdit.input.checked = invertEditing;
             // Qt: applying a preset changes the pin boxes, which reset the presets box to its placeholder.
             presets.selectedIndex = 0;
