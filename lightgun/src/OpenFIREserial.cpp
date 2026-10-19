@@ -238,8 +238,9 @@ void OF_Serial::SerialProcessing()
                 break;
               #ifdef USES_SOLENOID
               // solenoid automatic mode
-              case '8':
+              case '8': {
                 Serial.read(); // Nomf the padding bit.
+                const bool burstWas = OF_FFB::burstFireActive, autofireWas = OF_Prefs::toggles[OF_Const::autofire];
                 switch(Serial.read()) {
                 // "auto"
                 case '1':
@@ -257,7 +258,13 @@ void OF_Serial::SerialProcessing()
                     OF_FFB::burstFireActive = false;
                     break;
                 }
-                break;
+                // Firing mode changed with the local feedback: end the shot in progress, or it could stay on.
+                if(!serialMode && (OF_FFB::burstFireActive != burstWas || OF_Prefs::toggles[OF_Const::autofire] != autofireWas)) {
+                    const bool held = OF_FFB::triggerHeld;
+                    OF_FFB::FFBShutdown();
+                    OF_FFB::triggerHeld = held;                    // Keep the trigger state, so holding it does not count as a new pull.
+                }
+                break; }
               #endif // USES_SOLENOID
               #ifdef USES_DISPLAY
               case 'D':

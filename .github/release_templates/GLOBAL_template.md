@@ -48,6 +48,7 @@ New to OpenFIRE? Start from [Getting Started](https://github.com/alessandro-sata
 * Turning the solenoid hardware switch off during a burst stops the burst.
 * The trigger no longer stays pressed on the computer when the solenoid or rumble hardware switch is turned off, MAMEHOOKER starts or pause mode is entered while it is held.
 * When the temperature sensor reads too hot or reports a fault, the solenoid no longer fires at all, single shots included, and a burst stopped by the temperature no longer resumes by itself. The same applies to the MAMEHOOKER solenoid commands.
+* The solenoid no longer stays on if you aim off screen during a single shot while holding the trigger, or if the firing mode is changed with an `M8` command during a shot.
 * MAMEHOOKER rumble pulses with custom timings now give all the requested pulses.
 * MAMEHOOKER: turning off the solenoid or rumble hardware switch during a game cancels the effects in progress, which no longer resume by themselves when it is turned back on.
 * Pause mode: rumble or solenoid changed after a save can be saved again in the same pause.
@@ -284,6 +285,7 @@ Non conosci ancora OpenFIRE? Parti dai [Primi passi](https://github.com/alessand
 * Spegnere l'interruttore fisico del solenoide durante una raffica la interrompe.
 * Il grilletto non resta più premuto sul computer se, mentre lo tieni premuto, spegni l'interruttore fisico del solenoide o della vibrazione, si avvia MAMEHOOKER o entri in pausa.
 * Quando il sensore di temperatura rileva una temperatura troppo alta o segnala un guasto, il solenoide non scatta più, compresi i colpi singoli, e una raffica fermata dalla temperatura non riparte più da sola. Lo stesso vale per i comandi del solenoide di MAMEHOOKER.
+* Il solenoide non resta più acceso se esci dallo schermo durante un colpo singolo tenendo premuto il grilletto, oppure se la modalità di fuoco viene cambiata con un comando `M8` durante un colpo.
 * Gli impulsi di vibrazione MAMEHOOKER con durate personalizzate ora vengono eseguiti tutti.
 * MAMEHOOKER: spegnendo l'interruttore fisico del solenoide o della vibrazione durante il gioco, gli effetti in corso vengono annullati e non ripartono più da soli quando lo riaccendi.
 * Menu di pausa: rumble o solenoide cambiati dopo un salvataggio si possono salvare di nuovo nella stessa pausa.

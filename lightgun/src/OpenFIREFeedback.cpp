@@ -88,7 +88,10 @@ void OF_FFB::FFBOffScreen()
 
     if(burstFiring) BurstFire();
     else if(OF_FFB::GetSolenoid() && !burstFireActive) { // If the solenoid is engaged, since we're not shooting the screen, shut off the solenoid a'la an idle cycle
-        SolenoidActivation(OF_Prefs::settings[OF_Const::solenoidOnLength]);
+        if(solenoidFirstShot) {                               // Single shot still in its first pulse: end it on its timer, without starting it again.
+            if(millis() - previousMillisSol >= OF_Prefs::settings[OF_Const::solenoidOnLength])
+                OF_FFB::SetSolenoid(LOW);
+        } else SolenoidActivation(OF_Prefs::settings[OF_Const::solenoidOnLength]);
     }
 }
 
