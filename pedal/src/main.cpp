@@ -46,6 +46,9 @@ volatile uint8_t buttons_last_state = 0;
 // ===================================================================================
 
 volatile bool send_packet_pedal = false; // true if a packet needs to be sent / true se bisogna spedire un pacchetto
+// Repeats of the released state still to send: written only by the loop, the timer only reads it. / Ripetizioni dello stato rilasciato ancora da inviare: la scrive solo il loop, il timer la legge soltanto.
+#define RELEASE_REPEATS 2
+volatile uint8_t release_repeats = 0;
 #define DEBOUNCE_DELAY 15 // Debounce time for buttons in ms (perhaps 20ms is safer) / tempo di deboincing per pulsanti in ms (forse 20ms è più sicuro)
 
 /*
@@ -53,13 +56,15 @@ When a pedal is held down for an extended period (e.g., to take cover in Time Cr
 the dongle might lose the connection or interpret the lack of signal as a disconnection.
 This timer ensures the active state is periodically re-sent (keep-alive).
 NOTE: The value is transmitted every TIME_REPEAT_SEND only if a button is pressed,
-to minimize collisions. The value must be specified in microseconds (i.e., ms x 1000).
+to minimize collisions. After a release, the released state is also sent RELEASE_REPEATS more times,
+so that a lost release packet is recovered without waiting for the receiver's timeout. The value must be specified in microseconds (i.e., ms x 1000).
 /
 Quando un pedale viene tenuto premuto a lungo (es. per ripararsi in Time Crisis), 
 il dongle potrebbe perdere la connessione o interpretare il silenzio radio come disconnessione.
 Questo timer garantisce un reinvio periodico (keep-alive) dello stato attivo.
 NOTA: il valore è trasmesso ogni TIME_REPEAT_SEND solo se qualche buttone è premuto 
-per ridurre al minimo le collisioni. Il valore va specificato in microsecondi quindi ms x 1000
+per ridurre al minimo le collisioni. Dopo un rilascio, lo stato rilasciato viene inviato ancora RELEASE_REPEATS volte,
+così un pacchetto di rilascio perso si recupera senza attendere il timeout del ricevitore. Il valore va specificato in microsecondi quindi ms x 1000
 */
 #define TIME_REPEAT_SEND (uint64_t)69000 // time in milliseconds (set to 69ms, perhaps better at 50ms) / tempo in microsendi (impostato a 69ms, forse meglio a 50ms)
 
@@ -137,7 +142,7 @@ Alziamo semplicemente la flag atomica `send_packet_pedal`.
 */
 void timer_callback_send_repeat(void* arg) {
   
-  if (buttons_last_state) send_packet_pedal = true;
+  if (buttons_last_state || release_repeats) send_packet_pedal = true;
  
 }
 
@@ -281,6 +286,10 @@ void loop()
   */
   if ((buttons_state != buttons_last_state) || (send_packet_pedal == true)) {
     // Send packet with pedal position to the lightgun - send the buttons_state byte / Invia pacchetto con posizione pedali alla lightgun - invia il byte buttons_state
+    // The current state is always sent, never a stored one. / Si invia sempre lo stato corrente, mai uno memorizzato.
+    if (buttons_state) release_repeats = 0;                                      // Pressed: no release repeats. / Premuto: nessuna ripetizione del rilascio.
+    else if (buttons_last_state) release_repeats = RELEASE_REPEATS;              // Just released: schedule the repeats. / Appena rilasciato: prepara le ripetizioni.
+    else if (release_repeats) release_repeats = release_repeats - 1;             // Repeat of the released state. / Ripetizione dello stato rilasciato.
  
     SerialWireless.SendPacket((const uint8_t *)&buttons_state, 1, PACKET_TX::PEDAL_TX);
 

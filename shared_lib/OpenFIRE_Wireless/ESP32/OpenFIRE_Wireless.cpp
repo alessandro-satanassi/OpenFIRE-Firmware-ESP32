@@ -246,7 +246,8 @@ const uint8_t BROADCAST_ADDR[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 // ========= per gestione PEDAL ===========
 uint8_t peerAddress_pedal[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; // broadcast
-#define MAX_TIMEOUT_LAST_PACKET (uint64_t)100000   // = 100  ms  .. the value must be specified in microseconds. / il valore va specificato in microsecondi
+#define MAX_TIMEOUT_LAST_PACKET (uint64_t)200000   // = 200  ms  .. the value must be specified in microseconds. / il valore va specificato in microsecondi
+// 200 ms tolerate one lost keep-alive (the pedal resends every 69 ms). / 200 ms tollerano un keep-alive perso (il pedale reinvia ogni 69 ms).
 void setupTimerPedal();
 esp_timer_handle_t timer_handle_pedal;
 // ===================================================
@@ -321,34 +322,60 @@ void usbTask(void *pvParameters) {
       // /
       // ROTAZIONE ROUND-ROBIN
       // Facciamo un ciclo di massimo 3 tentativi per trovare il primo dispositivo con dati pendenti
+      // CONSISTENT SNAPSHOT: each report is copied locally and sent only if the radio did not change it during the copy.
+      // This holds because radioTask and usbTask run on the same core (APP_CPU_NUM) and radioTask has the higher
+      // priority (15 > 10): if it interrupts the copy, it finishes its update and raises pending before usbTask resumes.
+      // If the two tasks are ever moved to different cores, this check is no longer enough.
+      // Clearing pending before the copy also keeps an update received during the send: it raises pending again.
+      // /
+      // COPIA COERENTE: ogni report viene copiato in locale e inviato solo se la radio non l'ha cambiato durante la copia.
+      // Vale perché radioTask e usbTask girano sullo stesso core (APP_CPU_NUM) e radioTask ha priorità più alta
+      // (15 > 10): se interrompe la copia, finisce il suo aggiornamento e rialza pending prima che usbTask riprenda.
+      // Se un giorno i due task venissero spostati su core diversi, questo controllo non basterebbe più.
+      // Azzerare pending prima della copia conserva anche un aggiornamento arrivato durante l'invio: lo rialza.
       for (int i = 0; i < 3; i++) {
         int target = (currentRotation + i) % 3;
 
         // --- TURN 0: MOUSE / TURNO 0: MOUSE ---
         if (target == 0 && absmouse5Report_pending) {
-          if (usbHid.sendReport(HID_RID_e::HID_RID_MOUSE, &absmouse5Report_last_wifi, sizeof(absmouse5Report_last_wifi))) {
-            absmouse5Report_pending = false; // Data processed / Dato smaltito
+          absmouse5Report_pending = false;
+          asm volatile("" ::: "memory");  // Compiler barrier, no lock. / Barriera del compilatore, nessun lock.
+          auto reportLocal = absmouse5Report_last_wifi;
+          asm volatile("" ::: "memory");
+          if (absmouse5Report_pending) continue;  // Updated during the copy: it may be mixed, send the new one later. / Aggiornato durante la copia: potrebbe essere misto, si invia dopo quello nuovo.
+          if (usbHid.sendReport(HID_RID_e::HID_RID_MOUSE, &reportLocal, sizeof(reportLocal))) {
             currentRotation = 1;            // Next turn goes to the keyboard / Prossimo giro tocca alla Tastiera
             break; // IMPORTANT: Exit the for loop. The USB buffer is now full. / IMPORTANTE: Usciamo dal for. Il buffer USB ora è pieno.
           }
+          absmouse5Report_pending = true;  // Not sent: still to send. / Non inviato: resta da inviare.
         }
         
         // --- TURN 1: KEYBOARD / TURNO 1: TASTIERA ---
         else if (target == 1 && keyReport_pending) {
-          if (usbHid.sendReport(HID_RID_e::HID_RID_KEYBOARD, &keyReport_last_wifi, sizeof(keyReport_last_wifi))) {
-            keyReport_pending = false; 
+          keyReport_pending = false;
+          asm volatile("" ::: "memory");  // Compiler barrier, no lock. / Barriera del compilatore, nessun lock.
+          auto reportLocal = keyReport_last_wifi;
+          asm volatile("" ::: "memory");
+          if (keyReport_pending) continue;  // Updated during the copy: it may be mixed, send the new one later. / Aggiornato durante la copia: potrebbe essere misto, si invia dopo quello nuovo.
+          if (usbHid.sendReport(HID_RID_e::HID_RID_KEYBOARD, &reportLocal, sizeof(reportLocal))) {
             currentRotation = 2;            // Next up: the Gamepad / Prossimo giro tocca al Gamepad
             break; 
           }
+          keyReport_pending = true;        // Not sent: still to send. / Non inviato: resta da inviare.
         }
         
         // --- TURN 2: GAMEPAD / TURNO 2: GAMEPAD ---
         else if (target == 2 && gamepad16Report_pending) {
-          if (usbHid.sendReport(HID_RID_e::HID_RID_GAMEPAD, &gamepad16Report_last_wifi, sizeof(gamepad16Report_last_wifi))) {
-            gamepad16Report_pending = false;
+          gamepad16Report_pending = false;
+          asm volatile("" ::: "memory");  // Compiler barrier, no lock. / Barriera del compilatore, nessun lock.
+          auto reportLocal = gamepad16Report_last_wifi;
+          asm volatile("" ::: "memory");
+          if (gamepad16Report_pending) continue;  // Updated during the copy: it may be mixed, send the new one later. / Aggiornato durante la copia: potrebbe essere misto, si invia dopo quello nuovo.
+          if (usbHid.sendReport(HID_RID_e::HID_RID_GAMEPAD, &reportLocal, sizeof(reportLocal))) {
             currentRotation = 0;            // Next round, we start again from the Mouse. / Prossimo giro si riparte dal Mouse
             break; 
           }
+          gamepad16Report_pending = true;  // Not sent: still to send. / Non inviato: resta da inviare.
         }
         
       } // End of the for loop / Fine del ciclo for
@@ -1250,10 +1277,11 @@ void SerialWireless_::SendData_sem() {
   }
 
 // SUBMISSION AND UPDATING / INVIO E AGGIORNAMENTO
+  // Busy BEFORE sending: the completion callback may run before this task gets back here. / Occupata PRIMA dell'invio: la callback di completamento può arrivare prima che questo task torni qui.
+  radioFree = false;
   esp_err_t result = esp_now_send(peerAddress, buffer_espnow, len_tx);
   
   if (result == ESP_OK) {
-    radioFree = false; 
     
     // ATOMIC Update / Aggiornamento ATOMICO
     readIndex = (r + len_tx) & MASK; 
@@ -1269,6 +1297,7 @@ void SerialWireless_::SendData_sem() {
     // Non avanziamo readIndex per non perdere i dati seriali vitali.
     // Ma diamo 1 ms di pausa al sistema per non far intervenire il Watchdog
     // e prevenire un riavvio forzato della Lightgun.
+    radioFree = true;   // No callback will arrive for a failed send: free the radio again. / Per un invio fallito non arriverà nessuna callback: liberiamo di nuovo la radio.
     vTaskDelay(pdMS_TO_TICKS(1));
   }
 }
@@ -2448,6 +2477,7 @@ void packet_callback_read_dongle() {
                   //while ((millis() - lastMillis_tx_packet_connection_last_dongle) < 70) taskYIELD(); ///////yield(); 
                 }
                 SerialWireless.SendPacket((const uint8_t *)aux_buffer, 13, PACKET_TX::CHECK_CONNECTION_LAST_DONGLE);
+                if (radioFree) SerialWireless.SendData_sem(); // We are already in radioTask: transmit now as its own frame. / Siamo gia' nel radioTask: trasmetti subito come frame separato.
               }
         }
         break;
@@ -2498,6 +2528,7 @@ void packet_callback_read_dongle() {
                   //while ((millis() - lastMillis_tx_packet_gun_to_dongle_conferm) < 70) taskYIELD(); /////yield(); 
                 }
                 SerialWireless.SendPacket((const uint8_t *)aux_buffer, 13, PACKET_TX::CONNECTION);
+                if (radioFree) SerialWireless.SendData_sem(); // We are already in radioTask: transmit now as its own frame. / Siamo gia' nel radioTask: trasmetti subito come frame separato.
               }
               SerialWireless.stato_connessione_wireless = CONNECTION_STATE::DEVICES_CONNECTED;
           }
@@ -2672,6 +2703,7 @@ void packet_callback_read_pedal() {
                   //while ((millis() - lastMillis_tx_packet_connection_last_pedal) < 70) taskYIELD();  ////yield(); 
                 }
                 SerialWireless.SendPacket((const uint8_t *)aux_buffer, 13, PACKET_TX::CHECK_CONNECTION_LAST_PEDAL);
+                if (radioFree) SerialWireless.SendData_sem(); // We are already in radioTask: transmit now as its own frame. / Siamo gia' nel radioTask: trasmetti subito come frame separato.
               }
         }
         break;
@@ -2721,6 +2753,7 @@ void packet_callback_read_pedal() {
                   //while ((millis() - lastMillis_tx_packet_gun_to_pedal_conferm) < 70) taskYIELD();  ////yield(); 
                 }
                 SerialWireless.SendPacket((const uint8_t *)aux_buffer, 13, PACKET_TX::CONNECTION_PEDAL);
+                if (radioFree) SerialWireless.SendData_sem(); // We are already in radioTask: transmit now as its own frame. / Siamo gia' nel radioTask: trasmetti subito come frame separato.
               }
               SerialWireless.stato_connessione_wireless = CONNECTION_STATE::DEVICES_CONNECTED;
           }

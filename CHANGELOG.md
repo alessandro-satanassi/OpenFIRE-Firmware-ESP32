@@ -52,6 +52,7 @@ All notable changes to this project will be documented in this file.
 * Serial command `M0x0` (and `M0x2`): an analog stick used as a gamepad stick goes back to the left stick, as at startup and with the pause menu. Before, after `M0x1L` it stayed on the right stick.
 * Analog stick as keyboard arrows (ESP32): if you keep the stick tilted when leaving pause mode or when a serial command such as `M0` arrives, the arrow stays pressed. Before, it was lost until you brought the stick back to the centre.
 * Gamepad D-pad buttons: if you switch between gamepad and mouse while holding a direction, that direction no longer comes back later by itself when you press another one.
+* Wireless: the dongle could occasionally lose a button release, leaving the button pressed on the computer until the next change. Rarely, the wireless transmission of gun, pedal or dongle could also stop until a restart.
 * Burst fire (serial command `M8x1`): each burst fires exactly three shots, with the set pause between them, and the solenoid always switches off at the end. Before, a fourth shot could start and the solenoid could stay on.
 * Saving from pause mode: if saving fails, you can try again in the same pause. Before, the second try did nothing.
 * Solenoid and rumble: if you press Start or Select while firing, the solenoid switches off and the rumble ends as usual. Before, they could stay on for as long as you held the buttons.
@@ -135,6 +136,7 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 * Comando seriale `M0x0` (e `M0x2`): uno stick analogico usato come stick del gamepad torna sullo stick sinistro, come all'avvio e con il menu di pausa. Prima, dopo `M0x1L`, restava sullo stick destro.
 * Stick analogico come frecce della tastiera (ESP32): se tieni lo stick inclinato uscendo dalla pausa o quando arriva un comando seriale come `M0`, la freccia resta premuta. Prima si perdeva finché non riportavi lo stick al centro.
 * Pulsanti del D-pad del gamepad: se passi tra gamepad e mouse mentre tieni premuta una direzione, quella direzione non ricompare più da sola quando ne premi un'altra.
+* Wireless: il dongle poteva a volte perdere il rilascio di un pulsante, lasciandolo premuto sul computer fino al cambio successivo. Raramente la trasmissione wireless di pistola, pedale o dongle poteva anche fermarsi fino al riavvio.
 * Fuoco a raffica (comando seriale `M8x1`): ogni raffica spara esattamente tre colpi, con la pausa impostata tra uno e l'altro, e il solenoide si spegne sempre alla fine. Prima poteva partire un quarto colpo e il solenoide poteva restare acceso.
 * Salvataggio dalla pausa: se il salvataggio non riesce, puoi riprovare nella stessa pausa. Prima il secondo tentativo non faceva nulla.
 * Solenoide e vibrazione: se premi Start o Select mentre spari, il solenoide si spegne e la vibrazione finisce normalmente. Prima potevano restare accesi finché tenevi premuti i tasti.

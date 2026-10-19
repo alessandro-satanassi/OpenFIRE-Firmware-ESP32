@@ -43,6 +43,7 @@ New to OpenFIRE? Start from [Getting Started](https://github.com/alessandro-sata
 * Serial command `M0x0` (and `M0x2`): an analog stick used as a gamepad stick goes back to the left stick, as at startup.
 * Analog stick as keyboard arrows (ESP32): a tilted stick no longer loses its arrow when leaving pause mode or after a serial command such as `M0`.
 * Gamepad D-pad buttons: if you switch between gamepad and mouse while holding a direction, that direction no longer comes back later by itself when you press another one.
+* Wireless: the dongle no longer occasionally loses a button release, and the wireless transmission no longer rarely stops until a restart.
 * After the first calibration started from the gun on a new board, the gun returns to normal operation once you confirm it. As before, this first calibration is saved automatically; calibrations started from pause mode must be saved separately.
 * Burst fire (serial command `M8x1`): exactly three shots, with the correct pause between them, and the solenoid always off at the end.
 * Saving from pause mode can be retried in the same pause if it fails.
@@ -282,6 +283,7 @@ Non conosci ancora OpenFIRE? Parti dai [Primi passi](https://github.com/alessand
 * Comando seriale `M0x0` (e `M0x2`): uno stick analogico usato come stick del gamepad torna sullo stick sinistro, come all'avvio.
 * Stick analogico come frecce della tastiera (ESP32): lo stick inclinato non perde più la freccia uscendo dalla pausa o dopo un comando seriale come `M0`.
 * Pulsanti del D-pad del gamepad: se passi tra gamepad e mouse mentre tieni premuta una direzione, quella direzione non ricompare più da sola quando ne premi un'altra.
+* Wireless: il dongle non perde più a volte il rilascio di un pulsante, e la trasmissione wireless non si ferma più raramente fino al riavvio.
 * Dopo la prima calibrazione avviata dalla pistola su una scheda nuova, la pistola torna al funzionamento normale appena la confermi. Come in precedenza, questa prima calibrazione viene salvata automaticamente; quelle avviate dalla pausa vanno salvate separatamente.
 * Fuoco a raffica (comando seriale `M8x1`): esattamente tre colpi, con la pausa corretta tra uno e l'altro, e solenoide sempre spento alla fine.
 * Il salvataggio dalla pausa si può ripetere nella stessa pausa se non riesce.
