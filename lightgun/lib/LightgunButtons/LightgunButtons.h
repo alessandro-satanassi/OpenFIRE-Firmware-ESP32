@@ -120,6 +120,9 @@ public:
 
     /// @brief Bit mask of debounced buttons, 1 if pressed.
     uint32_t debounced;
+
+    /// @brief Counts the ReleaseAll() calls, so other code can tell that every report was cleared.
+    uint32_t releaseAllCount = 0;
     
     /// @brief Bit mask of buttons currently debouncing.
     /// @details Buttons can be debouncing after being pressed or released.

@@ -344,6 +344,7 @@ void LightgunButtons::ReleaseAll()
     Keyboard.releaseAll();
     Gamepad16.releaseAll();
     SendReports(true);
+    releaseAllCount++;
 }
 
 uint32_t LightgunButtons::Repeat()

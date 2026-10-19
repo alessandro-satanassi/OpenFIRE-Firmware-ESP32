@@ -1988,7 +1988,13 @@ void AnalogStickPoll()
                 Gamepad16.padUpdate(FW_Common::buttons.PadMaskConvert(newPos)); 
                 break;
 
-            case OF_Const::analogModeKeys:
+            case OF_Const::analogModeKeys: {
+                // After a ReleaseAll() the arrows are no longer pressed: forget the last direction, so the ones still held are pressed again.
+                static uint32_t releaseAllSeen = 0;
+                if(releaseAllSeen != FW_Common::buttons.releaseAllCount) {
+                    releaseAllSeen = FW_Common::buttons.releaseAllCount;
+                    FW_Common::aStickADCLastPos = 0;
+                }
                 if(FW_Common::aStickADCLastPos != newPos) {
                     for(int i = 0; i < 4; ++i) {
                         uint8_t bit = 1 << i;
@@ -2002,7 +2008,7 @@ void AnalogStickPoll()
                         }
                     }
                 }
-                break;
+                break; }
         }
         FW_Common::aStickADCLastPos = newPos;
     }
