@@ -808,7 +808,10 @@ void OF_Serial::SerialHandling()
           // Solenoid "off" command
           } else OF_FFB::SetSolenoid(LOW);
       // solenoid toggle not allowed, just force it off.
-      } else OF_FFB::SetSolenoid(LOW);
+      } else {
+          serialQueue[SerialQueue_Solenoid] = false, serialQueue[SerialQueue_SolPulse] = false;  // Cancel the requests, so they do not resume by themselves when the switch is turned back on.
+          OF_FFB::SetSolenoid(LOW);
+      }
   #endif // USES_SOLENOID
 
   #ifdef USES_RUMBLE
@@ -890,12 +893,14 @@ void OF_Serial::SerialHandling()
                     digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
                 #endif        
       // Rumble disabled, not allowed to be on
-      } else 
+      } else {
+                serialQueue[SerialQueue_Rumble] = false, serialQueue[SerialQueue_RumbPulse] = false;  // Cancel the requests, so they do not resume by themselves when the switch is turned back on.
                 #ifdef ARDUINO_ARCH_ESP32
                     analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0); // [ESP32_PORT] per ESP32
                 #else //rp2040
                     digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
                 #endif  
+      }
   #endif // USES_RUMBLE
 
   #ifdef LED_ENABLE

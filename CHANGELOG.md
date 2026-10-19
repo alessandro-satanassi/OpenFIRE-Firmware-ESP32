@@ -57,6 +57,7 @@ All notable changes to this project will be documented in this file.
 * Trigger: if you turn off the solenoid or rumble hardware switch, MAMEHOOKER starts or you enter pause mode while holding the trigger, the trigger no longer stays pressed on the computer afterwards.
 * Solenoid temperature sensor: when the sensor reads too hot or reports a fault, the solenoid no longer fires at all, single shots and the first shot of a burst included. Before, single shots ignored the temperature. A burst stopped by the temperature also no longer resumes by itself once the solenoid cools down. The same now applies to the MAMEHOOKER solenoid commands: pulses stop at once, and the commands received while too hot are discarded.
 * MAMEHOOKER rumble pulses with custom timings (`R1x0`/`R1x1`): the gun now gives all the requested pulses. Before, it stopped after the first one and ignored the following pulse commands.
+* MAMEHOOKER: if you turn off the solenoid or rumble hardware switch during a game, the effects in progress (on or pulses) are cancelled and no longer resume by themselves when you turn it back on. The next command from the game works normally.
 * Pause mode: if you turn rumble or solenoid on or off after saving, you can save again in the same pause. Before, the second save did nothing.
 * Desktop App, **Button Mapping**: when you change the type of an output (mouse, keyboard, gamepad), the gun gets the output shown. Before, it could get a different one.
 
@@ -136,6 +137,7 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 * Grilletto: se spegni l'interruttore fisico del solenoide o della vibrazione, si avvia MAMEHOOKER o entri in pausa mentre tieni premuto il grilletto, il grilletto non resta più premuto sul computer.
 * Sensore di temperatura del solenoide: quando il sensore rileva una temperatura troppo alta o segnala un guasto, il solenoide non scatta più, compresi i colpi singoli e il primo colpo di una raffica. Prima i colpi singoli ignoravano la temperatura. Inoltre una raffica fermata dalla temperatura non riparte più da sola quando il solenoide si raffredda. Lo stesso vale ora per i comandi del solenoide di MAMEHOOKER: gli impulsi si fermano subito e i comandi ricevuti mentre è troppo caldo vengono scartati.
 * Impulsi di vibrazione MAMEHOOKER con durate personalizzate (`R1x0`/`R1x1`): la pistola ora esegue tutti gli impulsi richiesti. Prima si fermava dopo il primo e ignorava i comandi di impulso successivi.
+* MAMEHOOKER: se spegni l'interruttore fisico del solenoide o della vibrazione durante il gioco, gli effetti in corso (acceso o impulsi) vengono annullati e non ripartono più da soli quando lo riaccendi. Il comando successivo del gioco funziona normalmente.
 * Menu di pausa: se attivi o disattivi rumble o solenoide dopo aver salvato, puoi salvare di nuovo nella stessa pausa. Prima il secondo salvataggio non faceva nulla.
 * App desktop, **Mappatura Pulsanti**: quando cambi il tipo di un'uscita (mouse, tastiera, gamepad), la pistola riceve l'uscita mostrata. Prima poteva riceverne un'altra.
 
