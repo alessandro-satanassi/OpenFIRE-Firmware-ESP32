@@ -292,7 +292,7 @@ La pistola funziona anche con il solo grilletto, ma la maggior parte dei giochi 
 Aggiungi quello che serve alla tua costruzione:
 
 **Interruttori (Pulsanti):**
-Oltre al grilletto il firmware gestisce fino a 13 pulsanti, tutti assegnabili nella WebApp OpenFIRE ESP32 (vedi le immagini dei pinout più sotto per quelli predefiniti); funzionano anche pulsanti e pedali normalmente chiusi (**NC**):
+Oltre al grilletto il firmware gestisce fino a 13 pulsanti, tutti assegnabili nella WebApp OpenFIRE ESP32 (le immagini dei pinout più sotto mostrano le assegnazioni predefinite); funzionano anche pulsanti e pedali normalmente chiusi (**NC**):
 * **Pulsante C:** un pulsante in più oltre ad A e B.
 * **Modulo D-Pad:** un interruttore di navigazione a 5 vie (Su, Giù, Sinistra, Destra, e Centro, usato come pulsante Home che entra in modalità pausa).
 * **Pulsanti di Sistema:** 2 pulsanti per *Start* e *Select*.

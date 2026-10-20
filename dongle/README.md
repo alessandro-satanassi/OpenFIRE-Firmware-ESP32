@@ -231,7 +231,7 @@ Il metodo più veloce, senza nient'altro da installare sul computer.
 
 1. Vai alla pagina delle **[Releases](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases)**.
 2. Scarica lo ZIP "Procedura Semplificata" per il tuo ricevitore e il tuo sistema operativo (es. `OpenFIRE-DONGLE-LILYGO_T_DONGLE_S3-windows-64bit.zip`).
-   > *Assicurati di scegliere il file della tua scheda esatta.*
+   > *Assicurati di scegliere il file per il modello esatto della tua scheda.*
 3. Estrai tutto lo ZIP in una cartella del computer.
 4. Inserisci il dongle nel computer.
 5. Esegui lo script `flash_firmware` (`.bat` su Windows, `.sh` su Linux e macOS) e segui le istruzioni a schermo.
@@ -252,7 +252,7 @@ Il dongle non richiede pulsanti né impostazioni: fa tutto da solo. Quando lo in
 1. **Scelta del canale:** il dongle controlla i canali radio intorno a sé e sceglie quello con meno interferenze (circa 15 secondi; con un display puoi seguire le fasi a schermo).
 2. **Attesa:** poi resta in attesa di una pistola *(con un display vedi un'icona di ricerca o di attesa)*.
 3. **Associazione:** quando accendi la pistola senza il cavo USB, questa si annuncia; il primo dongle libero risponde e i due si associano in modo esclusivo.
-4. **Gioco:** da questo momento il dongle trasforma i dati della pistola in normali comandi di mouse, tastiera e gamepad, e trasporta anche la porta seriale. Il computer gestisce la pistola esattamente come un controller cablato.
+4. **Gioco:** da questo momento il dongle trasforma i dati della pistola in normali comandi di mouse, tastiera e gamepad, e inoltra anche i dati della porta seriale. Il computer gestisce la pistola esattamente come un controller cablato.
 5. **Riconnessione rapida:** se spegni la pistola lasciando il dongle inserito, alla riaccensione si ricollega quasi all'istante.
 
 > [!TIP]

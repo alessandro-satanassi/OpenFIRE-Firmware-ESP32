@@ -192,7 +192,7 @@ Il metodo più veloce, senza nient'altro da installare sul computer.
 
 1. Vai alla pagina delle **[Releases](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases)**.
 2. Scarica lo ZIP "Procedura Semplificata" per la tua scheda e il tuo sistema operativo (es. `OpenFIRE-PEDAL-WAVESHARE_ESP32_S3_ZERO_N8R8-windows-64bit.zip`).
-   > *Assicurati di scegliere il file della tua scheda esatta.*
+   > *Assicurati di scegliere il file per il modello esatto della tua scheda.*
 3. Estrai tutto lo ZIP in una cartella del computer.
 4. Collega la scheda del pedale al computer con un cavo USB.
 5. Esegui lo script `flash_firmware` (`.bat` su Windows, `.sh` su Linux e macOS) e segui le istruzioni a schermo.
@@ -220,7 +220,7 @@ Il pedale non ha un pulsante di associazione: si associa alla pistola durante un
 > **Riavvio del pedale e nuova associazione**
 >
 > Ogni volta che il pedale viene spento e riacceso (o perde l'alimentazione), torna al passo 1 e attende una pistola.
-> *Quindi, dopo aver riavviato il pedale, **spegni e riaccendi anche la pistola**, perché riapra i 10 secondi di ricerca.*
+> *Quindi, dopo aver riavviato il pedale, **spegni e riaccendi anche la pistola**, per avviare una nuova ricerca di 10 secondi.*
 >
 > **Se riavvii il dongle, riavvia anche il pedale e la pistola:** il dongle potrebbe scegliere un canale radio diverso. Attendi che il dongle sia pronto ad associarsi, poi accendi prima il pedale e successivamente la pistola.
 
