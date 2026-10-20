@@ -205,7 +205,7 @@ The gun chooses the connection by itself:
 
 * **USB cable:** if the gun is connected to the computer by a USB data cable when you switch it on, it plays wired and switches the radio off.
 * **Wireless:** without the cable, the gun looks for its dongle and pairs with it automatically; the dongle has already chosen the radio channel with the least interference. If **Wireless pedal** is enabled, the gun then looks for the pedal for 10 seconds. From then on the computer sees the gun exactly as if it were connected by cable.
-* **Fast reconnection:** if you switch only the gun off and on again, it reconnects almost instantly to the dongle and pedal it was paired with, as long as they stayed on. After restarting the dongle or the pedal, restart the gun too.
+* **Fast reconnection:** if you switch only the gun off and on again, it reconnects almost instantly to the dongle and pedal it was paired with, as long as they stayed on. After restarting the dongle, restart the wireless pedal too, if used, and then the gun: the dongle may have selected a different radio channel. If you restart only the pedal, restart the gun too.
 * **Status at a glance:** the gun and dongle displays show icons for the connection type and status; the pedal uses its 4 LEDs.
 
 The [lightgun guide](lightgun/README.md#english-version) describes the startup sequence step by step.
@@ -507,7 +507,7 @@ La pistola sceglie da sola il collegamento:
 
 * **Cavo USB:** se all'accensione la pistola è collegata al computer con un cavo USB dati, gioca via cavo e spegne la radio.
 * **Senza fili:** senza il cavo, la pistola cerca il suo dongle e si associa automaticamente; il dongle ha già scelto il canale radio con meno interferenze. Se **Pedale wireless** è attivo, la pistola cerca poi il pedale per 10 secondi. Da quel momento il computer vede la pistola esattamente come se fosse collegata via cavo.
-* **Riconnessione rapida:** se spegni e riaccendi solo la pistola, si ricollega quasi all'istante al dongle e al pedale a cui era associata, purché siano rimasti accesi. Dopo aver riavviato il dongle o il pedale, riavvia anche la pistola.
+* **Riconnessione rapida:** se spegni e riaccendi solo la pistola, si ricollega quasi all'istante al dongle e al pedale a cui era associata, purché siano rimasti accesi. Dopo aver riavviato il dongle, riavvia anche il pedale wireless, se utilizzato, e poi la pistola: il dongle potrebbe aver scelto un canale radio diverso. Se riavvii soltanto il pedale, riavvia anche la pistola.
 * **Stato a colpo d'occhio:** i display di pistola e dongle mostrano icone per tipo e stato del collegamento; il pedale usa i suoi 4 LED.
 
 La [guida lightgun](lightgun/README.md#versione-italiana) descrive la sequenza di avvio passo per passo.

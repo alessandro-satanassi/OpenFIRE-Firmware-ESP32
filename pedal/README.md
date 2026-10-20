@@ -105,6 +105,8 @@ The pedal has no pairing button: it pairs with the gun during a short window whe
 >
 > Every time the pedal is switched off and on again (or loses power), it goes back to step 1 and waits for a gun.
 > *So after restarting the pedal, **switch the gun off and on again** as well, so that it opens the 10-second search again.*
+>
+> **If you restart the dongle, restart both the pedal and the gun too:** the dongle may select a different radio channel. Wait until the dongle is ready to pair, then switch on the pedal first and the gun afterwards.
 
 ---
 ### Questions or Issues?
@@ -219,6 +221,8 @@ Il pedale non ha un pulsante di associazione: si associa alla pistola durante un
 >
 > Ogni volta che il pedale viene spento e riacceso (o perde l'alimentazione), torna al passo 1 e attende una pistola.
 > *Quindi, dopo aver riavviato il pedale, **spegni e riaccendi anche la pistola**, perché riapra i 10 secondi di ricerca.*
+>
+> **Se riavvii il dongle, riavvia anche il pedale e la pistola:** il dongle potrebbe scegliere un canale radio diverso. Attendi che il dongle sia pronto ad associarsi, poi accendi prima il pedale e successivamente la pistola.
 
 ---
 ### Domande o Problemi?

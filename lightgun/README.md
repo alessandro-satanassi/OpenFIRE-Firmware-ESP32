@@ -192,7 +192,7 @@ Right after pairing with the dongle (with **Wireless pedal** enabled in Gun Sett
 
 ### 4. Fast Reconnection
 If only the gun is switched off and on again (for example when the battery runs low), it first looks for the dongle and pedal it was paired with, and reconnects almost instantly.
-* *Note:* this works only if the dongle and the pedal stayed on in the meantime. If they were restarted, they wait for a new pairing and the gun performs a full search.
+* *Note:* this works only if the dongle and the pedal stayed on in the meantime. After restarting the dongle, restart the wireless pedal too, if used, and then the gun: the dongle may have selected a different radio channel. If you restart only the pedal, restart the gun too.
 
 ### 5. Connection Status (Visual Feedback)
 With an OLED display, an icon at the top shows the connection:
@@ -423,7 +423,7 @@ Subito dopo l'associazione con il dongle (con **Pedale wireless** attivo in **Im
 
 ### 4. Riconnessione Rapida
 Se viene spenta e riaccesa solo la pistola (ad esempio quando la batteria si scarica), cerca per primi il dongle e il pedale a cui era associata e si ricollega quasi all'istante.
-* *Nota:* funziona solo se nel frattempo dongle e pedale sono rimasti accesi. Se sono stati riavviati, attendono una nuova associazione e la pistola esegue una ricerca completa.
+* *Nota:* funziona solo se nel frattempo dongle e pedale sono rimasti accesi. Dopo aver riavviato il dongle, riavvia anche il pedale wireless, se utilizzato, e poi la pistola: il dongle potrebbe aver scelto un canale radio diverso. Se riavvii soltanto il pedale, riavvia anche la pistola.
 
 ### 5. Stato della Connessione (Feedback Visivo)
 Con un display OLED, un'icona in alto indica il collegamento:

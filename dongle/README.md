@@ -126,7 +126,7 @@ The dongle needs no buttons and no setup: it does everything by itself. When you
 > **Dongle restart and new pairing**
 >
 > Every time the dongle is unplugged and plugged in again, it starts over from step 1, ready to pair with any gun (the same one too, with a new pairing).
-> *So after restarting the dongle, **switch the gun off and on again** as well, so that it looks for a dongle again.*
+> *After restarting the dongle, **switch off the gun and the wireless pedal, if used**. Wait until the dongle is ready to pair, then **switch on the pedal first and the gun afterwards**. The dongle may have selected a different radio channel, so the pedal must also start a new pairing.*
 
 ---
 ### Questions or Issues?
@@ -262,7 +262,7 @@ Il dongle non richiede pulsanti né impostazioni: fa tutto da solo. Quando lo in
 > **Riavvio del dongle e nuova associazione**
 >
 > Ogni volta che il dongle viene scollegato e ricollegato, riparte dal passo 1, pronto ad associarsi a qualsiasi pistola (anche la stessa, con una nuova associazione).
-> *Quindi, dopo aver riavviato il dongle, **spegni e riaccendi anche la pistola**, perché torni a cercare un dongle.*
+> *Dopo aver riavviato il dongle, **spegni la pistola e il pedale wireless, se utilizzato**. Attendi che il dongle sia pronto ad associarsi, poi **accendi prima il pedale e successivamente la pistola**. Il dongle potrebbe aver scelto un canale radio diverso, quindi anche il pedale deve iniziare una nuova associazione.*
 
 ---
 ### Domande o Problemi?
