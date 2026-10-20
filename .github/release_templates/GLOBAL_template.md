@@ -268,7 +268,7 @@ Non conosci ancora OpenFIRE? Parti dai [Primi passi](https://github.com/alessand
 * Tieni premuti **Grilletto + A** all'accensione, per circa 2 secondi, per portare in modalità aggiornamento firmware una pistola che esegue già la 7.0.0. Per la prima installazione o un recupero usa i pulsanti BOOT/RESET della scheda. Installa dalla porta USB OTG della pistola, non tramite il dongle.
 * La calibrazione dalla WebApp o dall'App desktop controlla gli emettitori IR a ogni bersaglio: mirino verde quando tutti e quattro sono visti bene, arancione quando uno è debole, rosso (tiro rifiutato) quando ne manca uno, con un riquadro che mostra ogni emettitore, pallini di avanzamento e una legenda.
 * Calibrazione dalla pistola: il cursore descrive un piccolo cerchio su ogni bersaglio, e un display OLED mostra dove si trova il bersaglio, il passo e come confermare.
-* Test della telecamera IR più chiaro: ogni cerchio degli emettitori mostra grandezza e luminosità della macchia di luce vista dalla telecamera; gli emettitori non visti sono segnati con una X rossa e una legenda spiega ogni simbolo.
+* Test della telecamera IR più chiaro: ogni cerchio degli emettitori mostra grandezza e luminosità della macchia di luce vista dalla telecamera; gli emettitori non rilevati sono segnati con una X rossa e una legenda spiega ogni simbolo.
 * Modalità mouse/gamepad salvabile per l'avvio, opzione pedale wireless e navigazione Su/Giù nel menu di pausa.
 * Stick analogico: **Inverti asse X** e **Inverti asse Y** nella scheda Mappatura Pulsanti, per stick collegati o montati al contrario (disattivate di default).
 * Gli interruttori fisici per rumble, solenoide e fuoco rapido ora funzionano nel firmware pronto da scaricare: assegna i loro pin in Layout Scheda.
@@ -350,7 +350,7 @@ Non conosci ancora OpenFIRE? Parti dai [Primi passi](https://github.com/alessand
 ### INSTALLAZIONE
 
 ####  WEB FLASHER (Consigliato per qualsiasi utente)
-Il modo più semplice, veloce e sicuro per installare o aggiornare il firmware. Non richiede l'installazione di driver o software esterni: viene eseguito interamente dal tuo browser.
+Il modo consigliato per installare o aggiornare il firmware. Non richiede l'installazione di driver o software esterni: viene eseguito interamente dal tuo browser.
 * **Requisiti:** PC/Mac con Google Chrome, Microsoft Edge o Opera.
 
 **[AVVIA OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?tag=<TAG>&lang=it)**

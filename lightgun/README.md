@@ -110,7 +110,7 @@ The pictures below show the default pin assignment of each board.
 ## Firmware Installation and Flashing
 
 #### WEB FLASHER (Recommended for all users)
-The easiest, fastest and safest way to install or update the firmware. Nothing to install: it runs in your browser.
+The recommended way to install or update the firmware. Nothing to install: it runs in your browser.
 * **Requirements:** a computer with Google Chrome, Microsoft Edge or Opera. On boards with two USB ports (such as the *ESP32-S3-DevKitC-1*), connect to the **USB OTG** port (labelled **USB**, in front of the RGB LED) using a USB data cable.
 
 **[LAUNCH OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=en)**
@@ -341,7 +341,7 @@ Le immagini qui sotto mostrano l'assegnazione predefinita dei pin di ogni scheda
 ## Installazione e Flashing del Firmware
 
 #### WEB FLASHER (Consigliato per qualsiasi utente)
-Il modo più semplice, veloce e sicuro per installare o aggiornare il firmware. Niente da installare: funziona nel browser.
+Il modo consigliato per installare o aggiornare il firmware. Niente da installare: funziona nel browser.
 * **Requisiti:** un computer con Google Chrome, Microsoft Edge o Opera. Sulle schede con due porte USB (come l'*ESP32-S3-DevKitC-1*), collegati alla porta **USB OTG** (etichettata **USB**, di fronte al LED RGB) con un cavo dati USB.
 
 **[AVVIA OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=it)**

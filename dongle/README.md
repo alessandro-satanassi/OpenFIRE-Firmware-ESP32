@@ -80,7 +80,7 @@ Pinouts of the supported boards for use as a dongle:
 In the Web Flasher choose **Dongle**, your exact board and its flash/PSRAM variant. Use firmware from the same release as the gun (7.0.0). The dongle is programmed through its own USB port; the gun's Trigger + A and B startup shortcuts do not apply to it, so if it does not enter update mode by itself, use its BOOT/RESET buttons.
 
 #### WEB FLASHER (Recommended for all users)
-The easiest, fastest and safest way to install or update the firmware. Nothing to install: it runs in your browser.
+The recommended way to install or update the firmware. Nothing to install: it runs in your browser.
 * **Requirements:** a computer with Google Chrome, Microsoft Edge or Opera.
 
 **[LAUNCH OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=en)**
@@ -216,7 +216,7 @@ Pinout delle schede supportate per l'uso come dongle:
 Nel Web Flasher scegli **Dongle**, la tua scheda esatta e la sua variante flash/PSRAM. Usa firmware della stessa release della pistola (7.0.0). Il dongle si programma tramite la sua porta USB; le scorciatoie all'avvio della pistola (Grilletto + A e B) non valgono per il dongle, quindi se non entra da solo in modalità aggiornamento usa i suoi pulsanti BOOT/RESET.
 
 #### WEB FLASHER (Consigliato per qualsiasi utente)
-Il modo più semplice, veloce e sicuro per installare o aggiornare il firmware. Niente da installare: funziona nel browser.
+Il modo consigliato per installare o aggiornare il firmware. Niente da installare: funziona nel browser.
 * **Requisiti:** un computer con Google Chrome, Microsoft Edge o Opera.
 
 **[AVVIA OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=it)**

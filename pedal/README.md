@@ -61,7 +61,7 @@ Pinouts of the supported boards for use as a pedal:
 In the Web Flasher choose **Pedal**, your exact board and its flash/PSRAM variant. Use firmware from the same release as the gun (7.0.0). The pedal is programmed through its own USB port; the gun's Trigger + A and B startup shortcuts do not apply to it, so if it does not enter update mode by itself, use its BOOT/RESET buttons.
 
 #### WEB FLASHER (Recommended for all users)
-The easiest, fastest and safest way to install or update the firmware. Nothing to install: it runs in your browser.
+The recommended way to install or update the firmware. Nothing to install: it runs in your browser.
 * **Requirements:** a computer with Google Chrome, Microsoft Edge or Opera.
 
 **[LAUNCH OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=en)**
@@ -97,7 +97,7 @@ The pedal has no pairing button: it pairs with the gun during a short window whe
 1. **Pedal on:** as soon as it is powered (battery or power bank), the pedal waits for a gun *(with the 4 LEDs connected, a light runs back and forth, like KITT from Knight Rider)*.
 2. **Search window:** when you switch on the gun, it first connects to the dongle; right after that, with the option above enabled and no wired pedal mapped, it looks for a pedal for about **10 seconds**.
 3. **Pairing:** if the pedal is on and in range during those 10 seconds, the gun finds it, pairs with it exclusively and stops searching *(the LEDs confirm the connection, then LED 1, 2, 3 or 4 stays on, showing the gun's player number)*.
-4. **Play:** from now on every press reaches the gun instantly, and the gun sends it to the computer together with the trigger and the aim. The two pedal inputs work like the gun's **Pedal** and **Alt Pedal** buttons: mouse button 4 and mouse button 5 by default, remappable in the WebApp's **Button Mapping** tab.
+4. **Play:** the gun receives each pedal press and forwards it to the computer together with the trigger and the aim. The two pedal inputs work like the gun's **Pedal** and **Alt Pedal** buttons: mouse button 4 and mouse button 5 by default, remappable in the WebApp's **Button Mapping** tab.
 5. **Fast reconnection:** if you switch the gun off while the pedal and the dongle stay on, the pedal reconnects almost instantly when you switch the gun back on, without the 10-second search.
 
 > [!IMPORTANT]
@@ -177,7 +177,7 @@ Pinout delle schede supportate per l'uso come pedale:
 Nel Web Flasher scegli **Pedal**, la tua scheda esatta e la sua variante flash/PSRAM. Usa firmware della stessa release della pistola (7.0.0). Il pedale si programma tramite la sua porta USB; le scorciatoie all'avvio della pistola (Grilletto + A e B) non valgono per il pedale, quindi se non entra da solo in modalità aggiornamento usa i suoi pulsanti BOOT/RESET.
 
 #### WEB FLASHER (Consigliato per qualsiasi utente)
-Il modo più semplice, veloce e sicuro per installare o aggiornare il firmware. Niente da installare: funziona nel browser.
+Il modo consigliato per installare o aggiornare il firmware. Niente da installare: funziona nel browser.
 * **Requisiti:** un computer con Google Chrome, Microsoft Edge o Opera.
 
 **[AVVIA OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=it)**
@@ -213,7 +213,7 @@ Il pedale non ha un pulsante di associazione: si associa alla pistola durante un
 1. **Pedale acceso:** appena riceve alimentazione (batteria o power bank), il pedale attende una pistola *(con i 4 LED collegati, una luce scorre avanti e indietro, come KITT di Supercar)*.
 2. **Finestra di ricerca:** quando accendi la pistola, questa si collega prima al dongle; subito dopo, con l'opzione sopra attiva e nessun pedale cablato assegnato, cerca un pedale per circa **10 secondi**.
 3. **Associazione:** se il pedale è acceso e a portata durante quei 10 secondi, la pistola lo trova, vi si associa in modo esclusivo e smette di cercare *(i LED confermano la connessione, poi resta acceso il LED 1, 2, 3 o 4, che indica il numero del giocatore della pistola)*.
-4. **Gioco:** da questo momento ogni pressione arriva all'istante alla pistola, che la invia al computer insieme al grilletto e alla mira. I due ingressi del pedale funzionano come i pulsanti **Pedale** e **Pedale alternativo** della pistola: per impostazione predefinita tasto mouse 4 e tasto mouse 5, rimappabili nella scheda **Mappatura Pulsanti** della WebApp.
+4. **Gioco:** da questo momento la pistola riceve ogni pressione del pedale e la invia al computer insieme al grilletto e alla mira. I due ingressi del pedale funzionano come i pulsanti **Pedale** e **Pedale alternativo** della pistola: per impostazione predefinita tasto mouse 4 e tasto mouse 5, rimappabili nella scheda **Mappatura Pulsanti** della WebApp.
 5. **Riconnessione rapida:** se spegni la pistola mentre pedale e dongle restano accesi, alla riaccensione della pistola il pedale si ricollega quasi all'istante, senza i 10 secondi di ricerca.
 
 > [!IMPORTANT]

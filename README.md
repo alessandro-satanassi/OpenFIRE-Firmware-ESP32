@@ -104,6 +104,8 @@ New to OpenFIRE? Here is what you need and the steps to follow; each step links 
 7. **Test** the buttons in **Gun Tests** and the camera with **Open IR Camera Tester...** ([test mode](lightgun/src/README.md#test-mode)).
 8. **Play** with the USB cable, or wirelessly: plug in the [dongle](dongle/README.md#english-version) and wait about 15 seconds, switch on the [wireless pedal](pedal/README.md#english-version) if you use one, then switch on the gun. [Your First Game](lightgun/src/README.md#your-first-game) explains how to leave configuration and set up the game's inputs. For two to four players, see [several guns](lightgun/src/README.md#multiple-guns-and-multiplayer).
 
+For a first test after calibration, try [OpenFIRE ShootingGallery](https://alessandro-satanassi.itch.io/openfire-shootinggallery), a mini-game created for testing your lightgun, playable online or available to download for Windows, Linux and macOS.
+
 If something does not work, see [Common Problems](lightgun/src/README.md#common-problems). The [operational manual](lightgun/src/README.md#english-version) explains buttons, pause mode and profiles.
 
 ## What's New in 7.0.0
@@ -192,7 +194,7 @@ For wireless play the pedal talks to the lightgun, and the lightgun to the dongl
 
 ## Quick Installation (Web Flasher)
 
-The easiest, fastest and safest way to install or update the firmware of any module (Lightgun, Dongle or Pedal) is the Web Flasher. No drivers and no programs: everything runs in your browser.
+The recommended way to install or update the firmware of any module (Lightgun, Dongle or Pedal) is the Web Flasher. No drivers and no programs: everything runs in your browser.
 
 * **Requirements:** a computer with Google Chrome, Microsoft Edge or Opera.
 
@@ -393,7 +395,7 @@ Non conosci ancora OpenFIRE? Ecco cosa ti serve e i passi da seguire; ogni passo
 
 **Cosa ti serve:** una lightgun basata su una scheda ESP32-S3, con una telecamera IR, quattro emettitori IR e i pulsanti. Per giocare senza fili servono anche un [dongle](dongle/README.md#versione-italiana) collegato al computer e una batteria nella pistola; il [pedale wireless](pedal/README.md#versione-italiana) è facoltativo.
 
-**Quanto è impegnativo?** Puoi seguire il progetto completo [PICON-AS](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/), con scocca da stampare in 3D, schemi di cablaggio e batteria ricaricabile, oppure costruire la tua pistola su una scheda di sviluppo ESP32-S3: bastano saldature e cablaggi di base. Per il dongle, una chiavetta USB già pronta come la LILYGO T-Dongle-S3 richiede solo l'installazione del firmware, senza saldature ([guida dongle](dongle/README.md#versione-italiana)).
+**Quanto è impegnativo?** Puoi seguire il progetto completo [PICON-AS](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/), con scocca da stampare in 3D, schemi di cablaggio e batteria ricaricabile, oppure costruire la tua pistola su una scheda di sviluppo ESP32-S3: bastano conoscenze di base di saldatura e cablaggio. Per il dongle, una chiavetta USB già pronta come la LILYGO T-Dongle-S3 richiede solo l'installazione del firmware, senza saldature ([guida dongle](dongle/README.md#versione-italiana)).
 
 **Due strumenti web, due compiti:** il Web Flasher installa o aggiorna il firmware di ogni dispositivo, mentre la WebApp configura e prova la lightgun. Usa prima il Web Flasher, poi la WebApp; entrambi sono raccolti anche nel [portale del progetto](https://alessandro-satanassi.github.io/OpenFIRE-ESP32/?lang=it).
 
@@ -406,6 +408,8 @@ Non conosci ancora OpenFIRE? Ecco cosa ti serve e i passi da seguire; ogni passo
 7. **Prova** i pulsanti in **Gun Tests** e la telecamera con **Apri Tester telecamera IR...** ([modalità di test](lightgun/src/README.md#modalità-di-test-italiano)).
 8. **Gioca** con il cavo USB, oppure senza fili: inserisci il [dongle](dongle/README.md#versione-italiana) e attendi circa 15 secondi, accendi il [pedale wireless](pedal/README.md#versione-italiana) se lo usi, poi accendi la pistola. [La prima partita](lightgun/src/README.md#la-prima-partita) spiega come uscire dalla configurazione e impostare i comandi del gioco. Per giocare in due, tre o quattro, vedi [più pistole](lightgun/src/README.md#modifica-dell-id-usb-per-pistole-multiple-italiano).
 
+Per una prima prova dopo la calibrazione, usa [OpenFIRE ShootingGallery](https://alessandro-satanassi.itch.io/openfire-shootinggallery), un mini-gioco creato per provare la lightgun, giocabile online oppure scaricabile per Windows, Linux e macOS.
+
 Se qualcosa non funziona, consulta [Problemi comuni](lightgun/src/README.md#problemi-comuni-italiano). Il [manuale operativo](lightgun/src/README.md#versione-italiana) spiega pulsanti, modalità pausa e profili.
 
 ## Novità della versione 7.0.0
@@ -416,12 +420,12 @@ La versione 7.0.0 introduce la **[WebApp OpenFIRE ESP32](https://alessandro-sata
   <img src="lightgun/docs/img/webapp_board_layout.png" alt="WebApp OpenFIRE ESP32, scheda Layout Scheda" width="80%">
 </p>
 
-* **Tre modelli di telecamera in un solo firmware:** DFRobot SEN0158 / Wii Cam, PixArt PAJ7025R2 e PAJ7025R3 grandangolare. Scegli la tua nella WebApp: nessun firmware diverso per ogni telecamera. Il firmware corregge anche la distorsione dell'ottica grandangolare della R3.
+* **Tre modelli di telecamera in un solo firmware:** DFRobot SEN0158 / Wii Cam, PixArt PAJ7025R2 e PAJ7025R3 grandangolare. Scegli la tua nella WebApp: non serve un firmware diverso per ogni telecamera. Il firmware corregge anche la distorsione dell'ottica grandangolare della R3.
 * **Configurazione online oppure offline:** usa la WebApp online tramite il cavo USB o il dongle associato, oppure tieni premuto **B all'accensione per circa 2 secondi** per avviare la WebApp contenuta nella lightgun, raggiungibile via Wi-Fi o rete USB, anche da telefono.
 * **Aggiornamento firmware senza aprire la pistola:** su una lightgun che esegue già la 7.0.0, tieni premuti **Grilletto + A all'accensione per circa 2 secondi**, poi collega al computer la sua porta USB OTG e usa il Web Flasher.
 * **Un solo file firmware per scheda:** aggiornamento normale e installazione pulita usano lo stesso file; l'installazione pulita cancella tutte le impostazioni e le calibrazioni.
 * **Layout Square con LED agli angoli dello schermo:** oltre al rettangolo verticale consigliato, ora è supportato anche un rettangolo più largo con i LED agli angoli dello schermo. Calibra di nuovo dopo aver cambiato la disposizione degli emettitori.
-* **Test della telecamera IR più chiaro:** ogni cerchio degli emettitori mostra grandezza e luminosità della macchia di luce vista dalla telecamera, gli emettitori non visti sono segnati con una X rossa e una legenda spiega ogni simbolo. Verificare la posizione dei LED e la sensibilità della telecamera diventa molto più semplice.
+* **Test della telecamera IR più chiaro:** ogni cerchio degli emettitori mostra grandezza e luminosità della macchia di luce vista dalla telecamera, gli emettitori non rilevati sono segnati con una X rossa e una legenda spiega ogni simbolo. Verificare la posizione dei LED e la sensibilità della telecamera diventa molto più semplice.
 * **Calibrazione che controlla gli emettitori:** nella WebApp e nell'App desktop il mirino è verde quando la telecamera vede bene tutti e quattro gli emettitori, arancione quando uno è debole e rosso quando ne manca uno; un riquadro mostra ogni emettitore e i tiri sui bersagli vengono rifiutati finché non sono visibili tutti e quattro gli emettitori. I pallini indicano l'avanzamento tra i bersagli e un breve lampo bianco sul mirino conferma ogni tiro accettato.
 * **Calibrazione dalla pistola più semplice:** il cursore descrive un piccolo cerchio su ogni bersaglio, e un display OLED mostra dove si trova il bersaglio e a che punto sei.
 * **Modalità di uscita dal menu di pausa:** passa da mouse assoluto a gamepad (mira sullo stick destro o sinistro) mentre giochi, senza comandi seriali: **Output Mode** nel Menu di Pausa Semplificato, oppure Select + Su / Select + Giù nella pausa Hotkey. Il cambio dura fino allo spegnimento; la modalità all'avvio si imposta nella WebApp.
@@ -469,7 +473,7 @@ Per la costruzione più semplice si consigliano queste schede:
 
 **Qualsiasi scheda standard, qualsiasi ruolo:** a parte le chiavette USB (LILYGO T-Dongle, Pocket Dongle), fatte per essere inserite nel computer come ricevitori, una DevKitC-1, una PICO o una ZERO si possono usare per la lightgun, per il pedale o anche per un dongle autocostruito con un cavo USB. La guida di ogni modulo mostra i collegamenti.
 
-> *Schede RP2040: il codice si compila ancora per le schede RP2040 originali, ma solo per il gioco via cavo USB. Lo sviluppo e tutte le funzionalità wireless sono concentrati sull'ESP32-S3.*
+> *Schede RP2040: il firmware può ancora essere compilato per le schede RP2040 originali, ma solo per il gioco via cavo USB. Lo sviluppo e tutte le funzionalità wireless sono concentrati sull'ESP32-S3.*
 
 ## Architettura del Sistema
 Il progetto è composto da tre parti, ognuna con la sua guida:
@@ -494,7 +498,7 @@ Nel gioco senza fili il pedale comunica con la lightgun e la lightgun con il don
 
 ## Installazione Rapida (Web Flasher)
 
-Il modo più semplice, veloce e sicuro per installare o aggiornare il firmware di qualsiasi modulo (Lightgun, Dongle o Pedale) è il Web Flasher. Niente driver e niente programmi: funziona tutto nel browser.
+Il modo consigliato per installare o aggiornare il firmware di qualsiasi modulo (Lightgun, Dongle o Pedale) è il Web Flasher. Niente driver e niente programmi: funziona tutto nel browser.
 
 * **Requisiti:** un computer con Google Chrome, Microsoft Edge o Opera.
 

@@ -41,7 +41,7 @@ This manual takes you from a freshly flashed gun to your first game: placing the
 
 ## IR Emitter Setup
 
-The gun aims by watching four infrared emitters placed around the screen. They can be arranged in two ways:
+The gun tracks its aim using four infrared emitters placed around the screen. They can be arranged in two ways:
 
  - **Square / rectangular layout (recommended):** two LEDs at the top and two at the bottom of the display, aligned in two columns. The best arrangement uses two pairs centred on the top and bottom edges, forming a vertical rectangle (narrower than it is tall), as shown by the alignment assistant. A wider rectangle with the four LEDs at the screen corners also works. Avoid a perfect square.
  - **Diamond layout:** one LED at the centre of each side of the display (top, bottom, left and right), not at the corners.
@@ -100,7 +100,7 @@ While a configuration page is connected, the gun is in configuration mode and do
 
 Switch on the gun holding **B** for about 2 seconds (see [Special boot modes](#special-boot-modes)). No Internet connection and nothing to download.
 
-- **Wi-Fi, phones included:** join the **OpenFIRE_Config** network. If a welcome page appears, choose to stay connected even without Internet (on some Android phones, the menu option to use the network as it is). Then open your **normal browser**, not the welcome window, and go to **http://openfire.local/**, or to **http://192.168.4.1/** if the name does not open.
+- **Wi-Fi, phones included:** join the **OpenFIRE_Config** network. If a welcome page appears, choose to stay connected even without Internet (on some Android phones, the menu option to use the network as it is). Then open your **normal browser**, not the welcome window, and go to **http://openfire.local/**, or to **http://192.168.4.1/** if that address does not work.
 - **USB cable:** on a computer that supports USB networking (NCM), connect the gun directly and open **http://192.168.7.1/** (**http://openfire.local/** may also work). Wi-Fi is not needed.
 - **Battery-powered gun:** keep the dongle plugged in and paired: without a USB cable, the gun completes its startup, and turns on the **OpenFIRE_Config** network, only after connecting to the dongle. No USB cable is needed to configure it over Wi-Fi. Connecting the WebApp puts the gun in configuration mode: normal play is suspended until you disconnect.
 - **Serial port:** in this mode the gun's USB serial port is replaced by the network connection. Online configuration and serial programs such as MAMEHOOKER are not available on the gun's USB port until you restart the gun normally. The dongle keeps its serial port, but do not use it with another program while the WebApp is connected to the gun.
@@ -114,7 +114,7 @@ Use one configuration page at a time. When you have finished, save, close the pa
 Buttons, pedals and switches are normally open: they connect their pin to GND when pressed or on. A **normally closed** device, such as the loader switch of the Blamcon Vyper, does the opposite. To use one, in **Board Layout** of the WebApp or the desktop App:
 
 1. Tick **Use Custom Pins**.
-2. Turn on **View > Show Unsafe Settings**, then tick **Edit NC Inputs**: it shows the **NC** boxes next to the pins. When it is off, the inverted pins only show the word **NC**. It is not saved and goes off at every connection and when **Show Unsafe Settings** is turned off, so the inversions cannot be changed by mistake. Turning it off does not clear the inversions already set.
+2. Turn on **View > Show Unsafe Settings**, then tick **Edit NC Inputs** to show the **NC** boxes next to the pins. When this option is disabled, inverted pins only show the label **NC**. The option is not saved: it is disabled whenever you connect or turn off **Show Unsafe Settings**, to prevent accidental changes. Existing inversions are kept.
 3. Tick **NC** next to the input, then **Save and Send Settings**.
 
 The **NC** box appears only for buttons, pedals wired to the gun (not the wireless pedal) and the Rumble, Solenoid and Autofire switches. The inversion belongs to the function, so it follows it if you move it to another pin. If you take the function off its pin, its NC box is cleared. With the board's default layout (Use Custom Pins off) no input is inverted. The inversion also applies to the startup shortcuts (Trigger + A, B).
@@ -127,7 +127,7 @@ With **Use Custom Pins** ticked, **User Layouts → Export Custom Layout...** in
 
 A file that cannot be used is refused and nothing is changed: **Board Doesn't Match** usually means it was made for another board, **File Read Error** that it is damaged or incomplete.
 
-**Coming from 6.2.1:** version 7.0.0 stores layouts in a new, sturdier format, so layout files exported with 6.2.1 cannot be imported (**File Read Error**). Note your pins before updating, set them again in **Board Layout**, then export a new file.
+**Coming from 6.2.1:** version 7.0.0 stores layouts in a new file format, so layout files exported with 6.2.1 cannot be imported (**File Read Error**). Note your pins before updating, set them again in **Board Layout**, then export a new file.
 
 <a id="special-boot-modes"></a>
 
@@ -180,6 +180,12 @@ For a first test, use one gun with the default **Absolute Mouse** output:
 2. Aim at the desktop to check that the pointer follows your aim, then open your game or emulator.
 3. In the game's input settings, enable mouse/lightgun input and select the gun as Player 1's aiming device, if the game offers a device selector. Map the trigger to fire and A/B to reload or the actions the game needs. By default they send the left, right and middle mouse buttons respectively; see [Default Buttons](#default-buttons).
 4. Test aiming and the buttons in the game. Some games have their own calibration or require a particular input mode: follow their instructions. If aiming works on the desktop but not in the game, check the game's input settings before repeating the gun's calibration.
+
+**Try your gun with OpenFIRE ShootingGallery**
+
+After configuring and calibrating your gun, save the settings and close the WebApp. Try **OpenFIRE ShootingGallery**, an arcade mini-game created specifically to test aiming and shooting. Use **Absolute Mouse** mode: with the default button mappings, the trigger fires and A reloads.
+
+[Play online or download for Windows, Linux and macOS](https://alessandro-satanassi.itch.io/openfire-shootinggallery) · [Watch the demo](https://youtu.be/WzNxs4hhthE)
 
 You do not need MAMEHOOKER just to aim and shoot. Set up [game-driven force feedback](#serial-handoff-mame-hooker-mode) afterwards, if you want the recoil, lights and counters to follow the game. For more than one gun, see [Multiple Guns and Multiplayer](#multiple-guns-and-multiplayer).
 
@@ -361,7 +367,7 @@ When MAMEHOOKER, or a similar program, sends its start code, the gun hands contr
 If you are new to MAMEHOOKER: **you need a compatible ini file for each game**, and **the gun's COM port must match the player number** (COM1 for P1, COM2 for P2, etc.). Set the COM port in the Windows Device Manager, or on Linux in the Wine registry of the prefix where the game and MAMEHOOKER run. Windows keeps the same COM port for the same gun, even through another USB port or its dongle. [The MAMEHOOKER wiki page explains everything step by step.](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/wiki/MAMEHOOKER_Documentation_EN) On Linux, to use the force feedback of native emulators (currently MAME, Flycast or their RetroArch cores), try [QMamehook](https://github.com/SeongGino/QMamehook).
 
 ### Multiple Guns and Multiplayer
-To play with two or more guns on the same computer, each gun must have its own identity. If several guns share the same name and/or USB Product/Vendor ID, programs that read each mouse separately, such as RetroArch and TeknoParrot, cannot tell them apart.
+To play with several guns on the same computer, assign each one a different player number in the WebApp: P1, P2, P3 or P4. This sets a different Product ID for each gun so programs such as RetroArch and TeknoParrot can distinguish them. You do not need to change the Vendor ID.
 
 1. Connect one gun at a time to the WebApp and open **Gun Settings → TinyUSB Identifier**.
 2. Choose the player with the **P1**–**P4** buttons: **P1** for the first gun, **P2** for the second, and so on. After a clean installation every gun is **P1**. **Advanced View** lets you enter a custom Product ID and name instead.
@@ -426,12 +432,12 @@ Questo manuale ti accompagna da una pistola con il firmware appena installato al
 
 ## Configurazione Emettitori IR
 
-La pistola punta osservando quattro emettitori a infrarossi posizionati intorno allo schermo. Si possono disporre in due modi:
+La pistola rileva il puntamento osservando quattro emettitori a infrarossi posizionati intorno allo schermo. Si possono disporre in due modi:
 
  - **Layout Square / rettangolare (consigliato):** due LED sopra e due sotto lo schermo, allineati su due colonne. La disposizione migliore usa due coppie centrate sui bordi superiore e inferiore, che formano un rettangolo verticale (più alto che largo), come mostra l'assistente di allineamento. Funziona anche un rettangolo più largo con i quattro LED agli angoli dello schermo. Evita un quadrato perfetto.
  - **Layout Diamond / a rombo:** un LED al centro di ciascun lato dello schermo (alto, basso, sinistra e destra), non agli angoli.
 
-**Se sposti gli emettitori Square agli angoli dello schermo:** mantieni **Quadrato** (Square) selezionato nel profilo, calibra di nuovo e salva. Non c'è un'impostazione separata per il rettangolo verticale o largo: la pistola lo ricava dalla calibrazione.
+**Se sposti gli emettitori Square agli angoli dello schermo:** mantieni **Quadrato** (Square) selezionato nel profilo, calibra di nuovo e salva. Non serve scegliere tra rettangolo verticale e orizzontale: la disposizione viene riconosciuta durante la calibrazione.
 
 Usa **emettitori IR da 940 nm per DFRobot/Wii** e **da 850 nm per PAJ7025R2/R3**. La lunghezza d'onda deve corrispondere alla telecamera: aumentare la sensibilità non rimedia a LED sbagliati o a un posizionamento scorretto.
 
@@ -487,7 +493,7 @@ Mentre una pagina di configurazione è collegata, la pistola è in modalità con
 
 Accendi la pistola tenendo premuto **B** per circa 2 secondi (vedi [Modalità speciali all'avvio](#modalita-speciali-allavvio)). Niente Internet e niente da scaricare.
 
-- **Wi-Fi, anche da telefono:** collegati alla rete **OpenFIRE_Config**. Se compare una pagina di benvenuto, scegli di restare connesso anche senza Internet (su alcuni Android: la voce del menu per usare la rete così com'è). Poi apri il **browser normale**, non la finestra di benvenuto, e vai su **http://openfire.local/**, oppure su **http://192.168.4.1/** se il nome non si apre.
+- **Wi-Fi, anche da telefono:** collegati alla rete **OpenFIRE_Config**. Se compare una pagina di benvenuto, scegli di restare connesso anche senza Internet (su alcuni Android: la voce del menu per usare la rete così com'è). Poi apri il **browser normale**, non la finestra di benvenuto, e vai su **http://openfire.local/**, oppure su **http://192.168.4.1/** se questo indirizzo non funziona.
 - **Cavo USB:** su un computer che supporta la rete via USB (NCM), collega direttamente la pistola e apri **http://192.168.7.1/** (può funzionare anche **http://openfire.local/**). Il Wi-Fi non serve.
 - **Pistola a batteria:** tieni il dongle inserito e associato: senza cavo USB la pistola completa l'avvio, e attiva la rete **OpenFIRE_Config**, solo dopo essersi collegata al dongle. Per configurarla via Wi-Fi non serve il cavo USB. Quando colleghi la WebApp la pistola entra in modalità configurazione: il gioco normale è sospeso fino alla disconnessione.
 - **Porta seriale:** in questa modalità la porta seriale USB della pistola è sostituita dal collegamento di rete. La configurazione online e i programmi seriali come MAMEHOOKER non sono disponibili sulla porta USB della pistola finché non la riavvii normalmente. Il dongle mantiene la propria porta seriale, ma non usarla con un altro programma mentre la WebApp è collegata alla pistola.
@@ -501,10 +507,10 @@ Usa una sola pagina di configurazione alla volta. Al termine salva, chiudi la pa
 Pulsanti, pedali e interruttori sono normalmente aperti: collegano il loro pin a GND quando sono premuti o accesi. Un dispositivo **normalmente chiuso**, come l'interruttore del caricatore della Blamcon Vyper, fa il contrario. Per usarlo, in **Layout Scheda** della WebApp o dell'App desktop:
 
 1. Spunta **Usa pin personalizzati**.
-2. Attiva **Visualizza > Mostra Impostazioni Non Sicure**, poi spunta **Modifica ingressi NC**: fa comparire le caselle **NC** accanto ai pin. Quando è spenta, sui pin invertiti compare solo la scritta **NC**. Non viene salvata e si spegne a ogni connessione e quando spegni **Mostra Impostazioni Non Sicure**, così le inversioni non si possono cambiare per errore. Spegnerla non cancella le inversioni già impostate.
+2. Attiva **Visualizza > Mostra Impostazioni Non Sicure**, poi spunta **Modifica ingressi NC** per mostrare le caselle **NC** accanto ai pin. Quando questa opzione è disattivata, sui pin invertiti compare solo la scritta **NC**. L'opzione non viene salvata: si disattiva a ogni connessione e quando disattivi **Mostra Impostazioni Non Sicure**, per evitare modifiche accidentali. Le inversioni già impostate vengono mantenute.
 3. Spunta **NC** accanto all'ingresso, poi **Salva e invia impostazioni**.
 
-La casella **NC** compare solo per pulsanti, pedali collegati alla pistola (non il pedale wireless) e gli interruttori Rumble, Solenoide e Autofire. L'inversione appartiene alla funzione, quindi la segue se la sposti su un altro pin. Se togli la funzione dal pin, la casella NC si azzera. Con il layout predefinito della scheda (Usa pin personalizzati spento) nessun ingresso è invertito. L'inversione vale anche per le scorciatoie all'avvio (Grilletto + A, B).
+La casella **NC** compare solo per pulsanti, pedali collegati alla pistola (non il pedale wireless) e gli interruttori Rumble, Solenoide e Autofire. L'inversione appartiene alla funzione, quindi la segue se la sposti su un altro pin. Se togli la funzione dal pin, la casella NC viene deselezionata. Con il layout predefinito della scheda (Usa pin personalizzati disattivato) nessun ingresso è invertito. L'inversione vale anche per le scorciatoie all'avvio (Grilletto + A, B).
 
 <a id="salvare-il-layout-dei-pin-in-un-file"></a>
 
@@ -557,7 +563,7 @@ Se la telecamera non è disponibile (ad esempio perché è selezionato il modell
 ## Manuale Operativo
 La pistola funziona come un mouse a posizionamento assoluto: dove miri, va il puntatore. Con l'impostazione **Modalità all'avvio** puoi scegliere invece un'uscita gamepad, e un programma di force feedback come MAMEHOOKER può cambiarla durante il gioco (vedi [Modalità Serial Handoff](#modalità-serial-handoff-mame-hooker-italiano)). Puoi cambiarla anche dalla modalità pausa, fino allo spegnimento.
 
-**Come il computer vede la pistola:** la pistola, o il suo dongle, viene riconosciuta come normali dispositivi USB (un mouse a posizionamento assoluto, una tastiera e un gamepad): non servono driver e giochi ed emulatori la usano come un qualsiasi mouse o controller. La posizione viene aggiornata 209 volte al secondo, circa ogni 4,8 ms, sia via USB sia senza fili. Per far seguire a solenoide, rumble, LED e contatori dell'OLED quello che accade nel gioco serve anche un programma di force feedback come MAMEHOOKER; senza, il force feedback reagisce solo al grilletto.
+**Come il computer vede la pistola:** il computer riconosce la pistola, collegata direttamente o tramite dongle, come mouse a posizionamento assoluto, tastiera e gamepad USB: non servono driver; giochi ed emulatori la usano come un qualsiasi mouse o controller. La posizione viene aggiornata 209 volte al secondo, circa ogni 4,8 ms, sia via USB sia senza fili. Per far reagire solenoide, rumble, LED e contatori dell'OLED agli eventi del gioco serve anche un programma di force feedback come MAMEHOOKER. Senza questo programma, il force feedback reagisce solo al grilletto.
 
 I pulsanti in modalità pausa, e la combinazione per entrarci, agiscono quando rilasci l'ultimo pulsante della combinazione: così la pistola distingue una combinazione da una pressione singola.
 
@@ -571,6 +577,12 @@ Per una prima prova usa una sola pistola con l'uscita predefinita **Mouse Assolu
 2. Mira sul desktop per controllare che il puntatore segua la tua mira, poi apri il gioco o l'emulatore.
 3. Nelle impostazioni dei comandi del gioco abilita l'ingresso mouse/lightgun e seleziona la pistola per il puntamento del giocatore 1, se il gioco permette di scegliere il dispositivo. Associa il grilletto allo sparo e A/B alla ricarica o alle azioni richieste dal gioco. Per impostazione predefinita inviano rispettivamente i pulsanti sinistro, destro e centrale del mouse; vedi [Pulsanti Predefiniti](#pulsanti-predefiniti-italiano).
 4. Prova puntamento e pulsanti nel gioco. Alcuni giochi hanno una propria calibrazione o richiedono una particolare modalità di ingresso: segui le loro istruzioni. Se il puntamento funziona sul desktop ma non nel gioco, controlla i comandi del gioco prima di ripetere la calibrazione della pistola.
+
+**Prova la pistola con OpenFIRE ShootingGallery**
+
+Dopo aver configurato e calibrato la pistola, salva le impostazioni e chiudi la WebApp. Puoi provarla con **OpenFIRE ShootingGallery**, un mini-gioco arcade creato appositamente per verificare il puntamento e lo sparo. Usa la modalità **Mouse assoluto**: con i pulsanti predefiniti, il grilletto spara e A ricarica.
+
+[Gioca online o scarica il gioco per Windows, Linux e macOS](https://alessandro-satanassi.itch.io/openfire-shootinggallery) · [Guarda la demo](https://youtu.be/WzNxs4hhthE)
 
 Per mirare e sparare non serve MAMEHOOKER. Puoi configurare in seguito il [force feedback comandato dal gioco](#modalità-serial-handoff-mame-hooker-italiano), se vuoi che rinculo, luci e contatori seguano la partita. Per più pistole vedi [Più pistole e multigiocatore](#modifica-dell-id-usb-per-pistole-multiple-italiano).
 
@@ -657,13 +669,13 @@ Puoi calibrare dalla WebApp (o dall'App desktop), che ti guida e controlla gli e
 
 Apri la scheda *Profili di calibrazione* e fai clic sul pulsante *Calibra profilo* del profilo che vuoi. Una finestra a schermo intero mostra sei bersagli uno dopo l'altro: centro, bordo superiore, bordo inferiore, bordo sinistro, bordo destro e di nuovo centro. Spara a ogni bersaglio con il grilletto.
 
-- **Colore del mirino:** verde quando la telecamera vede bene tutti e quattro gli emettitori, il momento migliore per sparare; arancione quando un emettitore è debole (il tiro viene accettato, ma un emettitore più luminoso dà una mira più stabile); rosso quando un emettitore non è visto.
+- **Colore del mirino:** verde quando la telecamera vede bene tutti e quattro gli emettitori, il momento migliore per sparare; arancione quando un emettitore è debole (il tiro viene accettato, ma un emettitore più luminoso dà una mira più stabile); rosso quando un emettitore non viene rilevato.
 - **Tiri rifiutati:** finché il mirino è rosso il tiro viene rifiutato e la finestra spiega il motivo. Riporta in vista l'emettitore mancante (allontanati se ai bordi dello schermo esce dalla vista), oppure controlla l'emettitore, la distanza e la [sensibilità della telecamera](#sensibilità-della-telecamera-ir-italiano), poi spara di nuovo.
-- **Riquadro LED IR**, in basso a destra: i quattro emettitori nella loro disposizione (Square o Diamond), ognuno con la stessa scala di colori del mirino; il mirino prende il colore del più debole. Un emettitore non visto è un cerchio rosso tratteggiato con una X rossa.
+- **Riquadro LED IR**, in basso a destra: i quattro emettitori nella loro disposizione (Square o Diamond), ognuno con la stessa scala di colori del mirino; il mirino prende il colore del più debole. Un emettitore non rilevato è un cerchio rosso tratteggiato con una X rossa.
 - **Avanzamento:** sei pallini sopra il titolo indicano a quale bersaglio sei. Un breve lampo bianco sul mirino conferma il tiro accettato; poi la finestra passa alla fase successiva. In questo momento la calibrazione non è ancora salvata.
 - **Legenda**, in basso a sinistra: spiega l'intensità del segnale, la dimensione dei punti IR e il simbolo di emettitore non rilevato.
 
-Dopo l'ultimo bersaglio la finestra passa alla verifica del puntamento: mira in giro per lo schermo, soprattutto ai bordi e agli angoli, e controlla che il puntatore resti sulla tua linea di mira. Premi il grilletto per accettare, A o B per ripetere la calibrazione, oppure C per uscire senza modifiche (nella WebApp funziona anche il tasto ESC della tastiera). Poi **salva**.
+Dopo l'ultimo bersaglio la finestra passa alla verifica del puntamento: mira in vari punti dello schermo, soprattutto ai bordi e agli angoli, e controlla che il puntatore resti sulla tua linea di mira. Premi il grilletto per accettare, A o B per ripetere la calibrazione, oppure C per uscire senza modifiche (nella WebApp funziona anche il tasto ESC della tastiera). Poi **salva**.
 
 <p align="center">
   <img src="../docs/img/webapp_calibration_ir.png" alt="Calibrazione nella WebApp: mirino rosso, riquadro con i quattro emettitori di cui uno non visto e il messaggio di tiro rifiutato perché la telecamera non vede tutti e quattro gli emettitori IR" width="70%">
@@ -728,7 +740,7 @@ Ogni cerchio degli emettitori mostra ciò che la telecamera misura:
 Il mirino grigio indica dove punta la pistola e il cerchio rosso il centro dei quattro emettitori. La legenda in basso a sinistra spiega ogni simbolo e sottolinea il layout in uso. Verde e ciano servono solo a distinguere gli emettitori: non dicono nulla sulla qualità del segnale.
 
 <p align="center">
-  <img src="../docs/img/webapp_ir_test.png" alt="Test della telecamera IR nella WebApp: tre emettitori visti, con cerchi di dimensione e luminosità diverse, e un emettitore non visto, segnato con una X rossa" width="70%">
+  <img src="../docs/img/webapp_ir_test.png" alt="Test della telecamera IR nella WebApp: tre emettitori visti, con cerchi di dimensione e luminosità diverse, e un emettitore non rilevato, segnato con una X rossa" width="70%">
 </p>
 
 <a id="problemi-comuni-italiano"></a>
@@ -742,7 +754,7 @@ Il mirino grigio indica dove punta la pistola e il cerchio rosso il centro dei q
 - **La calibrazione non passa al bersaglio successivo:** nella WebApp o nell'App desktop un tiro su un bersaglio viene rifiutato finché la telecamera non vede tutti e quattro gli emettitori (mirino rosso). Nel riquadro LED IR, un emettitore segnato con una X rossa deve tornare in vista (allontanati se ai bordi dello schermo esce dalla vista); controlla anche quell'emettitore, la distanza e la [sensibilità della telecamera](#sensibilità-della-telecamera-ir-italiano). Vedi [Come Calibrare](#come-calibrare-italiano).
 - **Il puntatore non segue il mirino della pistola:** calibra di nuovo stando di fronte al centro dello schermo, senza ruotare la pistola, e controlla che il profilo usi il layout IR giusto (**Quadrato** / Square o **Rombo** / Diamond).
 - **Il puntatore salta o trema:** di solito è un riflesso o un'altra sorgente di luce (finestra, lampada, superficie lucida) vista come un punto IR in più. Cercalo nel [test IR](#modalità-di-test-italiano), eliminalo o coprilo, oppure riduci la [sensibilità della telecamera](#sensibilità-della-telecamera-ir-italiano). Calibra di nuovo dopo aver spostato gli emettitori.
-- **La pistola non si associa al dongle:** inserisci prima il dongle e attendi circa 15 secondi, poi accendi la pistola senza il cavo USB collegato al computer (con il cavo gioca via cavo). Dopo aver scollegato o riavviato il dongle, spegni la pistola e il pedale wireless, se utilizzato. Attendi che il dongle sia pronto per l'associazione, poi accendi prima il pedale (se utilizzato) e infine la pistola. Usa un dongle per ogni pistola, con firmware della stessa release per lightgun e dongle ([guida dongle](../../dongle/README.md#versione-italiana)).
+- **La pistola non si associa al dongle:** inserisci prima il dongle e attendi circa 15 secondi, poi accendi la pistola senza il cavo USB collegato al computer (con il cavo usa il collegamento USB). Dopo aver scollegato o riavviato il dongle, spegni la pistola e il pedale wireless, se utilizzato. Attendi che il dongle sia pronto per l'associazione, poi accendi prima il pedale (se utilizzato) e infine la pistola. Usa un dongle per ogni pistola, con firmware della stessa release per lightgun e dongle ([guida dongle](../../dongle/README.md#versione-italiana)).
 - **Il pedale wireless non viene trovato:** funziona solo con una pistola che gioca tramite il dongle. Attiva **Pedale wireless**, lascia non assegnati entrambi gli ingressi dei pedali cablati e salva; accendi il pedale prima della pistola. Dopo aver riavviato il pedale, riavvia anche la pistola.
 - **Il display OLED resta spento:** è disattivato per impostazione predefinita; attivalo come spiegato in [Telecamera, display e impostazioni di avvio](#telecamera-display-e-impostazioni-di-avvio).
 - **La temperatura letta è troppo alta** (ad esempio circa 90 °C a temperatura ambiente): collega il TMP36 alla scheda con un proprio filo di massa, non condiviso con la telecamera ([consiglio di cablaggio](../README.md#moduli-opzionali)).
@@ -780,7 +792,7 @@ Se è la prima volta che usi MAMEHOOKER: **serve un file ini compatibile per ogn
 <a id="modifica-dell-id-usb-per-pistole-multiple-italiano"></a>
 
 ### Più pistole e multigiocatore
-Per giocare con due o più pistole sullo stesso computer, ogni pistola deve avere un'identità propria. Se più pistole condividono lo stesso nome e/o lo stesso ID USB di prodotto o di produttore (Product ID/Vendor ID), i programmi che leggono separatamente ogni mouse, come RetroArch e TeknoParrot, non riescono a distinguerle.
+Per giocare con più pistole sullo stesso computer, assegna a ciascuna un numero di giocatore diverso nella WebApp: P1, P2, P3 o P4. Ogni pistola avrà così un Product ID diverso, che permette a programmi come RetroArch e TeknoParrot di distinguerle. Non serve cambiare il Vendor ID.
 
 1. Collega alla WebApp una pistola alla volta e apri **Impostazioni Gun → Identificatore TinyUSB**.
 2. Scegli il giocatore con i pulsanti **P1**–**P4**: **P1** per la prima pistola, **P2** per la seconda, e così via. Dopo un'installazione pulita ogni pistola è **P1**. Con **Visualizzazione avanzata** puoi invece inserire un ID prodotto e un nome personalizzati.
