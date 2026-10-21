@@ -16,7 +16,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [7.0.0]
+## [7.0.0] - 2026-10-21
 
 ### Added
 
@@ -100,7 +100,7 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 
 ---
 
-## [7.0.0]
+## [7.0.0] - 2026-10-21
 
 ### Aggiunte
 
@@ -146,7 +146,7 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 * Solenoide: il solenoide non resta più acceso se, tenendo premuto il grilletto, esci dallo schermo durante un colpo singolo, oppure se la modalità di fuoco viene cambiata con un comando `M8` durante un colpo.
 * Impulsi di vibrazione MAMEHOOKER con durate personalizzate (`R1x0`/`R1x1`): la pistola ora esegue tutti gli impulsi richiesti. Prima si fermava dopo il primo e ignorava i comandi di impulso successivi.
 * MAMEHOOKER: se spegni l'interruttore fisico del solenoide o della vibrazione durante il gioco, gli effetti in corso (acceso o impulsi) vengono annullati e non ripartono più da soli quando lo riaccendi. Il comando successivo del gioco funziona normalmente.
-* Menu di pausa: se attivi o disattivi rumble o solenoide dopo aver salvato, puoi salvare di nuovo nella stessa pausa. Prima il secondo salvataggio non faceva nulla.
+* Modalità pausa: se attivi o disattivi rumble o solenoide dopo aver salvato, puoi salvare di nuovo nella stessa pausa. Prima il secondo salvataggio non faceva nulla.
 * App desktop, **Mappatura Pulsanti**: quando cambi il tipo di un'uscita (mouse, tastiera, gamepad), la pistola riceve l'uscita mostrata. Prima poteva riceverne un'altra.
 
 ### Passaggio dalla 6.2.1

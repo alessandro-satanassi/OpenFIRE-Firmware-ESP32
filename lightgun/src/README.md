@@ -520,7 +520,7 @@ Con **Usa pin personalizzati** spuntato, **Layout Utente → Esporta layout pers
 
 Un file che non si può usare viene rifiutato e non viene cambiato nulla: **La scheda non corrisponde** di solito indica un file creato per un'altra scheda, **Errore di lettura del file** un file danneggiato o incompleto.
 
-**Se arrivi dalla 6.2.1:** la versione 7.0.0 salva i layout in un nuovo formato, più robusto, quindi i file di layout esportati con la 6.2.1 non si possono importare (**Errore di lettura del file**). Annota i pin prima dell'aggiornamento, reimpostali in **Layout Scheda**, poi esporta un nuovo file.
+**Se arrivi dalla 6.2.1:** la versione 7.0.0 salva i layout in un nuovo formato di file, quindi i file di layout esportati con la 6.2.1 non si possono importare (**Errore di lettura del file**). Annota i pin prima dell'aggiornamento, reimpostali in **Layout Scheda**, poi esporta un nuovo file.
 
 <a id="modalita-speciali-allavvio"></a>
 

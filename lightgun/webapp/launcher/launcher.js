@@ -67,6 +67,7 @@
             showAll: 'See the published versions',
             open: 'Open this version',
             latest: 'latest',
+            type_stable: 'stable', type_beta: 'beta',
             hub: 'OpenFIRE ESP32: project home page',
             footer: 'OpenFIRE ESP32 - free software, GNU General Public License.'
         },
@@ -96,6 +97,7 @@
             showAll: 'Vedi le versioni pubblicate',
             open: 'Apri questa versione',
             latest: 'ultima',
+            type_stable: 'stabile', type_beta: 'beta',
             hub: 'OpenFIRE ESP32: pagina iniziale del progetto',
             footer: 'OpenFIRE ESP32 - software libero, licenza GNU General Public License.'
         }
@@ -306,7 +308,7 @@
             // quando l'etichetta non ha un suffisso, cioe' "7.0.0 stable".
             const label = String(entry.label || entry.id);
             top.appendChild(element('h2', null,
-                label + (entry.type && label.indexOf('-') < 0 ? ' ' + entry.type : '')));
+                label + (entry.type && label.indexOf('-') < 0 ? ' ' + (t('type_' + entry.type) || entry.type) : '')));
             if (String(list.latest || '') === String(entry.id))
                 top.appendChild(element('span', 'tag', t('latest')));
             link.appendChild(top);

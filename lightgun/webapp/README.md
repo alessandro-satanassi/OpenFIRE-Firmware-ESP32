@@ -61,7 +61,7 @@ The same page is used by the gun, the site and Tauri; differences:
 
 | | lightgun page | site / Tauri |
 | --- | --- | --- |
-| connection | automatic WebSocket, reconnects by itself | device selector (`COM Port`) and `Add a Device...` (Web Serial) |
+| connection | automatic WebSocket, reconnects by itself | `Connect` button (the browser's Web Serial port chooser) |
 | Board Previews / View Compatible Boards | hidden (only its own board is included) | all boards |
 
 View menu: `Show Unsafe Settings` (solenoid temperature thresholds, and `Edit NC Inputs` in Board Layout) and the theme (system, light, dark).

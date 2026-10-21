@@ -50,7 +50,7 @@ Tests: `tests/*.test.js` (Node) and `tests/browser-e2e.js` (browser, simulated l
 - Calibration posture reminder, in both Apps: two centred English/Italian lines above the bottom instructions stay visible through final verification, including refused-shot warnings. Existing texts, targets, progress and IR panel keep their sizes and positions; only the reminder moves up when the verification instructions or refusal box need more space. In Qt its bitmap is generated once per window, with no new timer.
 - Linux checks of the Qt App (user not in `dialout`, running as root): not applicable to a browser.
 - File dialogs: the browser file chooser and download replace "Open New Layout" / "Save New Layout"; a download cannot be cancelled, so "Canceled custom layout save operation." does not exist.
-- Device list: Web Serial only lists ports the user allowed, hence "Add a Device...".
+- Device list: Web Serial only lists ports the user allowed, so the Qt device selector is replaced by a `Connect` button that opens the browser's port chooser.
 - Menu bar: View, Help and About with the Qt entries; "Board Previews" and "Emitter Alignment" (also in Help) are added as buttons, with the language and theme selectors. "OpenFIRE on the Web" (a disabled placeholder in the Qt menu) is not shown; About opens directly (the Qt About menu has only "About OpenFIRE...").
 - Turning custom pins off/on or choosing an alternative preset keeps the rumble/solenoid toggles when their pins are mapped again, in both Apps. Importing a layout gives rumble and solenoid back their saved values, exactly like the Qt App.
 - Changing the output type of a button selects the first output of the new list, in both Apps; going back to the saved type gives back the saved output.

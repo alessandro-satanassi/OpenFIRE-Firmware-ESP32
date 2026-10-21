@@ -2508,7 +2508,8 @@ void SolenoidToggle()
             OF_RGB::SetLedPackedColor(WikiColor::Yellow);                 // Set a color,
         #endif // LED_ENABLE
 
-        OF_FFB::SetSolenoid(HIGH);                          // Engage the solenoid on to notify the user,
+        if(!(OF_Prefs::pins[OF_Const::tempPin] >= 0 && OF_FFB::tempStatus == OF_FFB::Temp_Fatal))
+            OF_FFB::SetSolenoid(HIGH);                      // Engage the solenoid on to notify the user (not if too hot or sensor fault / non se troppo caldo o sensore guasto),
         delay(300);                                               // Hold it that way for a bit,
         OF_FFB::SetSolenoid(LOW);                           // Release it,
 

@@ -110,7 +110,7 @@ New to OpenFIRE? Start from [Getting Started](https://github.com/alessandro-sata
 ### INSTALLATION
 
 #### WEB FLASHER (Recommended for all users)
-The easiest, fastest, and safest way to install or update the firmware. It does not require installing any drivers or external software: it runs entirely within your browser.
+The recommended way to install or update the firmware. It does not require installing any drivers or external software: it runs entirely within your browser.
 * **Requirements:** PC/Mac with Google Chrome, Microsoft Edge, or Opera.
 
 **[LAUNCH OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?tag=<TAG>&lang=en)**
@@ -294,7 +294,7 @@ Non conosci ancora OpenFIRE? Parti dai [Primi passi](https://github.com/alessand
 * Il solenoide non resta più acceso se esci dallo schermo durante un colpo singolo tenendo premuto il grilletto, oppure se la modalità di fuoco viene cambiata con un comando `M8` durante un colpo.
 * Gli impulsi di vibrazione MAMEHOOKER con durate personalizzate ora vengono eseguiti tutti.
 * MAMEHOOKER: spegnendo l'interruttore fisico del solenoide o della vibrazione durante il gioco, gli effetti in corso vengono annullati e non ripartono più da soli quando lo riaccendi.
-* Menu di pausa: rumble o solenoide cambiati dopo un salvataggio si possono salvare di nuovo nella stessa pausa.
+* Modalità pausa: rumble o solenoide cambiati dopo un salvataggio si possono salvare di nuovo nella stessa pausa.
 * App desktop, Mappatura Pulsanti: cambiando il tipo di un'uscita, la pistola riceve l'uscita mostrata.
 * Guide utente bilingui riscritte: consulta il [manuale operativo](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/lightgun/src/README.md#versione-italiana).
 
