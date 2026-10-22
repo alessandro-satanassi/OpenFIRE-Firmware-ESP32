@@ -288,7 +288,9 @@ class SerialWireless_ : public Stream
 
   bool connection_dongle();
   bool connection_gun();
-  bool connection_pedal();
+  bool connection_pedal(uint32_t timeout_ms = 0); // 0 = wait for a gun forever / 0 = attende una pistola per sempre
+  void radio_off_pedal();
+  void radio_on_pedal();
   bool connection_gun_at_last_dongle();
   bool connection_gun_at_pedal();
   bool connection_gun_at_last_pedal();

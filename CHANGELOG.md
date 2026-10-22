@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
+* **Wireless pedal power saving:** when left on, the pedal switches off its radio after 30 minutes without presses (player LED blinking) and wakes up with a press, still paired to the same gun. If no gun pairs with it within 10 minutes, it stops searching (LEDs 1 and 4 blinking) and a press restarts it. The pedal also runs at 80 MHz to use less battery.
 ### Changed
 ### Fixed
 ### Breaking Changes
@@ -94,6 +95,7 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 
 ## [Non rilasciato]
 ### Aggiunte
+* **Risparmio energetico del pedale wireless:** se resta acceso, il pedale spegne la radio dopo 30 minuti senza pressioni (LED del giocatore lampeggiante) e si risveglia con una pressione, sempre associato alla stessa pistola. Se nessuna pistola si associa entro 10 minuti, smette di cercare (LED 1 e 4 lampeggianti) e una pressione lo riavvia. Il pedale funziona inoltre a 80 MHz per consumare meno batteria.
 ### Modifiche
 ### Correzioni
 ### Modifiche Incompatibili

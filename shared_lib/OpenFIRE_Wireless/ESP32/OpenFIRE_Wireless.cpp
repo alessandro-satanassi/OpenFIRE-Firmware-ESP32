@@ -2277,9 +2277,10 @@ bool SerialWireless_::connection_gun_at_pedal() {
 
 // ======================= PEDAL IMPLEMENTATION - STAY LISTENING ON ALL CHANNELS / IMPLEMENTAZIONE PEDAL - RIMANE IN ASCOLTO SU TUTTI I CANALI ===============
 #ifdef PEDAL
-bool SerialWireless_::connection_pedal() {
+bool SerialWireless_::connection_pedal(uint32_t timeout_ms) {
   
     
+  unsigned long lastMillis_start_connection = millis();
   uint8_t channel = espnow_wifi_channel;   // between and 1 and 13 (14 should be reserved) / tra e 1 e 13 (il 14 dovrebbe essere riservato)
   
   #define TIMEOUT_PEDAL_CHANGE_CHANNEL 150 // 2000 // in milliseconds- change channel every / in millisecondi - cambia canale ogni
@@ -2294,6 +2295,11 @@ bool SerialWireless_::connection_pedal() {
   broadcast_receiver = true;
 
   while (stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
+    // With a timeout the pedal stops waiting for a gun, so that it can save the battery. / Con un timeout il pedale smette di attendere una pistola, per risparmiare la batteria.
+    if (timeout_ms && ((millis() - lastMillis_start_connection) >= timeout_ms)) {
+      broadcast_receiver = false;
+      return false;
+    }
     if (stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) {
       if (((millis() - lastMillis_change_channel) > TIMEOUT_PEDAL_CHANGE_CHANNEL)) { 
          
@@ -2354,6 +2360,39 @@ bool SerialWireless_::connection_pedal() {
     TinyUSBDevices.onBattery = true;
     return true;  
       
+}
+
+/*
+Power saving: the radio is switched off and later back on with the same gun and channel, without pairing again.
+ESP-NOW is started again from scratch, so it does not depend on what Wi-Fi keeps across a stop.
+Call it only with nothing left to send.
+/
+Risparmio energetico: la radio si spegne e poi si riaccende con la stessa pistola e lo stesso canale, senza riassociarsi.
+ESP-NOW riparte da zero, così non dipende da cosa il Wi-Fi conserva dopo uno stop.
+Va chiamata solo quando non c'è più nulla da inviare.
+*/
+void SerialWireless_::radio_off_pedal() {
+  esp_now_deinit();
+  esp_wifi_stop();
+}
+
+void SerialWireless_::radio_on_pedal() {
+  esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11G); // same settings as init_wireless() / stesse impostazioni di init_wireless()
+  esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW_HT20);
+  esp_wifi_start();
+  esp_wifi_set_promiscuous(true);
+  esp_wifi_set_channel(espnow_wifi_channel, WIFI_SECOND_CHAN_NONE);
+  esp_wifi_set_promiscuous(false);
+  esp_wifi_set_max_tx_power(espnow_wifi_power);
+  esp_wifi_set_ps(WIFI_PS_NONE);
+
+  esp_now_init();
+  memcpy(peerInfo.peer_addr, peerAddress, 6);
+  peerInfo.channel = espnow_wifi_channel;
+  if (esp_now_add_peer(&peerInfo) == ESP_OK) esp_now_set_peer_rate_config(peerAddress, &rate_config);
+  esp_now_register_recv_cb(_esp_now_rx_cb);
+  esp_now_register_send_cb(_esp_now_tx_cb);
+  radioFree = true;
 }
 #endif // PEDAL
 // ======================= END PEDAL IMPLEMENTATION - STAY LISTENING ON ALL CHANNELS / FINE IMPLEMENTAZIONE PEDAL - RIMANE IN ASCOLTO SU TUTTI I CANALI ===============

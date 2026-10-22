@@ -108,6 +108,18 @@ The pedal has no pairing button: it pairs with the gun during a short window whe
 >
 > **If you restart the dongle, restart both the pedal and the gun too:** the dongle may select a different radio channel. Wait until the dongle is ready to pair, then switch on the pedal first and the gun afterwards.
 
+## Power Saving
+
+If the pedal is left on, it saves the battery by itself: when it is not used for a while it switches off its radio and slows down, and the LEDs keep giving a short blink so you can see that it is still on.
+
+* **Paired pedal:** after **30 minutes** without presses, the pedal switches off its radio and the player LED gives a short blink every 4 seconds. Press the pedal to wake it: it reconnects instantly to the same gun, without a new pairing, and the press reaches the gun.
+* **Pedal still looking for a gun:** if no gun pairs with it within **10 minutes**, the pedal stops searching and LEDs 1 and 4 give a short blink every 4 seconds. Press the pedal to restart it: it goes back to step 1 and waits for a gun, so switch the gun off and on again as well.
+* **Gun restarted while the pedal was asleep:** if the pedal no longer responds after you wake it, restart the pedal and then the gun, as after any pedal restart.
+* **Pedal connected to the computer by USB:** in power saving its USB port disappears. Press the pedal before flashing it, or use its BOOT/RESET buttons.
+
+> [!TIP]
+> **For advanced users:** the times and the blink are set by `SLEEP_MINUTES`, `SLEEP_SEARCH_MINUTES`, `SLEEP_BLINK_PERIOD_MS` and `SLEEP_BLINK_ON_MS` at the top of `pedal/src/main.cpp`. `SLEEP_MINUTES 0` disables power saving while paired; `SLEEP_SEARCH_MINUTES 0` makes the pedal search for a gun with no time limit. To use less battery during play too, the pedal runs at 80 MHz (`PEDAL_CPU_FREQ_MHZ`).
+
 ---
 ### Questions or Issues?
 For technical support and to join the discussion, see the [Community & Support section](../README.md#community-support-english) on the project's home page.
@@ -223,6 +235,18 @@ Il pedale non ha un pulsante di associazione: si associa alla pistola durante un
 > *Quindi, dopo aver riavviato il pedale, **spegni e riaccendi anche la pistola**, per avviare una nuova ricerca di 10 secondi.*
 >
 > **Se riavvii il dongle, riavvia anche il pedale e la pistola:** il dongle potrebbe scegliere un canale radio diverso. Attendi che il dongle sia pronto ad associarsi, poi accendi prima il pedale e successivamente la pistola.
+
+## Risparmio Energetico
+
+Se il pedale resta acceso, risparmia la batteria da solo: quando non viene usato per un po' spegne la radio e rallenta, e i LED continuano a fare un breve lampeggio, così vedi che è ancora acceso.
+
+* **Pedale associato:** dopo **30 minuti** senza pressioni, il pedale spegne la radio e il LED del giocatore fa un breve lampeggio ogni 4 secondi. Premi il pedale per risvegliarlo: si ricollega all'istante alla stessa pistola, senza una nuova associazione, e la pressione arriva alla pistola.
+* **Pedale ancora in cerca di una pistola:** se nessuna pistola si associa entro **10 minuti**, il pedale smette di cercare e i LED 1 e 4 fanno un breve lampeggio ogni 4 secondi. Premi il pedale per riavviarlo: torna al passo 1 e attende una pistola, quindi spegni e riaccendi anche la pistola.
+* **Pistola riavviata mentre il pedale dormiva:** se dopo il risveglio il pedale non risponde più, riavvia il pedale e poi la pistola, come dopo ogni riavvio del pedale.
+* **Pedale collegato al computer via USB:** durante il risparmio energetico la sua porta USB scompare. Premi il pedale prima di aggiornarlo, oppure usa i suoi pulsanti BOOT/RESET.
+
+> [!TIP]
+> **Per utenti esperti:** i tempi e il lampeggio si impostano con `SLEEP_MINUTES`, `SLEEP_SEARCH_MINUTES`, `SLEEP_BLINK_PERIOD_MS` e `SLEEP_BLINK_ON_MS` all'inizio di `pedal/src/main.cpp`. `SLEEP_MINUTES 0` disattiva il risparmio energetico con il pedale associato; `SLEEP_SEARCH_MINUTES 0` fa cercare la pistola senza limite di tempo. Per consumare meno batteria anche durante il gioco, il pedale funziona a 80 MHz (`PEDAL_CPU_FREQ_MHZ`).
 
 ---
 ### Domande o Problemi?

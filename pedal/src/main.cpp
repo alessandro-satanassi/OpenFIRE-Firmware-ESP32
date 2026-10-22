@@ -16,6 +16,10 @@
 
 #include "TinyUSB_Devices.h"
 
+#include <WiFi.h>
+#include <esp_sleep.h>
+#include <driver/gpio.h>
+
 //#include "OpenFIRE-PEDAL-version.h"
 
 // ===================================================================================
@@ -69,6 +73,45 @@ così un pacchetto di rilascio perso si recupera senza attendere il timeout del 
 #define TIME_REPEAT_SEND (uint64_t)69000 // time in milliseconds (set to 69ms, perhaps better at 50ms) / tempo in microsendi (impostato a 69ms, forse meglio a 50ms)
 
 #define NUM_BUTTONS 2
+
+/*
+===================================================================================
+POWER SAVING / RISPARMIO ENERGETICO
+===================================================================================
+If the pedal is left on, it saves the battery.
+- Paired with a gun: after SLEEP_MINUTES from the last pedal press or release, the radio switches off and the player LED
+  blinks. A press switches the radio back on and the pedal carries on with the same gun, without pairing again.
+- Waiting for a gun: the search lasts SLEEP_SEARCH_MINUTES, then the radio switches off and LEDs 1 and 4 blink.
+  A press restarts the pedal, which searches again.
+0 in SLEEP_MINUTES disables the power saving once paired; 0 in SLEEP_SEARCH_MINUTES makes the search endless.
+/
+Se il pedale resta acceso, risparmia la batteria.
+- Associato a una pistola: dopo SLEEP_MINUTES dall'ultima pressione o rilascio di un pedale, la radio si spegne e lampeggia
+  il LED del giocatore. Una pressione riaccende la radio e il pedale continua con la stessa pistola, senza riassociarsi.
+- In attesa di una pistola: la ricerca dura SLEEP_SEARCH_MINUTES, poi la radio si spegne e lampeggiano i LED 1 e 4.
+  Una pressione riavvia il pedale, che ricomincia a cercare.
+0 in SLEEP_MINUTES disattiva il risparmio energetico da associato; 0 in SLEEP_SEARCH_MINUTES rende la ricerca senza fine.
+*/
+#define SLEEP_MINUTES 15 // 1 // 30          // minutes without presses before power saving / minuti senza pressioni prima del risparmio energetico
+#define SLEEP_SEARCH_MINUTES 5 // 1 // 10   // minutes of search for a gun before power saving / minuti di ricerca della pistola prima del risparmio energetico
+#define SLEEP_BLINK_PERIOD_MS 1000 // 4000 // one blink every / un lampeggio ogni
+#define SLEEP_BLINK_ON_MS 20 // 30       // how long the LEDs stay on in each blink / per quanto restano accesi i LED a ogni lampeggio
+
+/*
+CPU frequency: 80 MHz is the lowest the radio (Wi-Fi/ESP-NOW) supports. The pedal only reads two switches and sends a few
+packets per second, so it has plenty of margin and saves about 30 mA from the battery compared with 240 MHz.
+If start-up or pairing ever misbehave, try 160.
+/
+Frequenza della CPU: 80 MHz è la minima ammessa dalla radio (Wi-Fi/ESP-NOW). Il pedale legge solo due interruttori e invia
+pochi pacchetti al secondo, quindi ha margine in abbondanza e risparmia circa 30 mA dalla batteria rispetto a 240 MHz.
+Se avvio o accoppiamento dovessero dare problemi, provare 160.
+*/
+#define PEDAL_CPU_FREQ_MHZ 80
+
+#define SLEEP_MS ((unsigned long)SLEEP_MINUTES * 60000UL)
+#define SLEEP_SEARCH_MS ((unsigned long)SLEEP_SEARCH_MINUTES * 60000UL)
+
+unsigned long last_activity_millis = 0; // last press or release of a pedal / ultima pressione o rilascio di un pedale
 
 /*
 The Button struct encapsulates the state machine for software debouncing.
@@ -148,12 +191,81 @@ void timer_callback_send_repeat(void* arg) {
 
 esp_timer_handle_t timer_handle_send_repeat;
 
+// Steady LEDs while connected: the player LED, or the first and last LED if the player is not valid. / LED fissi da connesso: il LED del giocatore, oppure il primo e l'ultimo se il giocatore non è valido.
+uint8_t player_leds_mask() {
+  if (usb_data_wireless.devicePlayer >= 1 && usb_data_wireless.devicePlayer <= 4) return 1 << (usb_data_wireless.devicePlayer - 1);
+  return 0b1001;
+}
+
+void set_leds(uint8_t mask) {
+  for (uint8_t i = 0; i < 4; i++) {
+    if (leds[i] >= 0) digitalWrite(leds[i], (mask >> i) & 1 ? HIGH : LOW);
+  }
+}
+
+// Light sleep for the given time; returns true if a pedal press woke the pedal. / Sonno leggero per il tempo indicato; restituisce true se a svegliare il pedale è stata una pressione.
+bool light_sleep_ms(uint32_t ms) {
+  esp_sleep_enable_timer_wakeup((uint64_t)ms * 1000);
+  esp_light_sleep_start();
+  return esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_GPIO;
+}
+
+/*
+POWER SAVING LOOP / CICLO DI RISPARMIO ENERGETICO
+The chip stays in light sleep and wakes up only to blink the LEDs, or when a pedal is pressed.
+With a gun paired it returns at the first press; while waiting for a gun a press restarts the pedal.
+/
+Il chip resta in sonno leggero e si sveglia solo per far lampeggiare i LED, o quando si preme un pedale.
+Con una pistola associata ritorna alla prima pressione; in attesa di una pistola una pressione riavvia il pedale.
+*/
+void power_save(bool paired) {
+  if (paired) esp_timer_stop(timer_handle_send_repeat);
+  SerialWireless.radio_off_pedal();
+  set_leds(0);
+
+  // Pins keep their normal setting during light sleep: LEDs stay lit for the blink, pedals keep their pull-up. / I pin mantengono la configurazione normale nel sonno leggero: i LED restano accesi per il lampeggio, i pedali il pull-up.
+  for (uint8_t i = 0; i < 4; i++) {
+    if (leds[i] >= 0) gpio_sleep_sel_dis((gpio_num_t)leds[i]);
+  }
+  for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
+    if (buttons[i].pin >= 0) {
+      gpio_sleep_sel_dis((gpio_num_t)buttons[i].pin);
+      gpio_wakeup_enable((gpio_num_t)buttons[i].pin, GPIO_INTR_LOW_LEVEL); // pressed pedal = pin to ground / pedale premuto = pin a massa
+    }
+  }
+  esp_sleep_enable_gpio_wakeup();
+
+  for (;;) {
+    set_leds(paired ? player_leds_mask() : 0b1001); // player LED, or LEDs 1 and 4 while waiting for a gun / LED del giocatore, oppure LED 1 e 4 in attesa di una pistola
+    bool pressed = light_sleep_ms(SLEEP_BLINK_ON_MS);
+    set_leds(0);
+    if (pressed || light_sleep_ms(SLEEP_BLINK_PERIOD_MS - SLEEP_BLINK_ON_MS)) break;
+  }
+
+  // Woken by a pedal. / Svegliato da un pedale.
+  if (!paired) esp_restart();
+
+  for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
+    if (buttons[i].pin >= 0) gpio_wakeup_disable((gpio_num_t)buttons[i].pin);
+  }
+  esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
+
+  SerialWireless.radio_on_pedal();
+  set_leds(player_leds_mask());
+  last_activity_millis = millis();
+  esp_timer_start_periodic(timer_handle_send_repeat, TIME_REPEAT_SEND);
+}
+
 // ===============================================================================
 // MAIN SETUP
 // ===============================================================================
 
 // The main show!
 void setup() {
+
+  #ifdef PEDAL_CPU_FREQ_MHZ
+    setCpuFrequencyMhz(PEDAL_CPU_FREQ_MHZ);
+  #endif // PEDAL_CPU_FREQ_MHZ
 
   // Pedal Configuration (Inputs with Pull-Up) / Configurazione Pedali (Ingressi con Pull-Up)
   for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
@@ -179,9 +291,11 @@ void setup() {
   
   // ====== wireless connection management / gestione connessione wireless ======
   // Blocking phase: The pedal waits here until the ESP-NOW handshake is established. / Fase bloccante: Il pedale attende qui finché non stabilisce l'handshake ESP-NOW.
+  // The Arduino core applies its own Wi-Fi power save at every radio start (default: modem sleep); the pedal wants none, also after waking up. / Il core Arduino applica il suo risparmio Wi-Fi a ogni avvio della radio (predefinito: modem sleep); il pedale non ne vuole, anche dopo il risveglio.
+  WiFi.setSleep(WIFI_PS_NONE);
   SerialWireless.init_wireless();
   SerialWireless.begin();
-  SerialWireless.connection_pedal();
+  bool paired = SerialWireless.connection_pedal(SLEEP_SEARCH_MS); // after SLEEP_SEARCH_MINUTES without a gun it gives up / dopo SLEEP_SEARCH_MINUTES senza pistola rinuncia
   // ====== Wireless management complete... it proceeds only after the device has been paired. / fine gestione wireless .. va avanti solo dopo che si è accoppiato il dispositivo ======
   
   /*
@@ -198,6 +312,11 @@ void setup() {
 
   for (uint8_t i = 0; i < 4; i++) {
     digitalWrite(leds[i], LOW); 
+  }
+
+  if (!paired) {
+    // No gun found: power saving straight away (LEDs 1 and 4 blink); a press restarts the pedal. / Nessuna pistola trovata: subito risparmio energetico (lampeggiano i LED 1 e 4); una pressione riavvia il pedale.
+    power_save(false);
   }
 
   // Visual confirmation of successful mating. / Riscontro visivo di accoppiamento riuscito.
@@ -219,6 +338,8 @@ void setup() {
     
   esp_timer_create(&timer_args, &timer_handle_send_repeat);
   esp_timer_start_periodic(timer_handle_send_repeat, TIME_REPEAT_SEND);
+
+  last_activity_millis = millis();
  
 }
 
@@ -300,6 +421,10 @@ void loop()
     send_packet_pedal = false;
 
   }
+
+  // A pedal held down counts as activity too. / Anche un pedale tenuto premuto conta come attività.
+  if (buttons_state || release_repeats) last_activity_millis = millis_current;
+  else if ((SLEEP_MS > 0) && ((millis_current - last_activity_millis) >= SLEEP_MS)) power_save(true);
       
   // Voluntary delay to yield CPU time (e.g. to WiFi/ESP-NOW tasks) and rate-limit this loop. / Rate limiting volontario per cedere CPU al layer WiFi/ESP-NOW sottostante.
   vTaskDelay(pdMS_TO_TICKS(5));  // Approximate 5 ms polling interval. / fai polling ogni 5ms
