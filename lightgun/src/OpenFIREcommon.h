@@ -31,7 +31,11 @@
     #include <OpenFIRE_Multi_One_Euro_Filter.h>
 #endif // USE_MULTI_ONE_EURO_FILTER 
 
-#include <OpenFIRE_Diamond.h>
+#ifdef USE_DIAMOND_ADVANCED
+    #include <OpenFIRE_Diamond_Advanced.h>
+#else
+    #include <OpenFIRE_Diamond.h>
+#endif // USE_DIAMOND_ADVANCED
 
 #ifdef USE_PERSPECTIVE_ADVANCED
     #include <OpenFIRE_Perspective_Advanced.h>

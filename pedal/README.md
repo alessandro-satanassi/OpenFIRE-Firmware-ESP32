@@ -112,8 +112,8 @@ The pedal has no pairing button: it pairs with the gun during a short window whe
 
 If the pedal is left on, it saves the battery by itself: when it is not used for a while it switches off its radio and slows down, and the LEDs keep giving a short blink so you can see that it is still on.
 
-* **Paired pedal:** after **30 minutes** without presses, the pedal switches off its radio and the player LED gives a short blink every 4 seconds. Press the pedal to wake it: it reconnects instantly to the same gun, without a new pairing, and the press reaches the gun.
-* **Pedal still looking for a gun:** if no gun pairs with it within **10 minutes**, the pedal stops searching and LEDs 1 and 4 give a short blink every 4 seconds. Press the pedal to restart it: it goes back to step 1 and waits for a gun, so switch the gun off and on again as well.
+* **Paired pedal:** after **15 minutes** without presses, the pedal switches off its radio and the player LED gives a short blink every second. Press the pedal to wake it: it reconnects instantly to the same gun, without a new pairing, and the press reaches the gun.
+* **Pedal still looking for a gun:** if no gun pairs with it within **5 minutes**, the pedal stops searching and LEDs 1 and 4 give a short blink every second. Press the pedal to restart it: it goes back to step 1 and waits for a gun, so switch the gun off and on again as well.
 * **Gun restarted while the pedal was asleep:** if the pedal no longer responds after you wake it, restart the pedal and then the gun, as after any pedal restart.
 * **Pedal connected to the computer by USB:** in power saving its USB port disappears. Press the pedal before flashing it, or use its BOOT/RESET buttons.
 
@@ -240,8 +240,8 @@ Il pedale non ha un pulsante di associazione: si associa alla pistola durante un
 
 Se il pedale resta acceso, risparmia la batteria da solo: quando non viene usato per un po' spegne la radio e rallenta, e i LED continuano a fare un breve lampeggio, così vedi che è ancora acceso.
 
-* **Pedale associato:** dopo **30 minuti** senza pressioni, il pedale spegne la radio e il LED del giocatore fa un breve lampeggio ogni 4 secondi. Premi il pedale per risvegliarlo: si ricollega all'istante alla stessa pistola, senza una nuova associazione, e la pressione arriva alla pistola.
-* **Pedale ancora in cerca di una pistola:** se nessuna pistola si associa entro **10 minuti**, il pedale smette di cercare e i LED 1 e 4 fanno un breve lampeggio ogni 4 secondi. Premi il pedale per riavviarlo: torna al passo 1 e attende una pistola, quindi spegni e riaccendi anche la pistola.
+* **Pedale associato:** dopo **15 minuti** senza pressioni, il pedale spegne la radio e il LED del giocatore fa un breve lampeggio ogni secondo. Premi il pedale per risvegliarlo: si ricollega all'istante alla stessa pistola, senza una nuova associazione, e la pressione arriva alla pistola.
+* **Pedale ancora in cerca di una pistola:** se nessuna pistola si associa entro **5 minuti**, il pedale smette di cercare e i LED 1 e 4 fanno un breve lampeggio ogni secondo. Premi il pedale per riavviarlo: torna al passo 1 e attende una pistola, quindi spegni e riaccendi anche la pistola.
 * **Pistola riavviata mentre il pedale dormiva:** se dopo il risveglio il pedale non risponde più, riavvia il pedale e poi la pistola, come dopo ogni riavvio del pedale.
 * **Pedale collegato al computer via USB:** durante il risparmio energetico la sua porta USB scompare. Premi il pedale prima di aggiornarlo, oppure usa i suoi pulsanti BOOT/RESET.
 

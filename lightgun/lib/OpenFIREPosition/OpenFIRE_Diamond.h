@@ -1,3 +1,4 @@
+#ifndef USE_DIAMOND_ADVANCED
 /*!
  * @file OpenFIRE_Diamond.h
  * @brief Light Gun library for 4 LED setup
@@ -117,3 +118,5 @@ public:
 };
 
 #endif // _OpenFIRE_Diamond_h_
+
+#endif // USE_DIAMOND_ADVANCED

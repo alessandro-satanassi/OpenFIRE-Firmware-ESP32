@@ -1,3 +1,4 @@
+#ifndef USE_DIAMOND_ADVANCED
 /*!
  * @file OpenFIRE_Diamond.cpp
  * @brief Light Gun library for 4 LED setup
@@ -326,3 +327,5 @@ void OpenFIRE_Diamond::begin(const int* px, const int* py, unsigned int seen)
 
 
 }
+
+#endif // USE_DIAMOND_ADVANCED
