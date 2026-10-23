@@ -73,6 +73,33 @@
 
 //#include "OpenFIRE-DONGLE-version.h"
 
+/*
+CPU frequency: 80 MHz is the lowest the radio (Wi-Fi/ESP-NOW) supports. The dongle only forwards a few hundred small
+packets per second between ESP-NOW and USB, so it has plenty of margin, and a lower clock makes the chip run a little cooler.
+If start-up, pairing or play ever misbehave, try 160. Commented out = 240 MHz, as before.
+/
+Frequenza della CPU: 80 MHz è la minima ammessa dalla radio (Wi-Fi/ESP-NOW). Il dongle inoltra solo poche centinaia di
+piccoli pacchetti al secondo tra ESP-NOW e USB, quindi ha margine in abbondanza, e un clock più basso fa scaldare un po' meno il chip.
+Se avvio, accoppiamento o gioco dovessero dare problemi, provare 160. Commentato = 240 MHz, come prima.
+Da ulcune prove sembra che tra 240mhz e 80mhz ci siano 4 gradi di differenza e non risultano differenze di prestazioni
+*/
+//#define DONGLE_CPU_FREQ_MHZ 80
+
+/*
+DEBUG_TEMP: shows the CPU frequency and the chip's internal temperature in the top right corner of the display,
+refreshed every DEBUG_TEMP_INTERVAL_MS. Only for tests: the internal sensor is approximate, compare readings on the same dongle.
+/
+DEBUG_TEMP: mostra la frequenza della CPU e la temperatura interna del chip nell'angolo in alto a destra del display,
+aggiornate ogni DEBUG_TEMP_INTERVAL_MS. Solo per prove: il sensore interno è approssimativo, confrontare letture sullo stesso dongle.
+*/
+//#define DEBUG_TEMP
+
+#if defined(DEBUG_TEMP) && defined(USES_DISPLAY)
+  #define DEBUG_TEMP_INTERVAL_MS 30000UL
+  unsigned long debug_temp_millis = 0;
+  bool debug_temp_first = true;
+#endif // DEBUG_TEMP && USES_DISPLAY
+
 bool display_init = false;
 
 // ===================================================================================
@@ -81,6 +108,10 @@ bool display_init = false;
 
 // The main show!
 void setup() { 
+
+  #ifdef DONGLE_CPU_FREQ_MHZ
+    setCpuFrequencyMhz(DONGLE_CPU_FREQ_MHZ);
+  #endif // DONGLE_CPU_FREQ_MHZ
 
   // 1. HARDWARE INITIALIZATION / INIZIALIZZAZIONE HARDWARE (Video Feedback)
   #ifdef USES_DISPLAY
@@ -268,4 +299,21 @@ void loop()
     // The flush wakes up the asynchronous radio task to physically transmit them over the air without blocking the loop. / Il flush sveglia il task radio asincrono per spedirli fisicamente in aria senza bloccare il loop.
     SerialWireless.flush(); 
   }
+
+  #if defined(DEBUG_TEMP) && defined(USES_DISPLAY)
+  // Right of the banner (x 120-159, y 0-15), free on every screen after setup. / A destra del banner (x 120-159, y 0-15), libero in ogni schermata dopo il setup.
+  if (display_init && (debug_temp_first || (millis() - debug_temp_millis >= DEBUG_TEMP_INTERVAL_MS))) {
+    debug_temp_first = false;
+    debug_temp_millis = millis();
+    char debug_temp_buf[8];
+    tft.setTextSize(1);
+    tft.setTextColor(YELLOW, BLACK);
+    snprintf(debug_temp_buf, sizeof(debug_temp_buf), "%3luMHz", (unsigned long)getCpuFrequencyMhz());
+    tft.setCursor(122, 0);
+    tft.print(debug_temp_buf);
+    snprintf(debug_temp_buf, sizeof(debug_temp_buf), "%5.1fC", temperatureRead());
+    tft.setCursor(122, 8);
+    tft.print(debug_temp_buf);
+  }
+  #endif // DEBUG_TEMP && USES_DISPLAY
 }
