@@ -298,6 +298,10 @@ void OpenFIRE_Diamond::begin(const int* px, const int* py, unsigned int seen)
             }
         }
         if (!ConvexCycle(Gx, Gy)) return;
+        // Limite numerico, non il campo visivo: un LED ricostruito puo' stare fuori schermo, ma un
+        // valore enorme viene solo da una geometria precedente quasi degenere.
+        for (uint8_t k = 0; k < 4; k++)
+            if (!(fabsf(Gx[k]) <= 16383.0f && fabsf(Gy[k]) <= 16383.0f)) return;
     }
 
     // =========================================================================//

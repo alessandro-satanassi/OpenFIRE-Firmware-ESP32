@@ -186,7 +186,7 @@ Rounded profile values:
 | `lensCorrectionMax` | `1.5f` | Chosen upper safety limit |
 | `lensCorrectionMin` | `0.8f` | Retained lower safety limit |
 
-The last five arguments of the current `MakeProfile()` interface are ordered **K1, K2, Max, Min, focal ratio**. The focal ratio is not part of the correction: Square tracking uses it to recover the true rectangle shape from perspective.
+The last five arguments of the current `MakeProfile()` interface are ordered **K1, K2, Max, Min, focal ratio**. The focal ratio is not part of the correction: Square tracking uses it for perspective, to recover the true rectangle shape and to reconstruct the hidden LEDs when only 2 or 3 are visible.
 
 ```cpp
 // Theoretical inverse radial fit; not a measured lens calibration.
@@ -506,7 +506,7 @@ Valori arrotondati del profilo:
 | `lensCorrectionMax` | `1.5f` | Limite superiore di sicurezza scelto |
 | `lensCorrectionMin` | `0.8f` | Limite inferiore di sicurezza conservato |
 
-Gli ultimi cinque argomenti dell'interfaccia attuale di `MakeProfile()` sono ordinati **K1, K2, Max, Min, rapporto focale**. Il rapporto focale non fa parte della correzione: il tracking Square lo usa per ricavare la forma vera del rettangolo dalla prospettiva.
+Gli ultimi cinque argomenti dell'interfaccia attuale di `MakeProfile()` sono ordinati **K1, K2, Max, Min, rapporto focale**. Il rapporto focale non fa parte della correzione: il tracking Square lo usa per la prospettiva, per ricavare la forma vera del rettangolo e per ricostruire i LED nascosti quando se ne vedono solo 2 o 3.
 
 ```cpp
 // Theoretical inverse radial fit; not a measured lens calibration.
