@@ -98,15 +98,124 @@ static bool SquareGeometryValid(const int *x, const int *y) {
     return true;
 }
 
+// Ricostruzione dei LED nascosti dall'ultima geometria vista con 4 LED, che ne conserva la forma
+// reale (prospettiva compresa): una similitudine (n = 2 LED visti) o un'affinita' (n = 3) porta
+// i LED visti allora (px, py) su quelli visti ora (qx, qy) e si applica agli m nascosti (hx, hy:
+// in ingresso nell'ultima geometria, in uscita ora; validi solo se torna true). Per non deformare
+// la forma con la prospettiva, ciascuna delle due viste si guarda da una camera virtuale ruotata
+// (rotazione minima) verso la direzione media dei suoi LED visti: se l'arma ha solo ruotato le
+// due viste differiscono allora per una rotazione attorno all'asse e la ricostruzione e' esatta.
+// Basta una focale approssimata; con focal = 0 si lavora direttamente sull'immagine.
+// false anche se un nascosto esce dal limite numerico delle coordinate.
+namespace {
+struct SquareView {
+    float f, ox, oy;                                 // focale e centro dell'immagine
+    float r[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};        // rotazione della camera virtuale (per righe)
+
+    SquareView(float focal, float cx, float cy) : f(focal), ox(cx), oy(cy) {}
+
+    bool aim(const float* x, const float* y, uint8_t n) {
+        if (f <= 0.0f) return true;
+        float mx = 0.0f, my = 0.0f, mz = 0.0f;       // somma delle direzioni (versori)
+        for (uint8_t i = 0; i < n; ++i) {
+            const float dx = x[i] - ox, dy = y[i] - oy;
+            const float k = 1.0f / sqrtf(dx * dx + dy * dy + f * f);
+            mx += dx * k; my += dy * k; mz += f * k;
+        }
+        const float k = 1.0f / sqrtf(mx * mx + my * my + mz * mz);
+        mx *= k; my *= k; mz *= k;
+        if (!(mz > 0.0f)) return false;
+        // rotazione minima che porta (mx, my, mz) sull'asse ottico: asse (my, -mx, 0)
+        const float vx = my, vy = -mx, c = 1.0f / (1.0f + mz);
+        r[0] = 1.0f - vy * vy * c; r[1] = vx * vy * c;         r[2] = vy;
+        r[3] = vx * vy * c;         r[4] = 1.0f - vx * vx * c; r[5] = -vx;
+        r[6] = -vy;                 r[7] = vx;                 r[8] = 1.0f - (vx * vx + vy * vy) * c;
+        return true;
+    }
+    // dall'immagine al piano della camera virtuale (unita' mouse) e ritorno
+    bool to(float x, float y, float& u, float& v) const {
+        const float dx = x - ox, dy = y - oy;
+        if (f <= 0.0f) { u = dx; v = dy; return true; }
+        const float wz = r[6] * dx + r[7] * dy + r[8] * f;
+        if (!(wz > 1e-3f * f)) return false;
+        const float k = f / wz;
+        u = (r[0] * dx + r[1] * dy + r[2] * f) * k;
+        v = (r[3] * dx + r[4] * dy + r[5] * f) * k;
+        return true;
+    }
+    bool from(float u, float v, float& x, float& y) const {
+        if (f <= 0.0f) { x = u + ox; y = v + oy; return true; }
+        const float wz = r[2] * u + r[5] * v + r[8] * f;
+        if (!(wz > 1e-3f * f)) return false;
+        const float k = f / wz;
+        x = ox + (r[0] * u + r[3] * v + r[6] * f) * k;
+        y = oy + (r[1] * u + r[4] * v + r[7] * f) * k;
+        return true;
+    }
+};
+}
+
+static bool SquareFromAnchor(float focal, float ox, float oy, uint8_t n,
+                             const float* px, const float* py, const float* qx, const float* qy,
+                             uint8_t m, float* hx, float* hy) {
+    SquareView P(focal, ox, oy), Q(focal, ox, oy);
+    if (!P.aim(px, py, n) || !Q.aim(qx, qy, n)) return false;
+    float pu[3], pv[3], qu[3], qv[3];
+    for (uint8_t i = 0; i < n; ++i)
+        if (!P.to(px[i], py[i], pu[i], pv[i]) || !Q.to(qx[i], qy[i], qu[i], qv[i])) return false;
+    // Base dalla prima posizione: (P1 - P0, P2 - P0) allora, (Q1 - Q0, Q2 - Q0) ora. Con 2 LED il
+    // secondo vettore e' il primo ruotato di 90 gradi (similitudine: scala e rotazione).
+    const float a1x = pu[1] - pu[0], a1y = pv[1] - pv[0], b1x = qu[1] - qu[0], b1y = qv[1] - qv[0];
+    const float a2x = n == 2 ? -a1y : pu[2] - pu[0], a2y = n == 2 ? a1x : pv[2] - pv[0];
+    const float b2x = n == 2 ? -b1y : qu[2] - qu[0], b2y = n == 2 ? b1x : qv[2] - qv[0];
+    const float det = a1x * a2y - a1y * a2x;
+    if (!(fabsf(det) >= 4.0f)) return false;
+    const float inv = 1.0f / det;
+    if (n == 3) {
+        // Mappa lineare (allora -> ora) p q / r s: un movimento reale dell'arma la lascia vicina a
+        // scala e rotazione; un taglio forte vuol dire LED visti con etichette sbagliate.
+        const float p = (b1x * a2y - b2x * a1y) * inv, q = (b2x * a1x - b1x * a2x) * inv;
+        const float r = (b1y * a2y - b2y * a1y) * inv, t = (b2y * a1x - b1y * a2x) * inv;
+        const float cs = (p + t) * (p + t) + (r - q) * (r - q), ac = (p - t) * (p - t) + (q + r) * (q + r);
+        if (!(ac <= 0.0625f * cs)) return false;   // parte di taglio fino a 1/4 di quella di scala e rotazione
+    }
+    for (uint8_t j = 0; j < m; ++j) {
+        float u, v;
+        if (!P.to(hx[j], hy[j], u, v)) return false;
+        const float ex = u - pu[0], ey = v - pv[0];
+        const float s = (ex * a2y - ey * a2x) * inv, t = (a1x * ey - a1y * ex) * inv;
+        if (!Q.from(qu[0] + s * b1x + t * b2x, qv[0] + s * b1y + t * b2y, hx[j], hy[j])) return false;
+        if (!(fabsf(hx[j]) <= SQUARE_COORD_LIMIT && fabsf(hy[j]) <= SQUARE_COORD_LIMIT)) return false;
+    }
+    return true;
+}
+
 void OpenFIRE_Square::configure(const CameraProfile& profile) {
-    for (uint8_t i = 0; i < 4; ++i)
+    // Ripartenza pulita (es. dopo il salvataggio, che riavvia la camera): lo storico del
+    // tracking precedente non deve sopravvivere alla nuova geometria predefinita.
+    start = 0;
+    is_tracking_stable = false;
+    prev_num_points_seen = 0;
+    prev_point_seen_mask = 0;
+    current_point_seen_mask = 0;
+    for (uint8_t i = 0; i < 4; ++i) {
         motion_X[i] = motion_Y[i] = 0;
+        offset_X[i] = offset_Y[i] = 0.0f;
+        see[i] = 0;
+    }
+    spring_fast = false;
+    dark_frames = 255;
+    anchor_ok = false;
 
     camMaxX = profile.camMaxX;
     camToMouseShift = profile.camToMouseShift;
     camToMouseMult = profile.camToMouseMult;
     mouseResX = profile.mouseResX;
     mouseResY = profile.mouseResY;
+    // Focale nominale in unita' mouse (prospettiva: forma del rettangolo, vedi trueAspectOf, e
+    // LED nascosti con 2-3 LED, vedi SquareFromAnchor), dal rapporto focale / semilarghezza del
+    // sensore indicato nel profilo. Basta un valore approssimato; 0 se il profilo non lo indica.
+    focal = mouseResX * 0.5f * profile.lensFocalRatio;
     FPS_NORMALIZATION = 209.0f / (float)profile.fps;
 
     FinalX[0] = profile.squareTLX * camToMouseMult;
@@ -193,6 +302,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         // la posizione con meno di 3 punti per evitare salti impazziti del mirino.
         if (!is_tracking_stable && num_points_seen < 3) {
             prev_num_points_seen = 0; 
+            if (dark_frames < 255) dark_frames++;
             return; 
         }
 
@@ -334,10 +444,28 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
             bool left   = (idx1 == 0 && idx2 == 2) || (idx1 == 2 && idx2 == 0);
             bool right  = (idx1 == 1 && idx2 == 3) || (idx1 == 3 && idx2 == 1);
 
+            // Con l'ultima geometria vista con 4 LED i due nascosti ne conservano la forma reale
+            // (SquareFromAnchor); altrimenti si costruisce un rettangolo piatto.
+            bool from_anchor = false;
+            if (anchor_ok) {
+                uint8_t hid[2], nh = 0;
+                for (uint8_t i = 0; i < 4; i++) if (i != idx1 && i != idx2) hid[nh++] = i;
+                const float ax[2] = {(float)anchorX[idx1], (float)anchorX[idx2]};
+                const float ay[2] = {(float)anchorY[idx1], (float)anchorY[idx2]};
+                const float qx[2] = {(float)x1, (float)x2}, qy[2] = {(float)y1, (float)y2};
+                float hx[2] = {(float)anchorX[hid[0]], (float)anchorX[hid[1]]};
+                float hy[2] = {(float)anchorY[hid[0]], (float)anchorY[hid[1]]};
+                from_anchor = SquareFromAnchor(focal, mouseResX * 0.5f, mouseResY * 0.5f, 2, ax, ay, qx, qy, 2, hx, hy);
+                if (from_anchor)
+                    for (uint8_t j = 0; j < 2; j++) { Vx[hid[j]] = hx[j]; Vy[hid[j]] = hy[j]; }
+            }
+
             // Per prevenire il "Bug Clessidra" (incrocio errato dei vettori derivati),
             // viene riallineato dinamicamente l'indice dei punti e scalata la proiezione
             // imponendo con la forza matematica il rispetto dell'aspect_ratio originale.
-            if (top || bottom) {
+            if (from_anchor) {
+                // I due LED nascosti sono gia' ricostruiti.
+            } else if (top || bottom) {
                 //                 A   C             B   D
                 uint8_t p1 = top ? 0 : 2, p2 = top ? 1 : 3;
                 //                 C   A             D   B
@@ -632,6 +760,176 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
             if (positionXX[c] > positionXX[d]) { aux_swap = c; c = d; d = aux_swap; }
         }     
 
+        // Con 1-2 LED la traslazione o la ricostruzione ha gia' assegnato le etichette (A, B, C, D
+        // in ordine): con la forma prospettica il riordino dei punti potrebbe scambiarle.
+        if (num_points_seen <= 2 && !calibrationMode) { a = A; b = B; c = C; d = D; }
+
+        // =========================================================================//
+        // ======== CONTINUITA' DELL'ORDINAMENTO (3-4 PUNTI) =======================//
+        // =========================================================================//
+        // Con prospettiva forte e rotazione l'euristica puo' alternare le etichette da un
+        // frame all'altro, o darne una specchiata (impossibile per la camera), soprattutto
+        // con 3 LED dove il quarto punto e' ricostruito. Il perimetro A, B, D, C si ricava
+        // dall'angolo attorno al centroide, che e' sempre orientato bene; resta da scegliere
+        // quale punto e' A:
+        // - in tracking: la rotazione ciclica piu' vicina alla geometria precedente (solo
+        //   sui LED visti). Si usa se l'euristica e' specchiata, oppure se e' nettamente
+        //   migliore (costo < 1/4) e la forma (base/altezza come nel layout) la conferma o,
+        //   se la forma non decide, non implica una rotazione dell'arma di oltre 80 gradi
+        //   superiore a quella dell'euristica: cosi' un aggancio sbagliato (es. partenza
+        //   con l'arma molto ruotata) si corregge. La forma puo' anche dare ragione
+        //   all'euristica: con 4 LED veri se lo conferma la forma vera del rettangolo, corretta
+        //   dalla prospettiva (con l'arma molto di lato, sopra o sotto lo schermo la forma vista
+        //   si puo' invertire); con 3 LED solo nel primo secondo circa dopo una partenza o
+        //   ripresa (aggancio ancora incerto) e se la continuita' implica l'arma piu' ruotata;
+        // - dopo un buio breve, come in tracking se i 4 LED sono vicini all'ultima geometria;
+        // - alla partenza, solo se l'euristica e' specchiata: la rotazione con l'arma piu' dritta.
+        // In calibrazione non si applica.
+        if (num_points_seen >= 3 && !calibrationMode) {
+            const uint8_t heur[4] = {a, b, d, c};
+            float cxm = 0.0f, cym = 0.0f;
+            for (uint8_t i = 0; i < 4; i++) { cxm += positionXX[i]; cym += positionYY[i]; }
+            cxm *= 0.25f; cym *= 0.25f;
+            float an[4]; uint8_t ord[4] = {0, 1, 2, 3};
+            for (uint8_t i = 0; i < 4; i++) an[i] = atan2f(positionYY[i] - cym, positionXX[i] - cxm);
+            for (uint8_t i = 1; i < 4; i++)
+                for (uint8_t j = i; j > 0 && an[ord[j]] < an[ord[j - 1]]; j--) { const uint8_t t = ord[j]; ord[j] = ord[j - 1]; ord[j - 1] = t; }
+            // Area con segno dell'etichettatura dell'euristica: negativa = specchiata
+            const float area_h = (float)(positionXX[d] - positionXX[a]) * (float)(positionYY[c] - positionYY[b]) -
+                                 (float)(positionYY[d] - positionYY[a]) * (float)(positionXX[c] - positionXX[b]);
+            // Rotazione apparente di un'etichettatura (p = A, B, D, C), dai lati verticali A-C e B-D:
+            // con la prospettiva convergono verso il loro punto di fuga, e la direzione dal centro
+            // dell'immagine al punto di fuga e' la rotazione dell'arma attorno alla canna qualunque
+            // sia l'angolo di mira (con i lati paralleli e' la loro direzione). E' esatta solo per
+            // una lente ideale: con la distorsione e il punto ricostruito (3 LED) e' approssimata,
+            // ma il margine di 80 gradi del controllo la tollera.
+            auto rollOf = [&](const uint8_t* p) {
+                const float ox = mouseResX * 0.5f, oy = mouseResY * 0.5f;   // centro dell'immagine
+                const float ax = positionXX[p[0]] - ox, ay = positionYY[p[0]] - oy;
+                const float bx = positionXX[p[1]] - ox, by = positionYY[p[1]] - oy;
+                const float dx = positionXX[p[2]] - ox, dy = positionYY[p[2]] - oy;
+                const float cx = positionXX[p[3]] - ox, cy = positionYY[p[3]] - oy;
+                // rette A-C e B-D in coordinate omogenee e loro intersezione (punto di fuga)
+                const float l1x = ay - cy, l1y = cx - ax, l1z = ax * cy - ay * cx;
+                const float l2x = by - dy, l2y = dx - bx, l2z = bx * dy - by * dx;
+                float vx = l1y * l2z - l1z * l2y, vy = l1z * l2x - l1x * l2z;
+                const float sx = (cx - ax) + (dx - bx), sy = (cy - ay) + (dy - by);   // da A, B verso C, D
+                if (vx * sx + vy * sy < 0.0f) { vx = -vx; vy = -vy; }
+                if (fabsf(vx) + fabsf(vy) < 1.0f) { vx = sx; vy = sy; }   // caso degenere
+                return fabsf(atan2f(-vx, vy));
+            };
+            const uint8_t labs[4] = {A, B, D, C};
+            auto costOf = [&](const uint8_t* p) {
+                uint32_t cst = 0;
+                for (uint8_t j = 0; j < 4; ++j) {
+                    if (p[j] >= num_points_seen) continue;  // punto ricostruito (solo con 3 LED)
+                    const int32_t ddx = positionXX[p[j]] - prev_GeomX[labs[j]];
+                    const int32_t ddy = positionYY[p[j]] - prev_GeomY[labs[j]];
+                    const uint32_t q = (uint32_t)(ddx * ddx + ddy * ddy);
+                    cst = (cst > UINT32_MAX - q) ? UINT32_MAX : cst + q;
+                }
+                return cst;
+            };
+            // Buio breve (al massimo 8 fotogrammi, es. un LED che sfarfalla o una mano che passa):
+            // con i 4 LED di nuovo visibili si resta in continuita' se la rotazione ciclica piu'
+            // vicina all'ultima geometria dista poco (somma dei quadrati < 1/16 del lato piu' corto
+            // al quadrato); altrimenti si riparte come alla partenza.
+            bool resume = false;
+            if (!is_tracking_stable && num_points_seen == 4 && dark_frames <= 8) {
+                uint32_t best = UINT32_MAX; uint8_t bk = 0;
+                for (uint8_t k = 0; k < 4; ++k) {
+                    const uint8_t cand[4] = {ord[k], ord[(k + 1) & 3], ord[(k + 2) & 3], ord[(k + 3) & 3]};
+                    const uint32_t cst = costOf(cand);
+                    if (cst < best) { best = cst; bk = k; }
+                }
+                float minSide2 = FLT_MAX;
+                for (uint8_t j = 0; j < 4; ++j) {
+                    const float dx = (float)(positionXX[ord[(bk + j) & 3]] - positionXX[ord[(bk + j + 1) & 3]]);
+                    const float dy = (float)(positionYY[ord[(bk + j) & 3]] - positionYY[ord[(bk + j + 1) & 3]]);
+                    minSide2 = fminf(minSide2, dx * dx + dy * dy);
+                }
+                resume = (float)best < minSide2 * 0.0625f;
+            }
+            int chosen = -1;
+            const bool continuity = (is_tracking_stable && prev_num_points_seen >= 3) || resume;
+            if (!continuity) frames_since_cold = 0;
+            else if (frames_since_cold < 255) frames_since_cold++;
+            if (continuity) {
+                uint32_t best = UINT32_MAX; uint8_t bk = 0;
+                for (uint8_t k = 0; k < 4; ++k) {
+                    const uint8_t cand[4] = {ord[k], ord[(k + 1) & 3], ord[(k + 2) & 3], ord[(k + 3) & 3]};
+                    const uint32_t cst = costOf(cand);
+                    if (cst < best) { best = cst; bk = k; }
+                }
+                const uint8_t cand[4] = {ord[bk], ord[(bk + 1) & 3], ord[(bk + 2) & 3], ord[(bk + 3) & 3]};
+                const bool same = cand[0] == heur[0] && cand[1] == heur[1] && cand[2] == heur[2] && cand[3] == heur[3];
+                if (!same) {
+                    if (area_h <= 0.0f) chosen = bk;
+                    else if (best < costOf(heur) / 4) {
+                        // Prima decide la forma, se e' chiara: con le etichette giuste la base e l'altezza
+                        // stanno come nel layout (wideLayout), con un aggancio ruotato di 90 gradi sono
+                        // invertite. Cosi' l'arma inclinata di 85-90 gradi non scambia i LED, e un aggancio
+                        // sbagliato si corregge anche con l'arma inclinata di 20-45 gradi.
+                        // Forma: (AB^2 + CD^2 - AC^2 - BD^2) / somma, positiva = base piu' lunga dell'altezza.
+                        auto aspectOf = [&](const uint8_t* p) {
+                            auto d2 = [&](uint8_t i, uint8_t j) {
+                                const float dx = (float)(positionXX[i] - positionXX[j]), dy = (float)(positionYY[i] - positionYY[j]);
+                                return dx * dx + dy * dy;
+                            };
+                            const float h = d2(p[1], p[0]) + d2(p[2], p[3]), v = d2(p[3], p[0]) + d2(p[2], p[1]);
+                            const float q = (h - v) / fmaxf(h + v, 1.0f);
+                            return wideLayout ? q : -q;
+                        };
+                        // Con l'arma molto di lato, o molto sopra o sotto lo schermo, la prospettiva accorcia
+                        // un lato fino a invertire la forma vista. Con 4 LED veri si ricava allora la forma
+                        // vera del rettangolo, sul piano dello schermo, dalla prospettiva dei 4 punti e dalla
+                        // focale: nello spazio D - A = (B - A) + (C - A), da cui le profondita' di B e di C
+                        // rispetto ad A (rapporti di aree nell'immagine) e quindi i lati veri A-B e A-C.
+                        // Stessa scala e stesso segno di aspectOf; 0 se il quadrilatero e' degenere. Basta
+                        // valutarla per la continuita': l'ordine dell'euristica puo' essere incrociato.
+                        // Se il profilo non indica la focale si usa la regola dei 3 LED.
+                        auto trueAspectOf = [&](const uint8_t* p) {
+                            const float ox = mouseResX * 0.5f, oy = mouseResY * 0.5f;   // centro dell'immagine
+                            const float xa = positionXX[p[0]] - ox, ya = positionYY[p[0]] - oy;
+                            const float xb = positionXX[p[1]] - ox, yb = positionYY[p[1]] - oy;
+                            const float xd = positionXX[p[2]] - ox, yd = positionYY[p[2]] - oy;
+                            const float xc = positionXX[p[3]] - ox, yc = positionYY[p[3]] - oy;
+                            // doppia area con segno del triangolo (0, 1, 2)
+                            auto area2 = [](float x0, float y0, float x1, float y1, float x2, float y2) {
+                                return (x1 - x0) * (y2 - y0) - (y1 - y0) * (x2 - x0);
+                            };
+                            const float sB = area2(xb, yb, xd, yd, xc, yc), sC = area2(xc, yc, xd, yd, xb, yb);
+                            if (fabsf(sB) < 1.0f || fabsf(sC) < 1.0f) return 0.0f;
+                            const float kB = area2(xa, ya, xd, yd, xc, yc) / sB;   // profondita' di B / profondita' di A
+                            const float kC = area2(xa, ya, xd, yd, xb, yb) / sC;   // profondita' di C / profondita' di A
+                            if (!(kB > 0.0f && kC > 0.0f)) return 0.0f;
+                            const float hx = kB * xb - xa, hy = kB * yb - ya, hz = focal * (kB - 1.0f);   // lato A-B
+                            const float vx = kC * xc - xa, vy = kC * yc - ya, vz = focal * (kC - 1.0f);   // lato A-C
+                            const float h = hx * hx + hy * hy + hz * hz, v = vx * vx + vy * vy + vz * vz;
+                            const float q = (h - v) / fmaxf(h + v, 1.0f);
+                            return wideLayout ? q : -q;
+                        };
+                        const float q_cand = aspectOf(cand), q_heur = aspectOf(heur);
+                        bool ok;
+                        if (q_cand > 0.1f && q_heur < -0.1f) ok = true;         // la forma conferma la continuita'
+                        else if (q_cand < -0.1f && q_heur > 0.1f &&
+                                 (num_points_seen == 4 && focal > 0.0f ? trueAspectOf(cand) < -0.1f
+                                                       : (frames_since_cold < 200 && rollOf(cand) > rollOf(heur)))) ok = false;   // la forma conferma l'euristica
+                        else ok = rollOf(cand) < rollOf(heur) + 80.0f * 0.0174533f;  // forma incerta: rotazione
+                        if (ok) chosen = bk;
+                    }
+                }
+            } else if (area_h < 0.0f) {
+                float bestRoll = 10.0f;
+                for (uint8_t k = 0; k < 4; ++k) {
+                    const uint8_t cand[4] = {ord[k], ord[(k + 1) & 3], ord[(k + 2) & 3], ord[(k + 3) & 3]};
+                    const float r = rollOf(cand);
+                    if (r < bestRoll) { bestRoll = r; chosen = k; }
+                }
+            }
+            if (chosen >= 0) { a = ord[chosen]; b = ord[(chosen + 1) & 3]; d = ord[(chosen + 2) & 3]; c = ord[(chosen + 3) & 3]; }
+        }
+
         // =========================================================================//
         // ======== COSTRUZIONE MASCHERA: QUALI PUNTI ORDINATI SONO VERI? ==========//
         // =========================================================================//
@@ -657,10 +955,36 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         }
 
         // MIGLIORAMENTO DELL POSIZIONE DEL QUARTO PUNTO QUANTO SI VEDONO SOLO 3 PUNTI
+        // Con l'ultima geometria vista con 4 LED il quarto punto ne conserva la forma reale
+        // (SquareFromAnchor); altrimenti l'iniezione prospettica storica qui sotto.
+        bool hidden_from_anchor = false;
+        if (num_points_seen == 3 && anchor_ok) {
+            const uint8_t missing_mask = (~next_point_seen_mask) & 0x0F;
+            const uint8_t lab[4] = {a, b, c, d};   // indice in positionXX di A, B, C, D
+            uint8_t hl = 0, vl[3], nv = 0, nh = 0;
+            for (uint8_t L = 0; L < 4; L++) {
+                if (missing_mask & (1 << (3 - L))) { hl = L; nh++; }
+                else if (nv < 3) vl[nv++] = L;
+            }
+            if (nh == 1) {
+                float ax[3], ay[3], qx[3], qy[3];
+                for (uint8_t k = 0; k < 3; k++) {
+                    ax[k] = (float)anchorX[vl[k]]; ay[k] = (float)anchorY[vl[k]];
+                    qx[k] = (float)positionXX[lab[vl[k]]]; qy[k] = (float)positionYY[lab[vl[k]]];
+                }
+                float hx = (float)anchorX[hl], hy = (float)anchorY[hl];
+                if (SquareFromAnchor(focal, mouseResX * 0.5f, mouseResY * 0.5f, 3, ax, ay, qx, qy, 1, &hx, &hy)) {
+                    positionXX[lab[hl]] = fast_roundf(hx);
+                    positionYY[lab[hl]] = fast_roundf(hy);
+                    hidden_from_anchor = true;
+                }
+            }
+        }
+
         // =========================================================================//
         // === (3 PUNTI): INIEZIONE PROSPETTICA STORICA (Zero-Cost Math) ====//
         // =========================================================================//
-        if (num_points_seen == 3 && prev_num_points_seen >= 3) {
+        if (!hidden_from_anchor && num_points_seen == 3 && prev_num_points_seen >= 3) {
             uint8_t missing_mask = (~next_point_seen_mask) & 0x0F;
 
             // Manca D (BR). I punti certi sono A, B, C.
@@ -778,6 +1102,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
                     
                     offset_X[i] = (float)(predicted_x - GeomX[i]);
                     offset_Y[i] = (float)(predicted_y - GeomY[i]);
+                    spring_fast = num_points_seen > prev_num_points_seen;
                 }
             }
 
@@ -787,8 +1112,11 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
             float consumo = fmaxf(FPS_NORMALIZATION, (float)spostamento * COSTANTE_MOLLA);
 
             // With four measured LEDs, blend smoothly at low motion and
-            // converge quickly at high motion. Partial tracking is unchanged.
-            if (num_points_seen == 4) {
+            // converge quickly at high motion. With 1-3 LEDs the return stays
+            // linear (slow for large offsets), except after LEDs were added:
+            // then it is proportional at the slowest rate (MIN_RETURN), because
+            // the old geometry was less reliable than the new one.
+            if (num_points_seen == 4 || spring_fast) {
                 float largest_offset = 0.0f;
                 for (uint8_t i = 0; i < 4; ++i) {
                     if (offset_X[i] != 0.0f)
@@ -799,11 +1127,11 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
 
                 if (largest_offset > 0.0f) {
                     // Estimate motion only while recovering four measured LEDs.
-                    // Reset on reacquisition: old velocity must not speed up a
-                    // new, slow return. Newly visible LEDs start from zero.
+                    // Reset when the number of seen LEDs changes: old velocity must
+                    // not speed up a new, slow return. Newly visible LEDs start from zero.
                     int32_t motion_sum = 0;
                     for (uint8_t i = 0; i < 4; ++i) {
-                        if (prev_num_points_seen != 4)
+                        if (prev_num_points_seen != num_points_seen)
                             motion_X[i] = motion_Y[i] = 0;
                         if (prev_point_seen_mask & (1 << (3 - i))) {
                             const int32_t dx = GeomX[i] - prev_GeomX[i];
@@ -827,7 +1155,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
                     const float scale = fmaxf(height, 1.0f) * FPS_NORMALIZATION;
 
                     float return_rate;
-                    if (motion <= scale * MIN_RETURN)
+                    if (num_points_seen != 4 || motion <= scale * MIN_RETURN)
                         return_rate = MIN_RETURN;
                     else if (motion >= scale * MAX_RETURN)
                         return_rate = MAX_RETURN;
@@ -839,15 +1167,21 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
                 }
             }
 
-            // OTTIMIZZAZIONE: Branchless Math per la Molla. 
-            // Usa le istruzioni hardware min/max per non far spezzare la pipeline della CPU 
-            // all'indovinare i salti logici negativi/positivi del debito.
-            for (uint8_t i = 0; i < 4; i++) {
-                if (offset_X[i] > 0.0f) offset_X[i] = fmaxf(0.0f, offset_X[i] - consumo);
-                else if (offset_X[i] < 0.0f) offset_X[i] = fminf(0.0f, offset_X[i] + consumo);
-                
-                if (offset_Y[i] > 0.0f) offset_Y[i] = fmaxf(0.0f, offset_Y[i] - consumo);
-                else if (offset_Y[i] < 0.0f) offset_Y[i] = fminf(0.0f, offset_Y[i] + consumo);
+            // Molla: tutti gli offset vengono ridotti dello stesso fattore, cosi' la
+            // componente piu' grande cala di "consumo" e la forma della correzione resta
+            // la stessa. Sottrarre "consumo" a ogni componente azzerava prima quelle
+            // piccole, deformando il quadrilatero e causando scatti del cursore.
+            {
+                float largest = 0.0f;
+                for (uint8_t i = 0; i < 4; i++) {
+                    largest = fmaxf(largest, fabsf(offset_X[i]));
+                    largest = fmaxf(largest, fabsf(offset_Y[i]));
+                }
+                const float factor = largest > consumo ? 1.0f - consumo / largest : 0.0f;
+                for (uint8_t i = 0; i < 4; i++) {
+                    offset_X[i] *= factor;
+                    offset_Y[i] *= factor;
+                }
             }
         } else {
             for (uint8_t i = 0; i < 4; i++) { offset_X[i] = 0.0f; offset_Y[i] = 0.0f; }
@@ -902,8 +1236,11 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         see[2] = (see[2] << 1) | ((next_point_seen_mask >> 1) & 1);
         see[3] = (see[3] << 1) | (next_point_seen_mask & 1);
 
-        if (num_points_seen == 4)
+        if (num_points_seen == 4) {
             start = 0xFF;
+            for (uint8_t i = 0; i < 4; i++) { anchorX[i] = GeomX[i]; anchorY[i] = GeomY[i]; }
+            anchor_ok = true;
+        }
 
         prev2_medianX = medianX;
         prev2_medianY = medianY;
@@ -942,10 +1279,13 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
 
         is_tracking_stable = true;
         prev_point_seen_mask = next_point_seen_mask; 
+        dark_frames = num_points_seen >= 3 ? 0 : 255;
     }
     else {
         is_tracking_stable = false;
         prev_point_seen_mask = 0;
+        if (dark_frames < 255) dark_frames++;
+        anchor_ok = false;   // dopo il buio la posizione dell'arma rispetto allo schermo puo' essere cambiata
     }
     prev_num_points_seen = num_points_seen;
 }

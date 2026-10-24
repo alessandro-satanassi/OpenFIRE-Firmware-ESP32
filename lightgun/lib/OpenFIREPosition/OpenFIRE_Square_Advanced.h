@@ -69,6 +69,8 @@ public:
                 offset_Y[i] = 0.0f;
                 motion_X[i] = motion_Y[i] = 0;
             }
+            dark_frames = 255;   // nessuna ripresa dopo buio breve con le etichette del layout precedente
+            anchor_ok = false;
         }
     }
 
@@ -159,6 +161,15 @@ private:
     // assorbimenti frazionari (sub-pixel) senza incappare nell'arrotondamento prematuro a zero.
     float offset_X[4] = {0.0f, 0.0f, 0.0f, 0.0f};
     float offset_Y[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    // true se il debito attuale e' nato da un aumento dei LED visti (la geometria vecchia
+    // era meno affidabile e va lasciata in fretta), false se da una diminuzione.
+    bool spring_fast = false;
+    // fotogrammi dall'ultima volta che le etichette sono state prese dall'euristica
+    // (partenza o ripresa con 3-4 LED), fermo a 255
+    uint8_t frames_since_cold = 0;
+    // fotogrammi di buio consecutivi dopo l'ultimo frame con 3-4 LED (255 = buio lungo o
+    // ultimo frame con 1-2 LED): dopo un buio breve si riprende con la continuita'
+    uint8_t dark_frames = 255;
     
     // COSTANTE_MOLLA scales the movement-based consumption, not a fixed
     // percentage of the remaining error. Four-LED recovery also uses a
@@ -174,6 +185,11 @@ private:
     int prev_GeomX[4] = {0, 0, 0, 0};
     int prev_GeomY[4] = {0, 0, 0, 0};
 
+    // Ultima geometria vista con 4 LED (A, B, C, D): con 2-3 LED i nascosti ne conservano la forma.
+    int anchorX[4] = {0, 0, 0, 0};
+    int anchorY[4] = {0, 0, 0, 0};
+    bool anchor_ok = false;
+
     /////////////////////////////////////////////////////////////////////
 
     int camMaxX = 0;
@@ -181,6 +197,7 @@ private:
     int camToMouseMult = 1;
     int mouseResX = 0;
     int mouseResY = 0;
+    float focal = 0.0f;              // lunghezza focale nominale della camera, in unita' mouse
 
     bool calibrationMode = false;    // true = è in corso la calibrazione
     bool wideLayout = false;         // true = configurazione con base maggiore di altezza ad esempio per sensori sugli angoli del monitor
