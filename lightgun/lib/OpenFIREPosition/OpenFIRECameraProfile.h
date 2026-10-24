@@ -97,6 +97,11 @@ struct CameraProfile {
     float lensCorrectionMax;
     float lensCorrectionMin;
 
+    // Lens geometry
+    // Nominal focal length / sensor half-width, with the lens-correction
+    // normalisation (r = 1 at a side midpoint). 0 = unknown.
+    float lensFocalRatio;
+
     // Default Square geometry - automatically calculated
     int squareTLX;
     int squareTLY;
@@ -146,7 +151,8 @@ constexpr CameraProfile MakeProfile(CameraModel model,
                                     float lensRadialK1,
                                     float lensRadialK2,
                                     float lensCorrectionMax = 1.2f,
-                                    float lensCorrectionMin = 0.8f) {
+                                    float lensCorrectionMin = 0.8f,
+                                    float lensFocalRatio = 0.0f) {
     // OpenFIRE internal coordinate space
     const int camToMouseMult = 1 << camToMouseShift;
     const int mouseResX = camResX * camToMouseMult;
@@ -227,6 +233,9 @@ constexpr CameraProfile MakeProfile(CameraModel model,
         lensCorrectionMax,
         lensCorrectionMin,
 
+        // Lens geometry
+        lensFocalRatio,
+
         // Default Square geometry
         squareTLX,
         squareTLY,
@@ -271,6 +280,8 @@ constexpr CameraProfile MakeProfile(CameraModel model,
 //   lensRadialK1/K2     Radial lens correction coefficients
 //   lensCorrectionMax  Upper correction-factor limit (default: legacy 1.2)
 //   lensCorrectionMin  Lower correction-factor limit (default: legacy 0.8)
+//   lensFocalRatio     Nominal focal length / sensor half-width (default: 0 = unknown);
+//                      without distortion it is 1 / tan(horizontal FOV / 2)
 //   Max precedes Min to preserve existing MakeProfile calls.
 // ============================================================================
 
@@ -290,7 +301,8 @@ static constexpr CameraProfile DFRobot_SEN0158 = MakeProfile(
     0.006f,                       // Lens radial correction K1
     0.0f,                         // Lens radial correction K2
     1.2f,                         // Lens correction upper limit
-    0.8f                          // Lens correction lower limit
+    0.8f,                         // Lens correction lower limit
+    1.0f / 0.29621f               // Lens focal ratio: 1 / tan(33 deg / 2), nominal horizontal FOV
 );
 
 // ---------------------------------------------------------------------------
@@ -309,7 +321,8 @@ static constexpr CameraProfile PixArt_PAJ7025R2 = MakeProfile(
     0.0f,                         // Lens radial correction K1
     0.0f,                         // Lens radial correction K2
     1.2f,                         // Lens correction upper limit
-    0.8f                          // Lens correction lower limit
+    0.8f,                         // Lens correction lower limit
+    1.0f / 0.34727f               // Lens focal ratio: 1 / tan(38.3 deg / 2), nominal horizontal FOV
 );
 
 // ---------------------------------------------------------------------------
@@ -334,7 +347,8 @@ static constexpr CameraProfile PixArt_PAJ7025R3 = MakeProfile(
     -0.128946f,                   // Lens radial correction K1 (nominal fit)
     0.155087f,                    // Lens radial correction K2 (nominal fit)
     1.5f,                         // Lens correction upper limit
-    0.8f                          // Lens correction lower limit
+    0.8f,                         // Lens correction lower limit
+    0.378f / 0.539f               // Lens focal ratio: nominal EFL / sensor half-width (mm)
 );
 
 /*

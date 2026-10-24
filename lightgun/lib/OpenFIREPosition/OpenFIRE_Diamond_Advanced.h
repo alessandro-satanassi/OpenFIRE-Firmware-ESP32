@@ -58,6 +58,7 @@ class OpenFIRE_Diamond {
     float prevGeomX[4] = {0.0f, 0.0f, 0.0f, 0.0f};
     float prevGeomY[4] = {0.0f, 0.0f, 0.0f, 0.0f};
     uint8_t prevNumSeen = 0;        // LED visti nel frame precedente accettato (0 = buio)
+    uint8_t darkFrames = 255;       // fotogrammi di buio dopo l'ultimo frame accettato, fermo a 255
     uint8_t prevSeenMask = 0;       // quali indici erano misurati nel frame precedente
 
     // --- VARIABILI MOTORE KINEMATICO (MOLLA) ---

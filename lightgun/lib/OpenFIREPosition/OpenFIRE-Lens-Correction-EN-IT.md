@@ -186,14 +186,15 @@ Rounded profile values:
 | `lensCorrectionMax` | `1.5f` | Chosen upper safety limit |
 | `lensCorrectionMin` | `0.8f` | Retained lower safety limit |
 
-The last four arguments of the current `MakeProfile()` interface are ordered **K1, K2, Max, Min**:
+The last five arguments of the current `MakeProfile()` interface are ordered **K1, K2, Max, Min, focal ratio**. The focal ratio is not part of the correction: Square tracking uses it to recover the true rectangle shape from perspective.
 
 ```cpp
 // Theoretical inverse radial fit; not a measured lens calibration.
 -0.128946f, // lensRadialK1
  0.155087f, // lensRadialK2
  1.5f,      // lensCorrectionMax
- 0.8f       // lensCorrectionMin
+ 0.8f,      // lensCorrectionMin
+ 0.378f / 0.539f // lensFocalRatio: nominal EFL / sensor half-width
 ```
 
 A negative K1 does not, by itself, mean the correction is wrong: the complete polynomial matters. In this interpolant, the factor falls slightly below 1 in the inner region, then rises towards the corners. This does not prove that the real lens follows exactly that curve.
@@ -505,14 +506,15 @@ Valori arrotondati del profilo:
 | `lensCorrectionMax` | `1.5f` | Limite superiore di sicurezza scelto |
 | `lensCorrectionMin` | `0.8f` | Limite inferiore di sicurezza conservato |
 
-Gli ultimi quattro argomenti dell'interfaccia attuale di `MakeProfile()` sono ordinati **K1, K2, Max, Min**:
+Gli ultimi cinque argomenti dell'interfaccia attuale di `MakeProfile()` sono ordinati **K1, K2, Max, Min, rapporto focale**. Il rapporto focale non fa parte della correzione: il tracking Square lo usa per ricavare la forma vera del rettangolo dalla prospettiva.
 
 ```cpp
 // Theoretical inverse radial fit; not a measured lens calibration.
 -0.128946f, // lensRadialK1
  0.155087f, // lensRadialK2
  1.5f,      // lensCorrectionMax
- 0.8f       // lensCorrectionMin
+ 0.8f,      // lensCorrectionMin
+ 0.378f / 0.539f // lensFocalRatio: nominal EFL / sensor half-width
 ```
 
 Il K1 negativo non indica da solo che la correzione sia sbagliata: conta il polinomio completo. In questo interpolante il fattore scende leggermente sotto 1 nella zona interna e poi aumenta verso gli angoli. Non è una prova che la lente reale segua esattamente quella curva.

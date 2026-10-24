@@ -51,6 +51,7 @@ void OpenFIRE_Diamond::configure(const CameraProfile& profile)
 
     start = 0;
     prevNumSeen = 0;
+    darkFrames = 255;
     prevSeenMask = 0;
     for (uint8_t i = 0; i < 4; i++) {
         prevGeomX[i] = (float)FinalX[i];
@@ -95,9 +96,9 @@ void OpenFIRE_Diamond::begin(const int* px, const int* py, unsigned int seen)
     // Si parte solo dopo aver visto tutti e 4 i LED
     if (!start && n != 4) return;
     // Buio: si mantiene l'ultima posizione e si ricorda che la geometria non e' piu' aggiornata
-    if (n == 0) { prevNumSeen = 0; return; }
+    if (n == 0) { prevNumSeen = 0; if (darkFrames < 255) darkFrames++; return; }
     // Dopo il buio servono almeno 3 LED: con 1-2 l'identificazione non e' affidabile
-    if (prevNumSeen == 0 && n < 3) return;
+    if (prevNumSeen == 0 && n < 3) { if (darkFrames < 255) darkFrames++; return; }
 
     float Gx[4], Gy[4];
     uint8_t mask = 0;
@@ -142,7 +143,31 @@ void OpenFIRE_Diamond::begin(const int* px, const int* py, unsigned int seen)
         }
 
         uint8_t best = cold;
-        if (prevNumSeen != 0) {
+        // Buio breve (al massimo 8 fotogrammi): si resta in continuita' se la rotazione ciclica
+        // piu' vicina all'ultima posizione mostrata dista poco (somma dei quadrati < 1/16 del
+        // lato piu' corto al quadrato); altrimenti vale la regola di partenza.
+        bool resume = false;
+        if (prevNumSeen == 0 && start && darkFrames <= 8) {
+            float bestCost = FLT_MAX;
+            uint8_t r0 = 0;
+            for (uint8_t r = 0; r < 4; r++) {
+                float cost = 0.0f;
+                for (uint8_t k = 0; k < 4; k++) {
+                    const float dx = sx[ord[(r + k) & 3]] - (float)FinalX[k];
+                    const float dy = sy[ord[(r + k) & 3]] - (float)FinalY[k];
+                    cost += dx * dx + dy * dy;
+                }
+                if (cost < bestCost) { bestCost = cost; r0 = r; }
+            }
+            float minSide2 = FLT_MAX;
+            for (uint8_t k = 0; k < 4; k++) {
+                const float dx = sx[ord[(r0 + k) & 3]] - sx[ord[(r0 + k + 1) & 3]];
+                const float dy = sy[ord[(r0 + k) & 3]] - sy[ord[(r0 + k + 1) & 3]];
+                minSide2 = fminf(minSide2, dx * dx + dy * dy);
+            }
+            resume = bestCost < minSide2 * 0.0625f;
+        }
+        if (prevNumSeen != 0 || resume) {
             // Continuita': la rotazione ciclica piu' vicina all'ultima posizione mostrata,
             // cosi' l'identita' dei LED non salta anche con l'arma molto ruotata.
             float bestCost = FLT_MAX;
@@ -160,7 +185,8 @@ void OpenFIRE_Diamond::begin(const int* px, const int* py, unsigned int seen)
             // aggancio sbagliato (partenza con l'arma molto ruotata) si corregge tornando dritti.
             if (best != cold) {
                 // rotazione apparente: diagonale 0->2 ruotata di 90 gradi. Con l'arma molto di lato la
-                // diagonale orizzontale si inclina per la prospettiva, quella verticale no.
+                // diagonale orizzontale si inclina per la prospettiva, quella verticale molto meno
+                // (solo con la mira laterale e l'arma insieme molto sopra o sotto lo schermo).
                 auto rollOf = [&](uint8_t r) {
                     const float vx = sx[ord[(r + 2) & 3]] - sx[ord[r]], vy = sy[ord[(r + 2) & 3]] - sy[ord[r]];
                     return fabsf(atan2f(-vx, vy));
@@ -364,6 +390,7 @@ void OpenFIRE_Diamond::begin(const int* px, const int* py, unsigned int seen)
     }
     prevSeenMask = mask;
     prevNumSeen = n;
+    darkFrames = 0;
     if (n == 4) start = 0xFF;
 
     medianX = (FinalX[0] + FinalX[1] + FinalX[2] + FinalX[3]) / 4;
