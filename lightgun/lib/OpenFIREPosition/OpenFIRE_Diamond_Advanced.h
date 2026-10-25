@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include "OpenFIREConst.h"
 #include <OpenFIRECameraProfile.h>
+#include "OpenFIRE_Anchor.h"
 
 // Stessa interfaccia pubblica di OpenFIRE_Diamond.h, cosi' OpenFIREcommon non cambia.
 // Indici dei LED (spazio camera grezzo, X non specchiata):
@@ -57,8 +58,14 @@ class OpenFIRE_Diamond {
     // Geometria del frame precedente senza molla (misurata o ricostruita)
     float prevGeomX[4] = {0.0f, 0.0f, 0.0f, 0.0f};
     float prevGeomY[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    // Ultima geometria vista con tutti e 4 i LED (ancora esatta per ricostruzioni a 2-3 LED)
+    float anchorX[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    float anchorY[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    bool anchor_ok = false;
     uint8_t prevNumSeen = 0;        // LED visti nel frame precedente accettato (0 = buio)
     uint8_t darkFrames = 255;       // fotogrammi di buio dopo l'ultimo frame accettato, fermo a 255
+    uint8_t shortDarkFrames = 8;    // durata massima del buio breve, in fotogrammi (dagli fps del profilo)
+    float minLedDist2 = 64.0f;      // distanza minima al quadrato tra 2 LED (un pixel del sensore)
     uint8_t prevSeenMask = 0;       // quali indici erano misurati nel frame precedente
 
     // --- VARIABILI MOTORE KINEMATICO (MOLLA) ---
@@ -76,8 +83,14 @@ class OpenFIRE_Diamond {
     float COSTANTE_MOLLA = 0.25f;
 
     // Rapporto atteso diagonale orizzontale / verticale (dal profilo: segue il monitor).
-    // Serve all'aggancio a freddo con l'arma ruotata.
+    // Serve all'aggancio a freddo; non si aggiorna dal rapporto apparente deformato dalla prospettiva.
     float diagRatioRef = 1.0f;
+
+    // Focale nominale e centro dell'immagine (unita' mouse): ricostruzione dei LED nascosti
+    AnchorReconstruction anchorReconstruction;
+    float focal = 0.0f;
+    float imageCX = 0.0f;
+    float imageCY = 0.0f;
 
     static bool ConvexCycle(const float* x, const float* y);
 

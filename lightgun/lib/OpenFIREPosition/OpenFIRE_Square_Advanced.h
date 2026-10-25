@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include "OpenFIREConst.h"
 #include <OpenFIRECameraProfile.h>
+#include "OpenFIRE_Anchor.h"
 
 
 class OpenFIRE_Square {
@@ -71,11 +72,16 @@ public:
             }
             dark_frames = 255;   // nessuna ripresa dopo buio breve con le etichette del layout precedente
             anchor_ok = false;
+            three_ids_trusted = false;
+            frames_since_cold = 0;
+            ideal_aspect_ratio = wideLayout ? (1.0f / default_aspect_ratio) : default_aspect_ratio;
         }
     }
 
 
 private:
+    // A full lock followed only by validated three-point correspondences.
+    bool three_ids_trusted = false;
     //================================================================
     // STATO DEL TRACKER
     //================================================================
@@ -122,6 +128,8 @@ private:
     float ideal_aspect_ratio = 16.0f / 9.0f; 
     */
     float ideal_aspect_ratio = IR_SQUARE_BASE_HEIGHT_RATIO;
+    float default_aspect_ratio = IR_SQUARE_BASE_HEIGHT_RATIO;
+    float minLedDist = 2.0f;         // distanza minima tra 2 LED (un pixel del sensore, in unita' mouse)
     
     uint8_t prev_num_points_seen = 0; 
     
@@ -170,17 +178,14 @@ private:
     // fotogrammi di buio consecutivi dopo l'ultimo frame con 3-4 LED (255 = buio lungo o
     // ultimo frame con 1-2 LED): dopo un buio breve si riprende con la continuita'
     uint8_t dark_frames = 255;
+    uint8_t short_dark_frames = 8;   // durata massima del buio breve, in fotogrammi (dagli fps del profilo)
+    uint8_t cold_window_frames = 209; // finestra di ~1 secondo dopo partenza a freddo (dagli fps del profilo)
     
     // COSTANTE_MOLLA scales the movement-based consumption, not a fixed
     // percentage of the remaining error. Four-LED recovery also uses a
     // motion-dependent percentage defined in begin().
     float FPS_NORMALIZATION = 1.0f;
     float COSTANTE_MOLLA = 0.25f; 
-    
-    // Questo è un muro matematico. Quando mancano dei punti ottici, l'algoritmo valuta 6 combinazioni.
-    // PENALITA_STORICA garantisce che il codice preferisca mantenere l'associazione logica 
-    // del frame precedente piuttosto che inventare rotazioni spazialmente assurde.
-    const int32_t PENALITA_STORICA = 1000000; 
 
     int prev_GeomX[4] = {0, 0, 0, 0};
     int prev_GeomY[4] = {0, 0, 0, 0};
@@ -197,10 +202,11 @@ private:
     int camToMouseMult = 1;
     int mouseResX = 0;
     int mouseResY = 0;
+    AnchorReconstruction anchorReconstruction;
     float focal = 0.0f;              // lunghezza focale nominale della camera, in unita' mouse
 
     bool calibrationMode = false;    // true = è in corso la calibrazione
-    bool wideLayout = false;         // true = configurazione con base maggiore di altezza ad esempio per sensori sugli angoli del monitor
+    bool wideLayout = true;          // true = configurazione con base maggiore di altezza ad esempio per sensori sugli angoli del monitor
 
     // Signed motion in whole internal-coordinate units, used only during
     // four-LED spring recovery. No fixed-point scaling or noise estimator.

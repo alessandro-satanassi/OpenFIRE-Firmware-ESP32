@@ -23,6 +23,7 @@
 
 #include <Arduino.h>
 #include "OpenFIRE_Diamond_Advanced.h"
+#include "OpenFIRE_Anchor.h"
 #include <cfloat>
 
 void OpenFIRE_Diamond::configure(const CameraProfile& profile)
@@ -30,6 +31,17 @@ void OpenFIRE_Diamond::configure(const CameraProfile& profile)
     camToMouseShift = profile.camToMouseShift;
     camToMouseMult = profile.camToMouseMult;
     FPS_NORMALIZATION = profile.fps ? 209.0f / (float)profile.fps : 1.0f;
+    shortDarkFrames = profile.fps / 26;   // buio breve: circa 40 ms (8 fotogrammi a 209 fps)
+    {
+        // Distanza minima tra 2 LED: un pixel reale del sensore, in unita' mouse
+        const float sensorPixel = profile.sensorResX ? (float)profile.mouseResX / (float)profile.sensorResX : 1.0f;
+        minLedDist2 = sensorPixel * sensorPixel;
+    }
+    // Focale nominale e centro dell'immagine in unita' mouse (ricostruzione dei LED nascosti)
+    focal = profile.mouseResX * 0.5f * profile.lensFocalRatio;
+    imageCX = profile.mouseResX * 0.5f;
+    imageCY = profile.mouseResY * 0.5f;
+    anchorReconstruction.configure(focal, imageCX, imageCY);
 
     FinalX[0] = profile.diamondTCX * camToMouseMult;
     FinalX[1] = profile.diamondRCX * camToMouseMult;
@@ -53,9 +65,12 @@ void OpenFIRE_Diamond::configure(const CameraProfile& profile)
     prevNumSeen = 0;
     darkFrames = 255;
     prevSeenMask = 0;
+    anchor_ok = false;
     for (uint8_t i = 0; i < 4; i++) {
         prevGeomX[i] = (float)FinalX[i];
         prevGeomY[i] = (float)FinalY[i];
+        anchorX[i] = (float)FinalX[i];
+        anchorY[i] = (float)FinalY[i];
         offset_X[i] = offset_Y[i] = 0.0f;
         motion_X[i] = motion_Y[i] = 0.0f;
         see[i] = 0;
@@ -96,9 +111,9 @@ void OpenFIRE_Diamond::begin(const int* px, const int* py, unsigned int seen)
     // Si parte solo dopo aver visto tutti e 4 i LED
     if (!start && n != 4) return;
     // Buio: si mantiene l'ultima posizione e si ricorda che la geometria non e' piu' aggiornata
-    if (n == 0) { prevNumSeen = 0; if (darkFrames < 255) darkFrames++; return; }
+    if (n == 0) { prevNumSeen = 0; anchor_ok = false; if (darkFrames < 255) darkFrames++; return; }
     // Dopo il buio servono almeno 3 LED: con 1-2 l'identificazione non e' affidabile
-    if (prevNumSeen == 0 && n < 3) { if (darkFrames < 255) darkFrames++; return; }
+    if (prevNumSeen == 0 && n < 3) { anchor_ok = false; if (darkFrames < 255) darkFrames++; return; }
 
     float Gx[4], Gy[4];
     uint8_t mask = 0;
@@ -109,94 +124,53 @@ void OpenFIRE_Diamond::begin(const int* px, const int* py, unsigned int seen)
         // =========================================================================//
         // L'angolo cresce alto -> X max -> basso -> X min (Y verso il basso), qualunque
         // sia la distanza o la prospettiva. Resta solo da scegliere quale punto e' "alto".
-        const float cx = (sx[0] + sx[1] + sx[2] + sx[3]) * 0.25f;
-        const float cy = (sy[0] + sy[1] + sy[2] + sy[3]) * 0.25f;
-        uint8_t ord[4] = {0, 1, 2, 3};
-        float an[4];
-        for (uint8_t i = 0; i < 4; i++) an[i] = atan2f(sy[i] - cy, sx[i] - cx);
-        for (uint8_t i = 1; i < 4; i++)
-            for (uint8_t j = i; j > 0 && an[ord[j]] < an[ord[j - 1]]; j--) {
-                const uint8_t t = ord[j]; ord[j] = ord[j - 1]; ord[j - 1] = t;
-            }
+        uint8_t ord[4];
+        if (!OrderFourPoints(sx,sy,ord)) return;
 
-        // Regola di partenza (o ripresa dopo il buio). Il rombo e' piu' largo che alto (segue
-        // il monitor), quindi la diagonale piu' lunga e' quella orizzontale anche con l'arma
-        // molto ruotata; "alto" e' l'estremo della diagonale verticale con Y minore.
-        // Se le due diagonali sono simili (rombo quasi quadrato o prospettiva forte)
-        // si usa il punto con Y minima, come prima.
-        uint8_t cold = 0;
-        bool coldShape = false;  // true se la regola di partenza ha deciso con le diagonali
-        {
-            const float ax = sx[ord[0]] - sx[ord[2]], ay = sy[ord[0]] - sy[ord[2]];
-            const float bx = sx[ord[1]] - sx[ord[3]], by = sy[ord[1]] - sy[ord[3]];
-            const float da = ax * ax + ay * ay, db = bx * bx + by * by;
-            const bool wide = diagRatioRef > 1.15f, tall = diagRatioRef < 0.87f;
-            if ((wide || tall) && (da > 1.3225f * db || db > 1.3225f * da)) {
-                // verticale = la diagonale piu' corta (rombo largo) o piu' lunga (rombo alto)
-                const bool vertIsA = wide ? (da < db) : (da > db);
-                const uint8_t v0 = vertIsA ? 0 : 1;
-                cold = (sy[ord[v0]] <= sy[ord[v0 + 2]]) ? v0 : (uint8_t)(v0 + 2);
-                coldShape = true;
+        // Preserve a recent, close correspondence. Shape must not turn a valid lock
+        // by 90 degrees merely because perspective shortened one diagonal.
+        uint8_t best = 0;
+        float bestCost = FLT_MAX, minSide2 = FLT_MAX;
+        for (uint8_t k = 0; k < 4; ++k) {
+            const float dx = sx[ord[k]] - sx[ord[(k+1)&3]], dy = sy[ord[k]] - sy[ord[(k+1)&3]];
+            minSide2 = fminf(minSide2, dx*dx + dy*dy);
+        }
+        if (start) {
+            for (uint8_t r = 0; r < 4; ++r) {
+                float cost = 0.0f;
+                for (uint8_t k = 0; k < 4; ++k) {
+                    const float dx = sx[ord[(r+k)&3]] - prevGeomX[k];
+                    const float dy = sy[ord[(r+k)&3]] - prevGeomY[k];
+                    cost += dx*dx + dy*dy;
+                }
+                if (cost < bestCost) { bestCost=cost; best=r; }
+            }
+        }
+        const float step = COSTANTE_MOLLA * FPS_NORMALIZATION;
+        const bool recent = start && (prevNumSeen == 4 || (prevNumSeen == 0 && darkFrames <= shortDarkFrames));
+        if (!(recent && bestCost < minSide2 * step * step)) {
+            // The two screen diagonals share a physical midpoint. Their intersection
+            // gives relative endpoint depths, hence their lengths in camera space.
+            // No square root: only compare squared lengths.
+            const float ax=sx[ord[0]], ay=sy[ord[0]], bx=sx[ord[1]], by=sy[ord[1]];
+            const float ux=sx[ord[2]]-ax, uy=sy[ord[2]]-ay;
+            const float vx=sx[ord[3]]-bx, vy=sy[ord[3]]-by;
+            float da=ux*ux+uy*uy, db=vx*vx+vy*vy;
+            float verticalA=sy[ord[2]]-ay, verticalB=sy[ord[3]]-by;
+            CameraQuad quad;
+            if (quad.project(focal,imageCX,imageCY,sx,sy,ord)) {
+                da=quad.distance2(0,2);db=quad.distance2(1,3);
+                verticalA=quad.y[2]-quad.y[0];verticalB=quad.y[3]-quad.y[1];
+            }
+            const float ref=diagRatioRef>=1?diagRatioRef:1/diagRatioRef;
+            const float threshold=1+(ref-1)*COSTANTE_MOLLA;
+            if (da>threshold*threshold*db || db>threshold*threshold*da) {
+                const bool vertA = diagRatioRef>=1 ? da<db : da>db;
+                best=vertA?0:1;
+                if ((vertA?verticalA:verticalB)<0) best+=2;
             } else {
-                for (uint8_t r = 1; r < 4; r++) if (sy[ord[r]] < sy[ord[cold]]) cold = r;
+                best=0;for(uint8_t k=1;k<4;k++)if(sy[ord[k]]<sy[ord[best]])best=k;
             }
-        }
-
-        uint8_t best = cold;
-        // Buio breve (al massimo 8 fotogrammi): si resta in continuita' se la rotazione ciclica
-        // piu' vicina all'ultima posizione mostrata dista poco (somma dei quadrati < 1/16 del
-        // lato piu' corto al quadrato); altrimenti vale la regola di partenza.
-        bool resume = false;
-        if (prevNumSeen == 0 && start && darkFrames <= 8) {
-            float bestCost = FLT_MAX;
-            uint8_t r0 = 0;
-            for (uint8_t r = 0; r < 4; r++) {
-                float cost = 0.0f;
-                for (uint8_t k = 0; k < 4; k++) {
-                    const float dx = sx[ord[(r + k) & 3]] - (float)FinalX[k];
-                    const float dy = sy[ord[(r + k) & 3]] - (float)FinalY[k];
-                    cost += dx * dx + dy * dy;
-                }
-                if (cost < bestCost) { bestCost = cost; r0 = r; }
-            }
-            float minSide2 = FLT_MAX;
-            for (uint8_t k = 0; k < 4; k++) {
-                const float dx = sx[ord[(r0 + k) & 3]] - sx[ord[(r0 + k + 1) & 3]];
-                const float dy = sy[ord[(r0 + k) & 3]] - sy[ord[(r0 + k + 1) & 3]];
-                minSide2 = fminf(minSide2, dx * dx + dy * dy);
-            }
-            resume = bestCost < minSide2 * 0.0625f;
-        }
-        if (prevNumSeen != 0 || resume) {
-            // Continuita': la rotazione ciclica piu' vicina all'ultima posizione mostrata,
-            // cosi' l'identita' dei LED non salta anche con l'arma molto ruotata.
-            float bestCost = FLT_MAX;
-            for (uint8_t r = 0; r < 4; r++) {
-                float cost = 0.0f;
-                for (uint8_t k = 0; k < 4; k++) {
-                    const float dx = sx[ord[(r + k) & 3]] - (float)FinalX[k];
-                    const float dy = sy[ord[(r + k) & 3]] - (float)FinalY[k];
-                    cost += dx * dx + dy * dy;
-                }
-                if (cost < bestCost) { bestCost = cost; best = r; }
-            }
-            // Se la continuita' implica una rotazione dell'arma di oltre 80 gradi superiore a
-            // quella della regola di partenza, si torna alla regola di partenza: cosi' un
-            // aggancio sbagliato (partenza con l'arma molto ruotata) si corregge tornando dritti.
-            if (best != cold) {
-                // rotazione apparente: diagonale 0->2 ruotata di 90 gradi. Con l'arma molto di lato la
-                // diagonale orizzontale si inclina per la prospettiva, quella verticale molto meno
-                // (solo con la mira laterale e l'arma insieme molto sopra o sotto lo schermo).
-                auto rollOf = [&](uint8_t r) {
-                    const float vx = sx[ord[(r + 2) & 3]] - sx[ord[r]], vy = sy[ord[(r + 2) & 3]] - sy[ord[r]];
-                    return fabsf(atan2f(-vx, vy));
-                };
-                if (rollOf(best) >= rollOf(cold) + 80.0f * 0.0174533f) best = cold;
-            }
-            // Se le diagonali sono chiare e la continuita' scambia l'orizzontale con la verticale
-            // (rotazione dispari rispetto alla regola di partenza), l'aggancio e' sbagliato di 90
-            // gradi qualunque sia l'inclinazione dell'arma: si torna alla regola di partenza.
-            if (coldShape && ((best ^ cold) & 1)) best = cold;
         }
         for (uint8_t k = 0; k < 4; k++) { Gx[k] = sx[ord[(best + k) & 3]]; Gy[k] = sy[ord[(best + k) & 3]]; }
         if (!ConvexCycle(Gx, Gy)) return;
@@ -252,40 +226,56 @@ void OpenFIRE_Diamond::begin(const int* px, const int* py, unsigned int seen)
         for (uint8_t i = 0; i < n; i++) { Gx[bl[i]] = sx[i]; Gy[bl[i]] = sy[i]; mask |= 1u << bl[i]; }
 
         if (n == 3) {
-            // Trasformazione affine esatta: il punto mancante mantiene, rispetto ai 3 visti,
-            // le stesse coordinate relative che aveva nella geometria precedente.
+            const float* refX = anchor_ok ? anchorX : prevGeomX;
+            const float* refY = anchor_ok ? anchorY : prevGeomY;
             uint8_t m = 0;
-            while (mask & (1u << m)) m++;
-            const uint8_t k0 = (m + 1) & 3, k1 = (m + 2) & 3, k2 = (m + 3) & 3;
-            const float ux = prevGeomX[k1] - prevGeomX[k0], uy = prevGeomY[k1] - prevGeomY[k0];
-            const float vx = prevGeomX[k2] - prevGeomX[k0], vy = prevGeomY[k2] - prevGeomY[k0];
-            const float det = ux * vy - uy * vx;
-            if (fabsf(det) > 1.0f) {
-                const float qx = prevGeomX[m] - prevGeomX[k0], qy = prevGeomY[m] - prevGeomY[k0];
-                const float cu = (qx * vy - qy * vx) / det, cv = (ux * qy - uy * qx) / det;
-                Gx[m] = Gx[k0] + cu * (Gx[k1] - Gx[k0]) + cv * (Gx[k2] - Gx[k0]);
-                Gy[m] = Gy[k0] + cu * (Gy[k1] - Gy[k0]) + cv * (Gy[k2] - Gy[k0]);
+            while (mask & (1u << m)) ++m;
+            const uint8_t k0 = (m+1)&3, k1 = (m+2)&3, k2 = (m+3)&3;
+            const float ax[3] = {refX[k0],refX[k1],refX[k2]}, ay[3] = {refY[k0],refY[k1],refY[k2]};
+            const float qx[3] = {Gx[k0],Gx[k1],Gx[k2]}, qy[3] = {Gy[k0],Gy[k1],Gy[k2]};
+            float hx = refX[m], hy = refY[m];
+            if (anchorReconstruction.reconstruct(3,ax,ay,qx,qy,1,&hx,&hy)) {
+                Gx[m] = hx; Gy[m] = hy;
             } else {
-                // Geometria precedente degenere: parallelogramma
-                Gx[m] = Gx[k0] + Gx[k2] - Gx[k1];
-                Gy[m] = Gy[k0] + Gy[k2] - Gy[k1];
+                // Affine fallback: calculate it only when the virtual view is unsuitable.
+                const float ux = refX[k1]-refX[k0], uy = refY[k1]-refY[k0];
+                const float vx = refX[k2]-refX[k0], vy = refY[k2]-refY[k0];
+                const float det = ux*vy-uy*vx;
+                if (fabsf(det)>1.0f) {
+                    const float dx = refX[m]-refX[k0], dy = refY[m]-refY[k0];
+                    const float cu = (dx*vy-dy*vx)/det, cv = (ux*dy-uy*dx)/det;
+                    Gx[m] = Gx[k0]+cu*(Gx[k1]-Gx[k0])+cv*(Gx[k2]-Gx[k0]);
+                    Gy[m] = Gy[k0]+cu*(Gy[k1]-Gy[k0])+cv*(Gy[k2]-Gy[k0]);
+                } else {
+                    Gx[m] = Gx[k0]+Gx[k2]-Gx[k1]; Gy[m] = Gy[k0]+Gy[k2]-Gy[k1];
+                }
             }
         } else if (n == 2) {
-            // Similitudine (rotazione + scala uniforme + traslazione) che porta i due punti
-            // della geometria precedente sui due punti visti, applicata agli altri due.
+            const float* refX = anchor_ok ? anchorX : prevGeomX;
+            const float* refY = anchor_ok ? anchorY : prevGeomY;
             const uint8_t i1 = bl[0], i2 = bl[1];
-            const float vx = prevGeomX[i2] - prevGeomX[i1], vy = prevGeomY[i2] - prevGeomY[i1];
-            const float wx = Gx[i2] - Gx[i1], wy = Gy[i2] - Gy[i1];
-            const float vv = vx * vx + vy * vy;
-            if (vv < 64.0f) return;
-            const float sa = (wx * vx + wy * vy) / vv, sb = (vx * wy - vy * wx) / vv;
-            const float s2 = sa * sa + sb * sb;
-            if (s2 < 0.25f || s2 > 4.0f) return;  // scala non plausibile in un frame
-            for (uint8_t k = 0; k < 4; k++) {
-                if (k == i1 || k == i2) continue;
-                const float qx = prevGeomX[k] - prevGeomX[i1], qy = prevGeomY[k] - prevGeomY[i1];
-                Gx[k] = Gx[i1] + sa * qx - sb * qy;
-                Gy[k] = Gy[i1] + sb * qx + sa * qy;
+            const float vx = refX[i2]-refX[i1], vy = refY[i2]-refY[i1];
+            const float wx = Gx[i2]-Gx[i1], wy = Gy[i2]-Gy[i1];
+            const float vv = vx*vx+vy*vy;
+            if (vv<minLedDist2) return;
+            // The reference preserves shape; plausibility compares consecutive frames.
+            const float pvx = prevGeomX[i2]-prevGeomX[i1], pvy = prevGeomY[i2]-prevGeomY[i1];
+            const float pv2 = pvx*pvx+pvy*pvy, w2 = wx*wx+wy*wy;
+            if (pv2<minLedDist2 || w2<pv2*COSTANTE_MOLLA || w2*COSTANTE_MOLLA>pv2) return;
+            uint8_t hidden[2], nh = 0;
+            for (uint8_t k=0;k<4;++k) if (k!=i1 && k!=i2) hidden[nh++]=k;
+            const float ax[2] = {refX[i1],refX[i2]}, ay[2] = {refY[i1],refY[i2]};
+            const float qx[2] = {Gx[i1],Gx[i2]}, qy[2] = {Gy[i1],Gy[i2]};
+            float hx[2] = {refX[hidden[0]],refX[hidden[1]]}, hy[2] = {refY[hidden[0]],refY[hidden[1]]};
+            if (anchorReconstruction.reconstruct(2,ax,ay,qx,qy,2,hx,hy)) {
+                for (uint8_t j=0;j<2;++j) { Gx[hidden[j]]=hx[j]; Gy[hidden[j]]=hy[j]; }
+            } else {
+                // Similarity fallback. Avoid its two divisions on the normal virtual path.
+                const float sa = (wx*vx+wy*vy)/vv, sb = (vx*wy-vy*wx)/vv;
+                for (uint8_t j=0;j<2;++j) {
+                    const uint8_t k=hidden[j];const float dx=refX[k]-refX[i1],dy=refY[k]-refY[i1];
+                    Gx[k] = Gx[i1]+sa*dx-sb*dy; Gy[k] = Gy[i1]+sb*dx+sa*dy;
+                }
             }
         } else {
             // Un solo LED: traslazione della geometria precedente
@@ -395,7 +385,11 @@ void OpenFIRE_Diamond::begin(const int* px, const int* py, unsigned int seen)
     prevSeenMask = mask;
     prevNumSeen = n;
     darkFrames = 0;
-    if (n == 4) start = 0xFF;
+    if (n == 4) {
+        start = 0xFF;
+        for (uint8_t k = 0; k < 4; k++) { anchorX[k] = Gx[k]; anchorY[k] = Gy[k]; }
+        anchor_ok = true;
+    }
 
     medianX = (FinalX[0] + FinalX[1] + FinalX[2] + FinalX[3]) / 4;
     medianY = (FinalY[0] + FinalY[1] + FinalY[2] + FinalY[3]) / 4;
