@@ -26,7 +26,6 @@
  * Ported from Johnny Lee's C# WiiWhiteboard project (Warper.cs file)
  */
 
-
 #ifndef OpenFIRE_Perspective_Advanced_h
 #define OpenFIRE_Perspective_Advanced_h
 
@@ -41,10 +40,11 @@
 // e il sensore ottico posizionato al suo interno (o sopra).
 static constexpr float DEFAULT_PARALLAX_FACTOR = 0.0f;
 
-// Scala numerica interna: non rappresenta né la risoluzione della camera né quella
-// del monitor. Mantenerla fissa preserva esattamente il comportamento numerico
-// già validato con DFRobot e limita le perdite di precisione nelle omografie.
-static constexpr float NORM_SCALE = 10000.0f;
+// EN: Internal binary normalization, independent of camera and display resolutions.
+// IT: Normalizzazione binaria interna, indipendente dalle risoluzioni di camera e schermo.
+// EN: Source vertices are centered on the aim point before normalization.
+// IT: I vertici sorgente sono centrati sul punto di mira prima della normalizzazione.
+static constexpr float NORM_SCALE = 4096.0f;
 static constexpr float INV_NORM_SCALE = 1.0f / NORM_SCALE;
 
 // Soglia minima dell'area espressa come frazione dell'intero spazio Mouse.
@@ -54,56 +54,55 @@ static constexpr float MIN_QUAD_AREA_RATIO = 7.947286e-7f;
 class OpenFIRE_Perspective {
 
 private:
-  bool init = false;
-  
-  // Matrici lineari (1D) da 9 elementi invece che [3][3]. 
-  // Migliora drasticamente il caching della CPU e permette cicli di accesso 
-  // diretti in memoria contigua durante le pesanti moltiplicazioni matriciali.
-  float srcmatrix[9];
-  float dstmatrix[9];
-  float warpmatrix[9];
+    bool init = false;
 
-  float srcX = 0.0f;
-  float srcY = 0.0f;
+    // EN: Only the destination matrix is cached; the source query is local to warp().
+    // IT: Memorizziamo solo la matrice di destinazione; il punto sorgente e locale a warp().
+    float dstmatrix[9];
 
-  float cx = 0.0f;
-  float cy = 0.0f;
-  float invCx = 0.0f;
-  float invCy = 0.0f;
-  float minQuadArea = 0.0f;
+    float srcX = 0.0f;
+    float srcY = 0.0f;
 
-  // Lens correction parameters supplied by OpenFIRECameraProfile.h.
-  float k1 = 0.0f;
-  float k2 = 0.0f;
-  float lensCorrectionMax = 1.2f;
-  float lensCorrectionMin = 0.8f;
-  float parallaxFactor = DEFAULT_PARALLAX_FACTOR;
-  
-  // Tracciamento dell'area per il parallasse. L'area calcolata viene usata come proxy 
-  // affidabile e leggero (al posto della trigonometria) per stimare i cambiamenti 
-  // di distanza (asse Z) del giocatore rispetto allo schermo.
-  float baseArea = 0.0f;        
-  float smoothedArea = 0.0f; 
+    float cx = 0.0f;
+    float cy = 0.0f;
+    float invCx = 0.0f;
+    float invCy = 0.0f;
+    float minQuadArea = 0.0f;
 
-  int dstX = 0;
-  int dstY = 0;
+    // Lens correction parameters supplied by OpenFIRECameraProfile.h.
+    float k1 = 0.0f;
+    float k2 = 0.0f;
+    float lensCorrectionMax = 1.2f;
+    float lensCorrectionMin = 0.8f;
+    float parallaxFactor = DEFAULT_PARALLAX_FACTOR;
 
-  inline void applyLensCorrection(float &x, float &y);
-  inline float calculateQuadArea(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3);
+    // EN: Area-based distance proxy used only by the optional parallax adjustment.
+    // IT: Stima della distanza tramite area, usata dalla regolazione opzionale della parallasse.
+    float baseArea = 0.0f;
+    float smoothedArea = 0.0f;
+
+    int dstX = 0;
+    int dstY = 0;
+
+    inline void applyLensCorrection(float& x, float& y);
+    inline float calculateQuadArea(float x0, float y0, float x1, float y1, float x2, float y2, float x3,
+                                   float y3);
 
 public:
-  void configure(const CameraProfile& profile);
-  void warp(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3, float dx0, float dy0, float dx1, float dy1, float dx2, float dy2, float dx3, float dy3);
-  void source(float adjustedX, float adjustedY);
-  
-  // Mantiene la vecchia API K1-only e aggiunge l'overload K1+K2.
-  void setLensCorrection(float coefficientK1);
-  void setLensCorrection(float coefficientK1, float coefficientK2);
-  void setDynamicParallax(float hardwareOffset); 
-  
-  void deinit(bool set);
-  int getX();
-  int getY();
+    // EN/IT: Call deinit(false) when changing destination/layout / per cambiare destinazione o layout.
+    void configure(const CameraProfile& profile);
+    void warp(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3, float dx0,
+              float dy0, float dx1, float dy1, float dx2, float dy2, float dx3, float dy3);
+    void source(float adjustedX, float adjustedY);
+
+    // Mantiene la vecchia API K1-only e aggiunge l'overload K1+K2.
+    void setLensCorrection(float coefficientK1);
+    void setLensCorrection(float coefficientK1, float coefficientK2);
+    void setDynamicParallax(float hardwareOffset);
+
+    void deinit(bool set);
+    int getX();
+    int getY();
 };
 
 #endif
