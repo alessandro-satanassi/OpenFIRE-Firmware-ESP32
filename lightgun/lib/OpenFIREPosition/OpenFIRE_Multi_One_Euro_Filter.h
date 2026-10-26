@@ -11,7 +11,6 @@
  * @version V2.0
  * @date 2026
  */
-
 #ifndef OpenFIRE_Multi_One_Euro_Filter_h
 #define OpenFIRE_Multi_One_Euro_Filter_h
 
@@ -21,95 +20,61 @@
 
 class OpenFIRE_One_Euro_Multi {
 private:
-    // Struttura fusa: mantiene sia lo storico posizionale (prev/hat) che vettoriale (vel).
-    // Usare una singola struct garantisce che la cache L1 della CPU legga tutto lo stato
-    // di un singolo asse in una sola operazione (Locality of Reference).
+    // EN: Each point retains its own history; all points share the final X/Y weights.
+    // IT: Ogni punto ha la propria storia; i pesi finali X/Y sono comuni ai quattro punti.
     struct FilterState {
-        float x_prev, x_hat;
-        float y_prev, y_hat;
-        float vel_x_hat, vel_y_hat;
+        float previousX, filteredX;
+        float previousY, filteredY;
+        float velocityX, velocityY;
     };
-
     FilterState states[4];
     unsigned long lastMicros;
     bool initialized = false;
 
-    // ==========================================
-    // --- PARAMETRI DI TUNING E-SPORTS (BILANCIAMENTO DEFINITIVO) ---
+    // EN/IT: Temporal tuning / taratura temporale, invariata.
+    static constexpr float minCutoff = 0.1f;
+    static constexpr float maxCutoff = 30.0f;
+    static constexpr float derivativeBaseCutoff = 1.0f;
+    static constexpr float derivativeSnapCutoff = 25.0f;
+    static constexpr float microSnapThreshold = 0.5f;
+    static constexpr float twoPi = 6.28318530718f;
 
-    // min_cutoff: La "lentezza" del mirino quando ti muovi pochissimo o sei fermo.
-    // Impostato a 0.1f: il punto di equilibrio perfetto. 0.2f era leggermente
-    // scivoloso, 0.05f era troppo rigido. 0.1f garantisce mira da cecchino solida.
-    static constexpr float min_cutoff = 0.1f;
+    // EN: Velocities are normalized by the sensor's spatial/noise units.
+    // IT: Le velocita sono normalizzate sulle unita spaziali/di rumore del sensore.
+    static constexpr float snapGain = 31.25f;
+    static constexpr float snapEdgeGain = 62.5f;
+    static constexpr float betaGain = 0.2464f;
+    float invNoiseX = 1.0f;
+    float invNoiseY = 1.0f;
 
-    // --- GESTIONE ASIMMETRICA DELLA VELOCITÀ ---
-    // d_cutoff_base: Reattività per i movimenti di precisione.
-    // Il tuning temporale resta invariato e viene gestito tramite il dt reale.
-    static constexpr float d_cutoff_base = 1.0f;
+    // EN/IT: Geometry cached by configure() / geometria precalcolata in configure().
+    float centerX = 0.0f, centerY = 0.0f;
+    float invCenterX = 0.0f, invCenterY = 0.0f;
+    int mouseMaxX = 0, mouseMaxY = 0;
 
-    // d_cutoff_snap: Reattività per scatti violenti e frenate brusche.
-    static constexpr float d_cutoff_snap = 25.0f;
-
-    float sensor_noise_unit_x = 1.0f;
-    float sensor_noise_unit_y = 1.0f;
-
-    // Coefficienti di tuning normalizzati sul pixel fisico del sensore.
-    // Sono ricavati dal comportamento DFRobot originale, ma non contengono
-    // risoluzioni o dimensioni hardcoded di una specifica CAM.
-    // Con DFRobot: sensor_noise_unit X/Y = 32, quindi si ottengono
-    // esattamente snap=1000, edge=2000 e beta=0.0077 come prima.
-    static constexpr float snap_sensor_gain = 31.25f;
-    static constexpr float snap_edge_sensor_gain = 62.5f;
-    static constexpr float beta_sensor_gain = 0.2464f;
-
-    // Soglie di snap adattate alla granularita fisica/rumore della CAM.
-    float snap_base_x = 0.0f;
-    float snap_base_y = 0.0f;
-
-    float snap_edge_multiplier_x = 0.0f;
-    float snap_edge_multiplier_y = 0.0f;
-
-    // max_cutoff: Il limite di banda passante superiore.
-    static constexpr float max_cutoff = 30.0f;
-
-    // Beta adattivo normalizzato sulla granularita fisica del sensore.
-    // Una CAM con pixel fisici relativamente piu grossi (o CamNoiseFactor > 1)
-    // parte piu conservativa; una CAM piu pulita puo essere resa piu reattiva
-    // diminuendo CamNoiseFactor.
-    float beta_base_x = 0.0f;
-    float beta_base_y = 0.0f;
-
-    // MICRO-SNAP: resta volutamente invariato. Non e una soglia di rumore ottico:
-    // elimina soltanto la coda frazionaria quando l'input intero e gia fermo.
-    static constexpr float micro_snap_threshold = 0.5f;
-
-    // ==========================================
-
-
-    float inv_center_x = 0.0f;
-    float inv_center_y = 0.0f;
-    int mouseMaxX = 0;
-    int mouseMaxY = 0;
+    // EN: Optical tuning uses profile data only, without camera model checks.
+    // IT: La taratura ottica usa solo i dati del profilo, senza riconoscere la camera.
+    static constexpr float opticalReferenceFocal = 216.0629425048828125f;
+    static constexpr float opticalNeutralTangentSq = 0.25f;
+    static constexpr float opticalMotionStrength = 0.25f;
+    static constexpr float opticalStabilityStrength = 0.25f;
+    static constexpr float opticalLagRadius = 0.6f;
+    float opticalMotionRange = 0.0f;
+    float opticalSlow = 1.0f, opticalStability = 1.0f;
+    bool opticalActive = false;
     float fallbackDt = 1.0f / 209.0f;
 
-    static constexpr float OEF_TWO_PI = 6.28318530718f;
-
-    // Sostituisce l'implementazione classica dell'Exponential Moving Average.
-    // Espande la formula matematica per evitare chiamate di funzione ricorsive.
-    static inline float fast_alpha(float cutoff, float dt_two_pi) {
-        float te = cutoff * dt_two_pi;
-        return te / (te + 1.0f);
-    }
+    template <bool Optical> inline void filterFrame(int* x, int* y, float* outX, float* outY);
 
 public:
     OpenFIRE_One_Euro_Multi();
+    // EN: Restart history after a profile/layout change.
+    // IT: Riavvia la storia dopo un cambio di profilo/layout.
     void configure(const CameraProfile& profile);
-    
-    // Il passaggio tramite puntatori permette di leggere i raw (int) e restituire le coordinate
-    // sub-pixel perfette (float) senza copie di array.
-    void process(int* x_in, int* y_in, float* x_out, float* y_out);
+    // EN: Four ordered points in mouse coordinates; subpixel output.
+    // IT: Quattro punti ordinati in coordinate mouse; uscita subpixel.
+    void process(int* x, int* y, float* outX, float* outY);
 };
 
 #endif // OpenFIRE_Multi_One_Euro_Filter_h
-
 #endif // USE_MULTI_ONE_EURO_FILTER
