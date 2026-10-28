@@ -402,7 +402,7 @@ public:
         sTestCoords,
         sCurrentProf,
         sTestBlobs, // 152: IR test and calibration IR view, blob area/brightness of each vertex
-        sCaliIrWarning, // 153: calibration target shot refused (WebApp IR view): bit 0 emitter missing
+        sCaliIrWarning, // 153: calibration target shot refused: bit 0 emitter missing (IR view), bit 1 gun rolled too far
 
         // Push settings to board
         sCommitStart = 0xAA, // 170

@@ -28,6 +28,29 @@
 #include "OpenFIREserial.h"
 #include "OpenFIREusbnet.h"
 
+// Roll of the gun around the barrel during calibration. The Square identifies its four emitters
+// by height (the top pair, then the bottom pair), which holds while the roll stays below the
+// diagonal of their rectangle, atan(short side / long side); beyond it top and side swap with no
+// other sign: the roll then reads as the real one minus 90 degrees and the two sides swap. The
+// same angle with the sides swapped, so a swapped frame reads as too rolled up to a real roll of
+// 90 degrees minus that angle. The Diamond gets the same limit from its two diagonals.
+// share = 1: the frame can be used (the calibration readings); share = 1/2: a target shot is
+// taken, with a wide margin for the player (about 15 degrees with the emitters at the corners or
+// at the edge centres of a 16:9 screen, about 18 of a 4:3 one); between the two the readings go
+// on, so a shot taken just after straightening the gun has its whole history.
+// Measured on the frame itself, nothing to set. Only a frame with all four emitters seen is
+// judged (a missing emitter keeps its own handling).
+static bool CaliRollWithin(float share)
+{
+    if((OpenFIRECamera::Seen() & 15) != 15)
+        return true;
+    const bool diamond = OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout;
+    const float w = fabsf(diamond ? FW_Common::OpenFIREdiamond.W() : FW_Common::OpenFIREsquare.W());
+    const float h = fabsf(diamond ? FW_Common::OpenFIREdiamond.H() : FW_Common::OpenFIREsquare.H());
+    const float roll = diamond ? FW_Common::OpenFIREdiamond.Ang() : FW_Common::OpenFIREsquare.Ang();
+    return fabsf(roll) <= share*atan2f(fminf(w, h), fmaxf(w, h));
+}
+
 #if defined(USE_SQUARE_ADVANCED) && defined(USE_DIAMOND_ADVANCED) && defined(USE_PERSPECTIVE_ADVANCED)
     #define OPENFIRE_CALIBRATION_REFINEMENT
     #include <OpenFIRE_Calibration.h>
@@ -54,7 +77,8 @@ __attribute__((noinline)) void CaptureCalibrationFrame() {
     const bool diamond = OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout;
     const CameraProfile& p = OpenFIRECamera::Profile();
     int32_t xy[8];
-    bool valid = (OpenFIRECamera::Seen() & 15) == 15 &&
+    // A frame with the emitters swapped by the roll is left out too (CaliRollWithin).
+    bool valid = (OpenFIRECamera::Seen() & 15) == 15 && CaliRollWithin(1) &&
         (diamond ? FW_Common::OpenFIREdiamond.calibrationPoints(xy)
                  : FW_Common::OpenFIREsquare.calibrationPoints(xy));
     // A tracker may reject a frame and retain its old geometry. Accept only
@@ -481,6 +505,9 @@ static_assert(IR_WEAK_HYSTERESIS < IR_WEAK_MAX_BRIGHTNESS &&
 
 // Problem of the IR emitters for a calibration target shot (sCaliIrWarning bit).
 constexpr uint8_t CALI_IR_MISSING = 0x01;   // the camera does not see all four emitters
+constexpr uint8_t CALI_IR_ROLL = 0x02;      // the gun is rolled too far (CaliRollWithin)
+// OLED: how long the reason of a refused shot stays in the header, as in the WebApp window.
+constexpr uint32_t CALI_WARNING_MS = 4000;
 
 // Checks the last camera frame: all four emitters seen. A weak emitter does not refuse the
 // shot. With the Extended format, an emitter seen but still without Extended data (the first
@@ -665,6 +692,10 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
     int32_t mouseTargetX = mouseCurrentX;
     int32_t mouseTargetY = mouseCurrentY;
     bool mouseMoving = false;
+    #ifdef USES_DISPLAY
+        uint32_t caliWarningStamp = 0;  // OLED: when the reason of the last refused shot was shown
+        bool caliWarningShown = false;
+    #endif // USES_DISPLAY
     #if CALI_CURSOR_ORBIT_ENABLED
         uint32_t cursorOrbitStamp = micros();
         uint32_t cursorOrbitPhaseUs = 0;
@@ -752,23 +783,38 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
         }
         #endif // CALI_CURSOR_ORBIT_ENABLED
 
-        // WebApp IR view: every target shot (centre, the four edges, the corners when used,
-        // final centre) is refused while an emitter is missing, so that each reading is taken
-        // with all four emitters seen (a weak one is accepted). The WebApp is told why
-        // (sCaliIrWarning) and the stage does not change.
+        // From the gun alone and in the WebApp IR view: every target shot (centre, the four edges,
+        // the corners when used, final centre) is refused while an emitter is missing, so that
+        // each reading is taken with all four emitters seen (a weak one is accepted). An App
+        // without the IR view keeps accepting it, as before.
         // With a narrow camera close to the screen an emitter can leave the field at the edges:
         // the player then steps back. The confirmation of the verify stage is not checked.
-        const uint8_t shotRefusal =
-            (fromDesktop && caliIrView && buttons.pressed == FW_Const::BtnMask_Trigger && !mouseMoving &&
-             calStage <= FW_Const::Cali_Center)
-            ? CaliIrProblems() : 0;
+        // Every target shot is also refused, in every case, while the gun is rolled beyond half
+        // the angle that would swap the emitters (CaliRollWithin).
+        // The stage does not change; the Apps are told why (sCaliIrWarning), and the OLED shows
+        // it in the header.
+        const bool targetShot = buttons.pressed == FW_Const::BtnMask_Trigger && !mouseMoving &&
+                                calStage <= FW_Const::Cali_Center;
+        const uint8_t shotRefusal = targetShot
+            ? uint8_t(((!fromDesktop || caliIrView) ? CaliIrProblems() : 0) | (CaliRollWithin(.5f) ? 0 : CALI_IR_ROLL)) : 0;
+        #ifdef USES_DISPLAY
+            // The header goes back to the profile after CALI_WARNING_MS or at the next accepted shot.
+            if(shotRefusal) {
+                OLED.TopPanelUpdate("", (shotRefusal & CALI_IR_MISSING) ? "LED NOT SEEN" : "HOLD GUN UPRIGHT");
+                caliWarningStamp = millis();
+                caliWarningShown = true;
+            } else if(caliWarningShown && (targetShot || millis() - caliWarningStamp >= CALI_WARNING_MS)) {
+                OLED.TopPanelUpdate("Cali: ", OF_Prefs::profiles[OF_Prefs::currentProfile].name);
+                caliWarningShown = false;
+            }
+        #endif // USES_DISPLAY
 
         // Handle button presses and calibration stages
         if(((buttons.pressedReleased & (FW_Const::ExitPauseModeBtnMask | FW_Const::ExitPauseModeHoldBtnMask)) && !justBooted) ||
            desktopCancel) {
             goto calibration_cancelled;
         } else if(shotRefusal) {
-            if(!OF_Serial::AppSerialSendResponse(OF_Const::sCaliIrWarning, &shotRefusal, 1))
+            if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliIrWarning, &shotRefusal, 1))
                 goto calibration_failed;
         } else if(buttons.pressed == FW_Const::BtnMask_Trigger && !mouseMoving && corner < 4) {
             // A corner, between the right edge and the final centre: the stage stays Cali_Center
