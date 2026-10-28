@@ -18,6 +18,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <limits>
+#include <cmath>
 
 
 
@@ -26,6 +27,54 @@
 #include "OpenFIRElights.h"
 #include "OpenFIREserial.h"
 #include "OpenFIREusbnet.h"
+
+#if defined(USE_SQUARE_ADVANCED) && defined(USE_DIAMOND_ADVANCED) && defined(USE_PERSPECTIVE_ADVANCED)
+    #define OPENFIRE_CALIBRATION_REFINEMENT
+    #include <OpenFIRE_Calibration.h>
+    #include <new>
+
+namespace {
+OpenFIRECalibration::Session* calibrationSession = nullptr;
+
+// Session storage is temporary and outside the small task stack. Allocation
+// failure keeps the existing calibration; every exit (including goto) frees it.
+struct CalibrationScope {
+    explicit CalibrationScope(const CameraProfile& profile, bool diamond)
+        : session(new(std::nothrow) OpenFIRECalibration::Session(profile,diamond)) {
+        calibrationSession = session;
+    }
+    ~CalibrationScope() { calibrationSession = nullptr; delete session; }
+    OpenFIRECalibration::Session* const session;
+    CalibrationScope(const CalibrationScope&) = delete;
+    CalibrationScope& operator=(const CalibrationScope&) = delete;
+};
+
+__attribute__((noinline)) void CaptureCalibrationFrame() {
+    if(!calibrationSession) return;
+    const bool diamond = OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout;
+    const CameraProfile& p = OpenFIRECamera::Profile();
+    int32_t xy[8];
+    bool valid = (OpenFIRECamera::Seen() & 15) == 15 &&
+        (diamond ? FW_Common::OpenFIREdiamond.calibrationPoints(xy)
+                 : FW_Common::OpenFIREsquare.calibrationPoints(xy));
+    // A tracker may reject a frame and retain its old geometry. Accept only
+    // four distinct, exact matches to THIS successful camera read.
+    uint8_t used = 0;
+    for(uint8_t i = 0; valid && i < 4; ++i) {
+        bool matched = false;
+        for(uint8_t j = 0; j < 4; ++j) if(!(used & (1u << j))) {
+            const int32_t x = (diamond ? OpenFIRECamera::XPositions()[j]
+                                       : p.camMaxX-OpenFIRECamera::XPositions()[j])*p.camToMouseMult;
+            const int32_t y = OpenFIRECamera::YPositions()[j]*p.camToMouseMult;
+            if(xy[2*i] == x && xy[2*i+1] == y) {used |= 1u << j;matched = true;break;}
+        }
+        valid = matched;
+    }
+    if(valid) calibrationSession->observe(xy,micros());
+    else calibrationSession->invalidate();
+}
+} // namespace
+#endif
 
 #ifdef ARDUINO_ARCH_ESP32
     #include "esp32-hal-tinyusb.h"
@@ -551,6 +600,11 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
     const int CENTER_X = cameraProfile.mouseResX / 2;
     const int CENTER_Y = cameraProfile.mouseResY / 2;
 
+    #ifdef OPENFIRE_CALIBRATION_REFINEMENT
+        CalibrationScope calibrationCapture(cameraProfile,
+            OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout);
+    #endif
+
     // hold values in a buffer till calibration is complete
     int topOffset;
     int bottomOffset;
@@ -610,7 +664,15 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
 
         if(irPosUpdateTick) {
             irPosUpdateTick = 0;
+            #ifdef OPENFIRE_CALIBRATION_REFINEMENT
+                const uint32_t beforeFrame = calibrationSession ? calibrationSession->frameCount() : 0;
+            #endif
             GetPosition();
+            #ifdef OPENFIRE_CALIBRATION_REFINEMENT
+                // A failed/discarded camera read must not leave a usable old window.
+                if(calibrationSession && calibrationSession->frameCount() == beforeFrame)
+                    calibrationSession->invalidate();
+            #endif
         }
 
         if(fromDesktop && camNotAvailable)
@@ -683,6 +745,10 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
             if(!OF_Serial::AppSerialSendResponse(OF_Const::sCaliIrWarning, &shotRefusal, 1))
                 goto calibration_failed;
         } else if(buttons.pressed == FW_Const::BtnMask_Trigger && !mouseMoving) {
+            #ifdef OPENFIRE_CALIBRATION_REFINEMENT
+                if(calibrationSession && calStage < 6)
+                    calibrationSession->capture(calStage,micros());
+            #endif
             ++calStage;
             if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliStageUpd, &calStage, 1))
                 goto calibration_failed;
@@ -696,6 +762,10 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                     }
                     break;
                 case FW_Const::Cali_Top:
+                    if(!OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout &&
+                       (!(OpenFIREsquare.H() > 0) || !std::isfinite(OpenFIREsquare.H()) ||
+                        !(OpenFIREsquare.W() > 0) || !std::isfinite(OpenFIREsquare.W())))
+                        goto calibration_failed;
                     // Reset Offsets
                     topOffset = 0;
                     bottomOffset = 0;
@@ -813,6 +883,36 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                                                                              (OpenFIREsquare.testMedianY() - CENTER_Y) * cos(OpenFIREsquare.Ang()) + CENTER_Y;
                     }
 
+                    #ifdef OPENFIRE_CALIBRATION_REFINEMENT
+                        if(calibrationSession) {
+                            auto& profile = OF_Prefs::profiles[OF_Prefs::currentProfile];
+                            OpenFIRECalibration::Parameters original, refined;
+                            original.sourceX = profile.adjX; original.sourceY = profile.adjY;
+                            original.ledLeft = profile.TLled; original.ledRight = profile.TRled;
+                            original.offsets[0] = profile.topOffset;
+                            original.offsets[1] = profile.bottomOffset;
+                            original.offsets[2] = profile.leftOffset;
+                            original.offsets[3] = profile.rightOffset;
+                            if(calibrationSession->refine(original,refined)) {
+                                profile.adjX = refined.sourceX; profile.adjY = refined.sourceY;
+                                profile.TLled = refined.ledLeft; profile.TRled = refined.ledRight;
+                                profile.topOffset = refined.offsets[0];
+                                profile.bottomOffset = refined.offsets[1];
+                                profile.leftOffset = refined.offsets[2];
+                                profile.rightOffset = refined.offsets[3];
+                                // Replace the App's provisional edge values with the
+                                // final ones using the existing protocol messages.
+                                for(uint8_t i = 0; i < 4; ++i) {
+                                    caliPayload[0] = i+1;
+                                    memcpy(&caliPayload[1],&refined.offsets[i],sizeof(int32_t));
+                                    if(fromDesktop && !OF_Serial::AppSerialSendResponse(
+                                            OF_Const::sCaliInfoUpd,caliPayload,sizeof(caliPayload)))
+                                        goto calibration_failed;
+                                }
+                            }
+                        }
+                    #endif
+
                     caliPayload[0] = 5;
                     memcpy(&caliPayload[1], &OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, sizeof(float));
                     if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliInfoUpd, caliPayload, sizeof(caliPayload)))
@@ -860,6 +960,9 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                         // Press A/B to restart calibration for current profile
                         } else if(buttons.pressedReleased & FW_Const::ExitPauseModeHoldBtnMask) {
                             calStage = 0;
+                            #ifdef OPENFIRE_CALIBRATION_REFINEMENT
+                                if(calibrationSession) calibrationSession->reset();
+                            #endif
                             const uint8_t stage = FW_Const::Cali_Init;
                             if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliStageUpd, &stage, 1))
                                 goto calibration_failed;
@@ -1479,6 +1582,11 @@ void FW_Common::GetPosition()
                 else AbsMouse5.move(conMoveX, conMoveY);
 
             } else {
+                #ifdef OPENFIRE_CALIBRATION_REFINEMENT
+                    // Already in the non-Run branch, after a successful Read().
+                    // No capture check or extra call is added to the Run path.
+                    if(gunMode == FW_Const::GunMode_Calibration) CaptureCalibrationFrame();
+                #endif
                 if(gunMode == FW_Const::GunMode_Verification) {
                     // Output mapped to Mouse resolution
                     conMoveX = map(conMoveX, 0, res_x, 0, 32767);

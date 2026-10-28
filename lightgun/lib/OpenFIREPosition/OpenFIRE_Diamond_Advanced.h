@@ -118,6 +118,13 @@ public:
 
     /// @brief Bit mask of positions the camera saw
     unsigned int seen() const { return seenFlags; }
+
+    // Calibration-only access; the caller also checks these against the fresh camera frame.
+    bool calibrationPoints(int32_t* xy) const {
+        if(!start || prevNumSeen != 4 || prevSeenMask != 15) return false;
+        for(uint8_t i = 0; i < 4; ++i) { xy[2*i] = (int32_t)prevGeomX[i]; xy[2*i+1] = (int32_t)prevGeomY[i]; }
+        return true;
+    }
 };
 
 #endif // _OpenFIRE_Diamond_Advanced_h_

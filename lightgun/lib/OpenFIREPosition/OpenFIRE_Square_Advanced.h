@@ -52,6 +52,13 @@ public:
     float Ang() const { return angle; }
     unsigned int seen() const { return seenFlags; }
 
+    // Calibration-only access to measured geometry, before spring and OneEuro.
+    bool calibrationPoints(int32_t* xy) const {
+        if(!start || prev_num_points_seen != 4 || current_point_seen_mask != 15) return false;
+        for(uint8_t i = 0; i < 4; ++i) { xy[2*i] = prev_GeomX[i]; xy[2*i+1] = prev_GeomY[i]; }
+        return true;
+    }
+
     void setCalibrationMode(bool enabled) { calibrationMode = enabled; }
     //void setWideLayout(bool enabled) { wideLayout = enabled; }
 
