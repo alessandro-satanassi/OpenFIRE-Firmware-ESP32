@@ -35,11 +35,6 @@
 // ==============================================================================
 // PARAMETRI MATEMATICI E FISICI
 // ==============================================================================
-// Regola l'altezza della mira (asse Y) in base alla distanza del giocatore dalla TV.
-// Serve a compensare la differenza fisica di altezza tra la canna della pistola
-// e il sensore ottico posizionato al suo interno (o sopra).
-static constexpr float DEFAULT_PARALLAX_FACTOR = 0.0f;
-
 // EN: Internal binary normalization, independent of camera and display resolutions.
 // IT: Normalizzazione binaria interna, indipendente dalle risoluzioni di camera e schermo.
 // EN: Source vertices are centered on the aim point before normalization.
@@ -74,12 +69,13 @@ private:
     float k2 = 0.0f;
     float lensCorrectionMax = 1.2f;
     float lensCorrectionMin = 0.8f;
-    float parallaxFactor = DEFAULT_PARALLAX_FACTOR;
 
-    // EN: Area-based distance proxy used only by the optional parallax adjustment.
-    // IT: Stima della distanza tramite area, usata dalla regolazione opzionale della parallasse.
-    float baseArea = 0.0f;
+    // EN: Area-based distance proxy (lens-corrected LED quad), read by the parallax correction.
+    // IT: Stima della distanza tramite area (quadrilatero dei LED corretto), letta dalla parallasse.
     float smoothedArea = 0.0f;
+    // EN: Squared focal length in internal camera units, from the profile; 0 = unknown.
+    // IT: Lunghezza focale al quadrato in unita' camera interne, dal profilo; 0 = sconosciuta.
+    float focal2 = 0.0f;
 
     int dstX = 0;
     int dstY = 0;
@@ -91,14 +87,22 @@ private:
 public:
     // EN/IT: Call deinit(false) when changing destination/layout / per cambiare destinazione o layout.
     void configure(const CameraProfile& profile);
-    void warp(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3, float dx0,
+    // EN/IT: true when getX()/getY() were updated / true se getX()/getY() sono stati aggiornati.
+    bool warp(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3, float dx0,
               float dy0, float dx1, float dy1, float dx2, float dy2, float dx3, float dy3);
     void source(float adjustedX, float adjustedY);
 
     // Mantiene la vecchia API K1-only e aggiunge l'overload K1+K2.
     void setLensCorrection(float coefficientK1);
     void setLensCorrection(float coefficientK1, float coefficientK2);
-    void setDynamicParallax(float hardwareOffset);
+
+    // EN: Smoothed area of the LED quad, in internal camera units squared; 0 before the first frame.
+    //     The distance from the screen is proportional to 1 / sqrt(area), wherever the gun aims
+    //     (the growth of an off-axis image is removed when the profile gives the focal ratio).
+    // IT: Area filtrata del quadrilatero dei LED, in unita' camera interne al quadrato; 0 prima del
+    //     primo frame. La distanza dallo schermo e' proporzionale a 1 / sqrt(area), ovunque si miri
+    //     (l'ingrandimento di un'immagine fuori asse e' tolto se il profilo da' il rapporto focale).
+    float area() const { return smoothedArea; }
 
     void deinit(bool set);
     int getX();

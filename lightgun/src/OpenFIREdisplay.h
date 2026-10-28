@@ -55,9 +55,10 @@ public:
     /// (i.e. small text printouts when health/ammo empty)
     void IdleOps();
 
-    /// @brief Show a calibration target (stages 0..5) or the final aim check (stage 6).
+    /// @brief Show a calibration target (stages 0..5, corners Cali_Corner..+3) or the final
+    /// aim check (stage 6); corners = the four corner targets are part of this calibration.
     /// @details Call only when the stage changes; the top 16-pixel panel is preserved.
-    void CalibrationStageUpdate(uint8_t stage);
+    void CalibrationStageUpdate(uint8_t stage, bool corners = false);
 
     enum IRDrawMode_e : uint8_t {
         IRDraw_None = 0,     ///< No drawing or display refresh; existing pixels stay untouched.

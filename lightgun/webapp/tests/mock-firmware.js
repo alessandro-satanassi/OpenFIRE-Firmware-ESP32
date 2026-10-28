@@ -22,7 +22,7 @@ const ERR_COMMIT_RETRY = 0x82;
 const T_REQUEST = 0x00, T_RESPONSE = 0x01, T_EVENT = 0x02, T_ACK = 0x03, T_MASK = 0x03, F_FINAL = 0x80;
 
 const PROFILE_COUNT = 4;
-const PROFILE_SIZE = 68;
+const PROFILE_SIZE = 88;           // ProfileData_t, LED shape (skewX..keystoneY) and caliArea (zero) included
 const BUTTON_COUNT = 14;           // ButtonCount in OpenFIREprefs.h
 const USB_SIZE = 18;
 
@@ -169,6 +169,7 @@ class MockFirmware {
         // 'missing' (one not seen) or 'weak' (one dim): the target shots are refused only when 'missing'.
         this.caliIr = options.caliIr || 'ok';
         this.caliIrView = false;
+        this.caliCorners = false;
         // is_pedal_wireless of the firmware: a wireless pedal answered during the start-up,
         // so the two pedals work although no pin is mapped to them.
         this.pedalWireless = !!options.pedalWireless;
@@ -879,8 +880,10 @@ class MockFirmware {
                     this.gunMode = 'calibration';
                     // Optional fourth byte (caliStartFlags_e): older Apps send three bytes.
                     this.caliIrView = frame.payload.length >= 4 && (frame.payload[3] & this.S.caliStartFlags_e.caliFlagIrView) !== 0;
+                    this.caliCorners = frame.payload.length >= 4 && (frame.payload[3] & this.S.caliStartFlags_e.caliFlagCorners) !== 0;
                     await this.execCalMode(true);
                     this.caliIrView = false;
+                    this.caliCorners = false;
                     if (!this.sessionActive) {
                         this.sessionEnd();
                         this.restoreRunState();
@@ -921,6 +924,7 @@ class MockFirmware {
         const view = this.profileView();
         const backup = Uint8Array.from(this.profiles[this.currentProfile]);
         let calStage = 0;
+        let corner = 4;     // corner target being shot, 4 = none (Cali_Corner = 8..11)
         let communicationFailed = false;
         let top = 0, bottom = 0, left = 0, right = 0;
         const info = (type, bytes) => { const p = new Uint8Array(5); p[0] = type; p.set(bytes, 1); return p; };
@@ -953,10 +957,18 @@ class MockFirmware {
                 this.trigger = false;
                 if (!await this.sendResponse(C.sCaliIrWarning, Uint8Array.of(1)))
                     return fail();
+            } else if (this.trigger && corner < 4) {
+                // A corner between the right edge and the final centre: only the refinement uses it.
+                this.trigger = false;
+                ++corner;
+                if (!await this.sendResponse(C.sCaliStageUpd, Uint8Array.of(corner < 4 ? 8 + corner : 5)))
+                    return fail();
             } else if (this.trigger) {
                 this.trigger = false;
                 ++calStage;
-                if (!await this.sendResponse(C.sCaliStageUpd, Uint8Array.of(calStage)))
+                // After the right edge the corners come first, when asked for, then the final centre.
+                if (calStage === 5 && this.caliCorners) corner = 0;
+                if (!await this.sendResponse(C.sCaliStageUpd, Uint8Array.of(corner < 4 ? 8 : calStage)))
                     return fail();
                 switch (calStage) {
                 case 2: top = this.mouse.y; if (!await this.sendResponse(C.sCaliInfoUpd, info(1, i32(top)))) return fail(); break;

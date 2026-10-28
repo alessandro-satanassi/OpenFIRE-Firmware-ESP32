@@ -17,12 +17,36 @@
     const MODE_ALIGNMENT = 'alignment';
     const MODE_IRTEST = 'irtest';
 
-    const STAGE = { init: 0, top: 1, bottom: 2, left: 3, right: 4, center: 5, verify: 6, end: 7 };
+    const STAGE = { init: 0, top: 1, bottom: 2, left: 3, right: 4, center: 5, verify: 6, end: 7,
+        cornerTR: 8, cornerBR: 9, cornerBL: 10, cornerTL: 11 };
+    // Order of the shots. With caliFlagCorners the board asks for the four corners after the
+    // right edge (each move goes to a neighbouring point); the last entry is verification.
+    const SHOTS_EDGES = [STAGE.init, STAGE.top, STAGE.bottom, STAGE.left, STAGE.right, STAGE.center, STAGE.verify];
+    const SHOTS_CORNERS = [STAGE.init, STAGE.top, STAGE.bottom, STAGE.left, STAGE.right,
+        STAGE.cornerTR, STAGE.cornerBR, STAGE.cornerBL, STAGE.cornerTL, STAGE.center, STAGE.verify];
+    // Target of each shot stage, as a fraction of the window (x, y).
+    const TARGET_POINTS = {
+        [STAGE.init]: [0.5, 0.5], [STAGE.top]: [0.5, 0], [STAGE.bottom]: [0.5, 1], [STAGE.left]: [0, 0.5],
+        [STAGE.right]: [1, 0.5], [STAGE.center]: [0.5, 0.5],
+        [STAGE.cornerTR]: [1, 0], [STAGE.cornerBR]: [1, 1], [STAGE.cornerBL]: [0, 1], [STAGE.cornerTL]: [0, 0],
+    };
+    const CALI_HEADERS = {
+        [STAGE.top]: 'Shoot at the top edge of the screen.', [STAGE.bottom]: 'Shoot at the bottom edge of the screen.',
+        [STAGE.left]: 'Shoot at the left edge of the screen.', [STAGE.right]: 'Shoot at the right edge of the screen.',
+        [STAGE.cornerTR]: 'Shoot at the top right corner of the screen.', [STAGE.cornerBR]: 'Shoot at the bottom right corner of the screen.',
+        [STAGE.cornerBL]: 'Shoot at the bottom left corner of the screen.', [STAGE.cornerTL]: 'Shoot at the top left corner of the screen.',
+        [STAGE.center]: 'Shoot at the final target in the center.',
+    };
+    /** A stage that shows a target to shoot (not verification or the end). */
+    function caliTarget(stage) {
+        return TARGET_POINTS[stage] !== undefined;
+    }
 
     const CALI_PREFIXES = ['Top Offset: ', 'Bottom Offset: ', 'Left Offset: ', 'Right Offset: ', 'Top Left LED: ', 'Top Right LED: '];
     const CALI_KEYS = ['topOffset', 'bottomOffset', 'leftOffset', 'rightOffset', 'TLled', 'TRled'];
     const CALI_SHOT_TIME = 120; // ms: confirms a target acquired, not a save to flash
     const CALI_SHOT_HOLD = 40;  // ms fully white, followed by a quick fade
+    const CALI_TARGET_TRAVEL_TIME = 250; // ms: after the flash the target glides to the next point
 
     const CROSSHAIR_SIZE = 61.44;
     const CROSSHAIR_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 61.44 61.44" width="61.44" height="61.44">' +
@@ -344,6 +368,8 @@
             this.closed = false;
             this.targetTime = Date.now(); // calibration: start of the target ring's rotation
             this.acceptedShot = null; // { stage, positionStage, time }: acquisition and held visual target
+            this.travel = null;       // { stage, from, start }: target gliding to the point of stage
+            this.corners = !!options.corners; // corner targets asked for (the board may still skip them)
             this.resetValues();
         }
 
@@ -468,11 +494,15 @@
 
         setStage(stage) {
             if (this.closed || this.mode !== MODE_CALIBRATE) return;
-            if (!(stage >= STAGE.init && stage <= STAGE.end)) return; // unknown stage: Qt CaliModeSet does nothing
+            if (!(stage >= STAGE.init && stage <= STAGE.end) && !caliTarget(stage)) return; // unknown stage: Qt CaliModeSet does nothing
             if (stage === STAGE.end) {
                 this.shutdown(Object.assign({}, this.values));
                 return;
             }
+            // The board decides: the corners follow the right edge, or the final centre does
+            // (firmware without corners, or calibration without the refinement).
+            if (stage >= STAGE.cornerTR) this.corners = true;
+            else if (stage === STAGE.center && this.stage === STAGE.right) this.corners = false;
             this._setCalibrationStage(stage);
             this.irWarning = null; // a new stage: the refused shot is no longer current
             if (stage === STAGE.init) {
@@ -490,15 +520,20 @@
             const now = Date.now();
             const previous = this.acceptedShot;
             const positionStage = previous && now - previous.time < CALI_SHOT_TIME ? previous.positionStage : this.stage;
-            this.acceptedShot = stage === this.stage + 1 && stage <= STAGE.verify ?
+            const shots = this._shotSequence();
+            const shot = shots.indexOf(this.stage);
+            this.acceptedShot = shot >= 0 && shots[shot + 1] === stage ?
                 { stage: this.stage, positionStage, time: now } : null;
+            // After the flash the target glides from the shot to the next point (not into verification).
+            this.travel = this.acceptedShot && caliTarget(stage) ?
+                { stage, from: TARGET_POINTS[positionStage] || TARGET_POINTS[STAGE.center], start: now + CALI_SHOT_TIME } : null;
             clearTimeout(this._shotTimer);
             this._shotTimer = 0;
             clearTimeout(this._targetRingTimer);
             this._targetRingTimer = 0;
             this.targetTime = now;
             this.stage = stage;
-            if (stage > STAGE.center) {
+            if (!caliTarget(stage)) {
                 clearTimeout(this._targetRingTimer);
                 this._targetRingTimer = 0;
             }
@@ -716,7 +751,7 @@
 
             switch (this.stage) {
             case STAGE.init:
-                stageText = lines('Calibration: step 1 of 6');
+                stageText = lines(`Calibration: step 1 of ${this._shotSequence().length - 1}`);
                 header = lines('Shoot at the target to start calibration.');
                 tutorial = lines('Calibration can be exited without changes', '  by pressing either Button A, Button B, ', '       or Button C (if available).       ');
                 break;
@@ -724,13 +759,17 @@
             case STAGE.bottom:
             case STAGE.left:
             case STAGE.right:
-            case STAGE.center:
-                stageText = lines(`Calibration: step ${this.stage + 1} of 6`);
-                header = lines(['', 'Shoot at the top edge of the screen.', 'Shoot at the bottom edge of the screen.',
-                    'Shoot at the left edge of the screen.', 'Shoot at the right edge of the screen.',
-                    'Shoot at the final target in the center.'][this.stage]);
+            case STAGE.cornerTR:
+            case STAGE.cornerBR:
+            case STAGE.cornerBL:
+            case STAGE.cornerTL:
+            case STAGE.center: {
+                const shots = this._shotSequence();
+                stageText = lines(`Calibration: step ${shots.indexOf(this.stage) + 1} of ${shots.length - 1}`);
+                header = lines(CALI_HEADERS[this.stage]);
                 tutorial = lines('Calibration can be exited without changes', '  by pressing either Button A, Button B, ', '       or Button C (if available).       ');
                 break;
+            }
             default: {
                 stageY = h * 0.15;
                 const v = this.values;
@@ -765,7 +804,7 @@
             const headerSize = this._centered(ctx, header, headerTop, heading, tint);
             // IR view: a target shot is refused only with the crosshair red (an emitter missing).
             // The colour word (%1) is drawn in the full green of the crosshair.
-            if (this._caliIrColor() && this.stage <= STAGE.center) {
+            if (this._caliIrColor() && caliTarget(this.stage)) {
                 const [before, after = ''] = lines('Preferably shoot when the crosshair is %1.')[0].split('%1');
                 this._centeredSegments(ctx, [[before], [OF.i18n.t('green'), CALI_IR_SCALE.goodHigh], [after]],
                     headerTop + headerSize.height + GLYPH * sub, sub);
@@ -878,15 +917,23 @@
             }
         }
 
-        /** Six targets: centre, top, bottom, left, right, centre; green is progress, not IR quality. */
+        /** Shots in the order of the board (_shotSequence); green is progress, not IR quality. */
+        _shotSequence() {
+            return this.corners ? SHOTS_CORNERS : SHOTS_EDGES;
+        }
+
+        /** One dot per target: centre, top, bottom, left, right, the corners when used, centre. */
         _drawCalibrationProgress(ctx, stageTop) {
             const scale = this.textScale('sub') / 2;
             const y = stageTop - 52 * scale; // 45 px higher at 1080p; clear of the upper target
-            const x = this.width / 2 - 2.5 * 22 * scale;
+            const shots = this._shotSequence();
+            const count = shots.length - 1;  // the last entry is verification: every dot done
+            const shot = shots.indexOf(this.stage);
+            const x = this.width / 2 - (count - 1) / 2 * 22 * scale;
             ctx.save();
-            for (let i = 0; i < 6; ++i) {
-                const current = i === this.stage;
-                const done = i < this.stage;
+            for (let i = 0; i < count; ++i) {
+                const current = i === shot;
+                const done = i < shot;
                 ctx.beginPath();
                 ctx.arc(x + i * 22 * scale, y, (current ? 8 : 6) * scale, 0, Math.PI * 2);
                 ctx.fillStyle = current ? '#00dc00' : 'rgb(160,160,164)';
@@ -899,24 +946,40 @@
         }
 
         /** Hold only the drawing during the flash; verification cursor data continues to update. */
-        _crosshairPosition(stage = this.acceptedShot ? this.acceptedShot.positionStage : this.stage) {
+        _crosshairPosition(stage) {
             const w = this.width;
             const h = this.height;
-            const positions = [[w / 2, h / 2], [w / 2, 0], [w / 2, h], [0, h / 2], [w, h / 2], [w / 2, h / 2]];
+            if (stage === undefined) {
+                const travel = this.acceptedShot ? null : this._travelPoint();
+                if (travel) return [travel[0] * w, travel[1] * h];
+                stage = this.acceptedShot ? this.acceptedShot.positionStage : this.stage;
+            }
             if (stage === STAGE.verify && this.mouse) return [this.mouse.x, this.mouse.y];
-            return positions[stage] || positions[5];
+            const [x, y] = TARGET_POINTS[stage] || TARGET_POINTS[STAGE.center];
+            return [x * w, y * h];
+        }
+
+        /** Target gliding to the current point after the flash ([x, y] fractions), or null once there (or reduced motion). */
+        _travelPoint() {
+            const travel = this.travel;
+            if (!travel || travel.stage !== this.stage || reducedMotion()) return null;
+            const t = Math.max(0, (Date.now() - travel.start) / CALI_TARGET_TRAVEL_TIME);
+            if (t >= 1) return null;
+            const to = TARGET_POINTS[travel.stage];
+            const k = t * t * (3 - 2 * t); // smoothstep: leaves and arrives gently
+            return [travel.from[0] + (to[0] - travel.from[0]) * k, travel.from[1] + (to[1] - travel.from[1]) * k];
         }
 
         /** Outer dashed target ring; colour comes from the SVG actually drawn in this frame. */
         _drawTargetRing(ctx, color = CROSSHAIR_COLOR) {
             const still = reducedMotion();
-            if (this.closed || this.stage > STAGE.center || still || this.acceptedShot) {
+            if (this.closed || !caliTarget(this.stage) || still || this.acceptedShot) {
                 clearTimeout(this._targetRingTimer);
                 this._targetRingTimer = 0;
             }
             if (this.closed) return;
             if (this._drawShotConfirmation(ctx, still)) return;
-            if (this.stage <= STAGE.center) {
+            if (caliTarget(this.stage)) {
                 this._strokeTargetRing(ctx, this._crosshairPosition(), still ? 0 : Date.now() - this.targetTime, rgbHex(color));
                 if (!still && !this._targetRingTimer)
                     this._targetRingTimer = setTimeout(() => { this._targetRingTimer = 0; this.render(); }, CALI_ANIMATION_FRAME_TIME);

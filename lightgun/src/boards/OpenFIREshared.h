@@ -239,6 +239,7 @@ public:
         cameraModel, // inserita per CAM
         bootOutputMode,
         inputInvertMask,    // bit N = invert input function N (see invertibleInputs)
+        cameraParallax,     // camera below the sight line, percent of the vertical LED distance (0 = none)
         // Add here
         settingsTypesCount
     } settingsTypes_e;
@@ -261,6 +262,7 @@ public:
         {"CameraModel",         cameraModel         },  // inserira per CAM
         {"BootOutputMode",      bootOutputMode      },
         {"InputInvertMask",     inputInvertMask     },
+        {"CamParallax",         cameraParallax      },
     };
 
     enum {
@@ -297,6 +299,14 @@ public:
         profAR,
         profColor,
         profName,
+        // LED shape measured with the corner shots (calibration geometry, see Shape in
+        // OpenFIRE_Calibration.h), after the 16 bytes of the name. All zero = no correction.
+        profSkewX = profName + 4,
+        profSkewY,
+        profKeystoneX,
+        profKeystoneY,
+        // LED area seen at the final centre shot: distance reference of the parallax correction.
+        profCaliArea,
         profDataTypes,
         profCurrent = 0xFD,
     } profSyncTypes_e;
@@ -316,6 +326,11 @@ public:
         {"AspectRatio", profAR              },
         {"Color",       profColor           },
         {"Name",        profName            },
+        {"SkewX",       profSkewX           },
+        {"SkewY",       profSkewY           },
+        {"KeystoneX",   profKeystoneX       },
+        {"KeystoneY",   profKeystoneY       },
+        {"CaliArea",    profCaliArea        },
         {"CurrentProf", profCurrent         },
     };
 
@@ -435,8 +450,10 @@ public:
     // Optional fourth byte of sCaliProfile + sCaliStart (App to board). Older Apps send
     // three bytes and older firmware ignores the fourth, so both keep working as before.
     enum {
-        caliFlagIrView = 0x01   // send the IR emitters during calibration (sTestBlobs + sTestCoords)
+        caliFlagIrView = 0x01,  // send the IR emitters during calibration (sTestBlobs + sTestCoords)
                                 // and refuse the target shots while an emitter is missing
+        caliFlagCorners = 0x02  // four more targets at the screen corners after the right edge
+                                // (sCaliStageUpd 8..11: top-right, bottom-right, bottom-left, top-left)
     } caliStartFlags_e;
 
     enum {

@@ -54,6 +54,7 @@
         customLEDstatic: [0, 3],
         tempWarning: [20, 99],
         tempShutdown: [25, 60],
+        cameraParallax: [0, 25],    // percent of the vertical LED distance (firmware: settings[cameraParallax])
     };
 
     class AppState {

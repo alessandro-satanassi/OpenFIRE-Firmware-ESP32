@@ -73,6 +73,15 @@ __attribute__((noinline)) void CaptureCalibrationFrame() {
     if(valid) calibrationSession->observe(xy,micros());
     else calibrationSession->invalidate();
 }
+
+// Profile fields of the LED shape measured with the corner shots.
+OpenFIRECalibration::Shape ProfileShape(const OF_Prefs::ProfileData_t& profile) {
+    return {profile.skewX, profile.skewY, profile.keystoneX, profile.keystoneY};
+}
+void SetProfileShape(OF_Prefs::ProfileData_t& profile, const OpenFIRECalibration::Shape& shape) {
+    profile.skewX = shape.skewX; profile.skewY = shape.skewY;
+    profile.keystoneX = shape.keystoneX; profile.keystoneY = shape.keystoneY;
+}
 } // namespace
 #endif
 
@@ -590,6 +599,7 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
         testBlobState[i] = TestBlobState_None;
 
     uint8_t calStage = 0;
+    uint8_t corner = 4;     // corner target being shot, 4 = none (see Cali_Corner)
     bool communicationFailed = false;
     uint8_t caliPayload[5];
 
@@ -603,7 +613,15 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
     #ifdef OPENFIRE_CALIBRATION_REFINEMENT
         CalibrationScope calibrationCapture(cameraProfile,
             OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout);
+        // Only the refinement uses the four corners: always without an App, with an App
+        // only when it asks for them (caliFlagCorners). Older Apps keep six targets.
+        const bool cornerTargets = calibrationSession && (!fromDesktop || caliCorners);
+    #else
+        const bool cornerTargets = false;
     #endif
+    // Cursor targets of the corners, in the order of Cali_Corner.
+    static constexpr int32_t cornerX[4] = {32767, 32767, 0, 0};
+    static constexpr int32_t cornerY[4] = {0, 32767, 32767, 0};
 
     // hold values in a buffer till calibration is complete
     int topOffset;
@@ -626,6 +644,14 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
     OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset = 0;
     OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset = 0;
     OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset = 0;
+    #ifdef OPENFIRE_CALIBRATION_REFINEMENT
+        // The LED shape too: kept for a cancel, none while shooting (the refinement measures it).
+        const OpenFIRECalibration::Shape _shape = ProfileShape(OF_Prefs::profiles[OF_Prefs::currentProfile]);
+        SetProfileShape(OF_Prefs::profiles[OF_Prefs::currentProfile], {});
+        // And the parallax distance reference: no parallax correction while shooting.
+        const float _caliArea = OF_Prefs::profiles[OF_Prefs::currentProfile].caliArea;
+        OF_Prefs::profiles[OF_Prefs::currentProfile].caliArea = 0;
+    #endif
 
     // Force center mouse to center (Absolute HID range 0-32767)
     AbsMouse5.move(32768/2, 32768/2);
@@ -647,7 +673,7 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
     // Jack in, CaliMan, execute!!!
     SetMode(FW_Const::GunMode_Calibration);
     #ifdef USES_DISPLAY
-        OLED.CalibrationStageUpdate(FW_Const::Cali_Init);
+        OLED.CalibrationStageUpdate(FW_Const::Cali_Init, cornerTargets);
     #endif // USES_DISPLAY
     if(fromDesktop) {
         const uint8_t stage = FW_Const::Cali_Init;
@@ -726,10 +752,10 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
         }
         #endif // CALI_CURSOR_ORBIT_ENABLED
 
-        // WebApp IR view: every target shot (centre, the four edges, final centre) is refused
-        // while an emitter is missing, so that each reading is taken with all four emitters
-        // seen (a weak one is accepted). The WebApp is told why (sCaliIrWarning) and the stage
-        // does not change.
+        // WebApp IR view: every target shot (centre, the four edges, the corners when used,
+        // final centre) is refused while an emitter is missing, so that each reading is taken
+        // with all four emitters seen (a weak one is accepted). The WebApp is told why
+        // (sCaliIrWarning) and the stage does not change.
         // With a narrow camera close to the screen an emitter can leave the field at the edges:
         // the player then steps back. The confirmation of the verify stage is not checked.
         const uint8_t shotRefusal =
@@ -744,13 +770,35 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
         } else if(shotRefusal) {
             if(!OF_Serial::AppSerialSendResponse(OF_Const::sCaliIrWarning, &shotRefusal, 1))
                 goto calibration_failed;
+        } else if(buttons.pressed == FW_Const::BtnMask_Trigger && !mouseMoving && corner < 4) {
+            // A corner, between the right edge and the final centre: the stage stays Cali_Center
+            // and the edge offsets are already set; only the refinement uses this shot.
+            #ifdef OPENFIRE_CALIBRATION_REFINEMENT
+                if(calibrationSession)
+                    calibrationSession->capture(FW_Const::Cali_Center + 1 + corner, micros());
+            #endif
+            ++corner;
+            const uint8_t stage = corner < 4 ? FW_Const::Cali_Corner + corner : FW_Const::Cali_Center;
+            if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliStageUpd, &stage, 1))
+                goto calibration_failed;
+            if(!fromDesktop) {
+                mouseTargetX = corner < 4 ? cornerX[corner] : 32768 / 2;
+                mouseTargetY = corner < 4 ? cornerY[corner] : 32768 / 2;
+                mouseMoving = true;
+            }
+            #ifdef USES_DISPLAY
+                OLED.CalibrationStageUpdate(stage, cornerTargets);
+            #endif // USES_DISPLAY
         } else if(buttons.pressed == FW_Const::BtnMask_Trigger && !mouseMoving) {
             #ifdef OPENFIRE_CALIBRATION_REFINEMENT
                 if(calibrationSession && calStage < 6)
                     calibrationSession->capture(calStage,micros());
             #endif
             ++calStage;
-            if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliStageUpd, &calStage, 1))
+            // After the right edge the corners come first, when used, then the final centre.
+            if(calStage == FW_Const::Cali_Center && cornerTargets) corner = 0;
+            const uint8_t nextStage = corner < 4 ? FW_Const::Cali_Corner : calStage;
+            if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliStageUpd, &nextStage, 1))
                 goto calibration_failed;
 
             switch(calStage) {
@@ -862,10 +910,10 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                     OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset = leftOffset;
                     OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset = rightOffset;
 
-                    // Move back to center calibration point
+                    // Move to the first corner, or back to center calibration point
                     if(!fromDesktop) {
-                        mouseTargetX = 32768 / 2;
-                        mouseTargetY = 32768 / 2;
+                        mouseTargetX = corner < 4 ? cornerX[0] : 32768 / 2;
+                        mouseTargetY = corner < 4 ? cornerY[0] : 32768 / 2;
                         mouseMoving = true;
                     }
                     break;
@@ -900,6 +948,7 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                                 profile.bottomOffset = refined.offsets[1];
                                 profile.leftOffset = refined.offsets[2];
                                 profile.rightOffset = refined.offsets[3];
+                                SetProfileShape(profile, refined.shape);
                                 // Replace the App's provisional edge values with the
                                 // final ones using the existing protocol messages.
                                 for(uint8_t i = 0; i < 4; ++i) {
@@ -922,6 +971,11 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                     memcpy(&caliPayload[1], &OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, sizeof(float));
                     if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliInfoUpd, caliPayload, sizeof(caliPayload)))
                         goto calibration_failed;
+
+                    #ifdef OPENFIRE_CALIBRATION_REFINEMENT
+                        // Parallax distance reference: LED area while aiming at the final centre.
+                        OF_Prefs::profiles[OF_Prefs::currentProfile].caliArea = OpenFIREper.area();
+                    #endif
 
                     // Update Cam centre in perspective library
                     OpenFIREper.source(OF_Prefs::profiles[OF_Prefs::currentProfile].adjX, OF_Prefs::profiles[OF_Prefs::currentProfile].adjY);
@@ -962,6 +1016,8 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                             calStage = 0;
                             #ifdef OPENFIRE_CALIBRATION_REFINEMENT
                                 if(calibrationSession) calibrationSession->reset();
+                                SetProfileShape(OF_Prefs::profiles[OF_Prefs::currentProfile], {});
+                                OF_Prefs::profiles[OF_Prefs::currentProfile].caliArea = 0;
                             #endif
                             const uint8_t stage = FW_Const::Cali_Init;
                             if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliStageUpd, &stage, 1))
@@ -999,7 +1055,7 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
             #ifdef USES_DISPLAY
                 // Show the next target after capturing this shot, including a restart.
                 if(gunMode == FW_Const::GunMode_Calibration)
-                    OLED.CalibrationStageUpdate(calStage);
+                    OLED.CalibrationStageUpdate(corner < 4 ? FW_Const::Cali_Corner : calStage, cornerTargets);
             #endif // USES_DISPLAY
         }
     }
@@ -1059,6 +1115,10 @@ calibration_cancelled:
     OF_Prefs::profiles[OF_Prefs::currentProfile].TRled = _TRled;
     OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = _adjX;
     OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = _adjY;
+    #ifdef OPENFIRE_CALIBRATION_REFINEMENT
+        SetProfileShape(OF_Prefs::profiles[OF_Prefs::currentProfile], _shape);
+        OF_Prefs::profiles[OF_Prefs::currentProfile].caliArea = _caliArea;
+    #endif
     OpenFIREper.source(_adjX, _adjY);
     OpenFIREper.deinit(0);
     stateFlags |= FW_Const::StateFlag_PrintSelectedProfile;
@@ -1447,10 +1507,26 @@ void FW_Common::GetPosition()
             // setups, up to 9-19 px). MapCalibratedAxis() puts the two readings exactly
             // on the edges, gives the same result as before at the centre and with zero
             // offsets, and treats a damaged calibration as an uncalibrated profile.
-            mouseX = MapCalibratedAxis(OpenFIREper.getX(), res_x,
+            int32_t perspectiveX = OpenFIREper.getX();
+            int32_t perspectiveY = OpenFIREper.getY();
+            #ifdef OPENFIRE_CALIBRATION_REFINEMENT
+                // LED shape measured with the corner shots: nothing changes while it is zero.
+                OpenFIRECalibration::ApplyShape(ProfileShape(OF_Prefs::profiles[OF_Prefs::currentProfile]),
+                                                CALI_MAP_VALUE_LIMIT, perspectiveX, perspectiveY);
+                // Camera below the sight line (WebApp percent), turned with the gun's tilt:
+                // nothing changes at 0 or before a calibration.
+                if(OF_Prefs::settings[OF_Const::cameraParallax])
+                    OpenFIRECalibration::ApplyParallax(OF_Prefs::settings[OF_Const::cameraParallax] / 100.f,
+                                                       OF_Prefs::profiles[OF_Prefs::currentProfile].caliArea,
+                                                       OpenFIREper.area(),
+                                                       OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout ?
+                                                           OpenFIREdiamond.Ang() : OpenFIREsquare.Ang(),
+                                                       res_y, CALI_MAP_VALUE_LIMIT, perspectiveX, perspectiveY);
+            #endif
+            mouseX = MapCalibratedAxis(perspectiveX, res_x,
                                        OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset,
                                        OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset);
-            mouseY = MapCalibratedAxis(OpenFIREper.getY(), res_y,
+            mouseY = MapCalibratedAxis(perspectiveY, res_y,
                                        OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset,
                                        OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset);
 

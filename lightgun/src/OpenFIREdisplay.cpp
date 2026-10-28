@@ -326,9 +326,10 @@ void ExtDisplay::ShowTemp()
 }
 #endif // USES_TEMP
 
-void ExtDisplay::CalibrationStageUpdate(uint8_t stage)
+void ExtDisplay::CalibrationStageUpdate(uint8_t stage, bool corners)
 {
-    if(display == nullptr || stage > FW_Const::Cali_Verify)
+    const bool cornerStage = stage >= FW_Const::Cali_Corner && stage < FW_Const::Cali_Corner + 4;
+    if(display == nullptr || (stage > FW_Const::Cali_Verify && !cornerStage))
         return;
 
     // Static drawing on stage changes only, never at the camera frame rate.
@@ -340,7 +341,18 @@ void ExtDisplay::CalibrationStageUpdate(uint8_t stage)
     display->setTextColor(WHITE, BLACK);
 
     const char *lines[3];
-    char progress[] = {char('1' + stage), '/', '6', '\0'};
+    // Shot number: centre and edges, then the corners when used, then the final centre.
+    const uint8_t shots = FW_Const::Cali_Center + 1 + (corners ? 4 : 0);
+    const uint8_t shot = cornerStage ? FW_Const::Cali_Center + 1 + (stage - FW_Const::Cali_Corner)
+                       : stage == FW_Const::Cali_Center ? shots : stage + 1;
+    char progress[6];
+    uint8_t length = 0;
+    if(shot > 9) progress[length++] = char('0' + shot / 10);
+    progress[length++] = char('0' + shot % 10);
+    progress[length++] = '/';
+    if(shots > 9) progress[length++] = char('0' + shots / 10);
+    progress[length++] = char('0' + shots % 10);
+    progress[length] = '\0';
     int textX, textWidth, textY, lineSpacing;
     if(stage == FW_Const::Cali_Verify) {
         lines[0] = "CHECK AIM";
@@ -362,6 +374,11 @@ void ExtDisplay::CalibrationStageUpdate(uint8_t stage)
             case FW_Const::Cali_Right:  x = 61; break;
             default: break;
         }
+        if(cornerStage) {   // top-right, bottom-right, bottom-left, top-left
+            const uint8_t c = stage - FW_Const::Cali_Corner;
+            x = c < 2 ? 61 : 5;
+            y = (c == 1 || c == 2) ? 56 : 24;
+        }
 
         display->drawRect(5, 24, 57, 33, WHITE);
         // A small stationary reticle, including at the edges of the TV.
@@ -375,7 +392,7 @@ void ExtDisplay::CalibrationStageUpdate(uint8_t stage)
         display->drawFastVLine(x, y - 1, 3, WHITE);
 
         lines[0] = progress;
-        lines[1] = directions[stage];
+        lines[1] = cornerStage ? "CORNER" : directions[stage];
         lines[2] = "SHOOT";
         textX = 74;
         textWidth = 48;

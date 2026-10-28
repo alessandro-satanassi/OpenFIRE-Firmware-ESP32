@@ -1956,8 +1956,11 @@ void OF_Serial::AppSerialDispatchRequest(const AppSerialFrame_s &frame)
                 // Optional fourth byte: older Apps send three bytes and keep the classic calibration.
                 FW_Common::caliIrView = frame.length >= 4 &&
                                         (frame.payload[3] & OF_Const::caliFlagIrView) != 0;
+                FW_Common::caliCorners = frame.length >= 4 &&
+                                         (frame.payload[3] & OF_Const::caliFlagCorners) != 0;
                 FW_Common::ExecCalMode(true);
                 FW_Common::caliIrView = false;
+                FW_Common::caliCorners = false;
 
                 // A full App disconnect received inside ExecCalMode()
                 // first cancels calibration so that the backed-up profile

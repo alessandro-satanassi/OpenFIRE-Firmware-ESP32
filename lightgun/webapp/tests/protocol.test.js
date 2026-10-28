@@ -235,6 +235,7 @@ test('commit round trip updates the firmware and keeps calibration geometry', as
         current.pins[S.boardInputs_e.camSDA] = 8;
         current.settings[S.settingsTypes_e.rumbleStrength] = 128;
         current.settings[S.settingsTypes_e.customLEDcolor2] = 0xABCDEF;
+        current.settings[S.settingsTypes_e.cameraParallax] = 3;
         current.buttons[S.boardInputs_e.btnGunA] = [1, 0xB0, 1, 0xB1, 2, 3];
         current.profiles[1].name = 'Living Room';
         current.profiles[1].color = 0x00FFAA;
@@ -243,6 +244,9 @@ test('commit round trip updates the firmware and keeps calibration geometry', as
         current.profiles[1].topOffset = 9999; // must NOT be sent
         current.selectedProfile = 1;
         current.tinyUSB = { id: 3, name: 'FIRECon P3' };
+        // Parallax distance reference measured by the last calibration (not an App field).
+        const caliArea = new DataView(ctx.firmware.profiles[1].buffer, 4 * S.profSyncTypes_e.profCaliArea, 4);
+        caliArea.setFloat32(0, 1234.5, true);
 
         const progress = [];
         ctx.protocol.on('progress', (p) => progress.push(p));
@@ -259,6 +263,8 @@ test('commit round trip updates the firmware and keeps calibration geometry', as
         assert.equal(fw.pins[S.boardInputs_e.btnGunA], -1);
         assert.equal(fw.getSetting(S.settingsTypes_e.rumbleStrength), 128);
         assert.equal(fw.getSetting(S.settingsTypes_e.customLEDcolor2), 0xABCDEF);
+        assert.equal(fw.getSetting(S.settingsTypes_e.cameraParallax), 3);
+        assert.equal(caliArea.getFloat32(0, true), 1234.5, 'parallax distance reference stays in the firmware');
         assert.deepEqual(Array.from(fw.backupButtonDesc.subarray(6, 12)), [1, 0xB0, 1, 0xB1, 2, 3]);
         assert.equal(fw.getProfileName(1), 'Living Room');
         assert.equal(fw.getProfileU32(1, 12), 0x00FFAA);
@@ -432,6 +438,31 @@ test('desktop calibration: stages, values and completion', async () => {
         assert.equal(value(info[3]).getInt32(0, true), -7);
         assert.equal(value(info[4]).getFloat32(0, true), 1023.5);
         assert.equal(ctx.firmware.getProfileI32(profile, 0), 90);
+        assert.equal(ctx.firmware.gunMode, 'docked');
+    } finally {
+        await teardown(ctx);
+    }
+});
+
+test('desktop calibration with caliFlagCorners: four corners between the right edge and the final centre', async () => {
+    const ctx = await setup();
+    try {
+        assert.equal((await ctx.protocol.getSettings()).ok, true);
+        ctx.events.length = 0;
+        const flags = ctx.firmware.S.caliStartFlags_e;
+        assert.equal(await ctx.protocol.sendCommand(C.sCaliProfile, Uint8Array.of(C.sCaliStart, 1, 1, flags.caliFlagCorners)), true);
+        assert.ok(await waitUntil(() => ctx.events.some((e) => e.command === C.sCaliStageUpd)));
+        const order = [1, 2, 3, 4, 8, 9, 10, 11, 5, 6, 7];
+        for (const stage of order) {
+            ctx.firmware.trigger = true;
+            assert.ok(await waitUntil(() => ctx.events.some((e) => e.command === C.sCaliStageUpd && e.payload[0] === stage)),
+                      `stage ${stage}`);
+        }
+        const stages = ctx.events.filter((e) => e.command === C.sCaliStageUpd).map((e) => e.payload[0]);
+        assert.deepEqual(stages, [0, ...order]);
+        const info = ctx.events.filter((e) => e.command === C.sCaliInfoUpd);
+        assert.deepEqual(info.map((e) => e.payload[0]), [1, 2, 3, 4, 5, 6]);
+        assert.equal(ctx.firmware.getProfileI32(1, 0), 90);
         assert.equal(ctx.firmware.gunMode, 'docked');
     } finally {
         await teardown(ctx);

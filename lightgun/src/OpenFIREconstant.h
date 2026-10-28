@@ -85,7 +85,10 @@ public:
         Cali_Left,
         Cali_Right,
         Cali_Center,
-        Cali_Verify
+        Cali_Verify,
+        // Optional corner targets after Cali_Right, before Cali_Center: top-right, bottom-right,
+        // bottom-left, top-left (Cali_Corner..+3; Cali_Verify + 1 ends calibration for the App).
+        Cali_Corner = Cali_Verify + 2
     };
 
     enum PauseModeSelection_e {

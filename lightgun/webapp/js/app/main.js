@@ -830,17 +830,20 @@
             const C = this.C;
             if (!this.connected || this.window && this.window.mode !== OF.FullscreenWindow.MODE_ALIGNMENT) return;
             const settings = this.state.cur.profiles[profile];
+            // Fourth byte: ask for the IR emitters and the four corner targets during calibration
+            // (older firmware ignores it and keeps six targets).
+            const flags = this.S.caliStartFlags_e || {};
+            const caliFlags = (flags.caliFlagIrView || 0) | (flags.caliFlagCorners || 0);
             if (this.window) this.window.shutdown();
             this.caliProfile = profile;
             const win = new OF.FullscreenWindow(OF.FullscreenWindow.MODE_CALIBRATE, {
                 onExitRequest: () => this.sendCommand(C.serialTerminator).then((ok) => { if (!ok) this.failOperation(); }),
                 onExit: (mode, values) => this.onWindowExit(win, mode, values),
                 diamond: settings.layoutType === this.S.layoutTypes_e.layoutDiamond, // IR view: emitters in their layout
+                corners: !!flags.caliFlagCorners,
             });
             this.window = win;
             win.open();
-            // Fourth byte: ask for the IR emitters during calibration (older firmware ignores it).
-            const caliFlags = this.S.caliStartFlags_e ? this.S.caliStartFlags_e.caliFlagIrView : 0;
             this.sendCommand(C.sCaliProfile, [C.sCaliStart, profile, (settings.irSensitivity + (settings.layoutType << 4)) & 0xFF, caliFlags])
                 .then((ok) => { if (!ok) this.failOperation(); });
         }

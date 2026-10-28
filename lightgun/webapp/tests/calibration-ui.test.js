@@ -7,7 +7,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../js/app/fullscreen.js'), 'utf8');
 
-function setup(language = 'en') {
+function setup(language = 'en', options = {}) {
     let now = 1000000, reduce = false, id = 0;
     const timers = new Map(), frames = new Map();
     const translations = JSON.parse(fs.readFileSync(path.join(__dirname, '../lang/', language + '.json'), 'utf8'));
@@ -24,7 +24,7 @@ function setup(language = 'en') {
         cancelAnimationFrame(token) { frames.delete(token); },
     };
     vm.runInNewContext(source, root);
-    const win = new root.OF.FullscreenWindow('calibrate');
+    const win = new root.OF.FullscreenWindow('calibrate', options);
     win.width = 1280; win.height = 800;
     function draw() {
         const arcs = [];
@@ -268,7 +268,7 @@ test('late target-ring callbacks cannot draw or rearm after shutdown', () => {
     assert.equal(s.drawRing().arcs.length, 0); assert.equal(s.timers.size, 0); assert.equal(s.frames.size, 0);
 });
 
-test('solid stationary flash holds the original crosshair until 120 ms, then shows the next target', () => {
+test('solid stationary flash holds the original crosshair until 120 ms, then glides to the next target in 250 ms', () => {
     const s = setup(), positions = [[640,400], [640,0], [640,800], [0,400], [1280,400], [640,400]];
     for (let stage = 1; stage <= 6; ++stage) {
         const start = 1000000 + (stage - 1) * 1000;
@@ -288,9 +288,12 @@ test('solid stationary flash holds the original crosshair until 120 ms, then sho
         s.time(start + 520);
         const next = s.drawRing([0,224,0]);
         assert.equal(s.win.acceptedShot, null);
-        assert.deepEqual(Array.from(s.win._crosshairPosition()), positions[Math.min(stage,5)]);
+        assert.deepEqual(Array.from(s.win._crosshairPosition()), positions[stage <= 5 ? stage - 1 : 5]); // the glide starts
         assert.equal(next.strokes.length, stage <= 5 ? 1 : 0);
         if(stage <= 5) assert.equal(next.strokes[0].color, '#00e000');
+        s.time(start + 770);
+        assert.deepEqual(Array.from(s.win._crosshairPosition()), positions[Math.min(stage,5)]);
+        if(stage <= 5) assert.deepEqual(s.drawRing([0,224,0]).translations.at(-1), positions[stage]);
     }
 });
 
@@ -337,8 +340,10 @@ test('flash is fully white for 40 ms and fades for 80 ms, with no dash or rotati
         assert.deepEqual(Array.from(s.win._crosshairPosition()), [640,400]);
     }
     s.time(1000120); s.drawRing();
-    assert.deepEqual(Array.from(s.win._crosshairPosition()), [640,0]);
+    assert.deepEqual(Array.from(s.win._crosshairPosition()), [640,400]); // the glide to the top starts
     assert.equal(s.win._shotTimer, 0);
+    s.time(1000370);
+    assert.deepEqual(Array.from(s.win._crosshairPosition()), [640,0]);
 });
 
 test('an expired flash cannot hold an older target when a new stage arrives before its redraw', () => {
@@ -347,7 +352,95 @@ test('an expired flash cannot hold an older target when a new stage arrives befo
     assert.equal(s.win.acceptedShot.positionStage, 1);
     assert.deepEqual(Array.from(s.win._crosshairPosition()), [640,0]);
     s.time(1000240); s.drawRing();
+    assert.deepEqual(Array.from(s.win._crosshairPosition()), [640,0]); // the glide starts from the shot
+    s.time(1000490);
     assert.deepEqual(Array.from(s.win._crosshairPosition()), [640,800]);
+});
+
+test('the glide eases in and out along a straight line, follows resizing and is skipped with reduced motion', () => {
+    const s = setup(); s.win.setStage(1); s.win.setStage(2); // top, then bottom 0 ms later: held at the centre
+    s.time(1000120); s.drawRing();
+    const at = (elapsed) => { s.time(1000120 + elapsed); return Array.from(s.win._crosshairPosition()); };
+    assert.deepEqual(at(0), [640,400]);
+    assert.deepEqual(at(125), [640,600]);          // half the time, half the way
+    const early = at(25)[1] - 400, late = 800 - at(225)[1];
+    assert.ok(early > 0 && early < 400 * 0.1 && Math.abs(early - late) < 1e-9); // gentle and symmetric
+    s.win.width = 1920; s.win.height = 1080;
+    assert.deepEqual(at(125), [960,810]);          // fractions of the window, not pixels
+    assert.equal(s.drawRing().translations.at(-1)[1], 810); // the ring moves with the crosshair
+    assert.equal(s.timers.size, 1);                // the ring timer also drives the glide
+    s.reduced(true);
+    assert.deepEqual(at(125), [960,1080]);
+    s.reduced(false);
+    s.win.setStage(0);                             // a restart is not a shot: no glide
+    assert.deepEqual(at(130), [960,540]); assert.equal(s.win.travel, null);
+});
+
+test('ten targets with the corners: order, dots, titles, positions and shot flashes', () => {
+    const order = [0, 1, 2, 3, 4, 8, 9, 10, 11, 5];
+    const headers = { 8: 'Shoot at the top right corner of the screen.', 9: 'Shoot at the bottom right corner of the screen.',
+        10: 'Shoot at the bottom left corner of the screen.', 11: 'Shoot at the top left corner of the screen.' };
+    const points = { 0: [.5,.5], 1: [.5,0], 2: [.5,1], 3: [0,.5], 4: [1,.5], 8: [1,0], 9: [1,1], 10: [0,1], 11: [0,0], 5: [.5,.5] };
+    for (const language of ['en', 'it']) {
+        const translations = JSON.parse(fs.readFileSync(path.join(__dirname, '../lang/', language + '.json'), 'utf8'));
+        const s = setup(language, { corners: true }), w = s.win;
+        order.forEach((stage, shot) => {
+            const time = 1000000 + shot * 1000;
+            s.time(time); w.setStage(stage);
+            if (shot) assert.equal(w.acceptedShot.stage, order[shot - 1]); // every move is a forward shot
+            s.time(time + 500); w.infoVisible = false;
+            const arcs = s.draw();
+            assert.equal(arcs.length, 10);
+            arcs.forEach((dot, i) => {
+                assert.equal(dot.x, 640 + (i - 4.5) * 22);
+                assert.equal(dot.fill, i === shot ? '#00dc00' : i < shot ? 'rgb(160,160,164)' : undefined);
+            });
+            const { texts } = drawCalibration(s);
+            const title = language === 'it' ? `Calibrazione: passo ${shot + 1} di 10` : `Calibration: step ${shot + 1} of 10`;
+            assert.deepEqual(texts[0].lines, [title]);
+            if (headers[stage]) {
+                const header = translations[headers[stage]];
+                assert.ok(header && (language === 'en' || header !== headers[stage]));
+                assert.deepEqual(texts[1].lines, [header.trim()]);
+                assert.ok(texts[1].x >= 0 && texts[1].x + texts[1].width <= 1280);
+            }
+            assert.deepEqual(Array.from(w._crosshairPosition()), [points[stage][0] * 1280, points[stage][1] * 800]);
+            assert.equal(s.drawRing().strokes.length, 1); // the coloured ring also marks the corners
+        });
+        s.time(1100000); w.setStage(6);
+        assert.equal(w.acceptedShot.stage, 5);
+        assert.ok(s.draw().every((dot) => dot.fill === 'rgb(160,160,164)'));
+        w.setStage(0); assert.equal(w.corners, true); // a restart keeps the ten targets
+        assert.equal(s.draw().length, 10);
+    }
+});
+
+test('the board decides: six targets when the final centre follows the right edge, corners turn ten on', () => {
+    const s = setup('en', { corners: true }), w = s.win;
+    for (let stage = 0; stage <= 4; ++stage) w.setStage(stage);
+    assert.equal(s.draw().length, 10);
+    w.setStage(5);                                  // firmware without corners
+    assert.equal(w.corners, false); assert.equal(w.acceptedShot.stage, 4);
+    const arcs = s.draw();
+    assert.equal(arcs.length, 6); assert.equal(arcs[5].fill, '#00dc00');
+    w.infoVisible = false;
+    assert.deepEqual(drawCalibration(s).texts[0].lines, ['Calibration: step 6 of 6']);
+
+    const old = setup().win;                        // window opened without the corners
+    for (const stage of [0, 1, 2, 3, 4]) old.setStage(stage);
+    old.setStage(8);
+    assert.equal(old.corners, true); assert.equal(old.acceptedShot.stage, 4);
+    for (const stage of [12, 99, -1, 7.5]) { old.setStage(stage); assert.equal(old.stage, 8); }
+});
+
+test('skipped corners are not acknowledged; the IR refusal keeps the corner and its glide', () => {
+    const s = setup('en', { corners: true }), w = s.win;
+    for (let stage = 0; stage <= 4; ++stage) w.setStage(stage);
+    w.setStage(9); assert.equal(w.acceptedShot, null); assert.equal(w.travel, null);
+    assert.deepEqual(Array.from(w._crosshairPosition()), [1280,800]);
+    w.setStage(10); assert.equal(w.acceptedShot.stage, 9);
+    w.showIrWarning(1); assert.equal(w.stage, 10); assert.equal(w.acceptedShot.stage, 9);
+    w.setStage(5); assert.equal(w.acceptedShot, null); // 10 -> centre skips the top-left corner
 });
 
 test('skipped or backwards stages cancel the held position immediately without changing acquired values', () => {

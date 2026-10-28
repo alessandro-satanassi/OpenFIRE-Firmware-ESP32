@@ -93,7 +93,17 @@ public:
         int aspectRatio;            // ratio to use for AR correction mode
         uint color;                 // packed color blob per profile (uses least sig 24-bits out of 32 bits)
         char name[16];              // Profile display name
+        float skewX;                // Perspective: LED shape from the corner shots (OpenFIRECalibration::Shape),
+        float skewY;                // zero in the defaults below and in profiles saved without it
+        float keystoneX;
+        float keystoneY;
+        float caliArea;             // Perspective: LED area at calibration (parallax distance reference), 0 = none
     } ProfileData_t;
+    // Profile records are copied by struct offset (OF_Const::profSyncTypes_e).
+    static_assert(offsetof(ProfileData_t, skewX) == sizeof(uint32_t) * OF_Const::profSkewX &&
+                  offsetof(ProfileData_t, keystoneY) == sizeof(uint32_t) * OF_Const::profKeystoneY &&
+                  offsetof(ProfileData_t, caliArea) == sizeof(uint32_t) * OF_Const::profCaliArea,
+                  "ProfileData_t must follow OF_Const::profSyncTypes_e");
 
     /// @brief Instance of profile data 
     
@@ -184,6 +194,7 @@ public:
         CAMERA_DEFAULT, // OF_Const::PixArt_PAJ7025R2, // camera model
         OF_Const::bootOutputMouse,  // output mode at boot: unchanged behaviour
         0,                          // input invert mask: no input inverted
+        0,                          // camera parallax: camera on the sight line, no correction
     };
 
     typedef struct USBMap_s {

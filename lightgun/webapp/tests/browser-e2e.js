@@ -298,7 +298,7 @@ async function installFakeSerial(context, sim) {
     ok(await waitFor(() => dev.locator('.fullscreen-window.mode-calibrate').count().then((n) => n === 1)), 'calibration window opens');
     await sleep(300);
     await shot(dev, 'dev-cali-init');
-    for (let i = 0; i < 6; ++i) { fw.trigger = true; await sleep(250); }
+    for (let i = 0; i < 10; ++i) { fw.trigger = true; await sleep(250); } // centre, edges, corners, centre
     await dev.mouse.move(600, 300);
     await shot(dev, 'dev-cali-verify');
     fw.trigger = true;

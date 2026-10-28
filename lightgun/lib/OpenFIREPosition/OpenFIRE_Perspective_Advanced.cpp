@@ -113,6 +113,8 @@ void OpenFIRE_Perspective::configure(const CameraProfile& profile) {
     k2 = profile.lensRadialK2;
     lensCorrectionMax = profile.lensCorrectionMax;
     lensCorrectionMin = profile.lensCorrectionMin;
+    const float focal = (float)profile.mouseResX * 0.5f * profile.lensFocalRatio;
+    focal2 = focal * focal;
 }
 
 // EN: Use the same profile-defined radial map for the LEDs and the aim point.
@@ -148,7 +150,7 @@ inline float OpenFIRE_Perspective::calculateQuadArea(float x0, float y0, float x
     return 0.5f * fabsf((x2 - x0) * (y3 - y1) - (x3 - x1) * (y2 - y0));
 }
 
-void OpenFIRE_Perspective::warp(float x0, float y0, float x1, float y1, float x2, float y2, float x3,
+bool OpenFIRE_Perspective::warp(float x0, float y0, float x1, float y1, float x2, float y2, float x3,
                                 float y3, float dx0, float dy0, float dx1, float dy1, float dx2, float dy2,
                                 float dx3, float dy3) {
 
@@ -164,7 +166,7 @@ void OpenFIRE_Perspective::warp(float x0, float y0, float x1, float y1, float x2
     // IT: Scartiamo una forma raw collassata prima che la lente la faccia apparire bidimensionale.
     float rawArea = calculateQuadArea(pt_TL_x, pt_TL_y, pt_TR_x, pt_TR_y, pt_BR_x, pt_BR_y, pt_BL_x, pt_BL_y);
     if (rawArea <= minQuadArea)
-        return;
+        return false;
 
     applyLensCorrection(pt_TL_x, pt_TL_y);
     applyLensCorrection(pt_TR_x, pt_TR_y);
@@ -174,8 +176,20 @@ void OpenFIRE_Perspective::warp(float x0, float y0, float x1, float y1, float x2
     float currentArea =
         calculateQuadArea(pt_TL_x, pt_TL_y, pt_TR_x, pt_TR_y, pt_BR_x, pt_BR_y, pt_BL_x, pt_BL_y);
 
-    // EN: Cache only the destination transform and the parallax area reference.
-    // IT: Memorizziamo soltanto la destinazione e l'area di riferimento per la parallasse.
+    // EN: Distance proxy: an image at angle t off the axis is 1 / cos(t)^3 larger, so where the gun
+    //     aims does not change it. cos(t)^2 = f^2 / (f^2 + offset of the quad centre^2).
+    // IT: Stima della distanza: un'immagine a un angolo t dall'asse e' 1 / cos(t)^3 piu' grande, cosi'
+    //     il punto mirato non la cambia. cos(t)^2 = f^2 / (f^2 + scostamento del centro del quad^2).
+    float distanceArea = currentArea;
+    if (focal2 > 0.0f) {
+        const float mx = (pt_TL_x + pt_TR_x + pt_BR_x + pt_BL_x) * 0.25f - cx;
+        const float my = (pt_TL_y + pt_TR_y + pt_BR_y + pt_BL_y) * 0.25f - cy;
+        const float cos2 = focal2 / (focal2 + (mx * mx) + (my * my));
+        distanceArea *= cos2 * sqrtf(cos2);
+    }
+
+    // EN: Cache only the destination transform and restart the area filter.
+    // IT: Memorizziamo soltanto la destinazione e ripartiamo con il filtro dell'area.
     // EN: The current camera view is solved again each frame, including oblique views.
     // IT: La vista corrente della camera viene ricalcolata a ogni frame, anche se obliqua.
     if (!init) {
@@ -184,49 +198,42 @@ void OpenFIRE_Perspective::warp(float x0, float y0, float x1, float y1, float x2
             if (!computeSquareToQuad(dstmatrix, dx0 * INV_NORM_SCALE, dy0 * INV_NORM_SCALE,
                                      dx1 * INV_NORM_SCALE, dy1 * INV_NORM_SCALE, dx3 * INV_NORM_SCALE,
                                      dy3 * INV_NORM_SCALE, dx2 * INV_NORM_SCALE, dy2 * INV_NORM_SCALE)) {
-                return;
+                return false;
             }
-            baseArea = currentArea;
-            smoothedArea = currentArea;
+            smoothedArea = distanceArea;
             init = true;
         }
         if (!init)
-            return;
+            return false;
     }
 
     // EN/IT: Keep the existing area filter / conserviamo il filtro dell'area esistente.
     if (currentArea > minQuadArea) {
-        smoothedArea = (0.1f * currentArea) + (0.9f * smoothedArea);
-    }
-
-    float dynamicSrcY = srcY;
-
-    if (parallaxFactor != 0.0f && baseArea > minQuadArea && smoothedArea > minQuadArea) {
-        float distanceRatio = sqrtf(baseArea / smoothedArea);
-        dynamicSrcY += parallaxFactor * (distanceRatio - 1.0f);
+        smoothedArea = (0.1f * distanceArea) + (0.9f * smoothedArea);
     }
 
     float correctedSrcX = srcX;
+    float correctedSrcY = srcY;
 
-    applyLensCorrection(correctedSrcX, dynamicSrcY);
+    applyLensCorrection(correctedSrcX, correctedSrcY);
 
-    // EN: Center on the actual lens-corrected aim, including calibration and parallax.
-    // IT: Centriamo sulla mira effettiva corretta per la lente, incluse calibrazione e parallasse.
+    // EN: Center on the actual lens-corrected aim, including calibration.
+    // IT: Centriamo sulla mira effettiva corretta per la lente, inclusa la calibrazione.
     // EN: The query is now (0,0); binary normalization avoids additional decimal scaling error.
     // IT: Il punto da trasformare e ora (0,0); la scala binaria evita ulteriori errori decimali.
     pt_TL_x = (pt_TL_x - correctedSrcX) * INV_NORM_SCALE;
-    pt_TL_y = (pt_TL_y - dynamicSrcY) * INV_NORM_SCALE;
+    pt_TL_y = (pt_TL_y - correctedSrcY) * INV_NORM_SCALE;
     pt_TR_x = (pt_TR_x - correctedSrcX) * INV_NORM_SCALE;
-    pt_TR_y = (pt_TR_y - dynamicSrcY) * INV_NORM_SCALE;
+    pt_TR_y = (pt_TR_y - correctedSrcY) * INV_NORM_SCALE;
     pt_BR_x = (pt_BR_x - correctedSrcX) * INV_NORM_SCALE;
-    pt_BR_y = (pt_BR_y - dynamicSrcY) * INV_NORM_SCALE;
+    pt_BR_y = (pt_BR_y - correctedSrcY) * INV_NORM_SCALE;
     pt_BL_x = (pt_BL_x - correctedSrcX) * INV_NORM_SCALE;
-    pt_BL_y = (pt_BL_y - dynamicSrcY) * INV_NORM_SCALE;
+    pt_BL_y = (pt_BL_y - correctedSrcY) * INV_NORM_SCALE;
 
     float sourceQuery[3], sourceDet;
     if (!computeOriginToSquare(sourceQuery, pt_TL_x, pt_TL_y, pt_TR_x, pt_TR_y, pt_BR_x, pt_BR_y, pt_BL_x,
                                pt_BL_y, sourceDet)) {
-        return;
+        return false;
     }
 
     // EN: Apply the destination directly to the homogeneous point, without composing matrices.
@@ -248,7 +255,7 @@ void OpenFIRE_Perspective::warp(float x0, float y0, float x1, float y1, float x2
 
         // EN/IT: Keep the last valid output on non-finite results / manteniamo l'ultima uscita valida.
         if (!isfinite(dstX_float) || !isfinite(dstY_float))
-            return;
+            return false;
 
         // EN/IT: Bound before converting to int32 / limitiamo i valori prima della conversione a int32.
         if (dstX_float > 2000000000.0f)
@@ -262,7 +269,9 @@ void OpenFIRE_Perspective::warp(float x0, float y0, float x1, float y1, float x2
 
         dstX = (int)dstX_float;
         dstY = (int)dstY_float;
+        return true;
     }
+    return false;
 }
 
 void OpenFIRE_Perspective::setLensCorrection(float coefficientK1) { k1 = coefficientK1; }
@@ -270,7 +279,6 @@ void OpenFIRE_Perspective::setLensCorrection(float coefficientK1, float coeffici
     k1 = coefficientK1;
     k2 = coefficientK2;
 }
-void OpenFIRE_Perspective::setDynamicParallax(float hardwareOffset) { parallaxFactor = hardwareOffset; }
 void OpenFIRE_Perspective::source(float adjustedX, float adjustedY) {
     srcX = adjustedX;
     srcY = adjustedY;

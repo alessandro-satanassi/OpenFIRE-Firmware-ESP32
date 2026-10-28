@@ -180,6 +180,10 @@ public:
     // while an emitter is missing (see ExecCalMode). False in every other case.
     static inline bool caliIrView = false;
 
+    // Calibration started by an App that asked for the four corner targets (sCaliStart,
+    // caliFlagCorners). Without an App the corners are always used (see ExecCalMode).
+    static inline bool caliCorners = false;
+
     static inline uint32_t camWarningTimestamp = 0;
     #define CAM_WARNING_INTERVAL 3000
 

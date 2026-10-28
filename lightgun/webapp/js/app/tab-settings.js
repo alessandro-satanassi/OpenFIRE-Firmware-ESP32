@@ -227,6 +227,13 @@
                     "accessibleName": "PixArt PAJ7025 R3",
                     "text": "PixArt PAJ7025 R3"
             },
+            "label_cameraParallax": {
+                    "text": "Parallax correction (camera below the sight):"
+            },
+            "cameraParallaxBox": {
+                    "whatsThis": "<html><head/><body><p>Corrects the aim when the camera is <span style=\" font-weight:700;\">below the sight line</span> and you play closer to or farther from the screen than where you calibrated. Leave it at <span style=\" font-weight:700;\">0</span> when the camera is on the sight line.</p><p><span style=\" font-weight:700;\">Starting value</span>, for each cm between camera and sight: about 3 on a 27\" monitor, about 1.5 on a 55\" TV. Exact value: cm between camera and sight × 100 / cm between the top and bottom LEDs.</p><p><span style=\" font-weight:700;\">Fine tuning</span>: calibrate, step back to about one and a half times that distance and aim at a point. Cursor above the point: raise the value by 1. Cursor below the point: lower it by 1.</p><p>It takes effect after the next calibration of each profile.</p><p><span style=\" font-weight:700; font-style:italic;\">Default:</span><span style=\" font-style:italic;\"> 0</span></p></body></html>",
+                    "accessibleName": "Parallax Correction"
+            },
             "tinyUSBGroupbox": {
                     "title": "TinyUSB Identifier"
             },
@@ -413,8 +420,10 @@
             state.setSetting(T.cameraModel, model);
             app.refresh();
         }), name));
+        // Camera below the sight line (parallax), locked like the model: set once when building the gun.
         const camera = fieldset('cameraModelGroupbox', el('div', { class: 'row center' }, unlock),
-            el('div', { class: 'row center wrap' }, ...cameraRadios));
+            el('div', { class: 'row center wrap' }, ...cameraRadios),
+            el('div', { class: 'row center wrap' }, ...number('label_cameraParallax', 'cameraParallaxBox', T.cameraParallax)));
         track(camera, 'cameraModelGroupbox');
 
         // ----- TinyUSB identifier ------------------------------------------------------------------
@@ -494,7 +503,8 @@
                 ['solenoidOnLengthBox', T.solenoidOnLength], ['solenoidOffLengthBox', T.solenoidOffLength],
                 ['solenoidHoldLengthBox', T.solenoidHoldLength], ['rumbleIntensityBox', T.rumbleStrength],
                 ['rumbleLengthBox', T.rumbleInterval], ['neopixelStrandLengthBox', T.customLEDcount],
-                ['customLEDstaticSpinbox', T.customLEDstatic], ['holdToPauseLengthBox', T.holdToPauseLength]])
+                ['customLEDstaticSpinbox', T.customLEDstatic], ['holdToPauseLengthBox', T.holdToPauseLength],
+                ['cameraParallaxBox', T.cameraParallax]])
                 controls[name].value = settings[index];
 
             controls.bootOutputModeBox.value = String(settings[T.bootOutputMode]);
@@ -511,6 +521,7 @@
                 node.input.checked = settings[T.cameraModel] === model;
                 node.input.disabled = !cameraUnlocked;
             });
+            controls.cameraParallaxBox.disabled = !cameraUnlocked;
             unlock.input.checked = cameraUnlocked;
 
             usbToggle.input.checked = usbAdvanced;
