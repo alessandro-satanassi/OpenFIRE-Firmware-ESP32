@@ -225,6 +225,33 @@ bool fitShape(const float* zx, const float* zy, const float* weight,
     return true;
 }
 
+// Mean of the four LEDs on the screen, through the screen model fitted with this source (per
+// axis, or with the LED shape): where the shots place the LEDs.
+bool ledMean(const CameraProfile& p, bool diamond, const Shots& shots, const bool* used, const float* tx,
+             const float* ty, const float* weight, bool withShape, float left, float right, Point source,
+             Point& mean, float fit[4], Shape& shape) {
+    Point z[ShotCount];
+    if(!aimPoints(p, diamond, shots, used, source, left, right, z)) return false;
+    float zx[ShotCount], zy[ShotCount];
+    for(unsigned k = 0; k < ShotCount; ++k) { zx[k] = z[k].x; zy[k] = z[k].y; }
+    if(!fitAxis(zx, tx, weight, fit[0], fit[1]) || !fitAxis(zy, ty, weight, fit[2], fit[3])) return false;
+    shape = {};
+    if(withShape && !fitShape(zx, zy, weight, fit[0], fit[1], fit[2], fit[3], shape)) return false;
+    // The LEDs in Perspective output, as in aimPoints.
+    const Point led[4] = {{diamond ? res_x*.5f : left, 0}, {diamond ? 0 : right, diamond ? res_y*.5f : 0},
+                          {diamond ? float(res_x) : left, diamond ? res_y*.5f : res_y},
+                          {diamond ? res_x*.5f : right, float(res_y)}};
+    mean = {};
+    for(const Point& q : led) {
+        // ApplyShape without rounding, then the edge offsets.
+        const float u = q.x/res_x-.5f, v = q.y/res_y-.5f, w = 1+shape.keystoneX*u+shape.keystoneY*v;
+        if(!(w > 0)) return false;
+        mean.x += ((((u+shape.skewX*v)/w+.5f)*res_x)-fit[0])/fit[1]*.25f;
+        mean.y += ((((shape.skewY*u+v)/w+.5f)*res_y)-fit[2])/fit[3]*.25f;
+    }
+    return std::isfinite(mean.x) && std::isfinite(mean.y);
+}
+
 } // namespace
 
 bool Refine(const CameraProfile& p, bool diamond, const Shots& shots,
@@ -277,9 +304,40 @@ bool Refine(const CameraProfile& p, bool diamond, const Shots& shots,
     // With every shot, the corners included, the LED shape is measured too. It is kept only
     // with valid edge offsets; otherwise the per-axis result above stays.
     Shape shape;
-    if(taken == ShotCount && fitShape(zx, zy, weight, lowX, slopeX, lowY, slopeY, shape) &&
-       edgeOffsets(lowX, slopeX, lowY, slopeY, n.offsets))
-        n.shape = shape;
+    const bool withShape = taken == ShotCount && fitShape(zx, zy, weight, lowX, slopeX, lowY, slopeY, shape) &&
+                           edgeOffsets(lowX, slopeX, lowY, slopeY, n.offsets);
+    if(withShape) n.shape = shape;
+    // From one distance a shift of the source and a shift of the screen against the LEDs look the
+    // same, and the centre lines above split them assuming a rectangle of LEDs: with uneven LEDs
+    // (e.g. bars of different length) the split is wrong and the error grows away from the
+    // calibration distance and with the gun tilted. The LEDs centred on the screen split them with
+    // all the shots: the source moves until the fitted model puts the mean of the four LEDs at the
+    // screen centre. The mean is almost linear in the source: Newton steps, derivatives over one
+    // camera pixel; the first step lands within a fraction of a pixel, the second removes the rest.
+    // On any failure the result above stays.
+    float fit[4];
+    Shape fitted;
+    auto meanAt = [&](Point at, Point& m) {
+        return ledMean(p, diamond, shots, used, tx, ty, weight, withShape, original.ledLeft, original.ledRight,
+                       at, m, fit, fitted);
+    };
+    Point s = source, mean, movedX, movedY;
+    const float h = float(p.camToMouseMult);
+    bool centred = meanAt(s, mean);
+    for(unsigned step = 0; centred && step < 2; ++step) {
+        centred = meanAt({s.x+h, s.y}, movedX) && meanAt({s.x, s.y+h}, movedY);
+        const float a = (movedX.x-mean.x)/h, b = (movedY.x-mean.x)/h, c = (movedX.y-mean.y)/h, d = (movedY.y-mean.y)/h;
+        const float det = a*d-b*c, ex = mean.x-res_x*.5f, ey = mean.y-res_y*.5f;
+        centred = centred && std::abs(det) > 0;
+        if(centred) s = {s.x-(d*ex-b*ey)/det, s.y-(a*ey-c*ex)/det};
+        // Last: the model fitted at the final source.
+        centred = centred && meanAt(s, mean);
+    }
+    int32_t offsets[4];
+    if(centred && std::isfinite(s.x) && std::isfinite(s.y) && edgeOffsets(fit[0], fit[1], fit[2], fit[3], offsets)) {
+        n.sourceX = s.x; n.sourceY = s.y; n.shape = fitted;
+        std::copy(offsets, offsets+4, n.offsets);
+    }
     result = n;
     return true;
 }
