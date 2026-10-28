@@ -255,7 +255,20 @@ Options, from first to last before the list starts again:
 
 Calibration teaches the gun where the edges of your screen are, so the pointer lands exactly where you aim. Each profile has its own calibration; do it again after moving the emitters or changing the camera or lens.
 
-**Before you start:** stand in front of the centre of the screen at your usual playing distance, hold the gun upright without rotating it around the barrel, and aim carefully at each target.
+**Before you start:** stand in front of the centre of the screen at your usual playing distance (but not closer than the distance below), hold the gun upright without rotating it around the barrel, and aim carefully at each target.
+
+**Distance:** while you calibrate, the camera must see all four emitters even when you aim at the edges and corners of the screen: closer than this the shots at the edges are refused. The table gives the minimum distance from the screen, with about 10% margin, in the worst case (emitters at the corners of the screen, or at the centres of its edges with Diamond). If you play closer, calibrate from this distance and then move closer: the gun adapts to the distance, only near the edges it works with fewer emitters in view.
+
+| 16:9 screen | DFRobot / Wii | PixArt PAJ7025 R2 | PixArt PAJ7025 R3 |
+| --- | --- | --- | --- |
+| 24" | 2.0 m | 1.8 m | 0.6 m |
+| 32" | 2.7 m | 2.3 m | 0.8 m |
+| 43" | 3.6 m | 3.2 m | 1.1 m |
+| 55" | 4.6 m | 4.0 m | 1.4 m |
+| 65" | 5.5 m | 4.8 m | 1.6 m |
+| 75" | 6.3 m | 5.5 m | 1.8 m |
+
+For any other screen: its width × 3.8 (DFRobot / Wii), × 3.3 (PAJ7025 R2), × 1.1 (PAJ7025 R3, from the nominal data of its lens).
 
 You can calibrate from the WebApp (or the desktop App), which guides you and checks the IR emitters at every shot, or directly from the gun.
 
@@ -664,7 +677,20 @@ Le opzioni, dalla prima all'ultima, prima che l'elenco ricominci:
 
 La calibrazione insegna alla pistola dove sono i bordi del tuo schermo, così il puntatore arriva esattamente dove miri. Ogni profilo ha la sua calibrazione; ripetila dopo aver spostato gli emettitori o cambiato telecamera o lente.
 
-**Prima di iniziare:** mettiti di fronte al centro dello schermo, alla tua solita distanza di gioco, tieni la pistola dritta senza ruotarla attorno alla canna e mira con cura a ogni bersaglio.
+**Prima di iniziare:** mettiti di fronte al centro dello schermo, alla tua solita distanza di gioco (ma non più vicino della distanza qui sotto), tieni la pistola dritta senza ruotarla attorno alla canna e mira con cura a ogni bersaglio.
+
+**Distanza:** mentre calibri, la telecamera deve vedere tutti e quattro gli emettitori anche quando miri ai bordi e agli angoli dello schermo: più vicino di così i tiri ai bordi vengono rifiutati. La tabella indica la distanza minima dallo schermo, con circa il 10% di margine, nel caso peggiore (emettitori agli angoli dello schermo, oppure al centro dei suoi lati con Diamond). Se giochi più vicino, calibra da questa distanza e poi avvicinati: la pistola si adatta alla distanza, solo vicino ai bordi lavora con meno emettitori in vista.
+
+| Schermo 16:9 | DFRobot / Wii | PixArt PAJ7025 R2 | PixArt PAJ7025 R3 |
+| --- | --- | --- | --- |
+| 24" | 2,0 m | 1,8 m | 0,6 m |
+| 32" | 2,7 m | 2,3 m | 0,8 m |
+| 43" | 3,6 m | 3,2 m | 1,1 m |
+| 55" | 4,6 m | 4,0 m | 1,4 m |
+| 65" | 5,5 m | 4,8 m | 1,6 m |
+| 75" | 6,3 m | 5,5 m | 1,8 m |
+
+Per qualsiasi altro schermo: la sua larghezza × 3,8 (DFRobot / Wii), × 3,3 (PAJ7025 R2), × 1,1 (PAJ7025 R3, dai dati nominali della sua lente).
 
 Puoi calibrare dalla WebApp (o dall'App desktop), che ti guida e controlla gli emettitori IR a ogni tiro, oppure direttamente dalla pistola.
 

@@ -91,12 +91,15 @@
     // the crosshair changes colour with the weakest emitter (red when one is missing), a small panel
     // in the bottom right corner shows each emitter, and the board refuses every target shot
     // (sCaliIrWarning) while one is missing. A weak emitter (orange crosshair) is accepted.
+    // The firmware also refuses a target shot, with or without the IR view, while the gun is rolled
+    // around the barrel beyond half the angle that would swap its emitters (about 15 degrees on 16:9).
     const CALI_IR_PANEL_WIDTH = 0.14;      // of the window width (the panel is square)
     const CALI_IR_PANEL_MAX_WIDTH = 300;   // px
     const CALI_IR_PANEL_MIN_WIDTH = 140;   // px, also on small screens
     const CALI_IR_MAX_AGE = 500;           // ms without coordinates: older firmware, no panel
     const CALI_IR_WARNING_TIME = 4000;     // ms the refusal message stays on screen
     const CALI_IR_MISSING = 0x01;          // sCaliIrWarning bit
+    const CALI_IR_ROLL = 0x02;             // sCaliIrWarning bit
     const CALI_IR_PANEL_COLOR = [160, 160, 164]; // panel border and completed progress dots, fixed
     const CALI_LEGEND_SIZE = 268.8;        // same square as the IR panel at 1920x1080
     // Colour of each emitter seen in the panel, and of the crosshair from the emitter with the
@@ -579,7 +582,7 @@
             this._irExpiryTimer = setTimeout(() => { this.render(); this._armIrExpiry(); }, Math.min(...ends) - now + 20);
         }
 
-        /** Calibration: the board refused a target shot (sCaliIrWarning bit 1: an emitter is missing). */
+        /** Calibration: the board refused a target shot (sCaliIrWarning bit 1: an emitter is missing, bit 2: the gun is rolled too far). */
         showIrWarning(bits) {
             if (this.closed || this.mode !== MODE_CALIBRATE || !bits) return;
             this.irWarning = { bits, time: Date.now() };
@@ -813,7 +816,8 @@
             // At most 60% of the width, so that the IR panel at the bottom right stays clear.
             const warningChars = Math.max(16, Math.floor((w * 0.6) / (GLYPH * sub)));
             const warningLines = (bits) => wrapLines(this._caliIrWarningText(bits), warningChars);
-            // The IR panel is sized for this text too, so it keeps its size when a warning appears.
+            // The IR panel is sized for this text too, so it keeps its size when a warning appears
+            // (the roll warning is not wider).
             let textRight = w / 2 + textSize(warningLines(CALI_IR_MISSING), sub).width / 2 + 8 * sub;
             // Keep the posture reminder above the bottom instructions throughout calibration.
             // Reserve the initial three-line block even when verification has no tutorial yet.
@@ -1126,9 +1130,16 @@
 
         /** Calibration: lines explaining why the board refused a target shot (sCaliIrWarning bits). */
         _caliIrWarningText(bits) {
-            return lines(
-                bits & CALI_IR_MISSING ? 'Shot refused: the camera does not see all four IR emitters.' : '',
-                'Check the emitters, your distance and the IR sensitivity, then shoot again.');
+            if (!(bits & CALI_IR_ROLL)) {
+                return lines(
+                    bits & CALI_IR_MISSING ? 'Shot refused: the camera does not see all four IR emitters.' : '',
+                    'Check the emitters, your distance and the IR sensitivity, then shoot again.');
+            }
+            return lines(...(bits & CALI_IR_MISSING ? [
+                'Shot refused: the camera does not see all four IR emitters.',
+                'Check the emitters, your distance and the IR sensitivity, then shoot again.'] : []),
+                'Shot refused: lightgun rotated too much.',
+                'Hold the lightgun upright, then shoot again.');
         }
 
         _drawAlignment(ctx) {

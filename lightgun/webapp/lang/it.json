@@ -78,6 +78,8 @@
     "Shoot at the final target in the center.": "  Spara al bersaglio finale al centro.  ",
     "Shot refused: the camera does not see all four IR emitters.": "Tiro rifiutato: la camera non vede tutti e quattro gli emettitori IR.",
     "Check the emitters, your distance and the IR sensitivity, then shoot again.": "Controlla gli emettitori, la distanza e la sensibilità IR, poi spara di nuovo.",
+    "Shot refused: lightgun rotated too much.": "Tiro rifiutato: lightgun troppo ruotata.",
+    "Hold the lightgun upright, then shoot again.": "Tieni dritta la lightgun e spara di nuovo.",
     "Preferably shoot when the crosshair is %1.": "Spara preferibilmente quando il mirino è %1.",
     "green": "verde",
     "Verify aiming:": "Verifica del puntamento:",

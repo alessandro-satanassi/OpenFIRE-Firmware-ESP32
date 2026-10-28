@@ -568,6 +568,37 @@ test('posture reminder survives refused shots and leaves a full row above the wa
     }
 });
 
+test('a shot refused for the roll explains why in both languages and changes nothing else', () => {
+    const texts = {
+        en: ['Shot refused: lightgun rotated too much.', 'Hold the lightgun upright, then shoot again.'],
+        it: ['Tiro rifiutato: lightgun troppo ruotata.', 'Tieni dritta la lightgun e spara di nuovo.'],
+    };
+    for (const language of ['en', 'it']) {
+        const s = setup(language);
+        assert.deepEqual([...s.win._caliIrWarningText(2)], texts[language]);
+        assert.equal(s.win._caliIrWarningText(1).length, 2);
+        assert.equal(s.win._caliIrWarningText(1)[0].length > 0, true);
+        s.win.showIrWarning(2);
+        assert.equal(s.win.stage, 0); assert.equal(s.win.acceptedShot, null);
+    }
+});
+
+test('the roll warning is never wider than the missing-emitter one, so the IR panel keeps its place', () => {
+    for (const language of ['en', 'it']) {
+        for (const [width, height] of [[800, 600], [1280, 720], [1920, 1080], [2560, 1440], [3840, 2160]]) {
+            const widths = [1, 2].map(bits => {
+                const s = setup(language); s.language = language; s.win.width = width; s.win.height = height;
+                s.win.showIrWarning(bits);
+                const { texts } = drawCalibration(s);
+                const warning = texts.find(text => text.tint && text.tint[0] === 255 && text.tint[1] === 90);
+                assert.ok(warning);
+                return warning.width;
+            });
+            assert.ok(widths[1] <= widths[0], `${language} ${width}x${height}`);
+        }
+    }
+});
+
 test('posture reminder remains white in both incomplete and malformed verification branches', () => {
     for (const values of [{ TLled: -1, TRled: -1 }, { TLled: 40000, TRled: 40000 }]) {
         const s = setup(); s.win.stage = 6; s.win.values = values;

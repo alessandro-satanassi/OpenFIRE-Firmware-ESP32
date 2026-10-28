@@ -78,6 +78,8 @@
     "Shoot at the final target in the center.": "Shoot at the final target in the center.",
     "Shot refused: the camera does not see all four IR emitters.": "Shot refused: the camera does not see all four IR emitters.",
     "Check the emitters, your distance and the IR sensitivity, then shoot again.": "Check the emitters, your distance and the IR sensitivity, then shoot again.",
+    "Shot refused: lightgun rotated too much.": "Shot refused: lightgun rotated too much.",
+    "Hold the lightgun upright, then shoot again.": "Hold the lightgun upright, then shoot again.",
     "Preferably shoot when the crosshair is %1.": "Preferably shoot when the crosshair is %1.",
     "green": "green",
     "Verify aiming:": "Verify aiming:",
