@@ -1427,7 +1427,7 @@ void ExecRunMode()
     Serial.println(FW_Const::RunModeLabels[FW_Common::runMode]);
 #endif
 
-    #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE) && OPENFIRE_STANDBY_MINUTES > 0
+    #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
     // EN: A timer request can remain pending while Run is inactive (menu/calibration).
     // A new radio transmission updates the timeout but does not cancel that request: discard it on entry.
     // IT: Una richiesta del timer puo' restare pendente fuori dal Run (menu/calibrazione).

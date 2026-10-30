@@ -195,6 +195,7 @@ public:
         OF_Const::bootOutputMouse,  // output mode at boot: unchanged behaviour
         0,                          // input invert mask: no input inverted
         0,                          // camera parallax: camera on the sight line, no correction
+        OF_Const::standbyMinutesDefault, // wireless standby minutes (0 = disabled)
     };
 
     typedef struct USBMap_s {

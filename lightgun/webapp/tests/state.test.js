@@ -282,6 +282,7 @@ test('load: values the Qt widgets cannot show are corrected and can be saved', (
     config.settings[T.customLEDcount] = 0;       // 1..100
     config.settings[T.customLEDstatic] = 3;      // not above the strand length
     config.settings[T.cameraParallax] = 99;      // 0..25 (percent)
+    config.settings[T.standbyMinutes] = 7;       // not in the list: default
     config.toggles[B.rumbleFF] = true;           // with the solenoid on
     config.toggles[B.autofire] = true;
     const state = new OF.AppState(S);
@@ -291,6 +292,7 @@ test('load: values the Qt widgets cannot show are corrected and can be saved', (
     assert.equal(state.setting(T.customLEDcount), 1);
     assert.equal(state.setting(T.customLEDstatic), 1);
     assert.equal(state.setting(T.cameraParallax), 25);
+    assert.equal(state.setting(T.standbyMinutes), S.standbyMinutesDefault);
     assert.equal(state.toggle(B.solenoid), false);
     assert.equal(state.toggle(B.rumbleFF), true);
     assert.equal(state.toggle(B.autofire), true);      // rumble used as force feedback

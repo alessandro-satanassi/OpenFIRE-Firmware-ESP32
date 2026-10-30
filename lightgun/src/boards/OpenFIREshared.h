@@ -170,6 +170,14 @@ public:
         btnPedal, btnPedal2, btnPump, btnHome,
         rumbleSwitch, solenoidSwitch, autofireSwitch };
 
+    // Wireless standby: minutes without transmissions before the gun sleeps (settings[standbyMinutes]).
+    // 0 = standby disabled. The Apps offer only these values; any other saved value means standbyMinutesDefault.
+    // /
+    // Standby wireless: minuti senza trasmissioni prima che la pistola dorma (settings[standbyMinutes]).
+    // 0 = standby disabilitato. Le App offrono solo questi valori; ogni altro valore salvato vale standbyMinutesDefault.
+    static constexpr int standbyMinutesChoices[] = { 0, 5, 15, 30, 60 };
+    static constexpr int standbyMinutesDefault = 15;
+
     // For Apps to use for lists of pin functions
     char* boardInputs_sortedStr[boardInputsCount+1];
 
@@ -240,6 +248,7 @@ public:
         bootOutputMode,
         inputInvertMask,    // bit N = invert input function N (see invertibleInputs)
         cameraParallax,     // camera below the sight line, percent of the vertical LED distance (0 = none)
+        standbyMinutes,     // wireless standby minutes, one of standbyMinutesChoices (0 = disabled)
         // Add here
         settingsTypesCount
     } settingsTypes_e;
@@ -263,6 +272,7 @@ public:
         {"BootOutputMode",      bootOutputMode      },
         {"InputInvertMask",     inputInvertMask     },
         {"CamParallax",         cameraParallax      },
+        {"StandbyMinutes",      standbyMinutes      },
     };
 
     enum {

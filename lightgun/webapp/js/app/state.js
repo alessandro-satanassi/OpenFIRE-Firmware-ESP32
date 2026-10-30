@@ -185,6 +185,10 @@
             }
             if (settings[T.customLEDstatic] > settings[T.customLEDcount])
                 settings[T.customLEDstatic] = settings[T.customLEDcount];
+            // Wireless standby: a value not in the shared list is the default, as in the firmware (0 = disabled).
+            const standby = T.standbyMinutes;
+            if (standby !== undefined && standby < settings.length && !this.S.standbyMinutesChoices.includes(settings[standby]))
+                settings[standby] = this.S.standbyMinutesDefault;
             const toggles = config.toggles;
             if (toggles[B.solenoid] && toggles[B.rumbleFF]) toggles[B.solenoid] = false;
             if (!(toggles[B.solenoid] || (toggles[B.rumble] && toggles[B.rumbleFF]))) toggles[B.autofire] = false;

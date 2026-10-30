@@ -204,6 +204,7 @@ class MockFirmware {
         const defaults = [255, 150, 20, 80, 500, 2500, 1, 0, 0xFF0000, 0x00FF00, 0x0000FF, 38, 45, 0, 1];
         const sv = new DataView(this.settings.buffer);
         defaults.forEach((value, i) => sv.setUint32(i * 4, value, true));
+        sv.setUint32(S.settingsTypes_e.standbyMinutes * 4, S.standbyMinutesDefault, true);
 
         this.pins = new Int8Array(S.boardInputs_e.boardInputsCount).fill(-1);
 

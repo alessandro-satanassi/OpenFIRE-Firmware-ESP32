@@ -2,15 +2,15 @@
  * @brief Battery ESP-NOW standby / Standby ESP-NOW a batteria.
  * @copyright Alessandro Satanassi, 2026, GNU Lesser General Public License
  *
- * EN: After OPENFIRE_STANDBY_MINUTES without ESP-NOW transmission attempts
+ * EN: After the standby minutes (see OpenFIREstandby.h) without ESP-NOW transmission attempts
  * the gun turns the radio off and light-sleeps, blinking faintly. The trigger wakes it:
  * same dongle, no new pairing, and the wake-up pull is not sent as a shot.
- * IT: Dopo OPENFIRE_STANDBY_MINUTES senza tentativi di trasmissione ESP-NOW
+ * IT: Dopo i minuti di standby (vedi OpenFIREstandby.h) senza tentativi di trasmissione ESP-NOW
  * la pistola spegne la radio e va in light sleep, con un lampeggio tenue. Il grilletto la
  * risveglia: stesso dongle, nessun nuovo abbinamento, e il tiro di risveglio non e' uno sparo.
  */
 #include "OpenFIREstandby.h"
-#if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE) && OPENFIRE_STANDBY_MINUTES > 0
+#if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
 
 #include "OpenFIREcommon.h"
 #include "OpenFIREFeedback.h"
@@ -29,7 +29,6 @@ extern TaskHandle_t task_loop1;
 volatile bool OF_Standby::standbyRequested = false;
 
 namespace {
-constexpr uint32_t IdleMs = OPENFIRE_STANDBY_MINUTES * 60000UL;
 constexpr uint64_t CheckPeriodUs = 60ULL * 1000000ULL;
 esp_timer_handle_t checkTimer = nullptr;
 // EN/IT: Standby sign, a short blink every few seconds / segno di standby, breve lampeggio ogni pochi secondi.
@@ -40,6 +39,19 @@ constexpr uint32_t PauseWaitMs = 100;
 #ifdef DUAL_CORE
 volatile uint32_t pauseInputs = 0, inputsPaused = 0;
 #endif
+
+// EN: Read at every check, so a new saved value applies without restarting. 0 = standby disabled.
+// IT: Letto a ogni controllo, cosi' un nuovo valore salvato vale senza riavvio. 0 = standby disabilitato.
+uint32_t standbyMinutes() {
+    #ifdef OPENFIRE_STANDBY_MINUTES_FORCE
+    return OPENFIRE_STANDBY_MINUTES_FORCE;
+    #else
+    const uint32_t saved = OF_Prefs::settings[OF_Const::standbyMinutes];
+    for(const int choice : OF_Const::standbyMinutesChoices)
+        if(saved == uint32_t(choice)) return saved;
+    return OF_Const::standbyMinutesDefault; // EN/IT: not in the list / non in lista
+    #endif
+}
 
 bool reportsPending() {
     return TinyUSBDevices.newReport[TinyUSBDevices_::reportMouse] ||
@@ -187,8 +199,9 @@ void OF_Standby::Begin() {
         // EN: Check inactivity once a minute; the main core handles standby outside this shared timer task.
         // IT: Controlla l'inattivita' una volta al minuto; il core principale gestisce lo standby fuori dal task condiviso dei timer.
         .callback = [](void*) {
+            const uint32_t idleMs = standbyMinutes() * 60000UL;
             const uint32_t lastTx = lastRadioTxMs;
-            if(uint32_t(millis() - lastTx) >= IdleMs) standbyRequested = true;
+            if(idleMs && uint32_t(millis() - lastTx) >= idleMs) standbyRequested = true;
         },
         .arg = nullptr,
         .dispatch_method = ESP_TIMER_TASK,

@@ -159,6 +159,13 @@
                     "accessibleName": "Wireless Pedal Toggle",
                     "text": "Wireless pedal"
             },
+            "label_standbyMinutes": {
+                    "text": "Wireless standby:"
+            },
+            "standbyMinutesBox": {
+                    "whatsThis": "<html><head/><body><p>Only when the lightgun works <span style=\" font-weight:700;\">wireless on battery.</span></p><p>After the selected time of inactivity, the lightgun goes into standby. Pull the trigger to resume.</p><p><span style=\" font-style:italic;\">Disabled</span> keeps it always awake.</p><p><span style=\" font-weight:700; font-style:italic;\">Default:</span><span style=\" font-style:italic;\"> 15 minutes</span></p></body></html>",
+                    "accessibleName": "Wireless Standby"
+            },
             "lowButtonsToggle": {
                     "whatsThis": "<html><head/><body><p>This setting determines how <span style=\" font-style:italic;\">Button A</span> &amp; <span style=\" font-style:italic;\">Button B</span> behaves during normal use.</p><p><span style=\" font-weight:700;\">When Enabled, </span><span style=\" font-style:italic;\">Button A</span> &amp; <span style=\" font-style:italic;\">Button B</span> will perform different functions when aiming off-screen, instead actuating the functions of <span style=\" font-style:italic;\">Start</span> &amp; <span style=\" font-style:italic;\">Select</span> respectively.<br/><span style=\" font-weight:700;\">When Disabled,</span> all buttons will perform the same functions, regardless of aiming off-screen or not.</p><p>Enabled is recommended for lightguns <span style=\" font-weight:700;\">with two or less sub buttons.</span></p></body></html>",
                     "accessibleName": "Low Buttons Mode Toggle",
@@ -396,9 +403,19 @@
         controls.bootOutputModeBox = bootOutputModeBox;
         track(bootOutputModeBox, 'bootOutputModeBox');
 
+        // Wireless standby: only the minutes of the shared list, 0 = disabled.
+        const standbyMinutesBox = select(state.S.standbyMinutesChoices.map((value) =>
+            ({ value, label: value ? t('%1 minutes', value) : t('Disabled') })), state.S.standbyMinutesDefault,
+            (value) => { state.setSetting(T.standbyMinutes, Number(value)); app.refresh(); },
+            { attrs: { 'aria-label': text('standbyMinutesBox', 'accessibleName') } });
+        controls.standbyMinutesBox = standbyMinutesBox;
+        track(standbyMinutesBox, 'standbyMinutesBox');
+
         const input = fieldset('inputBox',
             el('div', { class: 'row center' }, toggle('lowButtonsToggle', B.lowButtonsMode)),
             el('div', { class: 'row center' }, toggle('pedalWirelessToggle', B.pedalWireless)),
+            el('div', { class: 'row center wrap' },
+                el('label', { class: 'field-label', text: text('label_standbyMinutes', 'text') }), standbyMinutesBox),
             el('div', { class: 'row center wrap' },
                 el('label', { class: 'field-label', text: text('label_bootOutput', 'text') }), bootOutputModeBox));
         const uiux = fieldset('uiuxBox',
@@ -508,6 +525,7 @@
                 controls[name].value = settings[index];
 
             controls.bootOutputModeBox.value = String(settings[T.bootOutputMode]);
+            controls.standbyMinutesBox.value = String(settings[T.standbyMinutes]);
 
             controls.customLEDstaticSpinbox.prefix = t(state.toggle(B.invertStaticPixels) ? 'Last ' : 'First ');
             const staticCount = settings[T.customLEDstatic];

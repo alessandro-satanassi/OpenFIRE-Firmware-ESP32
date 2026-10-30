@@ -236,6 +236,7 @@ test('commit round trip updates the firmware and keeps calibration geometry', as
         current.settings[S.settingsTypes_e.rumbleStrength] = 128;
         current.settings[S.settingsTypes_e.customLEDcolor2] = 0xABCDEF;
         current.settings[S.settingsTypes_e.cameraParallax] = 3;
+        current.settings[S.settingsTypes_e.standbyMinutes] = 0;
         current.buttons[S.boardInputs_e.btnGunA] = [1, 0xB0, 1, 0xB1, 2, 3];
         current.profiles[1].name = 'Living Room';
         current.profiles[1].color = 0x00FFAA;
@@ -264,6 +265,7 @@ test('commit round trip updates the firmware and keeps calibration geometry', as
         assert.equal(fw.getSetting(S.settingsTypes_e.rumbleStrength), 128);
         assert.equal(fw.getSetting(S.settingsTypes_e.customLEDcolor2), 0xABCDEF);
         assert.equal(fw.getSetting(S.settingsTypes_e.cameraParallax), 3);
+        assert.equal(fw.getSetting(S.settingsTypes_e.standbyMinutes), 0, 'standby disabled is sent');
         assert.equal(caliArea.getFloat32(0, true), 1234.5, 'parallax distance reference stays in the firmware');
         assert.deepEqual(Array.from(fw.backupButtonDesc.subarray(6, 12)), [1, 0xB0, 1, 0xB1, 2, 3]);
         assert.equal(fw.getProfileName(1), 'Living Room');
