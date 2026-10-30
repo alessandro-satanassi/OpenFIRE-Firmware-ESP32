@@ -22,6 +22,9 @@
 #include <driver/gpio.h>
 
 extern volatile bool radioFree;
+#ifdef DUAL_CORE
+extern TaskHandle_t task_loop1;
+#endif
 
 volatile bool OF_Standby::standbyRequested = false;
 
@@ -148,7 +151,9 @@ void Standby() {
     // EN: Stop the input core at the start of its main loop: no inputs processed while the radio is off.
     // IT: Ferma il core degli input all'inizio del suo ciclo principale: nessun input elaborato a radio spenta.
     pauseInputs = 1; __sync_synchronize();
-    struct Resume { ~Resume() { pauseInputs = 0; __sync_synchronize(); } } resume;
+    // EN: Clear the request before notifying; an early notification stays pending until the input task waits.
+    // IT: Azzera la richiesta prima di notificare; una notifica anticipata resta pendente fino all'attesa del task input.
+    struct Resume { ~Resume() { pauseInputs = 0; __sync_synchronize(); xTaskNotifyGive(task_loop1); } } resume;
     for(const uint32_t asked = millis(); !inputsPaused; vTaskDelay(1))
         if(millis() - asked >= PauseWaitMs) return;   // EN/IT: busy (menu, dock): later / occupato: piu' tardi
     __sync_synchronize();
@@ -201,7 +206,8 @@ void OF_Standby::WaitIfPaused() {
     #ifdef DUAL_CORE
     if(pauseInputs) {
         inputsPaused = 1; __sync_synchronize();
-        while(pauseInputs) vTaskDelay(1);
+        // EN/IT: Block until resumed, without periodic polling / attende la ripresa senza polling periodico.
+        while(pauseInputs) ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         inputsPaused = 0; __sync_synchronize();
     }
     #endif

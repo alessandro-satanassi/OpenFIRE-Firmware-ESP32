@@ -1432,6 +1432,7 @@ void ExecRunMode()
     // A new radio transmission updates the timeout but does not cancel that request: discard it on entry.
     // IT: Una richiesta del timer puo' restare pendente fuori dal Run (menu/calibrazione).
     // Un nuovo invio radio aggiorna il tempo ma non annulla quella richiesta: la scartiamo all'ingresso.
+    lastRadioTxMs = millis();
     OF_Standby::standbyRequested = false;
     #endif
 

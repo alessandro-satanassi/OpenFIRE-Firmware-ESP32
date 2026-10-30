@@ -291,8 +291,6 @@ void setup() {
   
   // ====== wireless connection management / gestione connessione wireless ======
   // Blocking phase: The pedal waits here until the ESP-NOW handshake is established. / Fase bloccante: Il pedale attende qui finché non stabilisce l'handshake ESP-NOW.
-  // The Arduino core applies its own Wi-Fi power save at every radio start (default: modem sleep); the pedal wants none, also after waking up. / Il core Arduino applica il suo risparmio Wi-Fi a ogni avvio della radio (predefinito: modem sleep); il pedale non ne vuole, anche dopo il risveglio.
-  WiFi.setSleep(WIFI_PS_NONE);
   SerialWireless.init_wireless();
   SerialWireless.begin();
   bool paired = SerialWireless.connection_pedal(SLEEP_SEARCH_MS); // after SLEEP_SEARCH_MINUTES without a gun it gives up / dopo SLEEP_SEARCH_MINUTES senza pistola rinuncia

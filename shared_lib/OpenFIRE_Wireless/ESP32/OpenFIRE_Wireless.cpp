@@ -1567,6 +1567,11 @@ void SerialWireless_::init_wireless() {
 
 
 void SerialWireless_::begin() {
+  // EN: Low-level APIs already disable Wi-Fi power save, so operation should normally work without this call.
+  // Also align Arduino's saved preference before any radio start (including channel scanning), so STA_START cannot restore modem sleep.
+  // IT: Le API di basso livello disattivano gia' il risparmio Wi-Fi, quindi normalmente dovrebbe funzionare anche senza questa chiamata.
+  // Allinea anche la preferenza memorizzata da Arduino prima di avviare la radio (inclusa la scansione dei canali), cosi' STA_START non ripristina il modem sleep.
+  WiFi.setSleep(WIFI_PS_NONE);
 
   #ifdef GUN
     if (lastDongleSave) espnow_wifi_channel=lastDongleChannel;
