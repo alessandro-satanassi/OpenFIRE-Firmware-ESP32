@@ -134,6 +134,9 @@ USB_Data_GUN_Wireless usb_data_wireless = {
 };
 
 SerialWireless_ SerialWireless;
+#ifdef GUN
+volatile uint32_t lastRadioTxMs = 0;
+#endif
 extern Adafruit_USBD_HID usbHid;
 
 // Spinlocks (Hardware Mutexes): Essential for ensuring that reads and writes
@@ -1238,6 +1241,14 @@ void SerialWireless_::SendData_sem() {
   // Uscita rapida se non c'è nulla da spedire
   if (available_data == 0) return;
 
+  #ifdef GUN
+  // EN: Gun standby: restart the inactivity timeout on every radio transmission attempt,
+  // including HID, serial and connection packets. Empty calls above do not postpone standby.
+  // IT: Standby della pistola: fa ripartire il tempo di inattivita' a ogni tentativo di trasmissione
+  // radio, inclusi pacchetti HID, seriali e di connessione. Le chiamate vuote sopra non rinviano lo standby.
+  lastRadioTxMs = millis();
+  #endif
+
   uint16_t len_tx = available_data;
 
   // PACKET ALIGNMENT ("Cut" prevention)
@@ -1500,7 +1511,7 @@ bool SerialWireless_::end() {
 bool SerialWireless_::startAccessPoint(const char *ssid, const char *password) {
   if (WiFi.softAP(ssid, password, espnow_wifi_channel)) {
     esp_err_t err;
-    err = esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_11G);
+    err = esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N);
     if (err != ESP_OK) {
       //Serial.printf("esp_wifi_set_protocol failed! 0x%x", err);
     }
@@ -1613,7 +1624,9 @@ void SerialWireless_::begin() {
 
   esp_err_t err;
   
-  err = esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11G); // | WIFI_PROTOCOL_11N);
+  // EN: Explicitly retain the b/g/n default; ESP-NOW uses the separate per-peer 11G/12 Mbps setting.
+  // IT: Mantiene esplicitamente il default b/g/n; ESP-NOW usa l'impostazione separata 11G/12 Mbps per peer.
+  err = esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N);
   if (err != ESP_OK) {
     //Serial.printf("esp_wifi_set_protocol failed! 0x%x", err);
   }
@@ -1626,7 +1639,7 @@ void SerialWireless_::begin() {
 
   #ifdef GUN_COMMENT
   if (!OF_WebConfigModeActive) {
-      err = esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11G); // | WIFI_PROTOCOL_11N);
+      err = esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N);
   if (err != ESP_OK) {
     //Serial.printf("esp_wifi_set_protocol failed! 0x%x", err);
   }
@@ -1637,8 +1650,8 @@ void SerialWireless_::begin() {
   }
   
   } else {
-      err = esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11G); // | WIFI_PROTOCOL_11N);
-      err = esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_11G); // | WIFI_PROTOCOL_11N);
+      err = esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N);
+      err = esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N);
   if (err != ESP_OK) {
     //Serial.printf("esp_wifi_set_protocol failed! 0x%x", err);
   }
@@ -2080,7 +2093,7 @@ bool SerialWireless_::connection_gun() {
     if (OF_WebConfigModeActive) {
       WiFi.softAP(WEBAPP_AP_SSID, NULL, espnow_wifi_channel);
       esp_err_t err;
-      err = esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_11G);
+      err = esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N);
       err = esp_wifi_set_bandwidth(WIFI_IF_AP, WIFI_BW_HT20);
     }
     */
@@ -2377,7 +2390,7 @@ void SerialWireless_::radio_off_pedal() {
 }
 
 void SerialWireless_::radio_on_pedal() {
-  esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11G); // same settings as init_wireless() / stesse impostazioni di init_wireless()
+  esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N); // same settings as begin() / stesse impostazioni di begin()
   esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW_HT20);
   esp_wifi_start();
   esp_wifi_set_promiscuous(true);
@@ -2396,6 +2409,46 @@ void SerialWireless_::radio_on_pedal() {
 }
 #endif // PEDAL
 // ======================= END PEDAL IMPLEMENTATION - STAY LISTENING ON ALL CHANNELS / FINE IMPLEMENTAZIONE PEDAL - RIMANE IN ASCOLTO SU TUTTI I CANALI ===============
+
+#ifdef GUN
+// EN: Same shutdown as the pedal; the application checks the queues before and after.
+// IT: Stesso spegnimento del pedale; l'applicazione controlla le code prima e dopo.
+bool SerialWireless_::radio_off_gun() {
+  if (esp_now_deinit() != ESP_OK || esp_wifi_stop() != ESP_OK) ESP.restart();
+  return true;
+}
+
+// EN: Same radio sequence as radio_on_pedal(), restoring both of the gun's peers.
+// IT: Stessa sequenza radio di radio_on_pedal(), ripristinando entrambi i peer della pistola.
+bool SerialWireless_::radio_on_gun() {
+  // EN: 11G alone is rejected by the driver: use the b/g/n default retained at boot.
+  // ESP-NOW still uses the per-peer 11G/12 Mbps rate below; a rejected bitmap would abort wake-up.
+  // IT: Il driver rifiuta 11G da solo: usa il default b/g/n rimasto attivo all'avvio.
+  // ESP-NOW mantiene il rate 11G/12 Mbps per peer impostato sotto; un bitmap rifiutato interromperebbe il risveglio.
+  if (esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N) != ESP_OK ||
+      esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW_HT20) != ESP_OK ||
+      esp_wifi_start() != ESP_OK) return false;
+  esp_wifi_set_promiscuous(true);
+  const esp_err_t channel = esp_wifi_set_channel(espnow_wifi_channel, WIFI_SECOND_CHAN_NONE);
+  esp_wifi_set_promiscuous(false);
+  if (channel != ESP_OK ||
+      esp_wifi_set_max_tx_power(espnow_wifi_power) != ESP_OK ||
+      esp_wifi_set_ps(WIFI_PS_NONE) != ESP_OK || esp_now_init() != ESP_OK) return false;
+  memcpy(peerInfo.peer_addr, peerAddress, 6);
+  peerInfo.channel = espnow_wifi_channel;
+  if (esp_now_add_peer(&peerInfo) != ESP_OK) return false;
+  esp_now_set_peer_rate_config(peerAddress, &rate_config);
+  if (TinyUSBDevices.is_pedal_wireless) {
+    memcpy(peerInfo.peer_addr, peerAddress_pedal, 6);
+    if (esp_now_add_peer(&peerInfo) != ESP_OK) return false;
+    esp_now_set_peer_rate_config(peerAddress_pedal, &rate_config);
+  }
+  if (esp_now_register_recv_cb(_esp_now_rx_cb) != ESP_OK ||
+      esp_now_register_send_cb(_esp_now_tx_cb) != ESP_OK) return false;
+  radioFree = true;
+  return true;
+}
+#endif
 
 // ===================================================================================
 // CALLBACK LEVEL: DECODING OF RECEIVED PACKETS / DECODIFICA DEI PACCHETTI RICEVUTI

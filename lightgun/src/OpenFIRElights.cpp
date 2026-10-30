@@ -23,6 +23,58 @@
 #include "boards/OpenFIREshared.h"
 
 #ifdef LED_ENABLE
+#if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
+// EN: Normal Run colours are restored from mode/settings; no lighting snapshot is needed.
+// IT: I colori del Run normale si ripristinano da modalita' e impostazioni, senza salvarne una copia.
+void OF_RGB::StandbyBegin()
+{
+    #ifdef CUSTOM_NEOPIXEL
+    if(externPixel) externPixel->clear();
+    #endif
+    #ifdef FOURPIN_LED
+    if(FW_Common::ledIsValid) {
+        const int pins[] = {OF_Prefs::pins[OF_Const::ledR], OF_Prefs::pins[OF_Const::ledG], OF_Prefs::pins[OF_Const::ledB]};
+        for(int pin : pins) {
+            // EN: PWM stops in light sleep: steady OFF level, also for common-anode LEDs.
+            // IT: Il PWM si ferma nel sonno: livello OFF fisso, anche per LED ad anodo comune.
+            pinMode(pin, OUTPUT);
+            digitalWrite(pin, OF_Prefs::toggles[OF_Const::commonAnode] ? HIGH : LOW);
+        }
+    }
+    #endif
+    StandbyBlink(false);
+}
+
+void OF_RGB::StandbyBlink(bool on)
+{
+    const uint32_t color = on ? 0x040100 : 0; // EN/IT: faint amber / ambra tenue
+    #ifdef DOTSTAR_ENABLE
+    dotstar.setPixelColor(0, color);
+    dotstar.show();
+    #endif
+    #ifdef NEOPIXEL_PIN
+    if(OF_Prefs::pins[OF_Const::neoPixel] < 0) {
+        neopixel.setPixelColor(0, color);
+        neopixel.show();
+    }
+    #endif
+    #ifdef CUSTOM_NEOPIXEL
+    if(externPixel) {
+        if(externPixel->numPixels()) externPixel->setPixelColor(0, color);
+        externPixel->show();
+    }
+    #endif
+}
+
+void OF_RGB::StandbyEnd()
+{
+    #ifdef CUSTOM_NEOPIXEL
+    if(externPixel) InitStaticPixels();
+    #endif
+    FW_Common::SetLedColorFromMode();
+}
+#endif
+
 void OF_RGB::LedInit()
 {
     #ifdef ARDUINO_RASPBERRY_PI_PICO
@@ -63,6 +115,11 @@ void OF_RGB::InitExternPixel(const int &pin)
 {
     externPixel = new Adafruit_NeoPixel(OF_Prefs::settings[OF_Const::customLEDcount], pin, NEO_GRB + NEO_KHZ800);
     externPixel->begin();
+    InitStaticPixels();
+}
+
+void OF_RGB::InitStaticPixels()
+{
     if(OF_Prefs::settings[OF_Const::customLEDstatic] > 0 &&
        OF_Prefs::settings[OF_Const::customLEDstatic] <= OF_Prefs::settings[OF_Const::customLEDcount]) {
         for(uint i = 0; i < OF_Prefs::settings[OF_Const::customLEDstatic]; ++i) {

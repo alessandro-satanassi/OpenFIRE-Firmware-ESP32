@@ -291,6 +291,11 @@ class SerialWireless_ : public Stream
   bool connection_pedal(uint32_t timeout_ms = 0); // 0 = wait for a gun forever / 0 = attende una pistola per sempre
   void radio_off_pedal();
   void radio_on_pedal();
+  #ifdef GUN
+  // EN/IT: Only the gun sleeps; no changes to dongle/pedal hot paths / dorme solo la pistola.
+  bool radio_off_gun();
+  bool radio_on_gun();
+  #endif
   bool connection_gun_at_last_dongle();
   bool connection_gun_at_pedal();
   bool connection_gun_at_last_pedal();
@@ -308,6 +313,10 @@ private:
 
 };
 extern SerialWireless_ SerialWireless;
+#ifdef GUN
+// EN/IT: Last radio activity used by gun standby / ultima attivita' radio usata dallo standby della pistola.
+extern volatile uint32_t lastRadioTxMs;
+#endif
 
 #endif // _SERIAL_STREAM_H_
 

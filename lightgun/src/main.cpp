@@ -34,6 +34,7 @@
 #include "OpenFIREFeedback.h"
 #include "OpenFIREprefs.h"
 #include "OpenFIREconstant.h"
+#include "OpenFIREstandby.h"
 
 // #include "web_assets.h"
 #include "OpenFIREweb.h"
@@ -854,6 +855,7 @@ CheckBootRequests();
         // this will turn off the DotStar/RGB LED and ensure proper transition to Run
         FW_Common::SetMode(FW_Const::GunMode_Run);
     }
+    OF_Standby::Begin();
 }
 
 #ifdef ARDUINO_ARCH_ESP32
@@ -927,6 +929,10 @@ void loop1()
     rp2040.fifo.pop();
     #endif
     while(FW_Common::gunMode == FW_Const::GunMode_Run) {
+        // EN: Pause input processing here while standby turns the radio off and restores it.
+        // IT: Ferma qui gli input mentre lo standby spegne e ripristina la radio.
+        OF_Standby::WaitIfPaused();
+
         // All buttons' outputs except for the trigger are processed here.
         FW_Common::buttons.Poll(0);
 
@@ -1421,6 +1427,14 @@ void ExecRunMode()
     Serial.println(FW_Const::RunModeLabels[FW_Common::runMode]);
 #endif
 
+    #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE) && OPENFIRE_STANDBY_MINUTES > 0
+    // EN: A timer request can remain pending while Run is inactive (menu/calibration).
+    // A new radio transmission updates the timeout but does not cancel that request: discard it on entry.
+    // IT: Una richiesta del timer puo' restare pendente fuori dal Run (menu/calibrazione).
+    // Un nuovo invio radio aggiorna il tempo ma non annulla quella richiesta: la scartiamo all'ingresso.
+    OF_Standby::standbyRequested = false;
+    #endif
+
     FW_Common::buttons.ReportEnable();
     triggerHidPressed = false;                              // Leaving Run released all the buttons.
     FW_Common::triggerPressedOffscreen = false;
@@ -1478,6 +1492,7 @@ void ExecRunMode()
         if(FW_Common::irPosUpdateTick) {
             FW_Common::irPosUpdateTick = 0;
             FW_Common::GetPosition();
+            if(OF_Standby::standbyRequested) OF_Standby::Check();
         }
         #ifdef USES_DISPLAY
             else {

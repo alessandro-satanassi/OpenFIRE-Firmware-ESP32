@@ -321,8 +321,6 @@ uint32_t LightgunButtons::Poll(unsigned long minTicks)
 
 void LightgunButtons::SendReports(const bool &forceReportAll)
 {
-    
-    
     if(TinyUSBDevices.newReport[ReportType_Mouse]) {
         AbsMouse5.report();
         if(!forceReportAll) return;

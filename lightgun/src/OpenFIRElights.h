@@ -60,6 +60,12 @@ public:
 
     static void SetLedColorFromMode();
 
+    #if defined(LED_ENABLE) && defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
+    static void StandbyBegin();
+    static void StandbyBlink(bool on);
+    static void StandbyEnd();
+    #endif
+
     static uint8_t Invert(const uint8_t &orig) { return ~orig; }
 
     #ifdef CUSTOM_NEOPIXEL
@@ -73,6 +79,10 @@ public:
     static inline uint32_t CalModeColor = WikiColor::Red;
 
 private:
+    #ifdef CUSTOM_NEOPIXEL
+    static void InitStaticPixels();
+    #endif
+
     // internal addressable LEDs inits
     #ifdef DOTSTAR_ENABLE
     // note if the colours don't match then change the colour format from BGR
