@@ -24,7 +24,7 @@
 // in un nome di cartella, in un indirizzo del sito e nel tag di Git.
 // Esempi: 7.0.0  |  7.0.0-beta1  |  7.0.1-rc2
 #define OPENFIRE_VERSION_MAJOR 7
-#define OPENFIRE_VERSION_MINOR 0
+#define OPENFIRE_VERSION_MINOR 1
 #define OPENFIRE_VERSION_PATCH 0
 #define OPENFIRE_VERSION_SUFFIX ""
 
@@ -32,7 +32,7 @@
 // l'unico che la App desktop sa leggere, e per questo resta: non identifica piu'
 // la versione, la Web App usa la stringa completa qui sotto.
 // scripts/webapp_build.py verifica ad ogni compilazione che i due numeri coincidano.
-#define OPENFIRE_VERSION 7.0
+#define OPENFIRE_VERSION 7.1
 /////// #define OPENFIRE_CODENAME "Dawn Sigma rc3"
 // #define GIT_HASH
 

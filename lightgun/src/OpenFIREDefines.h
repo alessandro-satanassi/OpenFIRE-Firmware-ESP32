@@ -21,7 +21,7 @@
 #include "OpenFIREversion.h" // [ESP32_PORT] aggiunto per gestire meglio le versioni
 
 #ifndef OPENFIRE_VERSION
-#define OPENFIRE_VERSION 7.0
+#define OPENFIRE_VERSION 7.1
 #endif // OPENFIRE_VERSION
 
  // For custom builders, remember to check (COMPILING.md) for IDE instructions!
