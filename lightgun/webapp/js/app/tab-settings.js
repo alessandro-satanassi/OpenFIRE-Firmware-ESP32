@@ -160,11 +160,11 @@
                     "text": "Wireless pedal"
             },
             "label_standbyMinutes": {
-                    "text": "Wireless standby:"
+                    "text": "Wireless power saving, standby after:"
             },
             "standbyMinutesBox": {
-                    "whatsThis": "<html><head/><body><p>Only when the lightgun works <span style=\" font-weight:700;\">wireless on battery.</span></p><p>After the selected time of inactivity, the lightgun goes into standby. Pull the trigger to resume.</p><p><span style=\" font-style:italic;\">Disabled</span> keeps it always awake.</p><p><span style=\" font-weight:700; font-style:italic;\">Default:</span><span style=\" font-style:italic;\"> 15 minutes</span></p></body></html>",
-                    "accessibleName": "Wireless Standby"
+                    "whatsThis": "<html><head/><body><p>Power saving, only when the lightgun works <span style=\" font-weight:700;\">wireless on battery.</span></p><p>After the selected time of inactivity, the lightgun goes into standby. Pull the trigger to resume.</p><p><span style=\" font-style:italic;\">Disabled</span> keeps it always awake.</p><p><span style=\" font-weight:700; font-style:italic;\">Default:</span><span style=\" font-style:italic;\"> 15 minutes</span></p></body></html>",
+                    "accessibleName": "Wireless Power Saving"
             },
             "lowButtonsToggle": {
                     "whatsThis": "<html><head/><body><p>This setting determines how <span style=\" font-style:italic;\">Button A</span> &amp; <span style=\" font-style:italic;\">Button B</span> behaves during normal use.</p><p><span style=\" font-weight:700;\">When Enabled, </span><span style=\" font-style:italic;\">Button A</span> &amp; <span style=\" font-style:italic;\">Button B</span> will perform different functions when aiming off-screen, instead actuating the functions of <span style=\" font-style:italic;\">Start</span> &amp; <span style=\" font-style:italic;\">Select</span> respectively.<br/><span style=\" font-weight:700;\">When Disabled,</span> all buttons will perform the same functions, regardless of aiming off-screen or not.</p><p>Enabled is recommended for lightguns <span style=\" font-weight:700;\">with two or less sub buttons.</span></p></body></html>",
