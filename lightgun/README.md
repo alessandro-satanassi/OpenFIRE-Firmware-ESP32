@@ -150,7 +150,7 @@ With **esptool** or a graphical tool such as **NodeMCU PyFlasher**, write the si
 
 ### Troubleshooting
 
-* **Entering update mode:** on a gun running 7.0.0, hold **Trigger + A while switching on, for about 2 seconds**; the OLED, if fitted, shows **Ready for firmware update**. Connect the gun's own USB OTG port, not the dongle. If the gun is running normally, the Web Flasher can also restart it into update mode by itself: the port disappears and comes back, so wait, start again and select the new port. For a first installation, older firmware or a recovery, use the board's **BOOT/RESET** buttons. The board's BOOT button is not the gun's B button.
+* **Entering update mode:** on a gun running 7.0.0 or later, hold **Trigger + A while switching on, for about 2 seconds**; the OLED, if fitted, shows **Ready for firmware update**. Connect the gun's own USB OTG port, not the dongle. If the gun is running normally, the Web Flasher can also restart it into update mode by itself: the port disappears and comes back, so wait, start again and select the new port. For a first installation, older firmware or a recovery, use the board's **BOOT/RESET** buttons. The board's BOOT button is not the gun's B button.
 * **Antivirus false positive (Windows):** the script uses Espressif's original `esptool.exe`, which some antivirus programs may block or flag. Download the package from the official Releases page and check its origin before allowing it to run; do not disable your antivirus globally.
 * **After the installation:** open the **[OpenFIRE ESP32 WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=en)**, or use the offline WebApp described below.
 
@@ -198,6 +198,13 @@ If only the gun is switched off and on again (for example when the battery runs 
 With an OLED display, an icon at the top shows the connection:
 * **Wi-Fi icon:** connected through the wireless dongle.
 * **USB icon:** connected by cable.
+
+### 6. Wireless Power Saving
+When the gun runs on battery and plays through the dongle, it goes into standby after a period of inactivity, for example when you put it down: **15 minutes** by default, or the time chosen in the WebApp under **Gun Settings → Input / Output → Wireless power saving, standby after:** (**Disabled**, 5, 15, 30 or 60 minutes).
+* In standby the radio and the OLED display are off, and the board's LED blinks faintly amber every 3 seconds.
+* **Pull the trigger** to resume: the gun reconnects to the same dongle and this pull is not sent as a shot.
+* If the dongle no longer answers (for example the computer was switched off), the gun restarts as at power-on.
+* Details in the [operating manual](src/README.md#camera-display-and-startup-settings).
 
 ---
 
@@ -381,7 +388,7 @@ Con **esptool** o un programma grafico come **NodeMCU PyFlasher**, scrivi il sin
 
 ### Risoluzione dei Problemi (Troubleshooting)
 
-* **Ingresso in modalità aggiornamento:** su una pistola con la 7.0.0 tieni premuti **Grilletto + A all'accensione per circa 2 secondi**; l'OLED, se presente, mostra **Ready for firmware update**. Collega la porta USB OTG della pistola, non il dongle. Se la pistola è in funzionamento normale, il Web Flasher può anche riavviarla da solo in modalità aggiornamento: la porta scompare e ricompare, quindi attendi, ricomincia e seleziona la nuova porta. Per la prima installazione, firmware precedenti o un recupero, usa i pulsanti **BOOT/RESET** della scheda. Il BOOT della scheda non è il pulsante B della pistola.
+* **Ingresso in modalità aggiornamento:** su una pistola con la 7.0.0 o successiva tieni premuti **Grilletto + A all'accensione per circa 2 secondi**; l'OLED, se presente, mostra **Ready for firmware update**. Collega la porta USB OTG della pistola, non il dongle. Se la pistola è in funzionamento normale, il Web Flasher può anche riavviarla da solo in modalità aggiornamento: la porta scompare e ricompare, quindi attendi, ricomincia e seleziona la nuova porta. Per la prima installazione, firmware precedenti o un recupero, usa i pulsanti **BOOT/RESET** della scheda. Il BOOT della scheda non è il pulsante B della pistola.
 * **Falso positivo dell'antivirus (Windows):** lo script usa l'`esptool.exe` originale di Espressif, che alcuni antivirus possono bloccare o segnalare. Scarica il pacchetto dalla pagina Releases ufficiale e verificane la provenienza prima di consentirne l'esecuzione; non disattivare l'antivirus globalmente.
 * **Dopo l'installazione:** apri la **[WebApp OpenFIRE ESP32](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=it)**, oppure usa la WebApp offline descritta sotto.
 
@@ -429,6 +436,13 @@ Se viene spenta e riaccesa solo la pistola (ad esempio quando la batteria si sca
 Con un display OLED, un'icona in alto indica il collegamento:
 * **Icona Wi-Fi:** collegata tramite il dongle wireless.
 * **Icona USB:** collegata via cavo.
+
+### 6. Risparmio Energetico Wireless
+Quando la pistola funziona a batteria e gioca tramite il dongle, entra in standby dopo un periodo di inattività, per esempio quando la appoggi: **15 minuti** per impostazione predefinita, oppure il tempo scelto nella WebApp in **Impostazioni Gun → Input / Output → Risparmio energetico wireless, standby dopo:** (**Disabilitato**, 5, 15, 30 o 60 minuti).
+* In standby la radio e il display OLED sono spenti, e il LED della scheda lampeggia debolmente in ambra ogni 3 secondi.
+* **Premi il grilletto** per riprendere: la pistola si ricollega allo stesso dongle e questa pressione non viene inviata come sparo.
+* Se il dongle non risponde più (per esempio il computer è stato spento), la pistola riparte come all'accensione.
+* Dettagli nel [manuale operativo](src/README.md#telecamera-display-e-impostazioni-di-avvio).
 
 ---
 

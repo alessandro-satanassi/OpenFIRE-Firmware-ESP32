@@ -50,7 +50,7 @@ pio run -e WAVESHARE_ESP32_S3_PICO -t upload    # build and upload through the b
 pio run -e WAVESHARE_ESP32_S3_PICO -t erase     # erase the whole flash (clean installation)
 ```
 
-Uploading keeps the settings saved in the gun; erase first for a clean installation. If the board does not enter update mode by itself, use its BOOT/RESET buttons (on a lightgun already running 7.0.0 you can also start it holding **Trigger + A**).
+Uploading keeps the settings saved in the gun; erase first for a clean installation. If the board does not enter update mode by itself, use its BOOT/RESET buttons (on a lightgun already running 7.0.0 or later you can also start it holding **Trigger + A**).
 
 ## The WebApp inside the lightgun
 Every lightgun build runs `scripts/pack_webapp.py`, which rebuilds the WebApp from `webapp/` and embeds it in the firmware (`include/web_assets.h`), the version served by the offline WebApp mode. The same build also writes the published WebApp of this firmware to `dist/site` and the home page of the site to `dist/launcher`. The first time a board picture needs compressing, the build installs Pillow in PlatformIO's Python. Details are in [webapp/README.md](../webapp/README.md).
@@ -116,7 +116,7 @@ pio run -e WAVESHARE_ESP32_S3_PICO -t upload    # compila e carica dalla porta U
 pio run -e WAVESHARE_ESP32_S3_PICO -t erase     # cancella tutta la flash (installazione pulita)
 ```
 
-Il caricamento conserva le impostazioni salvate nella pistola; per un'installazione pulita cancella prima la flash. Se la scheda non entra da sola in modalità aggiornamento, usa i suoi pulsanti BOOT/RESET (su una lightgun che esegue già la 7.0.0 puoi anche avviarla tenendo premuti **Grilletto + A**).
+Il caricamento conserva le impostazioni salvate nella pistola; per un'installazione pulita cancella prima la flash. Se la scheda non entra da sola in modalità aggiornamento, usa i suoi pulsanti BOOT/RESET (su una lightgun che esegue già la 7.0.0 o successiva puoi anche avviarla tenendo premuti **Grilletto + A**).
 
 ## La WebApp dentro la lightgun
 Ogni compilazione della lightgun esegue `scripts/pack_webapp.py`, che ricostruisce la WebApp da `webapp/` e la incorpora nel firmware (`include/web_assets.h`): è la versione servita dalla modalità WebApp offline. La stessa compilazione scrive anche la WebApp pubblicata di questo firmware in `dist/site` e la pagina iniziale del sito in `dist/launcher`. La prima volta che un'immagine di scheda va compressa, la compilazione installa Pillow nel Python di PlatformIO. I dettagli sono in [webapp/README.md](../webapp/README.md).

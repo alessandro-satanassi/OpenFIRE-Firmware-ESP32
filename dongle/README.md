@@ -77,7 +77,7 @@ Pinouts of the supported boards for use as a dongle:
 
 ## Firmware Installation and Flashing
 
-In the Web Flasher choose **Dongle**, your exact board and its flash/PSRAM variant. Use firmware from the same release as the gun (7.0.0). The dongle is programmed through its own USB port; the gun's Trigger + A and B startup shortcuts do not apply to it, so if it does not enter update mode by itself, use its BOOT/RESET buttons.
+In the Web Flasher choose **Dongle**, your exact board and its flash/PSRAM variant. Use firmware from the same release as the gun (7.1.0). The dongle is programmed through its own USB port; the gun's Trigger + A and B startup shortcuts do not apply to it, so if it does not enter update mode by itself, use its BOOT/RESET buttons.
 
 #### WEB FLASHER (Recommended for all users)
 The recommended way to install or update the firmware. Nothing to install: it runs in your browser.
@@ -213,7 +213,7 @@ Pinout delle schede supportate per l'uso come dongle:
 
 ## Installazione e Flashing del Firmware
 
-Nel Web Flasher scegli **Dongle**, la tua scheda esatta e la sua variante flash/PSRAM. Usa firmware della stessa release della pistola (7.0.0). Il dongle si programma tramite la sua porta USB; le scorciatoie all'avvio della pistola (Grilletto + A e B) non valgono per il dongle, quindi se non entra da solo in modalità aggiornamento usa i suoi pulsanti BOOT/RESET.
+Nel Web Flasher scegli **Dongle**, la tua scheda esatta e la sua variante flash/PSRAM. Usa firmware della stessa release della pistola (7.1.0). Il dongle si programma tramite la sua porta USB; le scorciatoie all'avvio della pistola (Grilletto + A e B) non valgono per il dongle, quindi se non entra da solo in modalità aggiornamento usa i suoi pulsanti BOOT/RESET.
 
 #### WEB FLASHER (Consigliato per qualsiasi utente)
 Il modo consigliato per installare o aggiornare il firmware. Niente da installare: funziona nel browser.

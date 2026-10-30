@@ -82,7 +82,7 @@ To build and set up your first gun, follow [Getting Started](#getting-started).
 This repository is a port of the [OpenFIRE firmware](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) by TeamOpenFIRE to the **ESP32-S3** microcontroller. It keeps the original project's features, with three main differences:
 
 - **Wireless play through a dongle:** instead of Bluetooth, the gun talks to a small dongle plugged into the computer over **ESP-NOW**, the ESP32's own radio protocol. The gun keeps the same responsiveness and behaviour as when it is connected by cable.
-- **Refined tracking for the Square layout:** less jitter, better handling of a tilted gun and more tolerance when an emitter briefly disappears from view, for a steadier pointer, accurate up to the screen edges and over a wider range of distances. *(The Diamond layout keeps the original tracking.)*
+- **Refined tracking for the Square and Diamond layouts:** less jitter, better handling of a tilted gun and more tolerance when an emitter briefly disappears from view, for a steadier pointer, accurate up to the screen edges and over a wider range of distances.
 - **Configuration in the browser:** the gun is configured with the **[WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=en)** instead of the original App.
 
 <a id="getting-started"></a>
@@ -110,7 +110,18 @@ For a first test after calibration, try [OpenFIRE ShootingGallery](https://aless
 
 If something does not work, see [Common Problems](lightgun/src/README.md#common-problems). The [operational manual](lightgun/src/README.md#english-version) explains buttons, pause mode and profiles.
 
-## What's New in 7.0.0
+## What's New in 7.1.0
+
+* **More accurate calibration with the four corners:** the WebApp, the desktop App and the gun now calibrate with ten targets, adding the four corners of the screen. The corners correct small differences in how the emitters are placed, and every shot is used to refine the result, for an aim that stays on target across the whole screen.
+* **Wireless power saving for the lightgun:** on battery, playing through the dongle, the gun goes into standby after 15 minutes without use (or 5, 30, 60 minutes, or never, as set in the WebApp). Pull the trigger to resume, still paired to the same dongle.
+* **Wireless power saving for the pedal:** the pedal switches off its radio after 15 minutes without presses and wakes up with a press.
+* **Parallax correction:** for guns with the camera mounted below the sight, it keeps the aim on target when you play closer to or farther from the screen than where you calibrated.
+* **Steadier tracking:** hidden emitters are rebuilt more accurately when only two or three are in view, and the Diamond layout now uses the refined tracking too.
+* **Calibration help:** a shot is refused while the gun is rotated too much around the barrel, and the manual lists the minimum calibration distance for each camera and screen size.
+
+**Updating from 7.0.0:** a normal update keeps settings and calibrations; calibrate each profile again to benefit from the corners. Use lightgun, dongle and pedal firmware from the same release.
+
+### Introduced in 7.0.0
 
 Version 7.0.0 introduces the **[OpenFIRE ESP32 WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=en)** as the main configuration tool: map pins and buttons, choose your camera, calibrate profiles and test the lightgun without installing anything.
 
@@ -120,7 +131,7 @@ Version 7.0.0 introduces the **[OpenFIRE ESP32 WebApp](https://alessandro-satana
 
 * **Three camera models in one firmware:** DFRobot SEN0158 / Wii Cam, PixArt PAJ7025R2 and the wide-angle PAJ7025R3. Select yours in the WebApp: no separate firmware per camera. The firmware also corrects the distortion of the R3's wide-angle lens.
 * **Online or offline configuration:** use the online WebApp through the USB cable or the paired dongle, or hold **B while switching on for about 2 seconds** to start the WebApp stored in the lightgun, reachable over Wi-Fi or USB networking, phones included.
-* **Firmware update without opening the gun:** on a lightgun already running 7.0.0, hold **Trigger + A while switching on for about 2 seconds**, then connect its USB OTG port to the computer and use the Web Flasher.
+* **Firmware update without opening the gun:** on a lightgun already running 7.0.0 or later, hold **Trigger + A while switching on for about 2 seconds**, then connect its USB OTG port to the computer and use the Web Flasher.
 * **One firmware file per board:** normal updates and clean installations use the same file; a clean installation erases all settings and calibrations.
 * **Square layout with LEDs at the screen corners:** besides the recommended vertical rectangle, a wider rectangle with the LEDs at the screen corners is now supported. Calibrate again after changing the emitter layout.
 * **Clearer IR camera test:** each emitter circle shows the size and brightness of the light spot seen by the camera, emitters that are not seen are marked with a red X, and a legend explains every symbol. LED placement and camera sensitivity are much easier to check.
@@ -151,7 +162,7 @@ The firmware turns the microcontroller into a complete lightgun controller, with
 This port brings a complete open-source lightgun to a board that can also work without cables. It is built with PlatformIO and, apart from the wireless part, stays very close to the original TeamOpenFIRE code:
 
 * **Transparent wireless:** the gun and its dongle talk directly over ESP-NOW, and the computer sees a standard USB device, with no perceptible latency and no extra drivers or software.
-* **Refined tracking:** the Square layout calculations were reworked for a very steady pointer even close to the screen and with the gun tilted on its axis. *(The Diamond layout keeps the original tracking.)* When these improvements have proven themselves, I intend to offer them to the original project through a Pull Request, so the whole OpenFIRE community can benefit.
+* **Refined tracking:** the Square and Diamond layout calculations were reworked for a very steady pointer even close to the screen and with the gun tilted on its axis. When these improvements have proven themselves, I intend to offer them to the original project through a Pull Request, so the whole OpenFIRE community can benefit.
 * **Faithful to the original:** apart from the ESP32 adaptations and the radio link, the control logic follows the official version, so improvements and fixes from TeamOpenFIRE can keep flowing into this port.
 
 Special thanks to TeamOpenFIRE for their excellent work on the original firmware: the core architecture is theirs, and so is our gratitude for making such an advanced system available to everyone.
@@ -388,7 +399,7 @@ Per costruire e configurare la tua prima pistola segui i [Primi passi](#primi-pa
 Questo repository è il porting del [firmware OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) del TeamOpenFIRE sul microcontrollore **ESP32-S3**. Mantiene le funzionalità del progetto originale, con tre differenze principali:
 
 - **Gioco senza fili tramite un dongle:** invece del Bluetooth, la pistola comunica con un piccolo dongle inserito nel computer tramite **ESP-NOW**, il protocollo radio dell'ESP32. La pistola mantiene la stessa reattività e lo stesso comportamento di quando è collegata via cavo.
-- **Tracciamento affinato per il layout Square:** meno tremolio, migliore gestione della pistola inclinata e più tolleranza quando un emettitore sparisce per un attimo dalla vista, per un puntatore più stabile, preciso fino ai bordi dello schermo e su una gamma di distanze più ampia. *(Il layout Diamond mantiene il tracciamento originale.)*
+- **Tracciamento affinato per i layout Square e Diamond:** meno tremolio, migliore gestione della pistola inclinata e più tolleranza quando un emettitore sparisce per un attimo dalla vista, per un puntatore più stabile, preciso fino ai bordi dello schermo e su una gamma di distanze più ampia.
 - **Configurazione nel browser:** la pistola si configura con la **[WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=it)** invece che con l'App originale.
 
 <a id="primi-passi"></a>
@@ -416,7 +427,18 @@ Dopo la calibrazione, prova [OpenFIRE ShootingGallery](https://alessandro-satana
 
 Se qualcosa non funziona, consulta [Problemi comuni](lightgun/src/README.md#problemi-comuni-italiano). Il [manuale operativo](lightgun/src/README.md#versione-italiana) spiega pulsanti, modalità pausa e profili.
 
-## Novità della versione 7.0.0
+## Novità della versione 7.1.0
+
+* **Calibrazione più precisa con i quattro angoli:** la WebApp, l'App desktop e la pistola calibrano ora con dieci bersagli, aggiungendo i quattro angoli dello schermo. Gli angoli correggono piccole differenze nel posizionamento degli emettitori e ogni tiro serve ad affinare il risultato, per una mira che resta sul bersaglio su tutto lo schermo.
+* **Risparmio energetico wireless della lightgun:** a batteria, giocando tramite il dongle, la pistola entra in standby dopo 15 minuti senza utilizzo (oppure 5, 30, 60 minuti, o mai, come impostato nella WebApp). Premi il grilletto per riprendere, sempre associata allo stesso dongle.
+* **Risparmio energetico wireless del pedale:** il pedale spegne la radio dopo 15 minuti senza pressioni e si risveglia con una pressione.
+* **Correzione parallasse:** per le pistole con la telecamera montata sotto il mirino, mantiene la mira sul bersaglio quando giochi più vicino o più lontano dallo schermo rispetto a dove hai calibrato.
+* **Tracciamento più stabile:** gli emettitori nascosti vengono ricostruiti con più precisione quando se ne vedono solo due o tre, e anche il layout Diamond usa ora il tracciamento affinato.
+* **Aiuti alla calibrazione:** un tiro viene rifiutato quando la pistola è troppo ruotata attorno alla canna, e il manuale riporta la distanza minima di calibrazione per ogni telecamera e dimensione dello schermo.
+
+**Aggiornamento dalla 7.0.0:** un aggiornamento normale mantiene impostazioni e calibrazioni; calibra di nuovo ogni profilo per sfruttare gli angoli. Usa firmware della stessa release per lightgun, dongle e pedale.
+
+### Introdotte con la 7.0.0
 
 La versione 7.0.0 introduce la **[WebApp OpenFIRE ESP32](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=it)** come strumento principale di configurazione: mappa pin e pulsanti, scegli la telecamera, calibra i profili e prova la lightgun senza installare nulla.
 
@@ -426,7 +448,7 @@ La versione 7.0.0 introduce la **[WebApp OpenFIRE ESP32](https://alessandro-sata
 
 * **Tre modelli di telecamera in un solo firmware:** DFRobot SEN0158 / Wii Cam, PixArt PAJ7025R2 e PAJ7025R3 grandangolare. Scegli la tua nella WebApp: non serve un firmware diverso per ogni telecamera. Il firmware corregge anche la distorsione dell'ottica grandangolare della R3.
 * **Configurazione online oppure offline:** usa la WebApp online tramite il cavo USB o il dongle associato, oppure tieni premuto **B all'accensione per circa 2 secondi** per avviare la WebApp contenuta nella lightgun, raggiungibile via Wi-Fi o rete USB, anche da telefono.
-* **Aggiornamento firmware senza aprire la pistola:** su una lightgun che esegue già la 7.0.0, tieni premuti **Grilletto + A all'accensione per circa 2 secondi**, poi collega al computer la sua porta USB OTG e usa il Web Flasher.
+* **Aggiornamento firmware senza aprire la pistola:** su una lightgun che esegue già la 7.0.0 o successiva, tieni premuti **Grilletto + A all'accensione per circa 2 secondi**, poi collega al computer la sua porta USB OTG e usa il Web Flasher.
 * **Un solo file firmware per scheda:** aggiornamento normale e installazione pulita usano lo stesso file; l'installazione pulita cancella tutte le impostazioni e le calibrazioni.
 * **Layout Square con LED agli angoli dello schermo:** oltre al rettangolo verticale consigliato, ora è supportato anche un rettangolo più largo con i LED agli angoli dello schermo. Calibra di nuovo dopo aver cambiato la disposizione degli emettitori.
 * **Test della telecamera IR più chiaro:** ogni cerchio degli emettitori mostra grandezza e luminosità della macchia di luce vista dalla telecamera. Gli emettitori non rilevati sono segnati con una X rossa e una legenda spiega ogni simbolo. Verificare la posizione dei LED e la sensibilità della telecamera diventa molto più semplice.
@@ -457,7 +479,7 @@ Il firmware trasforma il microcontrollore in un controller per lightgun completo
 Questo porting rende disponibile una lightgun open source completa su una scheda capace di funzionare anche senza cavi. È sviluppato con PlatformIO e, a parte il collegamento senza fili, resta molto vicino al codice originale del TeamOpenFIRE:
 
 * **Wireless trasparente:** pistola e dongle comunicano direttamente via ESP-NOW e il computer vede un normale dispositivo USB, senza latenza percepibile e senza driver o programmi aggiuntivi.
-* **Tracciamento affinato:** i calcoli del layout Square sono stati rielaborati per un puntatore molto stabile anche vicino allo schermo e con la pistola inclinata sul proprio asse. *(Il layout Diamond mantiene il tracciamento originale.)* Quando questi miglioramenti avranno dato buona prova di sé, è mia intenzione proporli al progetto originale con una Pull Request, perché ne possa beneficiare tutta la community di OpenFIRE.
+* **Tracciamento affinato:** i calcoli dei layout Square e Diamond sono stati rielaborati per un puntatore molto stabile anche vicino allo schermo e con la pistola inclinata sul proprio asse. Quando questi miglioramenti avranno dato buona prova di sé, è mia intenzione proporli al progetto originale con una Pull Request, perché ne possa beneficiare tutta la community di OpenFIRE.
 * **Fedele all'originale:** a parte gli adattamenti per ESP32 e il collegamento radio, la logica di controllo segue la versione ufficiale, così miglioramenti e correzioni del TeamOpenFIRE possono continuare a confluire in questo porting.
 
 Un ringraziamento speciale al TeamOpenFIRE per l'eccellente lavoro sul firmware originale: l'architettura di base è merito loro, e a loro va la nostra gratitudine per aver reso disponibile a tutti un sistema così avanzato.

@@ -1,8 +1,8 @@
 # OpenFIRE Web App
 
-**User guide (English):** for 7.0.0 setup, offline access and startup buttons, see the [operating manual](../src/README.md#configuration-with-the-webapp). The rest of this file is a source/build reference, not a prerequisite for using the WebApp.
+**User guide (English):** for setup, offline access and startup buttons, see the [operating manual](../src/README.md#configuration-with-the-webapp). The rest of this file is a source/build reference, not a prerequisite for using the WebApp.
 
-**Guida utente (Italiano):** per configurazione della 7.0.0, accesso offline e pulsanti all'avvio, consulta il [manuale operativo](../src/README.md#configurazione-con-la-webapp). Il resto di questo file è un riferimento per sorgenti/compilazione, non necessario per usare la WebApp.
+**Guida utente (Italiano):** per configurazione, accesso offline e pulsanti all'avvio, consulta il [manuale operativo](../src/README.md#configurazione-con-la-webapp). Il resto di questo file è un riferimento per sorgenti/compilazione, non necessario per usare la WebApp.
 
 The web version of the OpenFIRE App. One source folder, three outputs:
 

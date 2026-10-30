@@ -8,7 +8,7 @@
 
 # OpenFIRE - The Enclosed Instruction Book!
 
-*... adapted for ESP32 7.0.0 from the original [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware/blob/OpenFIRE-dev/OpenFIREmain/README.md) project repository.*
+*... adapted for ESP32 7.1.0 from the original [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware/blob/OpenFIRE-dev/OpenFIREmain/README.md) project repository.*
 
 This manual takes you from a freshly flashed gun to your first game: placing the IR emitters, configuring the gun, calibrating it, and everything you can do from the gun itself while playing.
 
@@ -133,7 +133,7 @@ A file that cannot be used is refused and nothing is changed: **Board Doesn't Ma
 
 ### Special boot modes
 
-Hold the buttons **before switching on or resetting** the gun and keep them pressed for about **2 seconds**, until the mode starts. These shortcuts need a gun already running firmware 7.0.0, with its buttons mapped and working.
+Hold the buttons **before switching on or resetting** the gun and keep them pressed for about **2 seconds**, until the mode starts. These shortcuts need a gun already running firmware 7.0.0 or later, with its buttons mapped and working.
 
 | Buttons held at startup | Result |
 | --- | --- |
@@ -154,6 +154,10 @@ When installing, choose the file for your **board and its flash/PSRAM variant**;
 - **OLED display:** disabled by default. Enable **Enable OLED Display (SSD1306 128x64)** in **Gun Settings → I2C Peripherals**, assign **Peripherals SDA** and **Peripherals SCL** in **Board Layout** to the pins the display is wired to, then save and restart. If the display stays blank, try **Use Alternative Device Address**.
 - **Startup mode:** choose **Absolute Mouse** (default), **Gamepad (right stick)** or **Gamepad (left stick)** in **Gun Settings → Input / Output**, then save. This is the output used at the next normal startup; you can still change it from pause mode, until the gun is switched off, and a force feedback program or a script can change it with the serial commands `M0x0` (absolute mouse), `M0x1` (gamepad, right stick) and `M0x1L` (gamepad, left stick).
 - **Wireless pedal** (**Gun Settings → Input / Output**): enable it only if you use the wireless pedal, and leave both wired pedal inputs unmapped; otherwise disable it, so the gun does not search for a pedal at every start. A mapped wired pedal always takes priority. The wireless pedal works when the gun plays through the dongle; with the gun connected to the computer by USB cable, use a wired pedal.
+- **Wireless power saving** (**Gun Settings → Input / Output → Wireless power saving, standby after:**): when the gun runs on battery and plays through the dongle, it saves battery by going into standby.
+  - **Setting:** the gun goes into standby after the selected period of inactivity, for example when you put it down. Choose **5**, **15** (default), **30** or **60 minutes**, or **Disabled** to keep it always awake. The change takes effect once saved, without restarting. The gun never goes into standby with the USB cable, while it is connected to the WebApp, in pause mode or during calibration.
+  - **In standby:** the radio and the OLED display switch off, rumble and solenoid stay off, and the board's built-in RGB LED (or, if fitted, the first LED of the external NeoPixel strip) blinks faintly amber every 3 seconds.
+  - **Waking up:** **pull the trigger**. The gun reconnects to the same dongle in a moment, and this pull is not sent to the game as a shot. Other buttons and the wireless pedal do not wake it. If the dongle no longer answers (computer switched off, dongle unplugged or restarted), the gun restarts as at power-on and searches for it again.
 
 ## First-time Setup
 After a new installation, or a clean installation, the gun has no calibration yet: it waits for the first one and does not move the pointer; the board's RGB LED, if present, blinks orange.
@@ -274,7 +278,7 @@ You can calibrate from the WebApp (or the desktop App), which guides you and che
 
 **From the WebApp or the desktop App**
 
-Open the *Calibration Profiles* tab and click the *Calibrate Profile* button of the profile you want. A full-screen window shows ten targets in turn: centre, top edge, bottom edge, left edge, right edge, the four corners (top right, bottom right, bottom left, top left) and centre again. Shoot each target with the trigger. The corners also measure how the emitters sit around the screen and correct small differences in their placement. The desktop App still shows the six targets without the corners.
+Open the *Calibration Profiles* tab and click the *Calibrate Profile* button of the profile you want. A full-screen window shows ten targets in turn: centre, top edge, bottom edge, left edge, right edge, the four corners (top right, bottom right, bottom left, top left) and centre again. Shoot each target with the trigger. The corners also measure how the emitters sit around the screen and correct small differences in their placement.
 
 - **Crosshair colour:** green when the camera sees all four emitters well, the best moment to shoot; orange when an emitter is weak (the shot is accepted, but a brighter emitter gives a steadier aim); red when an emitter is not seen.
 - **Refused shots:** while the crosshair is red the shot is refused and the window explains why. Bring the missing emitter back into view (step back if it leaves the view at the screen edges), or check the emitter, your distance and the [camera sensitivity](#ir-camera-sensitivity), then shoot again.
@@ -296,13 +300,14 @@ At the first startup after a new or clean installation, pull the trigger once to
 1. Select the profile to calibrate, with A/B/Start/Select in Hotkey pause mode or from the Simple Pause Menu, and pull the trigger.
 2. Aim at the centre of the screen and pull the trigger while keeping a steady aim.
 3. The cursor moves to the four edges in turn: top, bottom, left and right. At each edge it traces a small circle touching the edge: shoot **the point where the circle touches the screen edge**, not the centre of the circle.
-4. When the cursor returns to the centre, aim at the centre of its small circle and shoot.
-5. The new calibration is applied so you can check it: aim at the edges and corners and see that the pointer stays on your line of sight.
+4. The cursor then moves to the four corners in turn: top right, bottom right, bottom left and top left. At each corner the small circle touches both edges: shoot **the exact corner of the screen**, where the two edges meet, not the centre of the circle.
+5. When the cursor returns to the centre, aim at the centre of its small circle and shoot.
+6. The new calibration is applied so you can check it: aim at the edges and corners and see that the pointer stays on your line of sight.
    - Pull the trigger to accept the calibration.
    - Press A or B to start again from step 2.
    - Press C/Reload at any time, or A/B before the final check, to cancel and keep the previous calibration. During the very first calibration after a clean installation the buttons cannot cancel it; in the WebApp, ESC still closes the calibration window.
 
-With an OLED display, the screen below the status bar guides you: a small TV with a crosshair shows where the current target is on your monitor, together with the step (**1/10** to **10/10**, or **1/6** to **6/6** when the desktop App calibrates without the corners), the target (`CORNER` for the four corners) and `SHOOT`. At the end it shows `CHECK AIM`, `TRIGGER: CONFIRM` and `A/B: REPEAT`. The white dots on the display are the emitter positions the gun is tracking; some may be estimated, so four dots do not guarantee that the camera really sees all four emitters. The detailed checks on the emitters (crosshair colour, IR LEDs panel) are only available in the WebApp and desktop App windows, but from the gun too a target shot is refused while the camera does not see all four emitters or while the gun is rotated too much around the barrel: for a few seconds the top line of the display shows `LED NOT SEEN` or `HOLD GUN UPRIGHT` instead of the profile. Bring the emitter back into view (step back if it leaves the view at the screen edges) or hold the gun upright, then shoot again.
+With an OLED display, the screen below the status bar guides you: a small TV with a crosshair shows where the current target is on your monitor, together with the step (**1/10** to **10/10**), the target (`CORNER` for the four corners) and `SHOOT`. At the end it shows `CHECK AIM`, `TRIGGER: CONFIRM` and `A/B: REPEAT`. The white dots on the display are the emitter positions the gun is tracking; some may be estimated, so four dots do not guarantee that the camera really sees all four emitters. The detailed checks on the emitters (crosshair colour, IR LEDs panel) are only available in the WebApp and desktop App windows, but from the gun too a target shot is refused while the camera does not see all four emitters or while the gun is rotated too much around the barrel: for a few seconds the top line of the display shows `LED NOT SEEN` or `HOLD GUN UPRIGHT` instead of the profile. Bring the emitter back into view (step back if it leaves the view at the screen edges) or hold the gun upright, then shoot again.
 
 The first calibration performed from the gun, when no calibration is stored, is **saved automatically** when you confirm it. A calibration started from pause mode stays active only until you switch the gun off: **save it**, with Start + Select in Hotkey pause mode, with Save Settings in the Simple Pause Menu, or from the WebApp. Otherwise the previous saved calibration is restored at the next startup.
 
@@ -351,6 +356,7 @@ The grey crosshair shows where the gun is aiming and the red circle marks the ce
 - **The pointer does not follow the sight:** calibrate again standing in front of the centre of the screen, without rotating the gun, and check that the profile uses the right IR layout (Square or Diamond).
 - **The pointer jumps or shakes:** usually a reflection or another light source (window, lamp, shiny surface) seen as an extra IR point. Find it in the [IR test](#test-mode), remove or cover it, or lower the [camera sensitivity](#ir-camera-sensitivity). Calibrate again after moving the emitters.
 - **The gun does not pair with the dongle:** plug in the dongle first and wait about 15 seconds, then switch on the gun without its USB cable connected to the computer (with the cable it plays wired). After unplugging or restarting the dongle, switch off the gun and the wireless pedal, if used. Wait until the dongle is ready to pair, then switch on the pedal first (if used) and the gun afterwards. Use one dongle per gun, with lightgun and dongle firmware from the same release ([dongle guide](../../dongle/README.md#english-version)).
+- **The gun stops responding after a while and its LED blinks faintly amber:** it is in wireless power saving standby. Pull the trigger to resume. To change the time or disable it, see **Wireless power saving** in [Camera, display and startup settings](#camera-display-and-startup-settings).
 - **The wireless pedal is not found:** it works only with a gun playing through the dongle. Enable **Wireless pedal**, leave both wired pedal inputs unmapped and save; switch on the pedal before the gun. After restarting the pedal, restart the gun as well.
 - **The OLED display stays blank:** it is disabled by default; enable it as explained in [Camera, display and startup settings](#camera-display-and-startup-settings).
 - **The temperature reading is far too high** (for example about 90 °C at room temperature): give the TMP36 its own ground wire to the board, not shared with the camera ([wiring tip](../README.md#optional-modules)).
@@ -362,7 +368,6 @@ Some behaviours are limits of the system rather than faults: see [Known Limitati
 
 ## Known Limitations
 
-- The refined tracking applies to the Square layout; the Diamond layout uses the original OpenFIRE tracking.
 - Wireless play needs an ESP32-S3 board; on RP2040 boards the firmware works by USB cable only.
 - Up to four guns can play together; each gun playing wirelessly needs its own dongle, and the wireless pedal works only with a gun playing through the dongle.
 - The firmware is installed through each device's own USB port, not through the dongle or over Wi-Fi.
@@ -411,7 +416,7 @@ For technical support and to join the discussion, see the [Community & Support s
 
 # OpenFIRE - Il Manuale di utilizzo!
 
-*... adattato per ESP32 7.0.0 dal progetto originale [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware/blob/OpenFIRE-dev/OpenFIREmain/README.md).*
+*... adattato per ESP32 7.1.0 dal progetto originale [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware/blob/OpenFIRE-dev/OpenFIREmain/README.md).*
 
 Questo manuale ti accompagna da una pistola con il firmware appena installato alla prima partita: posizionamento degli emettitori IR, configurazione, calibrazione e tutto quello che puoi fare dalla pistola mentre giochi.
 
@@ -541,7 +546,7 @@ Un file che non si può usare viene rifiutato e non viene cambiato nulla: **La s
 
 ### Modalità speciali all'avvio
 
-Tieni premuti i pulsanti **prima di accendere o riavviare** la pistola e mantienili per circa **2 secondi**, finché la modalità non parte. Queste scorciatoie richiedono una pistola che esegue già il firmware 7.0.0, con i pulsanti mappati e funzionanti.
+Tieni premuti i pulsanti **prima di accendere o riavviare** la pistola e mantienili per circa **2 secondi**, finché la modalità non parte. Queste scorciatoie richiedono una pistola che esegue già il firmware 7.0.0 o successivo, con i pulsanti mappati e funzionanti.
 
 | Pulsanti tenuti premuti all'avvio | Risultato |
 | --- | --- |
@@ -562,6 +567,10 @@ Per l'installazione scegli il file della tua **scheda e della sua variante flash
 - **Display OLED:** disattivato per impostazione predefinita. Attiva **Abilita Display OLED (SSD1306 128x64)** in **Impostazioni Gun → Periferiche I2C**, assegna nel **Layout Scheda** **SDA periferiche** e **SCL periferiche** ai pin a cui è collegato il display, poi salva e riavvia. Se il display resta spento, prova **Usa Indirizzo Dispositivo Alternativo**.
 - **Modalità all'avvio:** scegli **Mouse assoluto** (predefinito), **Gamepad (stick destro)** o **Gamepad (stick sinistro)** in **Impostazioni Gun → Input / Output**, poi salva. È l'uscita usata al successivo avvio normale; puoi comunque cambiarla dalla modalità pausa, fino allo spegnimento, e un programma di force feedback o uno script possono cambiarla con i comandi seriali `M0x0` (mouse assoluto), `M0x1` (gamepad, stick destro) e `M0x1L` (gamepad, stick sinistro).
 - **Pedale wireless** (**Impostazioni Gun → Input / Output**): attivalo solo se usi il pedale wireless e lascia non assegnati entrambi gli ingressi dei pedali cablati; altrimenti disattivalo, così la pistola non cerca un pedale a ogni avvio. Un pedale cablato mappato ha sempre la precedenza. Il pedale wireless funziona quando la pistola gioca tramite il dongle; con la pistola collegata al computer via cavo USB, usa un pedale cablato.
+- **Risparmio energetico wireless** (**Impostazioni Gun → Input / Output → Risparmio energetico wireless, standby dopo:**): quando la pistola funziona a batteria e gioca tramite il dongle, risparmia la batteria entrando in standby.
+  - **Impostazione:** la pistola entra in standby dopo il periodo di inattività selezionato, per esempio quando la appoggi. Scegli **5**, **15** (predefinito), **30** o **60 minuti**, oppure **Disabilitato** per tenerla sempre attiva. La modifica ha effetto dopo il salvataggio, senza riavviare. La pistola non va mai in standby con il cavo USB, mentre è collegata alla WebApp, in modalità pausa o durante la calibrazione.
+  - **In standby:** la radio e il display OLED si spengono, rumble e solenoide restano fermi, e il LED RGB integrato della scheda (o, se presente, il primo LED della striscia NeoPixel esterna) lampeggia debolmente in ambra ogni 3 secondi.
+  - **Risveglio:** **premi il grilletto**. La pistola si ricollega in un attimo allo stesso dongle, e questa pressione non arriva al gioco come sparo. Gli altri pulsanti e il pedale wireless non la risvegliano. Se il dongle non risponde più (computer spento, dongle scollegato o riavviato), la pistola riparte come all'accensione e lo cerca di nuovo.
 
 <a id="prima-configurazione-italiano"></a>
 
@@ -696,7 +705,7 @@ Puoi calibrare dalla WebApp (o dall'App desktop), che ti guida e controlla gli e
 
 **Dalla WebApp o dall'App desktop**
 
-Apri la scheda *Profili di calibrazione* e fai clic sul pulsante *Calibra profilo* del profilo che vuoi. Una finestra a schermo intero mostra dieci bersagli uno dopo l'altro: centro, bordo superiore, bordo inferiore, bordo sinistro, bordo destro, i quattro angoli (in alto a destra, in basso a destra, in basso a sinistra, in alto a sinistra) e di nuovo centro. Spara a ogni bersaglio con il grilletto. Gli angoli misurano anche come sono messi gli emettitori attorno allo schermo e correggono piccole differenze nel loro posizionamento. L'App desktop mostra ancora i sei bersagli senza gli angoli.
+Apri la scheda *Profili di calibrazione* e fai clic sul pulsante *Calibra profilo* del profilo che vuoi. Una finestra a schermo intero mostra dieci bersagli uno dopo l'altro: centro, bordo superiore, bordo inferiore, bordo sinistro, bordo destro, i quattro angoli (in alto a destra, in basso a destra, in basso a sinistra, in alto a sinistra) e di nuovo centro. Spara a ogni bersaglio con il grilletto. Gli angoli misurano anche come sono messi gli emettitori attorno allo schermo e correggono piccole differenze nel loro posizionamento.
 
 - **Colore del mirino:** verde quando la telecamera vede bene tutti e quattro gli emettitori, il momento migliore per sparare; arancione quando un emettitore è debole (il tiro viene accettato, ma un emettitore più luminoso dà una mira più stabile); rosso quando un emettitore non viene rilevato.
 - **Tiri rifiutati:** finché il mirino è rosso il tiro viene rifiutato e la finestra spiega il motivo. Riporta in vista l'emettitore mancante (allontanati se ai bordi dello schermo esce dalla vista), oppure controlla l'emettitore, la distanza e la [sensibilità della telecamera](#sensibilità-della-telecamera-ir-italiano), poi spara di nuovo.
@@ -718,13 +727,14 @@ Al primo avvio dopo una nuova installazione o un'installazione pulita, premi il 
 1. Seleziona il profilo da calibrare, con A/B/Start/Select nella modalità pausa Hotkey o dal Menu di Pausa Semplificato, e premi il grilletto.
 2. Mira al centro dello schermo e premi il grilletto mantenendo la mira ferma.
 3. Il cursore si sposta sui quattro bordi uno dopo l'altro: alto, basso, sinistra e destra. Su ogni bordo descrive un piccolo cerchio che tocca il bordo: spara **al punto in cui il cerchio tocca il bordo dello schermo**, non al centro del cerchio.
-4. Quando il cursore torna al centro, mira al centro del suo piccolo cerchio e spara.
-5. La nuova calibrazione viene applicata, così puoi verificarla: mira ai bordi e agli angoli e controlla che il puntatore resti sulla tua linea di mira.
+4. Poi il cursore si sposta sui quattro angoli uno dopo l'altro: in alto a destra, in basso a destra, in basso a sinistra e in alto a sinistra. Su ogni angolo il piccolo cerchio tocca i due bordi: spara **all'angolo esatto dello schermo**, dove i due bordi si incontrano, non al centro del cerchio.
+5. Quando il cursore torna al centro, mira al centro del suo piccolo cerchio e spara.
+6. La nuova calibrazione viene applicata, così puoi verificarla: mira ai bordi e agli angoli e controlla che il puntatore resti sulla tua linea di mira.
    - Premi il grilletto per accettare la calibrazione.
    - Premi A o B per ricominciare dal passo 2.
    - Premi C/Reload in qualsiasi momento, oppure A/B prima della verifica finale, per annullare e mantenere la calibrazione precedente. Durante la primissima calibrazione dopo un'installazione pulita i pulsanti non la annullano; nella WebApp il tasto ESC chiude comunque la finestra di calibrazione.
 
-Con un display OLED, lo schermo sotto la barra di stato ti guida: una piccola TV con un mirino mostra dove si trova il bersaglio corrente sul monitor, insieme al passo (da **1/10** a **10/10**, oppure da **1/6** a **6/6** quando l'App desktop calibra senza gli angoli), al bersaglio (`CORNER` per i quattro angoli) e a `SHOOT`. Alla fine mostra `CHECK AIM`, `TRIGGER: CONFIRM` e `A/B: REPEAT`. I punti bianchi sul display sono le posizioni degli emettitori seguite dalla pistola; alcune possono essere stimate, quindi quattro punti non garantiscono che la telecamera veda davvero tutti e quattro gli emettitori. I controlli dettagliati sugli emettitori (colore del mirino, riquadro LED IR) sono disponibili solo nelle finestre della WebApp e dell'App desktop, ma anche dalla pistola un tiro su un bersaglio viene rifiutato quando la telecamera non vede tutti e quattro gli emettitori o quando la pistola è troppo ruotata attorno alla canna: per qualche secondo la riga in alto del display mostra `LED NOT SEEN` o `HOLD GUN UPRIGHT` al posto del profilo. Riporta in vista l'emettitore (allontanati se ai bordi dello schermo esce dalla vista) o tieni la pistola dritta, poi spara di nuovo.
+Con un display OLED, lo schermo sotto la barra di stato ti guida: una piccola TV con un mirino mostra dove si trova il bersaglio corrente sul monitor, insieme al passo (da **1/10** a **10/10**), al bersaglio (`CORNER` per i quattro angoli) e a `SHOOT`. Alla fine mostra `CHECK AIM`, `TRIGGER: CONFIRM` e `A/B: REPEAT`. I punti bianchi sul display sono le posizioni degli emettitori seguite dalla pistola; alcune possono essere stimate, quindi quattro punti non garantiscono che la telecamera veda davvero tutti e quattro gli emettitori. I controlli dettagliati sugli emettitori (colore del mirino, riquadro LED IR) sono disponibili solo nelle finestre della WebApp e dell'App desktop, ma anche dalla pistola un tiro su un bersaglio viene rifiutato quando la telecamera non vede tutti e quattro gli emettitori o quando la pistola è troppo ruotata attorno alla canna: per qualche secondo la riga in alto del display mostra `LED NOT SEEN` o `HOLD GUN UPRIGHT` al posto del profilo. Riporta in vista l'emettitore (allontanati se ai bordi dello schermo esce dalla vista) o tieni la pistola dritta, poi spara di nuovo.
 
 La prima calibrazione eseguita dalla pistola, quando non ne è presente una salvata, viene **memorizzata automaticamente** alla conferma. Una calibrazione avviata dalla pausa resta attiva solo fino allo spegnimento: **salvala**, con Start + Select nella modalità pausa Hotkey, con Save Settings nel Menu di Pausa Semplificato, oppure dalla WebApp. Altrimenti al riavvio viene ripristinata la calibrazione salvata in precedenza.
 
@@ -785,6 +795,7 @@ Il mirino grigio indica dove punta la pistola e il cerchio rosso il centro dei q
 - **Il puntatore non segue il mirino della pistola:** calibra di nuovo stando di fronte al centro dello schermo, senza ruotare la pistola, e controlla che il profilo usi il layout IR giusto (**Quadrato** / Square o **Rombo** / Diamond).
 - **Il puntatore salta o trema:** di solito è un riflesso o un'altra sorgente di luce (finestra, lampada, superficie lucida) vista come un punto IR in più. Cercalo nel [test IR](#modalità-di-test-italiano), eliminalo o coprilo, oppure riduci la [sensibilità della telecamera](#sensibilità-della-telecamera-ir-italiano). Calibra di nuovo dopo aver spostato gli emettitori.
 - **La pistola non si associa al dongle:** inserisci prima il dongle e attendi circa 15 secondi, poi accendi la pistola senza il cavo USB collegato al computer (con il cavo usa il collegamento USB). Dopo aver scollegato o riavviato il dongle, spegni la pistola e il pedale wireless, se utilizzato. Attendi che il dongle sia pronto per l'associazione, poi accendi prima il pedale (se utilizzato) e infine la pistola. Usa un dongle per ogni pistola, con firmware della stessa release per lightgun e dongle ([guida dongle](../../dongle/README.md#versione-italiana)).
+- **Dopo un po' la pistola non risponde e il suo LED lampeggia debolmente in ambra:** è in standby per il risparmio energetico wireless. Premi il grilletto per riprendere. Per cambiare il tempo o disattivarlo, vedi **Risparmio energetico wireless** in [Telecamera, display e impostazioni di avvio](#telecamera-display-e-impostazioni-di-avvio).
 - **Il pedale wireless non viene trovato:** funziona solo con una pistola che gioca tramite il dongle. Attiva **Pedale wireless**, lascia non assegnati entrambi gli ingressi dei pedali cablati e salva; accendi il pedale prima della pistola. Dopo aver riavviato il pedale, riavvia anche la pistola.
 - **Il display OLED resta spento:** è disattivato per impostazione predefinita; attivalo come spiegato in [Telecamera, display e impostazioni di avvio](#telecamera-display-e-impostazioni-di-avvio).
 - **La temperatura letta è troppo alta** (ad esempio circa 90 °C a temperatura ambiente): collega il TMP36 alla scheda con un proprio filo di massa, non condiviso con la telecamera ([consiglio di cablaggio](../README.md#moduli-opzionali)).
@@ -798,7 +809,6 @@ Alcuni comportamenti sono limiti del sistema e non guasti: vedi [Limiti noti](#l
 
 ## Limiti noti
 
-- Il tracciamento affinato vale per il layout Square; il layout Diamond usa il tracciamento originale di OpenFIRE.
 - Il gioco senza fili richiede una scheda ESP32-S3; sulle schede RP2040 il firmware funziona solo via cavo USB.
 - Possono giocare insieme fino a quattro pistole; ogni pistola senza fili richiede il proprio dongle, e il pedale wireless funziona solo con una pistola che gioca tramite il dongle.
 - Il firmware si installa dalla porta USB di ciascun dispositivo, non tramite il dongle o via Wi-Fi.

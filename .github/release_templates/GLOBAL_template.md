@@ -22,51 +22,32 @@ New to OpenFIRE? Start from [Getting Started](https://github.com/alessandro-sata
 
 ### New Features
 
-* Configuration with the new [WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=en): online from Chrome or Edge, through the gun's USB cable or its paired dongle, or offline from the WebApp stored in the gun, over Wi-Fi (phones included) or USB networking.
-* DFRobot/Wii, PAJ7025R2 and PAJ7025R3 cameras in the same firmware, chosen in the WebApp. Use 940 nm emitters for DFRobot/Wii and 850 nm for PixArt.
-* Hold **B** while switching on the gun, for about 2 seconds, to start the offline WebApp: join **OpenFIRE_Config**, accept the network without Internet, then open **http://openfire.local/** or **http://192.168.4.1/** in your normal browser. Over USB, use **http://192.168.7.1/** on computers that support it.
-* Hold **Trigger + A** while switching on, for about 2 seconds, to put a gun already running 7.0.0 into firmware update mode. For a first installation or a recovery, use the board's BOOT/RESET buttons. Install through the gun's own USB OTG port, not through the dongle.
-* Calibration from the WebApp or the desktop App checks the IR emitters at every target: green crosshair when all four are seen well, orange when one is weak, red (shot refused) when one is missing, with a panel showing each emitter, progress dots and a legend.
-* Calibration from the gun: the cursor traces a small circle on each target, and an OLED display shows where the target is, the step and how to confirm.
-* Clearer IR camera test: each emitter circle shows the size and brightness of the light spot seen by the camera; emitters not seen are marked with a red X, and a legend explains every symbol.
-* Saved mouse/gamepad startup mode, wireless pedal option and Up/Down navigation in the pause menu.
-* Analog stick: **Invert X Axis** and **Invert Y Axis** in the Button Mapping tab, for sticks wired or mounted the other way round (off by default).
-* Hardware switches for rumble, solenoid and rapid fire now work in the ready-made firmware: assign their pins in Board Layout.
-* Normally closed (NC) inputs in Board Layout (custom pins only): buttons, pedals and the rumble, solenoid and rapid fire switches can be read inverted, for devices such as the Blamcon Vyper loader. Unlock the **NC** boxes with **Edit NC Inputs** (shown with **View > Show Unsafe Settings**); nothing is inverted by default.
-* Custom layout files also keep the NC boxes; a damaged or incomplete file is refused when imported.
-* Output mode (mouse / gamepad right stick / gamepad left stick) can be switched from pause mode: **Output Mode** in the Simple Pause Menu, Select + Up / Select + Down in Hotkey mode. It lasts until the gun is switched off.
+* **Calibration with the four corners:** the WebApp, the desktop App and the gun now calibrate with ten targets: centre, the four edges, the four corners and centre again. The corners correct small differences in how the emitters are placed, and every shot is used to refine the result, so one imprecise shot or a slightly crooked camera weighs much less. The OLED display counts 1/10 to 10/10; the WebApp shows ten progress dots.
+* **Parallax correction (camera below the sight):** in **Gun Settings → CAMERA Model**, behind **Unlock CAMERA Modification**. It keeps the aim on target when you play closer to or farther from the screen than where you calibrated. Leave it at **0** (default) if the camera is on the sight line; after changing it, calibrate each profile once.
+* **Lightgun wireless power saving:** on battery, playing through the dongle, the gun goes into standby after a time without use: **Gun Settings → Input / Output → Wireless power saving, standby after:** (Disabled, 5, 15, 30 or 60 minutes; default 15). In standby the radio and the OLED are off and the board's LED blinks faintly amber. Pull the trigger to resume, still paired to the same dongle; the wake-up pull is not sent as a shot.
+* **Pedal wireless power saving:** the pedal switches off its radio after 15 minutes without presses (player LED blinking) and wakes up with a press. If no gun pairs with it within 5 minutes, it stops searching (LEDs 1 and 4 blinking) until a press.
+* **Calibration refuses a shot while the gun is rotated too much** around the barrel (about 15 degrees with 16:9, 18 with 4:3): the WebApp explains why, the OLED shows `HOLD GUN UPRIGHT`. From the gun, a target shot is now also refused while an emitter is not seen (`LED NOT SEEN`).
 
 ### Improvements and Fixes
 
-* Refined IR tracking and faster recovery of temporarily hidden LEDs; the Square layout supports vertical and wide rectangles.
-* Hotkey pause mode: the rumble/solenoid toggles now work when no hardware switch is fitted.
-* Serial command `M0x0` (and `M0x2`): an analog stick used as a gamepad stick goes back to the left stick, as at startup.
-* Analog stick as keyboard arrows (ESP32): a tilted stick no longer loses its arrow when leaving pause mode or after a serial command such as `M0`.
-* Gamepad D-pad buttons: if you switch between gamepad and mouse while holding a direction, that direction no longer comes back later by itself when you press another one.
-* Wireless: the dongle no longer occasionally loses a button release, and the wireless transmission no longer rarely stops until a restart.
-* After the first calibration started from the gun on a new board, the gun returns to normal operation once you confirm it. As before, this first calibration is saved automatically; calibrations started from pause mode must be saved separately.
-* Burst fire (serial command `M8x1`): exactly three shots, with the correct pause between them, and the solenoid always off at the end.
-* Saving from pause mode can be retried in the same pause if it fails.
-* Pressing Start or Select while firing switches the solenoid off and ends the rumble as usual.
-* Turning the solenoid hardware switch off during a burst stops the burst.
-* The trigger no longer stays pressed on the computer when the solenoid or rumble hardware switch is turned off, MAMEHOOKER starts or pause mode is entered while it is held.
-* When the temperature sensor reads too hot or reports a fault, the solenoid no longer fires at all, single shots included, and a burst stopped by the temperature no longer resumes by itself. The same applies to the MAMEHOOKER solenoid commands.
-* The solenoid no longer stays on if you aim off screen during a single shot while holding the trigger, or if the firing mode is changed with an `M8` command during a shot.
-* MAMEHOOKER rumble pulses with custom timings now give all the requested pulses.
-* MAMEHOOKER: turning off the solenoid or rumble hardware switch during a game cancels the effects in progress, which no longer resume by themselves when it is turned back on.
-* Pause mode: rumble or solenoid changed after a save can be saved again in the same pause.
-* Desktop App, Button Mapping: changing the type of an output gives the gun the output shown.
-* Rewritten bilingual user guides: see the [operating manual](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/lightgun/src/README.md#english-version).
+* Steadier tracking when only two or three emitters are in view: the missing ones are rebuilt from the last complete shape, taking perspective into account.
+* The Diamond layout now uses the refined tracking too.
+* The Square layout takes the camera lens into account, and the jitter filter adapts to the wide-angle PAJ7025R3.
+* The manual lists the minimum calibration distance for each camera and screen size: see [How to Calibrate](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/lightgun/src/README.md#how-to-calibrate).
+* The pedal runs at 80 MHz to use less battery.
+* Updated libraries: LovyanGFX 1.2.35 and arduino-pico 6.3.1 (RP2040).
+* Full list of changes in the [changelog](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/CHANGELOG.md#english-version).
 
 ### Installation and Usage Notes
 
-* One firmware file per board, whatever the camera. A clean installation uses the same file but erases all settings and calibrations.
-* A clean installation is recommended when upgrading from 6.2.1: note your settings first, then configure and calibrate again.
+* **Updating from 7.0.0:** a normal update keeps settings, pins and calibration profiles. Calibrate each profile again to get the corner refinement and, if you use it, the parallax correction.
+* **Coming from 6.2.1:** a clean installation is recommended; note your settings first, then configure and calibrate again. Layout files exported with 6.2.1 cannot be imported: set the pins again and export a new file.
 * Use lightgun, dongle and pedal firmware from this same release.
-* Layout files exported with 6.2.1 cannot be imported: note your pins before updating, set them again and export a new file.
+* Lightgun wireless power saving is on by default (15 minutes, only on battery through the dongle): change it or disable it in **Gun Settings → Input / Output**.
+* One firmware file per board, whatever the camera. A clean installation uses the same file but erases all settings and calibrations.
+* To update a gun already running 7.0.0 or later, hold **Trigger + A** while switching on, for about 2 seconds, or let the Web Flasher restart it into update mode (the serial port then changes: select the new port and retry). For a first installation or a recovery, use the board's BOOT/RESET buttons. Install through the gun's own USB OTG port, not through the dongle.
 * If the temperature sensor pin is assigned but no TMP36 is fitted, the solenoid does not fire. The default layouts of the ESP32-S3 DevKitC-1 and the Waveshare ESP32-S3 Pico assign this pin: without the sensor, enable **Use Custom Pins** in **Board Layout** and set **Temperature Sensor** to **Unmapped**.
 * Starting the offline WebApp replaces the gun's USB serial port with USB networking, even if you configure over Wi-Fi. While a configuration App is connected, normal play is suspended. Save and restart normally after configuring.
-* The Web Flasher can also restart a gun running 7.0.0 into update mode by itself. After this restart the serial port changes: select the new port and retry.
 
 ---
 
@@ -262,51 +243,32 @@ Non conosci ancora OpenFIRE? Parti dai [Primi passi](https://github.com/alessand
 
 ### Nuove funzionalità
 
-* Configurazione con la nuova [WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=it): online da Chrome o Edge, tramite il cavo USB della pistola o il suo dongle associato, oppure offline con la WebApp contenuta nella pistola, via Wi-Fi (anche da telefono) o rete USB.
-* Telecamere DFRobot/Wii, PAJ7025R2 e PAJ7025R3 nello stesso firmware, da scegliere nella WebApp. Usa emettitori da 940 nm per DFRobot/Wii e da 850 nm per PixArt.
-* Tieni premuto **B** all'accensione della pistola, per circa 2 secondi, per avviare la WebApp offline: collegati a **OpenFIRE_Config**, accetta la rete senza Internet, poi apri **http://openfire.local/** o **http://192.168.4.1/** nel browser normale. Via USB usa **http://192.168.7.1/** sui computer che la supportano.
-* Tieni premuti **Grilletto + A** all'accensione, per circa 2 secondi, per portare in modalità aggiornamento firmware una pistola che esegue già la 7.0.0. Per la prima installazione o un recupero usa i pulsanti BOOT/RESET della scheda. Installa dalla porta USB OTG della pistola, non tramite il dongle.
-* La calibrazione dalla WebApp o dall'App desktop controlla gli emettitori IR a ogni bersaglio: mirino verde quando tutti e quattro sono visti bene, arancione quando uno è debole, rosso (tiro rifiutato) quando ne manca uno, con un riquadro che mostra ogni emettitore, pallini di avanzamento e una legenda.
-* Calibrazione dalla pistola: il cursore descrive un piccolo cerchio su ogni bersaglio, e un display OLED mostra dove si trova il bersaglio, il passo e come confermare.
-* Test della telecamera IR più chiaro: ogni cerchio degli emettitori mostra grandezza e luminosità della macchia di luce vista dalla telecamera; gli emettitori non rilevati sono segnati con una X rossa e una legenda spiega ogni simbolo.
-* Modalità mouse/gamepad salvabile per l'avvio, opzione pedale wireless e navigazione Su/Giù nel menu di pausa.
-* Stick analogico: **Inverti asse X** e **Inverti asse Y** nella scheda Mappatura Pulsanti, per stick collegati o montati al contrario (disattivate di default).
-* Gli interruttori fisici per rumble, solenoide e fuoco rapido ora funzionano nel firmware pronto da scaricare: assegna i loro pin in Layout Scheda.
-* Ingressi normalmente chiusi (NC) in Layout Scheda (solo con i pin personalizzati): pulsanti, pedali e gli interruttori di rumble, solenoide e fuoco rapido possono essere letti invertiti, per dispositivi come il caricatore della Blamcon Vyper. Le caselle **NC** si sbloccano con **Modifica ingressi NC** (compare con **Visualizza > Mostra Impostazioni Non Sicure**); per impostazione predefinita nessun ingresso è invertito.
-* I file di layout personalizzato conservano anche le caselle NC; un file danneggiato o incompleto viene rifiutato all'importazione.
-* La modalità di uscita (mouse / gamepad stick destro / gamepad stick sinistro) si cambia anche dalla pausa: **Output Mode** nel Menu di Pausa Semplificato, Select + Su / Select + Giù in modalità Hotkey. Vale fino allo spegnimento.
+* **Calibrazione con i quattro angoli:** la WebApp, l'App desktop e la pistola calibrano ora con dieci bersagli: centro, i quattro bordi, i quattro angoli e di nuovo centro. Gli angoli correggono piccole differenze nel posizionamento degli emettitori e ogni tiro serve ad affinare il risultato, così un tiro impreciso o una telecamera un po' storta pesano molto meno. Il display OLED conta da 1/10 a 10/10; la WebApp mostra dieci pallini di avanzamento.
+* **Correzione parallasse (telecamera sotto il mirino):** in **Impostazioni Gun → Modello TELECAMERA**, dietro **Sblocca modifica TELECAMERA**. Mantiene la mira sul bersaglio quando giochi più vicino o più lontano dallo schermo rispetto a dove hai calibrato. Lasciala a **0** (predefinito) se la telecamera è sulla linea del mirino; dopo averla cambiata, calibra una volta ogni profilo.
+* **Risparmio energetico wireless della lightgun:** a batteria, giocando tramite il dongle, la pistola entra in standby dopo un periodo senza utilizzo: **Impostazioni Gun → Input / Output → Risparmio energetico wireless, standby dopo:** (Disabilitato, 5, 15, 30 o 60 minuti; predefinito 15). In standby la radio e l'OLED sono spenti e il LED della scheda lampeggia debolmente in ambra. Premi il grilletto per riprendere, sempre associata allo stesso dongle; la pressione di risveglio non viene inviata come sparo.
+* **Risparmio energetico wireless del pedale:** il pedale spegne la radio dopo 15 minuti senza pressioni (LED del giocatore lampeggiante) e si risveglia con una pressione. Se nessuna pistola si associa entro 5 minuti, smette di cercare (LED 1 e 4 lampeggianti) fino a una pressione.
+* **La calibrazione rifiuta il tiro quando la pistola è troppo ruotata** attorno alla canna (circa 15 gradi con 16:9, 18 con 4:3): la WebApp spiega il motivo, l'OLED mostra `HOLD GUN UPRIGHT`. Dalla pistola, ora un tiro su un bersaglio viene rifiutato anche finché un emettitore non è visto (`LED NOT SEEN`).
 
 ### Miglioramenti e correzioni
 
-* Tracciamento IR affinato e recupero più rapido dei LED temporaneamente nascosti; il layout Square supporta rettangoli verticali e larghi.
-* Modalità pausa Hotkey: i comandi per rumble e solenoide ora funzionano quando non è montato un interruttore fisico.
-* Comando seriale `M0x0` (e `M0x2`): uno stick analogico usato come stick del gamepad torna sullo stick sinistro, come all'avvio.
-* Stick analogico come frecce della tastiera (ESP32): lo stick inclinato non perde più la freccia uscendo dalla pausa o dopo un comando seriale come `M0`.
-* Pulsanti del D-pad del gamepad: se passi tra gamepad e mouse mentre tieni premuta una direzione, quella direzione non ricompare più da sola quando ne premi un'altra.
-* Wireless: il dongle non perde più a volte il rilascio di un pulsante, e la trasmissione wireless non si ferma più raramente fino al riavvio.
-* Dopo la prima calibrazione avviata dalla pistola su una scheda nuova, la pistola torna al funzionamento normale appena la confermi. Come in precedenza, questa prima calibrazione viene salvata automaticamente; quelle avviate dalla pausa vanno salvate separatamente.
-* Fuoco a raffica (comando seriale `M8x1`): esattamente tre colpi, con la pausa corretta tra uno e l'altro, e solenoide sempre spento alla fine.
-* Il salvataggio dalla pausa si può ripetere nella stessa pausa se non riesce.
-* Premendo Start o Select mentre si spara, il solenoide si spegne e la vibrazione finisce normalmente.
-* Spegnere l'interruttore fisico del solenoide durante una raffica la interrompe.
-* Il grilletto non resta più premuto sul computer se, mentre lo tieni premuto, spegni l'interruttore fisico del solenoide o della vibrazione, si avvia MAMEHOOKER o entri in pausa.
-* Quando il sensore di temperatura rileva una temperatura troppo alta o segnala un guasto, il solenoide non scatta più, compresi i colpi singoli, e una raffica fermata dalla temperatura non riparte più da sola. Lo stesso vale per i comandi del solenoide di MAMEHOOKER.
-* Il solenoide non resta più acceso se esci dallo schermo durante un colpo singolo tenendo premuto il grilletto, oppure se la modalità di fuoco viene cambiata con un comando `M8` durante un colpo.
-* Gli impulsi di vibrazione MAMEHOOKER con durate personalizzate ora vengono eseguiti tutti.
-* MAMEHOOKER: spegnendo l'interruttore fisico del solenoide o della vibrazione durante il gioco, gli effetti in corso vengono annullati e non ripartono più da soli quando lo riaccendi.
-* Modalità pausa: rumble o solenoide cambiati dopo un salvataggio si possono salvare di nuovo nella stessa pausa.
-* App desktop, Mappatura Pulsanti: cambiando il tipo di un'uscita, la pistola riceve l'uscita mostrata.
-* Guide utente bilingui riscritte: consulta il [manuale operativo](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/lightgun/src/README.md#versione-italiana).
+* Tracciamento più stabile quando si vedono solo due o tre emettitori: quelli mancanti vengono ricostruiti dall'ultima forma completa, tenendo conto della prospettiva.
+* Anche il layout Diamond usa ora il tracciamento affinato.
+* Il layout Square tiene conto della lente della telecamera, e il filtro anti-tremolio si adatta alla grandangolare PAJ7025R3.
+* Il manuale riporta la distanza minima di calibrazione per ogni telecamera e dimensione dello schermo: vedi [Come calibrare](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/lightgun/src/README.md#come-calibrare-italiano).
+* Il pedale funziona a 80 MHz per consumare meno batteria.
+* Librerie aggiornate: LovyanGFX 1.2.35 e arduino-pico 6.3.1 (RP2040).
+* Elenco completo delle modifiche nella [cronologia modifiche](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/CHANGELOG.md#versione-italiana).
 
 ### Note di installazione e utilizzo
 
-* Un solo file firmware per scheda, qualunque sia la telecamera. L'installazione pulita usa lo stesso file ma elimina tutte le impostazioni e calibrazioni.
-* Passando dalla 6.2.1 è consigliata un'installazione pulita: annota prima le impostazioni, poi configura e calibra di nuovo.
+* **Aggiornamento dalla 7.0.0:** un aggiornamento normale mantiene impostazioni, pin e profili di calibrazione. Calibra di nuovo ogni profilo per avere l'affinamento con gli angoli e, se la usi, la correzione parallasse.
+* **Se arrivi dalla 6.2.1:** è consigliata un'installazione pulita; annota prima le impostazioni, poi configura e calibra di nuovo. I file di layout esportati con la 6.2.1 non si possono importare: reimposta i pin ed esporta un nuovo file.
 * Usa firmware di questa stessa release per lightgun, dongle e pedale.
-* I file di layout esportati con la 6.2.1 non si possono importare: annota i pin prima dell'aggiornamento, reimpostali ed esporta un nuovo file.
+* Il risparmio energetico wireless della lightgun è attivo per impostazione predefinita (15 minuti, solo a batteria tramite il dongle): cambialo o disattivalo in **Impostazioni Gun → Input / Output**.
+* Un solo file firmware per scheda, qualunque sia la telecamera. L'installazione pulita usa lo stesso file ma elimina tutte le impostazioni e calibrazioni.
+* Per aggiornare una pistola che esegue già la 7.0.0 o successiva, tieni premuti **Grilletto + A** all'accensione, per circa 2 secondi, oppure lascia che il Web Flasher la riavvii in modalità aggiornamento (la porta seriale poi cambia: seleziona la nuova porta e riprova). Per la prima installazione o un recupero usa i pulsanti BOOT/RESET della scheda. Installa dalla porta USB OTG della pistola, non tramite il dongle.
 * Se il pin del sensore di temperatura è assegnato ma il TMP36 non è montato, il solenoide non scatta. I layout predefiniti di ESP32-S3 DevKitC-1 e Waveshare ESP32-S3 Pico assegnano questo pin: senza il sensore, attiva **Usa pin personalizzati** in **Layout Scheda** e imposta **Sensore di temperatura** su **Non assegnato**.
 * L'avvio della WebApp offline sostituisce la porta seriale USB della pistola con la rete USB, anche se configuri via Wi-Fi. Mentre un'App di configurazione è collegata, il gioco normale è sospeso. Al termine della configurazione salva e riavvia normalmente.
-* Il Web Flasher può anche riavviare da solo in modalità aggiornamento una pistola che esegue la 7.0.0. Dopo questo riavvio la porta seriale cambia: seleziona la nuova porta e riprova.
 
 ---
 

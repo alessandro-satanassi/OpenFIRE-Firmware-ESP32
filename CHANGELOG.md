@@ -10,10 +10,35 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
-* **Wireless pedal power saving:** when left on, the pedal switches off its radio after 15 minutes without presses (player LED blinking) and wakes up with a press, still paired to the same gun. If no gun pairs with it within 5 minutes, it stops searching (LEDs 1 and 4 blinking) and a press restarts it. The pedal also runs at 80 MHz to use less battery.
 ### Changed
 ### Fixed
 ### Breaking Changes
+
+---
+
+## [7.1.0] - 2026-11-07
+
+### Added
+
+* **Calibration with the four corners:** calibrating from the WebApp, the desktop App or the gun now uses ten targets: centre, the four edges, the four corners and centre again. The corners measure how the emitters sit around the screen and correct small differences in their placement. Every shot is used to refine the result, so a single imprecise shot or a camera mounted slightly crooked weighs much less, and the aim is more accurate across the whole screen, corners included. With an OLED display the steps go from 1/10 to 10/10 and the corners show `CORNER`; in the WebApp ten dots show the progress and the target glides to the next point.
+* **Parallax correction (camera below the sight):** a new setting in **Gun Settings → CAMERA Model**, behind **Unlock CAMERA Modification**. With the camera mounted lower than the sight, it keeps the aim on target when you play closer to or farther from the screen than where you calibrated. Leave it at **0** (default) when the camera is on the sight line; after changing it, calibrate each profile once.
+* **Wireless power saving for the lightgun:** when the gun runs on battery and plays through the dongle, it goes into standby after the chosen period of inactivity, for example when you put it down. Choose the time in **Gun Settings → Input / Output → Wireless power saving, standby after:** (**Disabled**, 5, 15, 30 or 60 minutes; default 15). In standby the radio and the OLED display are off and the board's LED blinks faintly amber every few seconds. Pull the trigger to resume, still paired to the same dongle: the wake-up pull is not sent as a shot. If the dongle no longer answers (computer switched off, dongle restarted), the gun restarts as at power-on.
+* **Wireless pedal power saving:** when left on, the pedal switches off its radio after 15 minutes without presses (player LED blinking) and wakes up with a press, still paired to the same gun. If no gun pairs with it within 5 minutes, it stops searching (LEDs 1 and 4 blinking) and a press restarts it. The pedal also runs at 80 MHz to use less battery.
+* **Calibration refuses a shot while the gun is rotated too much** around the barrel (beyond about 15 degrees with a 16:9 screen, 18 with 4:3): the WebApp window explains why, and the OLED display shows `HOLD GUN UPRIGHT`. In the calibration started from the gun, a target shot is now also refused while the camera does not see all four emitters (`LED NOT SEEN` on the OLED display).
+
+### Changed
+
+* **Steadier tracking when some emitters leave the view:** when the camera sees only two or three emitters, for example close to the screen edges, the missing ones are rebuilt from the last complete shape, taking perspective into account, for a steadier and more accurate pointer.
+* **The Diamond layout now uses the refined tracking** of the Square layout too.
+* The Square layout takes the camera lens into account for the real shape of the emitter rectangle, and the jitter filter adapts to the wide-angle lens of the PAJ7025R3.
+* The minimum calibration distance for each camera and screen size is listed in the manual ([How to Calibrate](lightgun/src/README.md#how-to-calibrate)).
+* Updated libraries: LovyanGFX 1.2.35 (all devices) and arduino-pico 6.3.1 (RP2040 boards).
+
+### Updating from 7.0.0
+
+* A normal update is enough: settings, pins and calibration profiles are kept. Calibrate each profile again to get the corner refinement and, if you use it, the parallax correction.
+* Use lightgun, dongle and pedal firmware from the same release.
+* Wireless power saving is enabled by default (15 minutes): choose another time, or **Disabled**, in **Gun Settings → Input / Output**.
 
 ---
 
@@ -95,10 +120,35 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 
 ## [Non rilasciato]
 ### Aggiunte
-* **Risparmio energetico del pedale wireless:** se resta acceso, il pedale spegne la radio dopo 15 minuti senza pressioni (LED del giocatore lampeggiante) e si risveglia con una pressione, sempre associato alla stessa pistola. Se nessuna pistola si associa entro 5 minuti, smette di cercare (LED 1 e 4 lampeggianti) e una pressione lo riavvia. Il pedale funziona inoltre a 80 MHz per consumare meno batteria.
 ### Modifiche
 ### Correzioni
 ### Modifiche Incompatibili
+
+---
+
+## [7.1.0] - 2026-11-07
+
+### Aggiunte
+
+* **Calibrazione con i quattro angoli:** la calibrazione dalla WebApp, dall'App desktop o dalla pistola usa ora dieci bersagli: centro, i quattro bordi, i quattro angoli e di nuovo centro. Gli angoli misurano come sono disposti gli emettitori attorno allo schermo e correggono piccole differenze nel loro posizionamento. Ogni tiro serve ad affinare il risultato, così un singolo tiro impreciso o una telecamera montata un po' storta pesano molto meno, e la mira è più precisa su tutto lo schermo, angoli compresi. Con un display OLED i passi vanno da 1/10 a 10/10 e gli angoli mostrano `CORNER`; nella WebApp dieci pallini mostrano l'avanzamento e il bersaglio scorre fino al punto successivo.
+* **Correzione parallasse (telecamera sotto il mirino):** una nuova impostazione in **Impostazioni Gun → Modello TELECAMERA**, dietro **Sblocca modifica TELECAMERA**. Con la telecamera montata più in basso del mirino, mantiene la mira sul bersaglio quando giochi più vicino o più lontano dallo schermo rispetto a dove hai calibrato. Lasciala a **0** (predefinito) se la telecamera è sulla linea del mirino; dopo averla cambiata, calibra una volta ogni profilo.
+* **Risparmio energetico wireless della lightgun:** quando la pistola funziona a batteria e gioca tramite il dongle, entra in standby dopo il periodo di inattività scelto, per esempio quando la appoggi. Scegli il tempo in **Impostazioni Gun → Input / Output → Risparmio energetico wireless, standby dopo:** (**Disabilitato**, 5, 15, 30 o 60 minuti; predefinito 15). In standby la radio e il display OLED sono spenti e il LED della scheda lampeggia debolmente in ambra ogni pochi secondi. Premi il grilletto per riprendere, sempre associata allo stesso dongle: la pressione di risveglio non viene inviata come sparo. Se il dongle non risponde più (computer spento, dongle riavviato), la pistola riparte come all'accensione.
+* **Risparmio energetico del pedale wireless:** se resta acceso, il pedale spegne la radio dopo 15 minuti senza pressioni (LED del giocatore lampeggiante) e si risveglia con una pressione, sempre associato alla stessa pistola. Se nessuna pistola si associa entro 5 minuti, smette di cercare (LED 1 e 4 lampeggianti) e una pressione lo riavvia. Il pedale funziona inoltre a 80 MHz per consumare meno batteria.
+* **La calibrazione rifiuta il tiro quando la pistola è troppo ruotata** attorno alla canna (oltre circa 15 gradi con uno schermo 16:9, 18 con 4:3): la finestra della WebApp spiega il motivo e il display OLED mostra `HOLD GUN UPRIGHT`. Nella calibrazione avviata dalla pistola, ora un tiro su un bersaglio viene rifiutato anche finché la telecamera non vede tutti e quattro gli emettitori (`LED NOT SEEN` sul display OLED).
+
+### Modifiche
+
+* **Tracciamento più stabile quando alcuni emettitori escono dalla vista:** quando la telecamera vede solo due o tre emettitori, per esempio vicino ai bordi dello schermo, quelli mancanti vengono ricostruiti dall'ultima forma completa, tenendo conto della prospettiva, per un puntatore più stabile e preciso.
+* **Anche il layout Diamond usa ora il tracciamento affinato** del layout Square.
+* Il layout Square tiene conto della lente della telecamera per la forma reale del rettangolo degli emettitori, e il filtro anti-tremolio si adatta alla lente grandangolare della PAJ7025R3.
+* Il manuale riporta la distanza minima di calibrazione per ogni telecamera e dimensione dello schermo ([Come calibrare](lightgun/src/README.md#come-calibrare-italiano)).
+* Librerie aggiornate: LovyanGFX 1.2.35 (tutti i dispositivi) e arduino-pico 6.3.1 (schede RP2040).
+
+### Aggiornamento dalla 7.0.0
+
+* Basta un aggiornamento normale: impostazioni, pin e profili di calibrazione vengono mantenuti. Calibra di nuovo ogni profilo per avere l'affinamento con gli angoli e, se la usi, la correzione parallasse.
+* Usa firmware di lightgun, dongle e pedale della stessa release.
+* Il risparmio energetico wireless è attivo per impostazione predefinita (15 minuti): scegli un altro tempo, o **Disabilitato**, in **Impostazioni Gun → Input / Output**.
 
 ---
 
