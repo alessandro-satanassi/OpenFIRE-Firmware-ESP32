@@ -197,10 +197,17 @@
             for (let i = 0; i < BUTTON_COUNT; ++i)
                 buttons.push(new Array(BUTTON_DESC_SIZE).fill(0));
 
+            // Refined lens values that a firmware does not send stay "camera record" (not 0.0).
+            const settings = new Array(this.settingsTypesCount).fill(0);
+            const T = this.shared.settingsTypes_e;
+            if (this.shared.lensValueUnset !== undefined)
+                for (const name of ['cameraLensK1', 'cameraLensK2', 'cameraLensFocal'])
+                    if (T[name] !== undefined) settings[T[name]] = this.shared.lensValueUnset;
+
             return {
                 toggles: new Array(this.boolTypesCount).fill(false),
                 pins: new Array(this.boardInputsCount).fill(this.shared.boardInputs_e.btnUnmapped),
-                settings: new Array(this.settingsTypesCount).fill(0),
+                settings,
                 buttons,
                 profiles: [],
                 selectedProfile: -1,

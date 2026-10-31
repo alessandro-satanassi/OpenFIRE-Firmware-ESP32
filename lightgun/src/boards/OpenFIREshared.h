@@ -178,6 +178,15 @@ public:
     static constexpr int standbyMinutesChoices[] = { 0, 5, 15, 30, 60 };
     static constexpr int standbyMinutesDefault = 15;
 
+    // Lens values refined for the fitted camera (settings[cameraLensK1/K2/Focal], WebApp "Refine lens"):
+    // the bits of a float. lensValueUnset (all ones, a NaN) keeps the value of the camera record,
+    // and every lens value returns to it when the camera model changes.
+    // /
+    // Valori della lente affinati per la cam montata (settings[cameraLensK1/K2/Focal], "Affina lente"
+    // della WebApp): i bit di un float. lensValueUnset (tutti uno, un NaN) mantiene il valore del record
+    // della cam, e ogni valore della lente torna a quello quando cambia il modello della cam.
+    static constexpr uint32_t lensValueUnset = 0xFFFFFFFF;
+
     // For Apps to use for lists of pin functions
     char* boardInputs_sortedStr[boardInputsCount+1];
 
@@ -249,6 +258,9 @@ public:
         inputInvertMask,    // bit N = invert input function N (see invertibleInputs)
         cameraParallax,     // camera below the sight line, percent of the vertical LED distance (0 = none)
         standbyMinutes,     // wireless standby minutes, one of standbyMinutesChoices (0 = disabled)
+        cameraLensK1,       // lens radial K1 refined for the fitted camera (float bits, lensValueUnset = camera record)
+        cameraLensK2,       // lens radial K2 refined for the fitted camera (float bits, lensValueUnset = camera record)
+        cameraLensFocal,    // lens focal ratio refined for the fitted camera (float bits, lensValueUnset = camera record)
         // Add here
         settingsTypesCount
     } settingsTypes_e;
@@ -273,6 +285,9 @@ public:
         {"InputInvertMask",     inputInvertMask     },
         {"CamParallax",         cameraParallax      },
         {"StandbyMinutes",      standbyMinutes      },
+        {"CamLensK1",           cameraLensK1        },
+        {"CamLensK2",           cameraLensK2        },
+        {"CamLensFocal",        cameraLensFocal     },
     };
 
     enum {
@@ -413,6 +428,8 @@ public:
         sCurrentProf,
         sTestBlobs, // 152: IR test and calibration IR view, blob area/brightness of each vertex
         sCaliIrWarning, // 153: calibration target shot refused: bit 0 emitter missing (IR view), bit 1 gun rolled too far
+        sLensInfo,      // 154: IR test with irTestFlagLens: camera coordinate space and lens values (see OpenFIREserial.cpp)
+        sLensSample,    // 155: IR test with irTestFlagLens: the four tracker vertices, full resolution
 
         // Push settings to board
         sCommitStart = 0xAA, // 170
@@ -465,6 +482,12 @@ public:
         caliFlagCorners = 0x02  // four more targets at the screen corners after the right edge
                                 // (sCaliStageUpd 8..11: top-right, bottom-right, bottom-left, top-left)
     } caliStartFlags_e;
+
+    // Optional second byte of sIRTest (App to board). Older Apps send one byte and older
+    // firmware ignores the second one (it then sends no sLensInfo).
+    enum {
+        irTestFlagLens = 0x01   // lens refinement: sLensInfo once, then sLensSample instead of sTestCoords
+    } irTestFlags_e;
 
     enum {
         usbPID = 0,

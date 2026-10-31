@@ -84,8 +84,20 @@ public:
     };
 
     //static bool Select(CameraModel model);
+    // EN: The selected camera record with the refined lens values of settings applied (if any).
+    // IT: Il record della cam selezionata con applicati i valori della lente affinati (se presenti).
     static const CameraProfile& Profile();
+    // EN: The selected camera record exactly as defined in OpenFIRECameraProfile.h.
+    // IT: Il record della cam selezionata esattamente come definito in OpenFIRECameraProfile.h.
+    static const CameraProfile& RecordProfile();
     static CameraModel Model();
+    static bool HasProfile() { return activeProfile != nullptr; }
+
+    // EN: true when the curve 1 + K1 q + K2 q^2 is physically valid over the field (q = 0..2);
+    //     minGain/maxGain = its extremes there.
+    // IT: true se la curva 1 + K1 q + K2 q^2 e' fisicamente valida nel campo (q = 0..2);
+    //     minGain/maxGain = i suoi estremi.
+    static bool LensCurveValid(float k1, float k2, float& minGain, float& maxGain);
 
     static bool Begin();
     static void End();
@@ -130,7 +142,10 @@ private:
     };
 
     static bool Select();
+    static void ApplyLensSettings(CameraProfile& profile);
     static const CameraProfile* activeProfile;
+    static const CameraProfile* activeRecord;
+    static CameraProfile runtimeProfile;
     static const CameraOps* activeOps;
     static ReadFn activeRead;
     static const int* activeX;

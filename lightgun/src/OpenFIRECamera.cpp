@@ -11,6 +11,8 @@
  */
 
 #include <Arduino.h>
+#include <cmath>
+#include <cstring>
 #include <Wire.h>
 #include <SPI.h>
 #include <DFRobotIRPositionEx.h>
@@ -40,6 +42,8 @@ SPIClass pajSPI(FSPI);
 }
 
 const CameraProfile* OpenFIRECamera::activeProfile = nullptr;
+const CameraProfile* OpenFIRECamera::activeRecord = nullptr;
+CameraProfile OpenFIRECamera::runtimeProfile = {};
 const OpenFIRECamera::CameraOps* OpenFIRECamera::activeOps = nullptr;
 OpenFIRECamera::ReadFn OpenFIRECamera::activeRead = nullptr;
 const int* OpenFIRECamera::activeX = nullptr;
@@ -122,18 +126,26 @@ bool OpenFIRECamera::Select() {
         // DFRobot, the model of a clean installation, so that the profile is never empty.
         default:
         case OF_Const::DFRobot_SEN0158:
-            activeProfile = &OpenFIRE_CameraProfiles::DFRobot_SEN0158;
+            activeRecord = &OpenFIRE_CameraProfiles::DFRobot_SEN0158;
             activeOps = &DFRobotOps;
             break;
         case OF_Const::PixArt_PAJ7025R2:
-            activeProfile = &OpenFIRE_CameraProfiles::PixArt_PAJ7025R2;
+            activeRecord = &OpenFIRE_CameraProfiles::PixArt_PAJ7025R2;
             activeOps = &PAJ7025R2Ops;
             break;
         case OF_Const::PixArt_PAJ7025R3:
-            activeProfile = &OpenFIRE_CameraProfiles::PixArt_PAJ7025R3;
+            activeRecord = &OpenFIRE_CameraProfiles::PixArt_PAJ7025R3;
             activeOps = &PAJ7025R3Ops;
             break;
     }
+
+    // EN: Every consumer reads the camera record through Profile(): a copy in RAM, where the
+    //     lens values refined for this camera (if any) replace the record's own.
+    // IT: Ogni consumatore legge il record della cam tramite Profile(): una copia in RAM, dove i
+    //     valori della lente affinati per questa cam (se presenti) sostituiscono quelli del record.
+    runtimeProfile = *activeRecord;
+    ApplyLensSettings(runtimeProfile);
+    activeProfile = &runtimeProfile;
 
     activeRead = activeOps->readBasic;
     activeExtendedCapabilities = activeOps->extendedCapabilities;
@@ -142,6 +154,87 @@ bool OpenFIRECamera::Select() {
 
 const CameraProfile& OpenFIRECamera::Profile() {
     return *activeProfile;
+}
+
+const CameraProfile& OpenFIRECamera::RecordProfile() {
+    return *activeRecord;
+}
+
+// EN: A refined lens value saved in settings (float bits); false = keep the record's value.
+// IT: Un valore della lente affinato salvato nelle impostazioni (bit del float); false = valore del record.
+static bool LensSetting(uint8_t index, float& value) {
+    const uint32_t bits = OF_Prefs::settings[index];
+    if (bits == OF_Const::lensValueUnset)
+        return false;
+    float v;
+    memcpy(&v, &bits, sizeof(v));
+    if (!std::isfinite(v))
+        return false;
+    value = v;
+    return true;
+}
+
+bool OpenFIRECamera::LensCurveValid(float k1, float k2, float& minGain, float& maxGain) {
+    // EN: Over the whole field, up to the corners (q = r^2 = 2), the correction factor
+    //     1 + K1 q + K2 q^2 must stay positive and the corrected radius r (1 + K1 r^2 + K2 r^4)
+    //     must grow with r: 1 + 3 K1 q + 5 K2 q^2 > 0 (the radial order of the points is kept).
+    // IT: Su tutto il campo, fino agli angoli (q = r^2 = 2), il fattore di correzione
+    //     1 + K1 q + K2 q^2 deve restare positivo e il raggio corretto r (1 + K1 r^2 + K2 r^4)
+    //     deve crescere con r: 1 + 3 K1 q + 5 K2 q^2 > 0 (l'ordine radiale dei punti si conserva).
+    // EN: Both are parabolas in q: their extremes over [0, Q_MAX] are at the two ends or at the
+    //     vertex -b/(2c), when it falls inside, so the check is exact.
+    // IT: Entrambe sono parabole in q: i loro estremi in [0, Q_MAX] sono ai due capi o nel
+    //     vertice -b/(2c), se cade dentro, quindi il controllo e' esatto.
+    constexpr float Q_MAX = 2.0f;
+    constexpr float K_LIMIT = 2.0f;
+    if (!(fabsf(k1) <= K_LIMIT) || !(fabsf(k2) <= K_LIMIT))
+        return false;
+    // EN: min/max of 1 + b q + c q^2 over [0, Q_MAX]. / IT: min/max di 1 + b q + c q^2 in [0, Q_MAX].
+    auto range = [](float b, float c, float& lo, float& hi) {
+        const float end = 1.0f + b * Q_MAX + c * Q_MAX * Q_MAX;
+        lo = fminf(1.0f, end);
+        hi = fmaxf(1.0f, end);
+        if (c != 0.0f) {
+            const float q = -b / (2.0f * c);
+            if (q > 0.0f && q < Q_MAX) {
+                const float v = 1.0f + b * q + c * q * q;
+                lo = fminf(lo, v);
+                hi = fmaxf(hi, v);
+            }
+        }
+    };
+    float slopeMin, slopeMax;
+    range(k1, k2, minGain, maxGain);
+    range(3.0f * k1, 5.0f * k2, slopeMin, slopeMax);
+    return minGain > 0.0f && slopeMin > 0.0f && std::isfinite(maxGain);
+}
+
+void OpenFIRECamera::ApplyLensSettings(CameraProfile& profile) {
+    float k1 = profile.lensRadialK1;
+    float k2 = profile.lensRadialK2;
+    const bool customK1 = LensSetting(OF_Const::cameraLensK1, k1);
+    const bool customK2 = LensSetting(OF_Const::cameraLensK2, k2);
+
+    float minGain, maxGain;
+    if ((customK1 || customK2) && LensCurveValid(k1, k2, minGain, maxGain)) {
+        profile.lensRadialK1 = k1;
+        profile.lensRadialK2 = k2;
+        // EN: The limits are safety bounds, not lens data: they are only widened, so that they
+        //     never clip the refined curve inside the field.
+        // IT: I limiti sono protezioni, non dati della lente: vengono solo allargati, cosi'
+        //     non tagliano mai la curva affinata dentro il campo.
+        if (minGain < profile.lensCorrectionMin)
+            profile.lensCorrectionMin = minGain;
+        if (maxGain > profile.lensCorrectionMax)
+            profile.lensCorrectionMax = maxGain;
+    }
+
+    // EN: A refined focal ratio is used only within a factor 2 of the record's (known) value.
+    // IT: Un rapporto focale affinato si usa solo entro un fattore 2 dal valore (noto) del record.
+    float focal;
+    if (profile.lensFocalRatio > 0.0f && LensSetting(OF_Const::cameraLensFocal, focal) &&
+        focal >= profile.lensFocalRatio * 0.5f && focal <= profile.lensFocalRatio * 2.0f)
+        profile.lensFocalRatio = focal;
 }
 
 CameraModel OpenFIRECamera::Model() {

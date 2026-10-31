@@ -183,6 +183,12 @@ public:
     // Calibration started by an App that asked for the four corner targets (sCaliStart,
     // caliFlagCorners). Without an App the corners are always used (see ExecCalMode).
     static inline bool caliCorners = false;
+    // EN: IR test started by the WebApp lens refinement (sIRTest + irTestFlagLens).
+    // IT: Test IR avviato dall'affinamento lente della WebApp (sIRTest + irTestFlagLens).
+    static inline bool lensSamples = false;
+    static void SendLensInfo();
+    static void SendLensSample(const int32_t (&vertexX)[4], const int32_t (&vertexY)[4],
+                               bool diamond, bool complete);
 
     static inline uint32_t camWarningTimestamp = 0;
     #define CAM_WARNING_INTERVAL 3000

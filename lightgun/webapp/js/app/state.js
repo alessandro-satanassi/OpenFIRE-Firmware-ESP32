@@ -612,6 +612,47 @@
             if (index === T.customLEDcount && value < settings[T.customLEDstatic]) settings[T.customLEDstatic] = value;
         }
 
+        // ----- Camera model and refined lens values ----------------------------------------
+        // The lens values belong to the fitted camera: a different model starts again from its
+        // own record (lensValueUnset), going back to the saved model gives back the saved values.
+
+        lensIndices() {
+            const T = this.T;
+            return [T.cameraLensK1, T.cameraLensK2, T.cameraLensFocal].filter((i) => i !== undefined);
+        }
+
+        setCameraModel(model) {
+            const T = this.T;
+            this.cur.settings[T.cameraModel] = model >>> 0;
+            const unset = this.S.lensValueUnset;
+            const saved = this.orig && this.orig.settings[T.cameraModel] === (model >>> 0);
+            for (const i of this.lensIndices())
+                this.cur.settings[i] = saved ? this.orig.settings[i] : unset;
+        }
+
+        cameraChangedUnsaved() {
+            const i = this.T.cameraModel;
+            return !!this.cur && !!this.orig && this.cur.settings[i] !== this.orig.settings[i];
+        }
+
+        /** Refined lens value (number) or null = the camera record's value. key: k1, k2, focal. */
+        lensValue(key) {
+            const i = { k1: this.T.cameraLensK1, k2: this.T.cameraLensK2, focal: this.T.cameraLensFocal }[key];
+            if (i === undefined || !OF.LensFit) return null;
+            return OF.LensFit.fromBits(this.cur.settings[i]);
+        }
+
+        lensCustomised() { return ['k1', 'k2', 'focal'].some((key) => this.lensValue(key) !== null); }
+
+        /** values: { k1, k2, focal }, null = camera record value. */
+        setLensValues(values) {
+            const T = this.T;
+            const v = values || {};
+            const pairs = [[T.cameraLensK1, v.k1], [T.cameraLensK2, v.k2], [T.cameraLensFocal, v.focal]];
+            for (const [i, value] of pairs)
+                if (i !== undefined) this.cur.settings[i] = OF.LensFit ? OF.LensFit.toBits(value) : this.S.lensValueUnset;
+        }
+
         // ----- Button mapping (Qt btnFuncTypeBox / btnFuncBox) ----------------------
 
         buttonType(button, slot) { return this.cur.buttons[button][slot * 2]; }

@@ -676,6 +676,14 @@
                 if (this.window) this.window.drawTest(payload);
                 break;
 
+            case C.sLensInfo:
+                if (this.window && this.window.setLensInfo) this.window.setLensInfo(payload);
+                break;
+
+            case C.sLensSample:
+                if (this.window && this.window.addLensSample) this.window.addLensSample(payload);
+                break;
+
             case C.sClearFlash:
                 this.showClearFlashDone();
                 break;
@@ -860,6 +868,41 @@
             win.open();
         }
 
+        /** Lens refinement of the fitted camera (Gun Settings > camera): IR test with irTestFlagLens. */
+        async openLensFit() {
+            const t = OF.UI.t;
+            const esc = OF.UI.escape;
+            if (!this.connected || this.irTestStarting || this.irTestActive) return; // double click
+            if (this.window && this.window.mode !== OF.FullscreenWindow.MODE_ALIGNMENT) return;
+            if (this.state.cameraChangedUnsaved()) {
+                OF.UI.alert(t('Refine camera lens'), esc(t('Save the camera model first: the lens is refined for the camera the gun is using.')), 'info');
+                return;
+            }
+            const flag = (this.S.irTestFlags_e || {}).irTestFlagLens || 1;
+            const session = this.session;
+            this.irTestStarting = true;
+            // Opened inside the click (fullscreen needs it); the gun answers with sLensInfo.
+            if (this.window) this.window.shutdown();
+            const win = new OF.LensFitWindow({ onExit: (mode, values) => this.onWindowExit(win, mode, values) });
+            this.window = win;
+            win.open();
+            try {
+                if (!await this.sendCommand(this.C.sIRTest, [1, flag]) || session !== this.session) {
+                    if (this.window === win) win.shutdown();
+                    return;
+                }
+            } finally {
+                if (session === this.session) this.irTestStarting = false;
+            }
+            if (win.closed) {
+                // Closed while the gun was entering the test: leave it again.
+                if (!await this.sendCommand(this.C.sIRTest, [0])) this.failOperation();
+                return;
+            }
+            this.irTestActive = true;
+            this.refresh();
+        }
+
         async openIRTest() {
             const t = OF.UI.t;
             if (!this.connected || this.irTestStarting || this.irTestActive) return; // double click
@@ -902,6 +945,21 @@
                 else if (result === 'malformed') this.status.show(t('Calibration for Profile ') + n + t(' returned with malformed values.'), 10000);
                 else this.status.show(t('Cancelled Calibration for Profile ') + n, 10000);
                 this.refresh();
+            } else if (OF.LensFitWindow && mode === OF.LensFitWindow.MODE_LENSFIT) {
+                if (values && this.state.loaded) {
+                    this.state.setLensValues(values);
+                    this.refresh();
+                    this.status.show(t('New lens values ready: save them, then calibrate again every profile you use.'), 10000);
+                }
+                if (!this.irTestActive || !this.connection.isDocked) {
+                    this.irTestActive = false;
+                    this.refresh();
+                } else if (await this.sendCommand(this.C.sIRTest, [0])) {
+                    this.irTestActive = false;
+                    this.refresh();
+                } else {
+                    this.failOperation();
+                }
             } else if (mode === OF.FullscreenWindow.MODE_IRTEST) {
                 if (!this.connection.isDocked) {
                     this.irTestActive = false;

@@ -98,6 +98,32 @@ __attribute__((noinline)) void CaptureCalibrationFrame() {
     else calibrationSession->invalidate();
 }
 
+// WebApp lens refinement: the measured vertices of this frame (tracker identities, before the
+// spring and the filters), with the same checks as CaptureCalibrationFrame(): four emitters
+// seen, roll within the limit that keeps their identities, and four distinct, exact matches to
+// THIS camera read. false = the frame must not be used for the lens fit.
+bool LensMeasuredVertices(bool diamond, int32_t (&vx)[4], int32_t (&vy)[4]) {
+    const CameraProfile& p = OpenFIRECamera::Profile();
+    int32_t xy[8];
+    if((OpenFIRECamera::Seen() & 15) != 15 || !CaliRollWithin(1) ||
+       !(diamond ? FW_Common::OpenFIREdiamond.calibrationPoints(xy)
+                 : FW_Common::OpenFIREsquare.calibrationPoints(xy)))
+        return false;
+    uint8_t used = 0;
+    for(uint8_t i = 0; i < 4; ++i) {
+        bool matched = false;
+        for(uint8_t j = 0; j < 4; ++j) if(!(used & (1u << j))) {
+            const int32_t x = (diamond ? OpenFIRECamera::XPositions()[j]
+                                       : p.camMaxX-OpenFIRECamera::XPositions()[j])*p.camToMouseMult;
+            const int32_t y = OpenFIRECamera::YPositions()[j]*p.camToMouseMult;
+            if(xy[2*i] == x && xy[2*i+1] == y) {used |= 1u << j;matched = true;break;}
+        }
+        if(!matched) return false;
+    }
+    for(uint8_t i = 0; i < 4; ++i) { vx[i] = xy[2*i]; vy[i] = xy[2*i+1]; }
+    return true;
+}
+
 // Profile fields of the LED shape measured with the corner shots.
 OpenFIRECalibration::Shape ProfileShape(const OF_Prefs::ProfileData_t& profile) {
     return {profile.skewX, profile.skewY, profile.keystoneX, profile.keystoneY};
@@ -1229,6 +1255,52 @@ static inline int32_t ClampTestCoord(int32_t value)
     return value;
 }
 
+// WebApp lens refinement (sIRTest with irTestFlagLens). The WebApp fits the lens values from
+// these vertices: the firmware only reports what the tracker sees, it does not know the camera.
+//
+// sLensSample payload (34 bytes): [0] format version (1), [1] flags (bit 0 = Diamond layout,
+// bit 1 = complete: the four vertices measured in this camera read, see LensMeasuredVertices),
+// then the four tracker vertices x0, y0 .. x3, y3 as int32 little endian, in the tracker's
+// internal camera coordinates (Profile().mouseResX/Y), before lens correction and filtering
+// when complete (otherwise the tracker's output, only to draw). Order: Square TL, TR, BL, BR;
+// Diamond top, right, bottom, left.
+void FW_Common::SendLensSample(const int32_t (&vertexX)[4], const int32_t (&vertexY)[4],
+                               bool diamond, bool complete)
+{
+    constexpr uint8_t LENS_SAMPLE_VERSION = 1;
+    uint8_t payload[2 + 8 * sizeof(int32_t)];
+    payload[0] = LENS_SAMPLE_VERSION;
+    payload[1] = (diamond ? 0x01 : 0x00) | (complete ? 0x02 : 0x00);
+    for(int i = 0; i < 4; ++i) {
+        memcpy(&payload[2 + i * 8], &vertexX[i], sizeof(int32_t));
+        memcpy(&payload[6 + i * 8], &vertexY[i], sizeof(int32_t));
+    }
+    OF_Serial::AppSerialSendEvent(OF_Const::sLensSample, payload, sizeof(payload));
+}
+
+// sLensInfo payload (49 bytes), sent once when the lens refinement starts: [0] format version (1),
+// mouseResX, mouseResY (int32 LE: the space of sLensSample), then two groups of five float32 LE
+// K1, K2, lensCorrectionMax, lensCorrectionMin, lensFocalRatio: first the camera record
+// (the defaults), then the values in use (record + refined values saved in settings).
+void FW_Common::SendLensInfo()
+{
+    constexpr uint8_t LENS_INFO_VERSION = 1;
+    const CameraProfile& record = OpenFIRECamera::RecordProfile();
+    const CameraProfile& active = OpenFIRECamera::Profile();
+    uint8_t payload[1 + 2 * sizeof(int32_t) + 10 * sizeof(float)];
+    payload[0] = LENS_INFO_VERSION;
+    const int32_t res[2] = { active.mouseResX, active.mouseResY };
+    memcpy(&payload[1], res, sizeof(res));
+    const CameraProfile* group[2] = { &record, &active };
+    for(int g = 0; g < 2; ++g) {
+        const float values[5] = { group[g]->lensRadialK1, group[g]->lensRadialK2,
+                                  group[g]->lensCorrectionMax, group[g]->lensCorrectionMin,
+                                  group[g]->lensFocalRatio };
+        memcpy(&payload[9 + g * sizeof(values)], values, sizeof(values));
+    }
+    OF_Serial::AppSerialSendEvent(OF_Const::sLensInfo, payload, sizeof(payload));
+}
+
 static void SendTestBlobs(const int32_t (&vertexXin)[4], const int32_t (&vertexYin)[4],
                           bool diamond, const CameraProfile& profile)
 {
@@ -1725,6 +1797,8 @@ void FW_Common::GetPosition()
                     int32_t rawX[4];
                     int32_t rawY[4];
                     bool outsideFov[4];
+                    int32_t trackerX[4];   // full resolution vertices, for the lens refinement
+                    int32_t trackerY[4];
 
                     // RAW Output for viewing in processing sketch mapped to 1920x1080 screen resolution
                     for (int i = 0; i < 4; ++i) {
@@ -1752,8 +1826,22 @@ void FW_Common::GetPosition()
                         outsideFov[i] =
                             pointX < 0 || pointX > cameraProfile.mouseMaxX ||
                             pointY < 0 || pointY > cameraProfile.mouseMaxY;
+                        trackerX[i] = pointX;
+                        trackerY[i] = pointY;
                     }
 
+                    // WebApp lens refinement (IR test with irTestFlagLens): the vertices only.
+                    // complete = measured vertices of this camera read (no spring, no retained
+                    // or estimated geometry); otherwise the tracker's vertices, only to draw.
+                    if(runMode == FW_Const::RunMode_Processing && lensSamples) {
+                        const bool diamond = OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout != 0;
+                        #ifdef OPENFIRE_CALIBRATION_REFINEMENT
+                            const bool complete = LensMeasuredVertices(diamond, trackerX, trackerY);
+                        #else
+                            const bool complete = false;   // no measured geometry in this build
+                        #endif
+                        SendLensSample(trackerX, trackerY, diamond, complete);
+                    } else
                     // IR test view, and calibration with the WebApp IR view.
                     if(runMode == FW_Const::RunMode_Processing || caliIrView) {
                         int mouseXscaled = mouseX / PERSPECTIVE_SCALE;

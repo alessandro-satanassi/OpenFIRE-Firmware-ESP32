@@ -22,12 +22,14 @@ js/core/transport.js    Web Serial and WebSocket byte streams
 js/core/protocol.js     App protocol (peer of src/OpenFIREserial.cpp in the firmware)
 js/core/i18n.js         translations (OF.i18n.t)
 js/core/boards.js       board data helpers (OF.Boards)
+js/core/lensfit.js      lens refinement: sample collector and solver (OF.LensFit, no DOM)
 js/app/connection.js    connection controller (auto WebSocket on the gun, Web Serial on the site)
 js/app/maps.js          mouse / keyboard / gamepad outputs, profile option lists
 js/app/state.js         configuration being edited and the editing rules of the Qt App (no DOM)
 js/app/ui.js            elements, dialogs, spin boxes, menus, status bar
 js/app/tab-*.js         Board Layout, Button Mapping, Gun Settings, Calibration Profiles, Gun Tests
 js/app/fullscreen.js    calibration, IR emitter alignment and IR camera test screens
+js/app/lensfit-window.js  lens refinement screen (Gun Settings, camera, "Refine lens...")
 js/app/testfont.js      8x8 bitmap typeface of those screens (from the Qt App)
 js/app/windows.js       Boards Previewer and About
 js/app/version.js       says so when the lightgun runs a firmware of another version

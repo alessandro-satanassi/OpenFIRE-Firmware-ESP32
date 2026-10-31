@@ -1625,6 +1625,17 @@ bool OF_Serial::AppSerialDispatchCommit(const AppSerialFrame_s &frame,
         case OF_Const::sSave: {
             const bool complete = !appSerialCommitFailed;
 
+            // EN: The refined lens values belong to the fitted camera: a different camera model
+            //     starts again from its own record (the WebApp does the same, this is a guard).
+            // IT: I valori della lente affinati appartengono alla cam montata: un modello di cam
+            //     diverso riparte dal proprio record (la WebApp fa lo stesso, questa e' una protezione).
+            if(complete && OpenFIRECamera::HasProfile() &&
+               OF_Prefs::settings[OF_Const::cameraModel] != (uint32_t)OpenFIRECamera::Model()) {
+                OF_Prefs::settings[OF_Const::cameraLensK1] = OF_Const::lensValueUnset;
+                OF_Prefs::settings[OF_Const::cameraLensK2] = OF_Const::lensValueUnset;
+                OF_Prefs::settings[OF_Const::cameraLensFocal] = OF_Const::lensValueUnset;
+            }
+
             const bool saved =
                 complete &&
                 FW_Common::SavePreferences() == OF_Prefs::Error_Success;
@@ -1901,10 +1912,16 @@ void OF_Serial::AppSerialDispatchRequest(const AppSerialFrame_s &frame)
     case OF_Const::sIRTest:
         // Leaving test mode is always accepted, also when the camera stopped working
         // while testing: the App would otherwise report the camera error twice.
+        // Optional second byte: irTestFlagLens = WebApp lens refinement (sLensInfo, then sLensSample).
+        FW_Common::lensSamples = frame.payload[0] && frame.length >= 2 &&
+                                 (frame.payload[1] & OF_Const::irTestFlagLens) != 0;
         if(frame.payload[0] && FW_Common::camNotAvailable) {
+            FW_Common::lensSamples = false;
             AppSerialSendError(OF_Const::sErrCam);
         } else if(frame.payload[0]) {
             FW_Common::SetRunMode(FW_Const::RunMode_Processing);
+            if(FW_Common::lensSamples)
+                FW_Common::SendLensInfo();
         } else if(FW_Common::runMode == FW_Const::RunMode_Processing) {
             switch(OF_Prefs::profiles[OF_Prefs::currentProfile].runMode) {
             case FW_Const::RunMode_Normal:

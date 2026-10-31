@@ -241,6 +241,19 @@
                     "whatsThis": "<html><head/><body><p>Corrects the aim when the camera is <span style=\" font-weight:700;\">below the sight line</span> and you play closer to or farther from the screen than where you calibrated. Leave it at <span style=\" font-weight:700;\">0</span> when the camera is on the sight line.</p><p><span style=\" font-weight:700;\">Starting value</span>, for each cm between camera and sight: about 3 on a 27\" monitor, about 1.5 on a 55\" TV. Exact value: cm between camera and sight × 100 / cm between the top and bottom LEDs.</p><p><span style=\" font-weight:700;\">Fine tuning</span>: calibrate, step back to about one and a half times that distance and aim at a point. Cursor above the point: raise the value by 1. Cursor below the point: lower it by 1.</p><p>It takes effect after the next calibration of each profile.</p><p><span style=\" font-weight:700; font-style:italic;\">Default:</span><span style=\" font-style:italic;\"> 0</span></p></body></html>",
                     "accessibleName": "Parallax Correction"
             },
+            "label_cameraLens": {
+                    "text": "Camera lens:"
+            },
+            "cameraLensBox": {
+                    "whatsThis": "<html><head/><body><p>Lens values of the camera fitted in the gun. The camera record gives the default values (for some cameras, such as the PAJ7025 R3, computed from the datasheet); each camera may be a little different, wide-angle ones above all.</p><p><span style=\" font-weight:700;\">Refine lens</span> opens a fullscreen window: sweep the gun over the whole screen, also at the corners and from close, until everything is green. The values that the data really determine are refined (K1, then K2 and the focal ratio), the others keep the default value.</p><p>Do it once, when building the gun, <span style=\" font-weight:700;\">before calibrating</span>: after saving the new values, calibrate again every profile you use.</p><p>Changing the camera model brings back the default values of the new camera.</p></body></html>",
+                    "accessibleName": "Camera Lens"
+            },
+            "cameraLensRefineButton": {
+                    "text": "Refine lens..."
+            },
+            "cameraLensResetButton": {
+                    "text": "Default values"
+            },
             "tinyUSBGroupbox": {
                     "title": "TinyUSB Identifier"
             },
@@ -434,13 +447,22 @@
         track(unlock, 'cameraModelUnlockToggle');
         const cameraNames = ['camModel_DFRobot', 'camModel_PAJ7025R2', 'camModel_PAJ7025R3'];
         const cameraRadios = cameraNames.map((name, model) => track(radio('of-camera-model', text(name, 'text'), false, () => {
-            state.setSetting(T.cameraModel, model);
+            state.setCameraModel(model);   // a different camera starts again from its default lens values
             app.refresh();
         }), name));
+        // Lens values refined for the fitted camera, locked like the model.
+        const lensValues = el('span', { class: 'lens-values' });
+        const lensRefine = el('button', { text: text('cameraLensRefineButton', 'text'),
+            attrs: { type: 'button' }, on: { click: () => app.openLensFit() } });
+        const lensReset = el('button', { text: text('cameraLensResetButton', 'text'),
+            attrs: { type: 'button' }, on: { click: () => { state.setLensValues(null); app.refresh(); } } });
+        const lensRow = track(el('div', { class: 'row center wrap' },
+            el('label', { class: 'field-label', text: text('label_cameraLens', 'text') }), lensValues, lensRefine, lensReset), 'cameraLensBox');
         // Camera below the sight line (parallax), locked like the model: set once when building the gun.
         const camera = fieldset('cameraModelGroupbox', el('div', { class: 'row center' }, unlock),
             el('div', { class: 'row center wrap' }, ...cameraRadios),
-            el('div', { class: 'row center wrap' }, ...number('label_cameraParallax', 'cameraParallaxBox', T.cameraParallax)));
+            el('div', { class: 'row center wrap' }, ...number('label_cameraParallax', 'cameraParallaxBox', T.cameraParallax)),
+            lensRow);
         track(camera, 'cameraModelGroupbox');
 
         // ----- TinyUSB identifier ------------------------------------------------------------------
@@ -540,6 +562,12 @@
                 node.input.disabled = !cameraUnlocked;
             });
             controls.cameraParallaxBox.disabled = !cameraUnlocked;
+            const lens = ['k1', 'k2', 'focal'].map((key) => state.lensValue(key));
+            const names = [t('K1'), t('K2'), t('focal ratio')];
+            lensValues.textContent = lens.every((v) => v === null) ? t('default values') :
+                lens.map((v, i) => names[i] + ' ' + (v === null ? t('default') : v.toFixed(4))).join(' · ');
+            lensRefine.disabled = !cameraUnlocked || !app.connected || app.irTestActive || state.cameraChangedUnsaved();
+            lensReset.disabled = !cameraUnlocked || !state.lensCustomised();
             unlock.input.checked = cameraUnlocked;
 
             usbToggle.input.checked = usbAdvanced;

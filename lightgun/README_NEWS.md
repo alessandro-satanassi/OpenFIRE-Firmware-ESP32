@@ -8,6 +8,7 @@
 - [Normally closed (NC) inputs](src/README.md#normally-closed-nc-inputs)
 - [Calibration and operating manual](src/README.md#how-to-calibrate)
 - [Wireless power saving](src/README.md#camera-display-and-startup-settings)
+- [Camera lens refinement (section 12)](lib/OpenFIREPosition/OpenFIRE-Lens-Correction-EN-IT.md#english)
 - [7.1.0 changelog](../CHANGELOG.md#english-version)
 
 ---
@@ -22,4 +23,5 @@
 - [Ingressi normalmente chiusi (NC)](src/README.md#ingressi-normalmente-chiusi-nc)
 - [Calibrazione e manuale operativo](src/README.md#come-calibrare-italiano)
 - [Risparmio energetico wireless](src/README.md#telecamera-display-e-impostazioni-di-avvio)
+- [Affinamento della lente della telecamera (paragrafo 12)](lib/OpenFIREPosition/OpenFIRE-Lens-Correction-EN-IT.md#italiano)
 - [Cronologia modifiche 7.1.0](../CHANGELOG.md#versione-italiana)

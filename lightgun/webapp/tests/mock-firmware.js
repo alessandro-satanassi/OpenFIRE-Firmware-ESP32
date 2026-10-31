@@ -168,6 +168,12 @@ class MockFirmware {
         // Emitters during a calibration started with caliFlagIrView: 'ok' (four, bright),
         // 'missing' (one not seen) or 'weak' (one dim): the target shots are refused only when 'missing'.
         this.caliIr = options.caliIr || 'ok';
+        // Lens refinement (sIRTest + irTestFlagLens): the simulated camera's lens differs from its
+        // record by lensOffset; lensSupport false = firmware without the lens refinement.
+        this.lensSupport = options.lensSupport !== false;
+        this.lensOffset = options.lensOffset || { k1: 0.05, k2: -0.04, focal: 1 };
+        this.lensSamples = false;
+        this.lensTime = 0;
         this.caliIrView = false;
         this.caliCorners = false;
         // is_pedal_wireless of the firmware: a wireless pedal answered during the start-up,
@@ -205,6 +211,8 @@ class MockFirmware {
         const sv = new DataView(this.settings.buffer);
         defaults.forEach((value, i) => sv.setUint32(i * 4, value, true));
         sv.setUint32(S.settingsTypes_e.standbyMinutes * 4, S.standbyMinutesDefault, true);
+        for (const name of ['cameraLensK1', 'cameraLensK2', 'cameraLensFocal'])
+            if (S.settingsTypes_e[name] !== undefined) sv.setUint32(S.settingsTypes_e[name] * 4, S.lensValueUnset, true);
 
         this.pins = new Int8Array(S.boardInputs_e.boardInputsCount).fill(-1);
 
@@ -859,9 +867,12 @@ class MockFirmware {
             break;
         }
         case C.sIRTest:
-            if (frame.payload[0] && this.camNotAvailable) await this.sendError(C.sErrCam);
-            else if (frame.payload[0]) this.runMode = 'processing';
-            else if (this.runMode === 'processing') this.runMode = 'normal';
+            this.lensSamples = this.lensSupport && !!frame.payload[0] && frame.payload.length >= 2 && !!(frame.payload[1] & 1);
+            if (frame.payload[0] && this.camNotAvailable) { this.lensSamples = false; await this.sendError(C.sErrCam); }
+            else if (frame.payload[0]) {
+                this.runMode = 'processing';
+                if (this.lensSamples) { this.lensTime = 0; this.sendEvent(C.sLensInfo, this.lensInfoPayload()); }
+            } else if (this.runMode === 'processing') this.runMode = 'normal';
             break;
         case C.sCaliProfile: {
             const operation = frame.payload[0];
@@ -1149,7 +1160,13 @@ class MockFirmware {
             if (this.gunMode !== 'docked')
                 return;
 
-            if (!this.dockedSaving && this.runMode === 'processing' && Date.now() - lastCoords >= 50) {
+            if (!this.dockedSaving && this.runMode === 'processing' && this.lensSamples) {
+                // Faster than the firmware's 50 ms, so that a browser check completes quickly.
+                if (Date.now() - lastCoords >= 4) {
+                    lastCoords = Date.now();
+                    this.sendEvent(this.C.sLensSample, this.lensSamplePayload());
+                }
+            } else if (!this.dockedSaving && this.runMode === 'processing' && Date.now() - lastCoords >= 50) {
                 lastCoords = Date.now();
                 const coords = new Uint8Array(48);
                 const v = new DataView(coords.buffer);
@@ -1172,6 +1189,71 @@ class MockFirmware {
 
     queueEvent(command, payload) {
         this.pendingEvents.push([command, payload]);
+    }
+
+    // ----- Lens refinement (FW_Common::SendLensInfo / SendLensSample) ----------
+
+    lensRecord() {
+        // OpenFIRECameraProfile.h: PAJ7025R3 when selected, otherwise PAJ7025R2 (4096 x 4096).
+        const model = this.getSetting(this.S.settingsTypes_e.cameraModel);
+        return model === 2 ? { k1: -0.128946, k2: 0.155087, max: 1.5, min: 0.8, focal: 0.378 / 0.539 }
+            : { k1: 0, k2: 0, max: 1.2, min: 0.8, focal: 1 / 0.34727 };
+    }
+
+    lensInfoPayload() {
+        const rec = this.lensRecord(), p = new Uint8Array(49), v = new DataView(p.buffer);
+        p[0] = 1; v.setInt32(1, 4096, true); v.setInt32(5, 4096, true);
+        const T = this.S.settingsTypes_e, active = Object.assign({}, rec);
+        const bits = (name) => this.getSetting(T[name]);
+        const f = new DataView(new ArrayBuffer(4));
+        const value = (name, key) => { const b = bits(name); if (b !== this.S.lensValueUnset) { f.setUint32(0, b); active[key] = f.getFloat32(0); } };
+        value('cameraLensK1', 'k1'); value('cameraLensK2', 'k2'); value('cameraLensFocal', 'focal');
+        [rec, active].forEach((g, n) => [g.k1, g.k2, g.max, g.min, g.focal].forEach((x, i) => v.setFloat32(9 + n * 20 + i * 4, x, true)));
+        return p;
+    }
+
+    /** A simulated sweep of the gun over a 55" screen (Square layout, tracker order TL, TR, BL, BR). */
+    lensSamplePayload() {
+        const rec = this.lensRecord();
+        const truth = { k1: rec.k1 + this.lensOffset.k1, k2: rec.k2 + this.lensOffset.k2, focal: rec.focal * this.lensOffset.focal };
+        if (!this.lensRandom) this.lensRandom = mulberry32(1234);
+        const rnd = this.lensRandom;
+        const noise = () => (rnd() + rnd() + rnd() - 1.5) * 4;
+        const W = 1.21, H = 0.68, res = 4096, c = res / 2, f = c * truth.focal;
+        for (let attempt = 0; attempt < 50; ++attempt) {
+            const t = (this.lensTime += 0.037);
+            const pos = [W / 2 + 0.5 * Math.sin(t * 0.13), H / 2 + 0.25 * Math.sin(t * 0.17), -(1.9 + 1.1 * Math.sin(t * 0.07))];
+            const tgt = [(0.5 + 0.56 * Math.sin(t * 1.03)) * W, (0.5 + 0.56 * Math.sin(t * 0.71 + 1)) * H, 0];
+            const roll = 0.3 * Math.sin(t * 0.23);
+            // Camera axes: looking from pos to tgt, y down, turned by roll.
+            const fw = tgt.map((v, i) => v - pos[i]), n = Math.hypot(...fw), z = fw.map((v) => v / n);
+            let x = [-z[2], 0, z[0]]; const nx = Math.hypot(...x); x = x.map((v) => v / nx);
+            const y = [z[1] * x[2] - z[2] * x[1], z[2] * x[0] - z[0] * x[2], z[0] * x[1] - z[1] * x[0]];
+            const cr = Math.cos(roll), sr = Math.sin(roll);
+            const ax = x.map((v, i) => cr * v - sr * y[i]), ay = x.map((v, i) => sr * v + cr * y[i]);
+            const pts = [];
+            for (const [X, Y] of [[0, 0], [W, 0], [0, H], [W, H]]) {
+                const d = [X - pos[0], Y - pos[1], -pos[2]];
+                const pc = [ax, ay, z].map((r) => r[0] * d[0] + r[1] * d[1] + r[2] * d[2]);
+                if (pc[2] <= 0) break;
+                const ux = f * pc[0] / pc[2], uy = f * pc[1] / pc[2];
+                // Observed point whose firmware correction with the true lens is (ux, uy).
+                let lo = 0, hi = 2;
+                for (let i = 0; i < 40; ++i) {
+                    const m = (lo + hi) / 2, q = (ux * m / c) ** 2 + (uy * m / c) ** 2;
+                    if (m * (1 + truth.k1 * q + truth.k2 * q * q) < 1) lo = m; else hi = m;
+                }
+                const m = (lo + hi) / 2;
+                pts.push([Math.round(c + ux * m + noise()), Math.round(c + uy * m + noise())]);
+            }
+            const complete = pts.length === 4 && pts.every(([px, py]) => px >= 0 && py >= 0 && px < res && py < res);
+            if (!complete && attempt < 49) continue;
+            const p = new Uint8Array(34), v = new DataView(p.buffer);
+            p[0] = 1; p[1] = complete ? 2 : 0;
+            for (let i = 0; i < 4; ++i) { const q = pts[i] || [-1, -1]; v.setInt32(2 + i * 8, q[0], true); v.setInt32(6 + i * 8, q[1], true); }
+            return p;
+        }
+        return null;
     }
 
     // ----- Accessors for tests ------------------------------------------------

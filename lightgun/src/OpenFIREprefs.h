@@ -196,6 +196,9 @@ public:
         0,                          // input invert mask: no input inverted
         0,                          // camera parallax: camera on the sight line, no correction
         OF_Const::standbyMinutesDefault, // wireless standby minutes (0 = disabled)
+        OF_Const::lensValueUnset,   // lens K1: camera record value
+        OF_Const::lensValueUnset,   // lens K2: camera record value
+        OF_Const::lensValueUnset,   // lens focal ratio: camera record value
     };
 
     typedef struct USBMap_s {
