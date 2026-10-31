@@ -35,7 +35,7 @@ New to OpenFIRE? Start from [Getting Started](https://github.com/alessandro-sata
 * The Square layout takes the camera lens into account, and the jitter filter adapts to the wide-angle PAJ7025R3.
 * The manual lists the minimum calibration distance for each camera and screen size: see [How to Calibrate](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/lightgun/src/README.md#how-to-calibrate).
 * The pedal runs at 80 MHz to use less battery.
-* Updated libraries: LovyanGFX 1.2.35 and arduino-pico 6.3.1 (RP2040).
+* Updated libraries: LovyanGFX 1.2.36 and arduino-pico 6.3.1 (RP2040).
 * Full list of changes in the [changelog](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/CHANGELOG.md#english-version).
 
 ### Installation and Usage Notes
@@ -256,7 +256,7 @@ Non conosci ancora OpenFIRE? Parti dai [Primi passi](https://github.com/alessand
 * Il layout Square tiene conto della lente della telecamera, e il filtro anti-tremolio si adatta alla grandangolare PAJ7025R3.
 * Il manuale riporta la distanza minima di calibrazione per ogni telecamera e dimensione dello schermo: vedi [Come calibrare](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/lightgun/src/README.md#come-calibrare-italiano).
 * Il pedale funziona a 80 MHz per consumare meno batteria.
-* Librerie aggiornate: LovyanGFX 1.2.35 e arduino-pico 6.3.1 (RP2040).
+* Librerie aggiornate: LovyanGFX 1.2.36 e arduino-pico 6.3.1 (RP2040).
 * Elenco completo delle modifiche nella [cronologia modifiche](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/CHANGELOG.md#versione-italiana).
 
 ### Note di installazione e utilizzo

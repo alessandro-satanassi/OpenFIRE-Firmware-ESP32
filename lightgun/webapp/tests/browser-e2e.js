@@ -740,7 +740,7 @@ async function installFakeSerial(context, sim) {
 
     // ----- a beta nobody published falls back on its three numbers, and is told -----
     sim.firmware.version = '7.0-abcdef0';
-    sim.firmware.versionFull = '7.0.0-beta2';
+    sim.firmware.versionFull = NUMBERS + '-beta2';
     home = await verContext.newPage();
     await home.goto('http://localhost:8126/');
     await home.click('#connect');
@@ -750,7 +750,7 @@ async function installFakeSerial(context, sim) {
     ok(await waitFor(() => mismatch(home).count().then((n) => n === 1), 15000),
         'and that App says at once that the versions do not match');
     const fallback = (await mismatch(home).innerText()).replace(/\s+/g, ' ');
-    ok(fallback.includes('7.0.0-beta2') && fallback.includes(NUMBERS),
+    ok(fallback.includes(NUMBERS + '-beta2') && fallback.includes(NUMBERS),
         'naming both: ' + JSON.stringify(fallback.slice(0, 130)));
     await home.close();
 

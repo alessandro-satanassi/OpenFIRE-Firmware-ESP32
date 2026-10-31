@@ -90,7 +90,7 @@ Besides the trigger, the firmware handles up to 13 buttons, all assignable in th
 Purchase links for the components and step-by-step assembly instructions are in my hardware project **[PICON-AS](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/)**.
 
 The OpenFIRE project's illustrated guide to wiring the components is also included. *The pictures show a Raspberry Pi Pico (RP2040), but the wiring is the same on any ESP32-S3 pin you assign.*
-* **[OpenFIRE Hardware Guide](docs/guide/OpenFIRE-Hardware-Guide_1.2.pdf)**
+* **[OpenFIRE Hardware Guide](docs/guide/OpenFIRE-Hardware-Guide_1.3.pdf)**
 
 ---
 
@@ -328,7 +328,7 @@ Oltre al grilletto il firmware gestisce fino a 13 pulsanti, tutti assegnabili ne
 Link per l'acquisto dei componenti e istruzioni di montaggio passo per passo sono nel mio progetto hardware **[PICON-AS](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/)**.
 
 È inclusa anche la guida illustrata del progetto OpenFIRE per il collegamento dei componenti. *Le immagini mostrano un Raspberry Pi Pico (RP2040), ma i collegamenti sono gli stessi su qualsiasi pin dell'ESP32-S3 che assegni.*
-* **[Guida Componenti OpenFIRE](docs/guide/OpenFIRE-Hardware-Guide_1.2.pdf)**
+* **[Guida Componenti OpenFIRE](docs/guide/OpenFIRE-Hardware-Guide_1.3.pdf)**
 
 ---
 

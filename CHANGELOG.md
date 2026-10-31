@@ -32,7 +32,7 @@ All notable changes to this project will be documented in this file.
 * **The Diamond layout now uses the refined tracking** of the Square layout too.
 * The Square layout takes the camera lens into account for the real shape of the emitter rectangle, and the jitter filter adapts to the wide-angle lens of the PAJ7025R3.
 * The minimum calibration distance for each camera and screen size is listed in the manual ([How to Calibrate](lightgun/src/README.md#how-to-calibrate)).
-* Updated libraries: LovyanGFX 1.2.35 (all devices) and arduino-pico 6.3.1 (RP2040 boards).
+* Updated libraries: LovyanGFX 1.2.36 (lightgun and dongle) and arduino-pico 6.3.1 (RP2040 boards).
 
 ### Updating from 7.0.0
 
@@ -142,7 +142,7 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 * **Anche il layout Diamond usa ora il tracciamento affinato** del layout Square.
 * Il layout Square tiene conto della lente della telecamera per la forma reale del rettangolo degli emettitori, e il filtro anti-tremolio si adatta alla lente grandangolare della PAJ7025R3.
 * Il manuale riporta la distanza minima di calibrazione per ogni telecamera e dimensione dello schermo ([Come calibrare](lightgun/src/README.md#come-calibrare-italiano)).
-* Librerie aggiornate: LovyanGFX 1.2.35 (tutti i dispositivi) e arduino-pico 6.3.1 (schede RP2040).
+* Librerie aggiornate: LovyanGFX 1.2.36 (lightgun e dongle) e arduino-pico 6.3.1 (schede RP2040).
 
 ### Aggiornamento dalla 7.0.0
 
