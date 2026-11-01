@@ -31,6 +31,7 @@
 #ifndef _OPENFIRESHARED_H_
 #define _OPENFIRESHARED_H_
 
+#include <cstdint>
 #include <string>
 #include <map>
 #include <unordered_map>
