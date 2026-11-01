@@ -109,12 +109,16 @@ void ExtDisplay::Stop()
 {
     irOverlayValid = 0;
     if(display != nullptr) {
-        #if defined(ARDUINO_ARCH_ESP32) && defined(USE_LOVYAN_GFX)
+        #ifdef ARDUINO_ARCH_ESP32
         // EN: Deleting the display does not close its I2C port: close it here, so that on a save the
         //     camera starts with the display port closed, as at power-on; Begin() opens it again.
         // IT: Eliminare il display non chiude la sua porta I2C: la si chiude qui, cosi' in un salvataggio
         //     la cam riparte con la porta del display chiusa, come all'accensione; Begin() la riapre.
+          #ifdef USE_LOVYAN_GFX
         display->releaseBus();
+          #else
+        Wire1.end();
+          #endif
         #endif
         delete display;
         display = nullptr;
