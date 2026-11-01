@@ -1526,24 +1526,24 @@ void SerialWireless_::write_on_rx_serialBuffer(const uint8_t *data, int len) {
 bool SerialWireless_::end() {
 
   // EN: Order: first stop what can wake the radio task (the serial timer, which cannot be deleted
-  //     while running, and the ESP-NOW callbacks, removed by esp_now_deinit), then delete the task:
-  //     no wake-up can reach a task that no longer exists.
+  //     while running, and the ESP-NOW callbacks, removed by esp_now_deinit). The task is deleted
+  //     only after Wi-Fi is off: esp_wifi_deinit also stops the Wi-Fi task, so a callback that had
+  //     already started has finished too, and no wake-up can reach a task that no longer exists.
   // IT: Ordine: prima si ferma cio' che puo' svegliare il task della radio (il timer seriale, che
-  //     attivo non si puo' cancellare, e le callback ESP-NOW, tolte da esp_now_deinit), poi si
-  //     cancella il task: nessuna sveglia puo' arrivare a un task che non esiste piu'.
+  //     attivo non si puo' cancellare, e le callback ESP-NOW, tolte da esp_now_deinit). Il task si
+  //     cancella solo a Wi-Fi spento: esp_wifi_deinit ferma anche il task del Wi-Fi, quindi anche una
+  //     callback gia' partita e' finita, e nessuna sveglia puo' arrivare a un task che non esiste piu'.
   esp_timer_stop(timer_handle_serial);
-  esp_err_t err = esp_now_deinit();
-  vTaskDelete(xRadioTaskHandle);
-  // vTaskDelete(xUSBTaskHandle); // This only goes into the dongle. / questo va solo nel dongle
-  
-  if (err != ESP_OK) {
-    //Serial.printf("esp_now_deinit failed! 0x%x", err);
-    return false;
-  }
+  const esp_err_t err = esp_now_deinit();
+  //if (err != ESP_OK) Serial.printf("esp_now_deinit failed! 0x%x", err);
+
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF); // Turn off Wi-Fi / Disattiva il WiFi
+
+  vTaskDelete(xRadioTaskHandle);
+  // vTaskDelete(xUSBTaskHandle); // This only goes into the dongle. / questo va solo nel dongle
   esp_timer_delete(timer_handle_serial);
-  return true;
+  return err == ESP_OK;
 }
 
 bool SerialWireless_::startAccessPoint(const char *ssid, const char *password) {
