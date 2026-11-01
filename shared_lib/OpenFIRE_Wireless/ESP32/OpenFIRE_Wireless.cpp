@@ -460,6 +460,40 @@ void radioTask(void *pvParameters) {
 // GRAPHICAL CHANNEL SEARCH FOR GUN / VERSIONE GRAFICA RICERCA CANALE PER GUN //////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 
+#ifdef USES_DISPLAY
+// EN: A pairing animation task deleted from outside while it is drawing would leave the display
+//     bus locked, and the next drawing would then wait for ever: the device would stay frozen on the
+//     pairing screen. So the task is asked to stop and ends itself between two drawings.
+// IT: Un task di animazione dell'accoppiamento cancellato dall'esterno mentre disegna lascerebbe il
+//     bus del display bloccato, e il disegno successivo aspetterebbe per sempre: il dispositivo
+//     resterebbe fermo sulla schermata di accoppiamento. Quindi al task si chiede di fermarsi e si
+//     chiude da solo tra un disegno e l'altro.
+static volatile bool animTaskEnded = false;
+
+// EN/IT: Pause of the animation loop; it ends the task when StopAnimTask() asks / pausa del ciclo
+//        dell'animazione; chiude il task quando lo chiede StopAnimTask().
+static void AnimTaskPause(uint32_t ms) {
+  if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(ms))) {
+    animTaskEnded = true;
+    vTaskDelete(NULL);
+  }
+}
+
+static void StopAnimTask(TaskHandle_t &task) {
+  if (task == NULL) return;
+  animTaskEnded = false;
+  xTaskNotifyGive(task);
+  // EN: Wait for the task to end itself, without a forced deletion: one while it is drawing would
+  //     lock the display bus again. A drawing takes a few milliseconds; if it ever stayed stuck, the
+  //     display bus would be stuck too, and the next drawing would wait in any case.
+  // IT: Si attende che il task si chiuda da solo, senza cancellarlo a forza: farlo mentre disegna
+  //     bloccherebbe di nuovo il bus del display. Un disegno dura pochi millisecondi; se restasse
+  //     bloccato, lo sarebbe anche il bus del display, e il disegno successivo aspetterebbe comunque.
+  while (!animTaskEnded) vTaskDelay(1);
+  task = NULL;
+}
+#endif // USES_DISPLAY
+
 #if defined(GUN) && defined(USES_DISPLAY)
 void animTaskLink_pedal(void *pvParameters) {
   const char* rotazione = "-\\|/-\\|/";
@@ -493,7 +527,7 @@ void animTaskLink_pedal(void *pvParameters) {
     display_OLED->write(rotazione[rotazioneIndex]);
     rotazioneIndex = (rotazioneIndex + 1) % 8;
     display_OLED->display();
-    vTaskDelay(pdMS_TO_TICKS(150)); // a short delay to avoid saturating the CPU / piccolo delay per non saturare la CPU
+    AnimTaskPause(150); // a short delay to avoid saturating the CPU / piccolo delay per non saturare la CPU
   } 
 }
 
@@ -529,7 +563,7 @@ void animTaskLink(void *pvParameters) {
     display_OLED->write(rotazione[rotazioneIndex]);
     rotazioneIndex = (rotazioneIndex + 1) % 8;
     display_OLED->display();
-    vTaskDelay(pdMS_TO_TICKS(150)); // a short delay to avoid saturating the CPU / piccolo delay per non saturare la CPU
+    AnimTaskPause(150); // a short delay to avoid saturating the CPU / piccolo delay per non saturare la CPU
   } 
 }
 #endif // GUN
@@ -584,7 +618,7 @@ void animTaskLink(void *pvParameters) {
     #ifdef USE_LOVYAN_GFX
     tft.display();
     #endif // USE_LOVYAN_GFX
-    vTaskDelay(pdMS_TO_TICKS(150)); // piccolo delay per non saturare la CPU
+    AnimTaskPause(150); // piccolo delay per non saturare la CPU
   } 
 }
 
@@ -633,7 +667,7 @@ void animTask(void *pvParameters) {
     #ifdef USE_LOVYAN_GFX
     tft.display();
     #endif // USE_LOVYAN_GFX
-    vTaskDelay(pdMS_TO_TICKS(150)); // piccolo delay per non saturare la CPU
+    AnimTaskPause(150); // piccolo delay per non saturare la CPU
   }
 }
 #endif //DONGLE
@@ -935,10 +969,7 @@ uint8_t findBestChannel() {
   g_sniffing = false;
   
   #if defined(DONGLE) && defined(USES_DISPLAY)
-    if (animTaskHandle != NULL) {
-      vTaskDelete(animTaskHandle);
-      animTaskHandle = NULL;
-    }
+    StopAnimTask(animTaskHandle);
   #endif // USES_DISPLAY
   
   return bestCh;
@@ -1824,10 +1855,7 @@ bool SerialWireless_::connection_dongle() {
   TinyUSBDevices.onBattery = true;
   
     #if defined(DONGLE) && defined(USES_DISPLAY)
-      if (animTaskHandleLink != NULL) {
-        vTaskDelete(animTaskHandleLink);
-        animTaskHandleLink = NULL;
-      }
+      StopAnimTask(animTaskHandleLink);
     #endif // USES_DISPLAY
   
   return true; 
@@ -2104,10 +2132,7 @@ bool SerialWireless_::connection_gun() {
     */
 
     #if defined(GUN) && defined(USES_DISPLAY)
-      if (animTaskHandleLink != NULL) {
-        vTaskDelete(animTaskHandleLink);
-        animTaskHandleLink = NULL;
-      }
+      StopAnimTask(animTaskHandleLink);
     #endif // USES_DISPLAY
 
 
@@ -2116,10 +2141,7 @@ bool SerialWireless_::connection_gun() {
   }
   
   #if defined(GUN) && defined(USES_DISPLAY)
-    if (animTaskHandleLink != NULL) {
-      vTaskDelete(animTaskHandleLink);
-      animTaskHandleLink = NULL;
-    }
+    StopAnimTask(animTaskHandleLink);
   #endif // USES_DISPLAY
 
   return false; 
@@ -2198,7 +2220,17 @@ bool SerialWireless_::connection_gun_at_pedal() {
 
   broadcast_receiver = true;
   
-  while ( (seconds > 1) && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
+  // EN: Overall limit of the search: the countdown below stops while a negotiation is under way, so a pedal
+  //     that keeps answering without ever confirming would otherwise keep the gun here forever. The limit
+  //     leaves room for the normal countdown plus one whole negotiation, so the usual cases do not change.
+  // IT: Limite complessivo della ricerca: il conto alla rovescia qui sotto si ferma durante una negoziazione, quindi
+  //     un pedale che continua a rispondere senza mai confermare terrebbe altrimenti la pistola qui per sempre. Il
+  //     limite lascia spazio al conto normale piu' una negoziazione intera, cosi' i casi abituali non cambiano.
+  const unsigned long pedalSearchStart = millis();
+  const unsigned long pedalSearchLimit =
+    (unsigned long)MAX_SECONDI_CONNESSIONE_PEDAL * TIMEOUT_GUN_AT_PEDAL_CHANGE_SECONDS + TIMEOUT_GUN_AT_PEDAL_DIALOGUE;
+  while ( (seconds > 1) && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED &&
+          (millis() - pedalSearchStart) < pedalSearchLimit) {
     if (stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) {
       if (((millis() - lastMillis_change_seconds) > TIMEOUT_GUN_AT_PEDAL_CHANGE_SECONDS) && 
          ((millis() - lastMillis_tx_packet)) >= (TIMEOUT_GUN_AT_PEDAL_TX_PACKET - 50)) {  // addition set 50 ms as a margin, to avoid that when sending a packet it immediately changes the channel without giving the possibility of a response / aggiunta impostato 50 ms come margine, per evitare che quando invia pacchetto cambi subito casnale senza dare possibilità risposta
@@ -2269,10 +2301,7 @@ bool SerialWireless_::connection_gun_at_pedal() {
 
 
     #if defined(GUN) && defined(USES_DISPLAY)
-      if (animTaskHandleLink_pedal != NULL) {
-        vTaskDelete(animTaskHandleLink_pedal);
-        animTaskHandleLink_pedal = NULL;
-      }
+      StopAnimTask(animTaskHandleLink_pedal);
     #endif // USES_DISPLAY
 
     TinyUSBDevices.is_pedal_wireless = true;
@@ -2280,10 +2309,7 @@ bool SerialWireless_::connection_gun_at_pedal() {
   }
   
   #if defined(GUN) && defined(USES_DISPLAY)
-    if (animTaskHandleLink_pedal != NULL) {
-      vTaskDelete(animTaskHandleLink_pedal);
-      animTaskHandleLink_pedal = NULL;
-    }
+    StopAnimTask(animTaskHandleLink_pedal);
   #endif // USES_DISPLAY
 
   TinyUSBDevices.is_pedal_wireless = false;
