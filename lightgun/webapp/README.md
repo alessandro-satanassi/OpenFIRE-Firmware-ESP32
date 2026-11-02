@@ -23,12 +23,14 @@ js/core/protocol.js     App protocol (peer of src/OpenFIREserial.cpp in the firm
 js/core/i18n.js         translations (OF.i18n.t)
 js/core/boards.js       board data helpers (OF.Boards)
 js/core/lensfit.js      lens refinement: sample collector and solver (OF.LensFit, no DOM)
+js/core/emitter-layout.js  emitter placement: perspective, radial FOV and rectangle search (no device writes)
 js/app/connection.js    connection controller (auto WebSocket on the gun, Web Serial on the site)
 js/app/maps.js          mouse / keyboard / gamepad outputs, profile option lists
 js/app/state.js         configuration being edited and the editing rules of the Qt App (no DOM)
 js/app/ui.js            elements, dialogs, spin boxes, menus, status bar
 js/app/tab-*.js         Board Layout, Button Mapping, Gun Settings, Calibration Profiles, Gun Tests
 js/app/fullscreen.js    calibration, IR emitter alignment and IR camera test screens
+js/app/emitter-alignment.js  fullscreen placement controls, physical measurements and markers
 js/app/lensfit-window.js  lens refinement screen (Gun Settings, camera, "Refine lens...")
 js/app/testfont.js      8x8 bitmap typeface of those screens (from the Qt App)
 js/app/windows.js       Boards Previewer and About
@@ -46,6 +48,12 @@ generated (not in git):
 boards/OpenFIREshared.js   from src/boards/OpenFIREshared.h
 lang/translations.js       from lang/*.json
 ```
+
+The generated shared data also includes `cameraOptics`: sensor and lens coefficients are read from
+`lib/OpenFIREPosition/OpenFIRECameraProfile.h`; manufacturer FOV limits and tolerances come from
+`boards/camera-optics.json`. Add a metadata entry when adding a camera. The placement solver consumes
+records without camera-ID branches. Phone lens converter options are estimates, not measured profiles.
+All placement work runs in the browser; the lightgun's tracking and serial protocol are unchanged.
 
 ## Translations
 

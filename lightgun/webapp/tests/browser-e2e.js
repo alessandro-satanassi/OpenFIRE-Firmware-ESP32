@@ -357,6 +357,26 @@ async function installFakeSerial(context, sim) {
 
     await dev.getByRole('button', { name: 'Emitter Alignment', exact: true }).click();
     ok(await dev.locator('.fullscreen-window.mode-alignment').count() === 1, 'alignment assistant opens');
+    await dev.waitForFunction(() => !!OF.app.window?.alignment?.result);
+    const alignmentSettings = await dev.evaluate(() => JSON.stringify(OF.app.state.cur.settings));
+    await dev.selectOption('#alignment-camera', '2');
+    await dev.fill('#alignment-inches', '27');
+    await dev.fill('#alignment-distance', '2');
+    await dev.waitForFunction(() => OF.app.window.alignment.result.optics.model === 2 && OF.app.window.alignment.result.settings.inches === 27);
+    ok(await dev.locator('#alignment-lens').isDisabled(), 'wide native optics disable add-on lenses');
+    ok(await dev.evaluate(() => OF.app.window.alignment.result.ratio > 1.2), 'placement responds to wide optics and playing distance');
+    ok(await dev.evaluate((s) => JSON.stringify(OF.app.state.cur.settings) === s, alignmentSettings), 'placement camera selection does not edit gun settings');
+    await dev.selectOption('#alignment-scenario', 'two');
+    ok(await dev.locator('#alignment-separation').isVisible(), 'two-player placement has adjustable gun spacing');
+    await dev.locator('[data-layout="diamond"]').click();
+    await dev.waitForFunction(() => OF.app.window.alignment.result.settings.diamond);
+    const diamondSpacing = await dev.evaluate(() => OF.app.window.alignment.result.base);
+    await dev.fill('#alignment-distance', '3');
+    await dev.waitForFunction(() => OF.app.window.alignment.result.settings.distance === 3);
+    ok(await dev.evaluate((base) => OF.app.window.alignment.result.base === base, diamondSpacing), 'Diamond placement remains at fixed edge centres');
+    ok(await dev.getByRole('button', { name: 'Go to Gun Tests', exact: true }).count() === 0, 'placement remains independent from Gun Tests');
+    const alignmentFormats = await dev.locator('#alignment-aspect option').allTextContents();
+    ok(await dev.evaluate((formats) => OF.Maps.aspectRatios.every((r) => formats.includes(r)), alignmentFormats), 'placement includes all preference screen formats');
     await dev.keyboard.press('Escape');
     ok(await waitFor(() => dev.locator('.fullscreen-window').count().then((n) => n === 0)), 'alignment assistant closes');
 

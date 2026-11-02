@@ -11,6 +11,7 @@ import json
 import os
 import re
 import sys
+import math
 
 HEADER_RELATIVE = os.path.join("src", "boards", "OpenFIREshared.h")
 PICTURES_RELATIVE = os.path.join("src", "boards", "boardPics")
@@ -135,6 +136,8 @@ def extract_shared(project_dir, report=False):
     if report:
         for problem in problems:
             _warn(problem)
+    if os.path.isfile(os.path.join(project_dir, 'lib', 'OpenFIREPosition', 'OpenFIRECameraProfile.h')):
+        data['cameraOptics'] = camera_optics(project_dir, data)
     return data
 
 
@@ -234,8 +237,44 @@ def write_if_changed(path, text):
 
 def generate_shared_js(project_dir, webapp_dir, report=True):
     path = os.path.join(webapp_dir, "boards", "OpenFIREshared.js")
-    write_if_changed(path, render_shared_js(extract_shared(project_dir, report)))
+    data = extract_shared(project_dir, report)
+    write_if_changed(path, render_shared_js(data))
     return path
+
+
+def camera_optics(project_dir, shared):
+    """EN: Lens/sensor data from firmware, FOV limits from manufacturer metadata.
+    IT: Lente/sensore dal firmware, limiti FOV dai dati dei produttori.
+    This is build-time data only: no additional firmware work at camera rate.
+    Fail the build on an unrecognised record, rather than silently use stale optics.
+    """
+    with open(os.path.join(project_dir, 'lib', 'OpenFIREPosition', 'OpenFIRECameraProfile.h'), encoding='utf-8-sig') as f:
+        source = _strip_comments(f.read())
+    with open(os.path.join(project_dir, 'webapp', 'boards', 'camera-optics.json'), encoding='utf-8') as f:
+        metadata = json.load(f)
+    result = []
+    def number(expression):
+        expression = re.sub(r'(?<=\d)[fF]\b', '', expression.strip())
+        if not re.fullmatch(r'[\d.eE+*/()\s-]+', expression):
+            raise ValueError('Unsupported camera expression: ' + expression)
+        value = float(eval(expression, {"__builtins__": {}}, {}))
+        if not math.isfinite(value):
+            raise ValueError('Invalid camera expression: ' + expression)
+        return value
+    for match in re.finditer(r'static\s+constexpr\s+CameraProfile\s+\w+\s*=\s*MakeProfile\((.*?)\);', source, re.S):
+        args = [v.strip() for v in match.group(1).split(',')]
+        model = args[0].removeprefix('OF_Const::')
+        if model not in metadata or len(args) != 14:
+            raise ValueError('Camera optics metadata/MakeProfile needs updating: ' + model)
+        row = dict(metadata[model])
+        row.update(model=shared['cameraModel_e'][model],
+                   sensorX=number(args[4]), sensorY=number(args[5]),
+                   k1=number(args[9]), k2=number(args[10]),
+                   max=number(args[11]), min=number(args[12]), focal=number(args[13]))
+        result.append(row)
+    if len(result) != len(metadata):
+        raise ValueError('Incomplete generated camera optics')
+    return result
 
 
 if __name__ == "__main__":

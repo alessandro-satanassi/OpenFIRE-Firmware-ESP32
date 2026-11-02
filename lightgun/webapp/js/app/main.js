@@ -863,7 +863,12 @@
         openAlignment() {
             if (this.window && this.window.mode !== OF.FullscreenWindow.MODE_ALIGNMENT) return;
             if (this.window) this.window.shutdown();
-            const win = new OF.FullscreenWindow(OF.FullscreenWindow.MODE_ALIGNMENT, { onExit: (mode) => this.onWindowExit(win, mode) });
+            const win = new OF.FullscreenWindow(OF.FullscreenWindow.MODE_ALIGNMENT, {
+                cameraModel: this.state.cur ? this.state.cur.settings[this.S.settingsTypes_e.cameraModel] : undefined,
+                diamond: this.state.cur?.profiles[this.state.cur.selectedProfile]?.layoutType === this.S.layoutTypes_e.layoutDiamond,
+                lensValues: this.state.cur ? Object.fromEntries(['k1', 'k2', 'focal'].map(k => [k, this.state.lensValue(k)])) : null,
+                onExit: (mode) => this.onWindowExit(win, mode)
+            });
             this.window = win;
             win.open();
         }

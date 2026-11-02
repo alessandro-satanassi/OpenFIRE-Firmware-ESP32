@@ -405,6 +405,10 @@
             this.overlay = overlay;
             this.canvas = canvas;
             this.retryButton = retry;
+            if (this.mode === MODE_ALIGNMENT) {
+                this.alignment = new OF.EmitterAlignment(this, this.options);
+                this.alignment.mount();
+            }
             if (this.mode === MODE_CALIBRATE) this._createCaliLegend();
             if (this.mode === MODE_IRTEST) this._createIRTestLegend();
 
@@ -475,6 +479,7 @@
         shutdown(values) {
             if (this.closed) return;
             this.closed = true;
+            if (this.alignment) this.alignment.destroy();
             clearTimeout(this._irWarningTimer);
             clearTimeout(this._irExpiryTimer);
             clearTimeout(this._targetRingTimer);
@@ -1143,71 +1148,7 @@
         }
 
         _drawAlignment(ctx) {
-            const w = this.width;
-            const h = this.height;
-            const heading = this.textScale('heading');
-            const sub = this.textScale('sub');
-            const small = this.textScale('small');
-            this._background(ctx, 'darkslategray');
-
-            // Square layout: emitters at the top and bottom, base width independent from the aspect ratio.
-            const offset = (h * 0.711) / 2;
-            const leftX = w / 2 - offset;
-            const rightX = w / 2 + offset;
-            // QGraphicsRectItem: brush colour and the default pen (black, 1 px).
-            const box = (x1, y1, x2, y2, color) => {
-                const x = Math.min(x1, x2);
-                const y = Math.min(y1, y2);
-                ctx.fillStyle = color;
-                ctx.fillRect(x, y, Math.abs(x2 - x1), Math.abs(y2 - y1));
-                ctx.strokeStyle = '#000';
-                ctx.lineWidth = 1;
-                ctx.strokeRect(x, y, Math.abs(x2 - x1), Math.abs(y2 - y1));
-            };
-            // Same order as the Qt scene: square and diamond box of each index.
-            const square = [[leftX, -10, 10 * sub], [rightX, -10, 10 * sub], [leftX, h + 10, h - 10 * sub], [rightX, h + 10, h - 10 * sub]];
-            const diamond = [
-                [w / 2 - 15 * sub, -10, w / 2 + 15 * sub, 10 * sub],
-                [w / 2 - 15 * sub, h + 10, w / 2 + 15 * sub, h - 10 * sub],
-                [-10, h / 2 - 15 * sub, 10 * sub, h / 2 + 15 * sub],
-                [w + 10, h / 2 - 15 * sub, w - 10 * sub, h / 2 + 15 * sub],
-            ];
-            for (let i = 0; i < 4; ++i) {
-                const [x, y1, y2] = square[i];
-                box(x - 15 * sub, y1, x + 15 * sub, y2, 'firebrick');
-                box(...diamond[i], 'olivedrab');
-            }
-
-            this._polyline(ctx, [[leftX, -10], [leftX, h + 10], [rightX, h + 10], [rightX, -10]], 'firebrick', 2);
-            this._polyline(ctx, this._crossLines(), 'olivedrab', 2);
-
-            const header = lines('       Depending on your desired layout,       ', '      your IR emitters should be aligned       ',
-                '         to either one of the two sets         ', '               of colored boxes:               ');
-            const headerSize = textSize(header, heading);
-            this._centered(ctx, header, h * 0.15 - headerSize.height / 2, heading);
-
-            const leftText = lines('      For Square Layout,     ', '    the emitters should be   ', '    placed at the top and    ',
-                '    bottom of the display;   ', 'each one being aligned to the');
-            const leftColored = lines('      Red-colored boxes.     ');
-            const rightText = lines('     For Diamond Layout,     ', 'the emitters should be placed', '  at the center of the four  ',
-                '    edges of the display;    ', 'each one being aligned to the');
-            const rightColored = lines('     Green-colored boxes.    ');
-
-            const drawSide = (text, colored, tint, alignRight) => {
-                const size = textSize(text.concat(colored), small);
-                const main = textSize(text, small);
-                const x = alignRight ? w * 0.98 - size.width : w * 0.02;
-                const y = h * 0.3 + main.height / 2;
-                drawText(ctx, text, x + (size.width - main.width) / 2, y, small);
-                const coloredSize = textSize(colored, small);
-                drawText(ctx, colored, x + (size.width - coloredSize.width) / 2, y + main.height, small, tint);
-            };
-            drawSide(leftText, leftColored, [255, 100, 100], false);
-            drawSide(rightText, rightColored, [100, 255, 100], true);
-
-            const tutorial = lines('Press ESC to exit alignment tool.');
-            const size = textSize(tutorial, sub);
-            drawText(ctx, tutorial, w * 0.05, h * 0.9 - size.height / 2, sub);
+            this.alignment.draw(ctx);
         }
 
         /** The test uses the board's applied layout, not unsaved profile edits. */

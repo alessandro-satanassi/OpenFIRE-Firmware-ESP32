@@ -43,7 +43,7 @@ This manual takes you from a freshly flashed gun to your first game: placing the
 
 The gun tracks its aim using four infrared emitters placed around the screen. They can be arranged in two ways:
 
- - **Square / rectangular layout (recommended):** two LEDs at the top and two at the bottom of the display, aligned in two columns. The best arrangement uses two pairs centred on the top and bottom edges, forming a vertical rectangle (narrower than it is tall), as shown by the alignment assistant. A wider rectangle with the four LEDs at the screen corners also works. Avoid a perfect square.
+ - **Square / rectangular layout (recommended):** two LEDs at the top and two at the bottom of the display, aligned in two columns. A vertical rectangle leaves more room for movement with a narrow camera field of view. A wider rectangle, including the screen corners, can improve precision when all four emitters remain in view. The alignment assistant suggests a spacing for your setup. Avoid a square or an almost square rectangle.
  - **Diamond layout:** one LED at the centre of each side of the display (top, bottom, left and right), not at the corners.
 
 **Moving Square emitters to the screen corners:** keep **Square** selected in the calibration profile, calibrate again and save. There is no separate vertical or wide setting to choose: the gun works it out from the calibration.
@@ -53,6 +53,10 @@ Use **940 nm IR emitters for DFRobot/Wii** and **850 nm for PAJ7025R2/R3**. The 
 With a DFRobot/Wii camera and a small PC monitor, two Wii sensor bars are enough, one above the screen and one below. On a TV, build or buy a set of high-power IR LEDs and arrange them like larger sensor bars at the top and bottom of the display.
 
 The **OpenFIRE ESP32 WebApp** has an alignment assistant that shows where to place the emitters on your display: open it with the **Emitter Alignment** button in the menu bar, or from ***Help → Open IR Emitter Alignment Assistant***.
+
+In the fullscreen assistant, choose the screen size and format, camera, playing distance and movement space. **Square** positions and centimetre measurements update automatically; **Diamond** stays at the centre of each edge. For two players, set the distance between their lightguns. Hide the controls to see the placement markers clearly. The assistant also works without a connected gun and does not change its settings.
+
+The suggested distance includes a movement margin, not a guarantee of detection range. Add-on lenses marked **estimate** have not been measured on your camera. Check the four screen corners from your playing positions in the IR camera test, then calibrate again after moving the emitters.
 
 <table>
   <tr>
@@ -455,7 +459,7 @@ Questo manuale ti accompagna da una pistola con il firmware appena installato al
 
 La pistola rileva il puntamento osservando quattro emettitori a infrarossi posizionati intorno allo schermo. Si possono disporre in due modi:
 
- - **Layout Square / rettangolare (consigliato):** due LED sopra e due sotto lo schermo, allineati su due colonne. La disposizione migliore usa due coppie centrate sui bordi superiore e inferiore, che formano un rettangolo verticale (più alto che largo), come mostra l'assistente di allineamento. Funziona anche un rettangolo più largo con i quattro LED agli angoli dello schermo. Evita un quadrato perfetto.
+ - **Layout Square / rettangolare (consigliato):** due LED sopra e due sotto lo schermo, allineati su due colonne. Un rettangolo verticale lascia più libertà di movimento con una camera dal campo visivo stretto. Un rettangolo più largo, anche con i LED agli angoli, può migliorare la precisione quando tutti gli emettitori rimangono visibili. L'assistente di allineamento suggerisce una distanza fra i LED adatta alla tua configurazione. Evita un quadrato o un rettangolo quasi quadrato.
  - **Layout Diamond / a rombo:** un LED al centro di ciascun lato dello schermo (alto, basso, sinistra e destra), non agli angoli.
 
 **Se sposti gli emettitori Square agli angoli dello schermo:** mantieni **Quadrato** (Square) selezionato nel profilo, calibra di nuovo e salva. Non serve scegliere tra rettangolo verticale e orizzontale: la disposizione viene riconosciuta durante la calibrazione.
@@ -465,6 +469,10 @@ Usa **emettitori IR da 940 nm per DFRobot/Wii** e **da 850 nm per PAJ7025R2/R3**
 Con una telecamera DFRobot/Wii e un piccolo monitor per PC bastano due barre sensore Wii, una sopra lo schermo e una sotto. Su una TV costruisci o acquista un set di LED IR ad alta potenza e disponili come barre sensore più grandi, sopra e sotto lo schermo.
 
 La **WebApp OpenFIRE ESP32** ha un assistente di allineamento che mostra dove posizionare gli emettitori sul tuo schermo: aprilo con il pulsante **Allineamento Sensore** nella barra dei menu, oppure da ***Aiuto → Apri Assistente allineamento emettitori IR***.
+
+Nell'assistente a schermo intero scegli dimensioni e formato dello schermo, camera, distanza e spazio di gioco. Le posizioni **Square** e le quote in centimetri si aggiornano automaticamente; **Diamond** resta al centro dei quattro lati. Per due giocatori, imposta la distanza fra le loro pistole. Nascondi i controlli per vedere meglio i riferimenti di montaggio. L'assistente funziona anche senza pistola collegata e non ne modifica le impostazioni.
+
+La distanza suggerita comprende un margine di movimento, non garantisce la portata di rilevamento. Le lenti aggiuntive indicate come **stima** non sono state misurate sulla tua camera. Nel test della camera IR, verifica i quattro angoli dello schermo dalle tue posizioni di gioco; dopo aver spostato gli emettitori, ripeti la calibrazione.
 
 <table>
   <tr>
