@@ -1090,7 +1090,7 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
 .alignment-planner button { background: #19283b; border: 1px solid #3d526b; color: #eaf2fc; padding: 7px 12px; border-radius: 7px; cursor: pointer; }
 .alignment-planner button:hover { background: #253d55; }
 .alignment-planner button:focus-visible, .alignment-planner input:focus-visible, .alignment-planner select:focus-visible { outline: 2px solid #58d6e8; outline-offset: 2px; }
-.alignment-body { position: absolute; top: 100px; bottom: 72px; left: 50%; transform: translateX(-50%); width: min(850px, calc(100% - 112px)); display: grid; grid-template-columns: 1fr 1fr; align-content: center; gap: 18px; overflow: auto; scrollbar-width: thin; padding: 4px; }
+.alignment-body { position: absolute; top: 100px; bottom: 72px; left: 50%; transform: translateX(-50%); width: min(850px, calc(100% - 112px)); display: grid; grid-template-columns: 1fr 1fr; align-content: start; align-content: safe center; gap: 18px; overflow: auto; scrollbar-width: thin; padding: 4px; }
 .alignment-body[hidden], .alignment-planner [hidden] { display: none !important; }
 .alignment-card { background: #101e30f5; border: 1px solid #2a405a; border-radius: 14px; padding: 18px 20px; box-shadow: 0 12px 40px #0003; min-width: 0; }
 .alignment-card h2 { font-size: 16px; font-weight: 600; margin: 0 0 14px; }

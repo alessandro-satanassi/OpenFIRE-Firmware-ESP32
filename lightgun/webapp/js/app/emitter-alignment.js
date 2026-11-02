@@ -8,7 +8,7 @@
     const cm=x=>(x*100).toLocaleString(OF.i18n.currentLang,{maximumFractionDigits:1});
     class EmitterAlignment {
         constructor(win,options={}) {
-            this.win=win;this.records=OF.Boards.shared.cameraOptics||[];this.fields={};this.values={inches:55,distance:2,aspect:16/9,scenario:'normal',separation:.8,diamond:!!options.diamond};
+            this.win=win;this.records=OF.Boards.shared.cameraOptics||[];this.fields={};this.values={inches:55,distance:2,aspect:16/9,scenario:'normal',separation:.8,diamond:!!options.diamond,lens:1};
             this.model=options.cameraModel;this.custom=options.lensValues;this.factor=1;
             this.record=this.records.find(r=>r.model===this.model)||this.records[0];
         }
@@ -28,7 +28,8 @@
                 b.onclick=()=>{this.values.diamond=key==='diamond';for(const n of modes.children)n.setAttribute('aria-pressed',n===b?'true':'false');this.schedule();};modes.append(b);
             }
             controls.append(modes);
-            this.range(controls,'inches','Screen diagonal','″',20,120,1,[20,24,27,32,42,43,48,50,55,65,75,77,83,85,98,100,120]);
+            const sizes=[20,24,27,32,42,43,48,50,55,65,75,77,83,85,98,100,120];
+            this.range(controls,'inches','Screen diagonal','″',20,120,1,sizes,{label:'Common screen sizes',prompt:'Choose a common screen size…',entries:sizes.map(v=>[v,v+'″'])});
             this.range(controls,'distance','Playing distance','m',.5,10,.05,[.5,.75,1,1.5,2,2.5,3,4,5,6,8,10]);
             // EN: Include every format in the preferences; ultrawide additions are
             // planner-only and do not add or change firmware profile enum values.
@@ -37,7 +38,9 @@
             const formats=[...new Set([...OF.Maps.aspectRatios,'21:9','21:10','32:9'])];
             this.select(controls,'aspect','Screen format',formats.map(label=>{const [w,h]=label.split(':').map(Number);return[w/h,label];}));
             this.select(controls,'camera','Camera',this.records.map(r=>[r.model,r.label]),this.record?.model);
-            this.select(controls,'lens','Additional lens',[[1,t('None')],[.67,t('0.67x converter (estimate)')],[.45,t('0.45x converter (estimate)')]],1);
+            // EN: Add-on wide converter as a factor: 1 = none, any value down to 0.30x.
+            // IT: Convertitore grandangolare come fattore: 1 = nessuno, qualsiasi valore fino a 0,30x.
+            this.range(controls,'lens','Additional lens','×',.3,1,.01,[.3,.45,.5,.6,.67,.75,1],{label:'Common lenses',prompt:'Choose a common lens…',entries:[[1,t('None')],[.67,t('0.67x converter (estimate)')],[.45,t('0.45x converter (estimate)')]]});
             this.select(controls,'scenario','Playing space',[['normal',t('Normal movement')],['wide',t('Wide movement (up to 75° roll)')],['two',t('Two players')]]);
             this.separation=this.range(controls,'separation','Distance between lightguns','m',.5,1.5,.05,[.6,.8,1,1.2,1.5]);this.separation.hidden=true;
             this.results=node('section','alignment-card alignment-results');
@@ -48,7 +51,7 @@
             if(!this.record){this.results.append(node('p','',t('Camera optics are unavailable. Rebuild the WebApp.')));return;}
             this.schedule();
         }
-        range(parent,key,label,unit,min,max,step,ticks) {
+        range(parent,key,label,unit,min,max,step,ticks,presets) {
             const box=node('div','alignment-field'),id='alignment-'+key;
             const title=node('label','',t(label));title.htmlFor=id;
             const line=node('div','alignment-value'),number=node('input');number.type='number';number.min=min;number.max=key==='distance'?20:max;number.step=step;number.id=id;number.value=this.values[key];number.setAttribute('aria-label',t(label));
@@ -57,11 +60,11 @@
             line.append(title,number,node('span','',unit));box.append(line,slider,list);parent.append(box);this.fields[key]={number,slider};
             const update=e=>{const value=Number(e.target.value);if(!e.target.value||!Number.isFinite(value))return;this.values[key]=Math.max(min,Math.min(Number(number.max),value));if(e.target!==number)number.value=this.values[key];slider.value=this.values[key];this.schedule();};
             number.oninput=slider.oninput=update;number.onchange=()=>{number.value=this.values[key];};
-            if(key==='inches'){
-                const preset=node('select','alignment-preset');preset.setAttribute('aria-label',t('Common screen sizes'));
-                const prompt=node('option','',t('Choose a common screen size…'));prompt.value='';preset.append(prompt);
-                for(const tick of ticks){const option=node('option','',tick+'″');option.value=tick;preset.append(option);}
-                preset.onchange=()=>{if(!preset.value)return;number.value=preset.value;update({target:number});preset.value='';};box.append(preset);
+            if(presets){
+                const preset=node('select','alignment-preset');preset.setAttribute('aria-label',t(presets.label));
+                const prompt=node('option','',t(presets.prompt));prompt.value='';preset.append(prompt);
+                for(const [value,text] of presets.entries){const option=node('option','',text);option.value=value;preset.append(option);}
+                preset.onchange=()=>{if(!preset.value)return;number.value=preset.value;update({target:number});preset.value='';};box.append(preset);this.fields[key].preset=preset;
             }
             return box;
         }
@@ -70,11 +73,13 @@
             for(const [value,label] of entries){const option=node('option','',label);option.value=value;select.append(option);}select.value=initial===undefined?this.values[key]:initial;
             box.append(title,select);parent.append(box);this.fields[key]=select;
             select.onchange=()=>{
-                if(key==='camera'){this.record=this.records.find(r=>r.model===Number(select.value));this.factor=1;this.fields.lens.value=1;}
-                else if(key==='lens')this.factor=Number(select.value);
+                if(key==='camera'){this.record=this.records.find(r=>r.model===Number(select.value));this.setLens(1);}
                 else this.values[key]=key==='aspect'?Number(select.value):select.value;
                 this.schedule();
             };
+        }
+        setLens(value) {
+            const f=this.fields.lens;this.values.lens=value;f.number.value=f.slider.value=value;
         }
         schedule() {
             if(!this.record)return;
@@ -82,8 +87,9 @@
             // R3 already has a very wide native field. This is metadata driven,
             // not a camera ID check; future wide records get the same behaviour.
             const wide=this.record.addOnLens===false;
-            this.fields.lens.disabled=wide;
-            if(wide){this.factor=1;this.fields.lens.value=1;}
+            for(const field of Object.values(this.fields.lens))field.disabled=wide;
+            if(wide)this.setLens(1);
+            this.factor=this.values.lens;
             this.separation.hidden=this.values.scenario!=='two';
             this.timer=setTimeout(()=>{
                 if(this.win.closed)return;
