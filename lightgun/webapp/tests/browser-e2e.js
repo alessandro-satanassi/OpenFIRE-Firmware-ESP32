@@ -366,8 +366,7 @@ async function installFakeSerial(context, sim) {
     ok(await dev.locator('#alignment-lens').isDisabled(), 'wide native optics disable add-on lenses');
     ok(await dev.evaluate(() => OF.app.window.alignment.result.ratio > 1.2), 'placement responds to wide optics and playing distance');
     ok(await dev.evaluate((s) => JSON.stringify(OF.app.state.cur.settings) === s, alignmentSettings), 'placement camera selection does not edit gun settings');
-    await dev.selectOption('#alignment-scenario', 'two');
-    ok(await dev.locator('#alignment-separation').isVisible(), 'two-player placement has adjustable gun spacing');
+    ok(await dev.locator('#alignment-scenario').count() === 0 && await dev.locator('#alignment-separation').count() === 0, 'one play profile: no playing space choice');
     await dev.locator('[data-layout="diamond"]').click();
     await dev.waitForFunction(() => OF.app.window.alignment.result.settings.diamond);
     const diamondSpacing = await dev.evaluate(() => OF.app.window.alignment.result.base);

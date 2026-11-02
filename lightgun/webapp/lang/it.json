@@ -614,11 +614,6 @@
     "None": "Nessuna",
     "0.67x converter (estimate)": "Convertitore 0,67× (stima)",
     "0.45x converter (estimate)": "Convertitore 0,45× (stima)",
-    "Playing space": "Spazio di gioco",
-    "Normal movement": "Movimenti normali",
-    "Wide movement (up to 75° roll)": "Movimenti ampi (rotazione fino a 75°)",
-    "Two players": "Due giocatori",
-    "Distance between lightguns": "Distanza fra le pistole",
     "Camera optics are unavailable. Rebuild the WebApp.": "Dati ottici non disponibili. Rigenera la WebApp.",
     "Slider": "Cursore",
     "Suggested placement": "Posizionamento suggerito",
@@ -635,9 +630,7 @@
     "Vertical LED spacing": "Distanza verticale fra i LED",
     "Suggested minimum distance": "Distanza minima suggerita",
     "More than 20 m": "Oltre 20 m",
-    "Includes side movement and roll up to 75°; the most demanding poses need more distance.": "Considera spostamenti laterali e rotazioni fino a 75°; le posizioni più impegnative richiedono maggiore distanza.",
-    "Checked from both player positions, with small side movements and roll up to 15°.": "Verificato dalle posizioni di entrambi i giocatori, con piccoli spostamenti laterali e rotazioni fino a 15°.",
-    "Includes small side movements and roll up to 15°.": "Considera piccoli spostamenti laterali e rotazioni fino a 15°.",
+    "Includes side movements and gun roll up to 45°.": "Considera spostamenti laterali e rotazioni della pistola fino a 45°.",
     "Unmeasured add-on lens: approximate geometry only. Check the real field of view with the IR camera test.": "Lente aggiuntiva non misurata: la geometria è approssimativa. Verifica il campo reale con il test della camera IR.",
     "Uses the lens refinement currently selected in the App.": "Usa i valori di affinamento della lente attualmente selezionati nell’App.",
     "Check all four screen corners from your playing positions in the IR camera test.": "Nel test della camera IR, verifica i quattro angoli dello schermo dalle tue posizioni di gioco.",
@@ -652,5 +645,5 @@
     "Move back to at least": "Allontanati almeno fino a",
     "After fitting the lens, use Refine lens in the App, so the gun knows the new lens.": "Dopo aver montato la lente, usa Affina lente nell’App, così la pistola conosce la nuova lente.",
     "This lens may be too strong for Refine lens in the App: aiming may be less precise.": "Questa lente potrebbe essere troppo forte per Affina lente nell’App: la mira potrebbe essere meno precisa.",
-    "When you tilt the gun, one LED may briefly leave the view: the gun fills it in, with slightly less precise aim.": "Quando inclini la pistola, un LED può uscire per un attimo dalla vista: la pistola lo ricostruisce, con una mira un po’ meno precisa."
+    "When you tilt the gun, one LED may leave the view: the gun fills it in, with slightly less precise aim.": "Quando inclini la pistola, un LED può uscire dalla vista: la pistola lo ricostruisce, con una mira un po’ meno precisa."
 }

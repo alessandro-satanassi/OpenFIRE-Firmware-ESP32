@@ -27,9 +27,11 @@ test('Diamond geometry stays at the centres of its four edges',()=>{
  assert.equal(a.ratio,b.ratio);assert.equal(a.base,a.width);assert.equal(b.base,b.width);
  const p=L.leds(a.settings,a.ratio);assert.equal(p[0][0],0);assert.equal(p[1][1],0);assert.equal(p[2][0],0);assert.equal(p[3][1],0);
 });
-test('more movement requires at least the distance of the same layout with normal movement',()=>{
- const a=L.calculate({inches:55,distance:3,scenario:'normal',diamond:true},records[1]);
- const b=L.calculate({inches:55,distance:3,scenario:'wide',diamond:true},records[1]);assert.ok(b.minDistance>=a.minDistance);
+test('one play profile: old playing space inputs are ignored',()=>{
+ const a=L.calculate({inches:55,distance:3},records[1]);
+ const b=L.calculate({inches:55,distance:3,scenario:'wide',separation:1.5},records[1]);
+ assert.equal(JSON.stringify([a.ratio,a.minDistance,a.status]),JSON.stringify([b.ratio,b.minDistance,b.status]));
+ assert.ok(!('scenario' in a.settings)&&!('separation' in a.settings));
 });
 test('add-on factor changes tangent of FOV, not degrees by linear division',()=>{
  const x=L.optics(records[0],.45);assert.ok(x.horizontal>66&&x.horizontal<68);assert.ok(x.estimated);
@@ -57,7 +59,7 @@ test('position quotes are symmetric for every supported camera and monitor size'
 });
 test('direct radial boundary test agrees with projected coverage',()=>{
  for(const record of records)for(const ratio of [.5,.711,1.3,16/9])for(const distance of [.5,.8,1.2,2,3,5,8]){
-  const s=L.settings({inches:55,distance,scenario:'wide'}),o=L.optics(record),p=L.poses(s,distance);
+  const s=L.settings({inches:55,distance}),o=L.optics(record),p=L.poses(s,distance);
   const c=L.coverage(s,o,ratio,p);
   if(Math.abs(c.margin-.05)>1e-4)assert.equal(L.fits(s,o,ratio,p),c.margin>=.05);
  }
@@ -81,6 +83,7 @@ test('candidates avoid near-square shapes: upright up to 0.85, wide from 1.5 or 
  for(const aspect of [16/9,16/10,3/2,5/4,4/3,21/9,32/9]){
   const c=L.candidates(L.settings({aspect}));
   assert.ok(c.includes(.85));assert.ok(c.every(r=>r<=.85||r>=1.5||(r===c[c.length-1]&&r>=1.3)));
+  assert.ok(c.every(r=>r>=L.DEFAULT_RATIO),'never narrower than the proportion recommended so far');
   assert.ok(c.every(r=>r<=aspect+1e-12));
  }
  assert.ok(!L.candidates(L.settings({aspect:5/4})).includes(5/4));
@@ -117,10 +120,9 @@ test('too close: the advice does not change while moving back, and the suggested
   }
  }
 });
-test('normal play checks 15 degrees of roll; only rolled poses may lose one LED',()=>{
+test('play profile: gun straight needs four LEDs, rolled 20 or 45 degrees may lose one',()=>{
  const s=L.settings({inches:55,distance:3}),p=L.poses(s,3);
  assert.ok(p.every(q=>q.spare===0||q.spare===1));
- assert.equal(p.filter(q=>q.spare===0).length*2,p.filter(q=>q.spare===1).length);
- const w=L.poses(L.settings({inches:55,distance:3,scenario:'wide'}),3);
- assert.equal(w.filter(q=>q.spare===0).length*4,w.filter(q=>q.spare===1).length);
+ assert.equal(p.filter(q=>q.spare===0).length*4,p.filter(q=>q.spare===1).length);
+ assert.ok(p.filter(q=>q.spare===0).every(q=>Math.abs(q.right[1])<1e-12),'straight poses have no roll');
 });

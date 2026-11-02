@@ -54,7 +54,7 @@ With a DFRobot/Wii camera and a small PC monitor, two Wii sensor bars are enough
 
 The **OpenFIRE ESP32 WebApp** has an alignment assistant that shows where to place the emitters on your display: open it with the **Emitter Alignment** button in the menu bar, or from ***Help → Open IR Emitter Alignment Assistant***.
 
-In the fullscreen assistant, choose the screen size and format, camera, playing distance and movement space. **Square** positions and centimetre measurements update automatically; **Diamond** stays at the centre of each edge. For two players, set the distance between their lightguns. Hide the controls to see the placement markers clearly. The assistant also works without a connected gun and does not change its settings.
+In the fullscreen assistant, choose the screen format and size, camera, add-on lens and playing distance. **Square** positions and centimetre measurements update automatically; **Diamond** stays at the centre of each edge. The suggestion covers normal play, with side movements and the gun tilted. Hide the controls to see the placement markers clearly. The assistant also works without a connected gun and does not change its settings.
 
 The suggested distance includes a movement margin, not a guarantee of detection range. Add-on lenses marked **estimate** have not been measured on your camera. Check the four screen corners from your playing positions in the IR camera test, then calibrate again after moving the emitters.
 
@@ -470,7 +470,7 @@ Con una telecamera DFRobot/Wii e un piccolo monitor per PC bastano due barre sen
 
 La **WebApp OpenFIRE ESP32** ha un assistente di allineamento che mostra dove posizionare gli emettitori sul tuo schermo: aprilo con il pulsante **Allineamento Sensore** nella barra dei menu, oppure da ***Aiuto → Apri Assistente allineamento emettitori IR***.
 
-Nell'assistente a schermo intero scegli dimensioni e formato dello schermo, camera, distanza e spazio di gioco. Le posizioni **Square** e le quote in centimetri si aggiornano automaticamente; **Diamond** resta al centro dei quattro lati. Per due giocatori, imposta la distanza fra le loro pistole. Nascondi i controlli per vedere meglio i riferimenti di montaggio. L'assistente funziona anche senza pistola collegata e non ne modifica le impostazioni.
+Nell'assistente a schermo intero scegli formato e dimensioni dello schermo, camera, eventuale lente aggiuntiva e distanza di gioco. Le posizioni **Square** e le quote in centimetri si aggiornano automaticamente; **Diamond** resta al centro dei quattro lati. Il consiglio tiene conto del gioco normale, con spostamenti laterali e pistola inclinata. Nascondi i controlli per vedere meglio i riferimenti di montaggio. L'assistente funziona anche senza pistola collegata e non ne modifica le impostazioni.
 
 La distanza suggerita comprende un margine di movimento, non garantisce la portata di rilevamento. Le lenti aggiuntive indicate come **stima** non sono state misurate sulla tua camera. Nel test della camera IR, verifica i quattro angoli dello schermo dalle tue posizioni di gioco; dopo aver spostato gli emettitori, ripeti la calibrazione.
 

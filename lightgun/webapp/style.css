@@ -1098,6 +1098,8 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
 .alignment-layouts button { flex: 1; }
 .alignment-layouts button[aria-pressed="true"] { border-color: #58d6e8; color: #74e3f4; background: #163b4c; }
 .alignment-field { margin: 10px 0; }
+.alignment-group { background: #0b1626; border: 1px solid #22374f; border-radius: 10px; padding: 2px 12px; margin: 10px 0; }
+.alignment-group:last-child { margin-bottom: 0; }
 .alignment-value { display: flex; align-items: center; gap: 6px; }
 .alignment-value label { flex: 1; }
 .alignment-value span { width: 18px; color: #a9bad0; }

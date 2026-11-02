@@ -8,7 +8,7 @@
     const cm=x=>(x*100).toLocaleString(OF.i18n.currentLang,{maximumFractionDigits:1});
     class EmitterAlignment {
         constructor(win,options={}) {
-            this.win=win;this.records=OF.Boards.shared.cameraOptics||[];this.fields={};this.values={inches:55,distance:2,aspect:16/9,scenario:'normal',separation:.8,diamond:!!options.diamond,lens:1};
+            this.win=win;this.records=OF.Boards.shared.cameraOptics||[];this.fields={};this.values={inches:55,distance:2,aspect:16/9,diamond:!!options.diamond,lens:1};
             this.model=options.cameraModel;this.custom=options.lensValues;this.factor=1;
             this.record=this.records.find(r=>r.model===this.model)||this.records[0];
         }
@@ -28,21 +28,22 @@
                 b.onclick=()=>{this.values.diamond=key==='diamond';for(const n of modes.children)n.setAttribute('aria-pressed',n===b?'true':'false');this.schedule();};modes.append(b);
             }
             controls.append(modes);
-            const sizes=[20,24,27,32,42,43,48,50,55,65,75,77,83,85,98,100,120];
-            this.range(controls,'inches','Screen diagonal','″',20,120,1,sizes,{label:'Common screen sizes',prompt:'Choose a common screen size…',entries:sizes.map(v=>[v,v+'″'])});
-            this.range(controls,'distance','Playing distance','m',.5,10,.05,[.5,.75,1,1.5,2,2.5,3,4,5,6,8,10]);
+            // EN/IT: Three groups: screen, camera, play / Tre gruppi: schermo, camera, gioco.
+            const screen=node('div','alignment-group'),camera=node('div','alignment-group'),play=node('div','alignment-group');
+            controls.append(screen,camera,play);
             // EN: Include every format in the preferences; ultrawide additions are
             // planner-only and do not add or change firmware profile enum values.
             // IT: Tutti i formati delle preferenze; gli ultrawide aggiuntivi valgono
             // solo per l'assistente, senza modificare gli enum dei profili firmware.
             const formats=[...new Set([...OF.Maps.aspectRatios,'21:9','21:10','32:9'])];
-            this.select(controls,'aspect','Screen format',formats.map(label=>{const [w,h]=label.split(':').map(Number);return[w/h,label];}));
-            this.select(controls,'camera','Camera',this.records.map(r=>[r.model,r.label]),this.record?.model);
+            this.select(screen,'aspect','Screen format',formats.map(label=>{const [w,h]=label.split(':').map(Number);return[w/h,label];}));
+            const sizes=[20,24,27,32,42,43,48,50,55,65,75,77,83,85,98,100,120];
+            this.range(screen,'inches','Screen diagonal','″',20,120,1,sizes,{label:'Common screen sizes',prompt:'Choose a common screen size…',entries:sizes.map(v=>[v,v+'″'])});
+            this.select(camera,'camera','Camera',this.records.map(r=>[r.model,r.label]),this.record?.model);
             // EN: Add-on wide converter as a factor: 1 = none, any value down to 0.30x.
             // IT: Convertitore grandangolare come fattore: 1 = nessuno, qualsiasi valore fino a 0,30x.
-            this.range(controls,'lens','Additional lens','×',.3,1,.01,[.3,.45,.5,.6,.67,.75,1],{label:'Common lenses',prompt:'Choose a common lens…',entries:[[1,t('None')],[.67,t('0.67x converter (estimate)')],[.45,t('0.45x converter (estimate)')]]});
-            this.select(controls,'scenario','Playing space',[['normal',t('Normal movement')],['wide',t('Wide movement (up to 75° roll)')],['two',t('Two players')]]);
-            this.separation=this.range(controls,'separation','Distance between lightguns','m',.5,1.5,.05,[.6,.8,1,1.2,1.5]);this.separation.hidden=true;
+            this.range(camera,'lens','Additional lens','×',.3,1,.01,[.3,.45,.5,.6,.67,.75,1],{label:'Common lenses',prompt:'Choose a common lens…',entries:[[1,t('None')],[.67,t('0.67x converter (estimate)')],[.45,t('0.45x converter (estimate)')]]});
+            this.range(play,'distance','Playing distance','m',.5,10,.05,[.5,.75,1,1.5,2,2.5,3,4,5,6,8,10]);
             this.results=node('section','alignment-card alignment-results');
             this.results.setAttribute('aria-live','polite');this.results.setAttribute('aria-atomic','true');
             this.body.append(controls,this.results);
@@ -90,7 +91,6 @@
             for(const field of Object.values(this.fields.lens))field.disabled=wide;
             if(wide)this.setLens(1);
             this.factor=this.values.lens;
-            this.separation.hidden=this.values.scenario!=='two';
             this.timer=setTimeout(()=>{
                 if(this.win.closed)return;
                 const custom=this.record.model===this.model?this.custom:null;
@@ -110,12 +110,12 @@
             entry('Screen size',cm(r.width)+' × '+cm(r.height)+' cm');
             if(!s.diamond){entry('Horizontal LED spacing',cm(r.base)+' cm');entry('From the screen centre','± '+cm(r.base/2)+' cm');entry('From each side edge',cm((r.width-r.base)/2)+' cm');entry('Base / height',r.ratio.toLocaleString(OF.i18n.currentLang,{maximumFractionDigits:2}));}
             entry('Vertical LED spacing',cm(r.height)+' cm');
-            entry('Suggested minimum distance',r.minDistance===null?t('More than 20 m'):r.minDistance.toLocaleString(OF.i18n.currentLang,{maximumFractionDigits:2})+' m');
+            if(r.moveTo===null||r.moveTo!==r.minDistance)entry('Suggested minimum distance',r.minDistance===null?t('More than 20 m'):r.minDistance.toLocaleString(OF.i18n.currentLang,{maximumFractionDigits:2})+' m');
             if(r.moveTo!==null)entry('Move back to at least',r.moveTo.toLocaleString(OF.i18n.currentLang,{maximumFractionDigits:2})+' m');
             this.results.append(grid);
             const notes=node('div','alignment-notes');
-            notes.append(node('p','',t(s.scenario==='wide'?'Includes side movement and roll up to 75°; the most demanding poses need more distance.':s.scenario==='two'?'Checked from both player positions, with small side movements and roll up to 15°.':'Includes small side movements and roll up to 15°.')));
-            notes.append(node('p','',t('When you tilt the gun, one LED may briefly leave the view: the gun fills it in, with slightly less precise aim.')));
+            notes.append(node('p','',t('Includes side movements and gun roll up to 45°.')));
+            notes.append(node('p','',t('When you tilt the gun, one LED may leave the view: the gun fills it in, with slightly less precise aim.')));
             if(r.optics.estimated)notes.append(node('p','alignment-estimate',t('Unmeasured add-on lens: approximate geometry only. Check the real field of view with the IR camera test.')));
             if(this.factor>=.5&&this.factor<1)notes.append(node('p','alignment-estimate',t('After fitting the lens, use Refine lens in the App, so the gun knows the new lens.')));
             else if(this.factor<.5)notes.append(node('p','alignment-estimate',t('This lens may be too strong for Refine lens in the App: aiming may be less precise.')));

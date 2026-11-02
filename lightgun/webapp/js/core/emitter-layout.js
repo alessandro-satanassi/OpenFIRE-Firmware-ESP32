@@ -46,18 +46,18 @@
     function settings(input) {
         const finite = (v, a, b, fallback) => Number.isFinite(+v) ? clamp(+v, a, b) : fallback;
         return { inches: finite(input.inches, 20, 120, 55), aspect: finite(input.aspect, 1, 4, 16/9),
-            distance: finite(input.distance, .3, 20, 2), scenario: ['normal', 'wide', 'two'].includes(input.scenario) ? input.scenario : 'normal',
-            separation: finite(input.separation, .5, 1.5, .8), diamond: !!input.diamond };
+            distance: finite(input.distance, .3, 20, 2), diamond: !!input.diamond };
     }
     function poses(s, distance) {
         const { width: w, height: h } = dimensions(s.inches, s.aspect);
-        const sides = s.scenario === 'two' ? [-s.separation/2-w*.08, -s.separation/2+w*.08, s.separation/2-w*.08, s.separation/2+w*.08]
-            : s.scenario === 'wide' ? [-w*.35, 0, w*.35] : [-w*.12, 0, w*.12];
-        // EN: Normal play: 15° roll at every corner already covers real play. With the gun rolled one LED
-        //     may leave the view: the firmware rebuilds it from the other three (spare).
-        // IT: Gioco normale: 15° a ogni angolo coprono gia' il gioco reale. Con l'arma ruotata un LED
-        //     puo' uscire dall'inquadratura: il firmware lo ricostruisce dagli altri tre (spare).
-        const rolls = s.scenario === 'wide' ? [-75, -45, 0, 45, 75] : [-15, 0, 15];
+        // EN: One play profile: side moves up to 20% of the screen width, the gun held straight
+        //     (all four LEDs) or rolled up to 20° and 45°: then one LED may leave the view, the
+        //     firmware rebuilds it from the other three (spare). Larger rolls are rare: not checked.
+        // IT: Un solo profilo di gioco: spostamenti laterali fino al 20% della larghezza schermo,
+        //     arma dritta (tutti e 4 i LED) o ruotata fino a 20° e 45°: allora un LED puo' uscire
+        //     dall'inquadratura, il firmware lo ricostruisce dagli altri tre (spare). Oltre: raro.
+        const sides = [-w*.2, 0, w*.2];
+        const rolls = [-45, -20, 0, 20, 45];
         const list = [];
         for (const side of sides) for (const up of [-h*.1, h*.1]) for (const ax of [-.5, 0, .5]) for (const ay of [-.5, 0, .5]) {
             const f = norm([ax*w-side, ay*h-up, distance]), right = norm([f[2], 0, -f[0]]), down = cross(f, right);
@@ -156,14 +156,16 @@
     // EN: Shapes close to a square let the firmware swap the LEDs when seen up close (tracking
     //     simulations): upright up to 0.85, wide from 1.5 or at the screen corners (4:3 and wider).
     //     1.3 and 1.4 only from 4 screen heights, even one step forward: no swaps seen there.
+    //     Never narrower than 0.711, the proportion recommended so far.
     // IT: Rettangoli quasi quadrati fanno scambiare i LED al firmware visti da vicino (simulazioni
     //     del tracking): verticali fino a 0,85, larghi da 1,5 o agli angoli (dal 4:3 in su).
     //     1,3 e 1,4 solo da 4 altezze schermo, anche col passo avanti: li' nessuno scambio.
+    //     Mai piu' stretto di 0,711, la proporzione consigliata finora.
     const FAR_HEIGHTS = 4;
     function candidates(s,distance=0) {
         if(s.diamond) return [s.aspect];
         const far=distance*STEP_FORWARD>=FAR_HEIGHTS*dimensions(s.inches,s.aspect).height;
-        return [DEFAULT_RATIO,.5,.6,.65,.7,.75,.8,.85,1.3,1.4,1.5,1.6,1.68,s.aspect]
+        return [DEFAULT_RATIO,.75,.8,.85,1.3,1.4,1.5,1.6,1.68,s.aspect]
             .filter((r,i,a)=>r<=s.aspect && (r<=.85 || r>=1.5 || (r===s.aspect && r>=1.3) || (far && (r===1.3 || r===1.4))) && a.indexOf(r)===i);
     }
     function rowsAt(s,o,distance) {
