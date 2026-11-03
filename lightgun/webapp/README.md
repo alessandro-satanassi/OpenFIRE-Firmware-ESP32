@@ -64,6 +64,10 @@ All placement work runs in the browser; the lightgun's tracking and serial proto
 On opening, the planner selects the first green distance. Later setup edits preserve the chosen
 distance; **Set ideal minimum distance**, below the distance slider, recomputes it on request.
 The button uses the current screen, optics and layout, with the same 10 m cap and honest warning.
+The legacy toggle below the distance group uses the fixed 0.711 Square ratio or Diamond edge
+centres. A disabled fieldset locks and dims setup controls without overwriting their values or
+individual disabled states. The toggle stays outside it. Legacy mode skips optical advice;
+turning it off restores normal calculation at the preserved distance and setup.
 
 ## Translations
 

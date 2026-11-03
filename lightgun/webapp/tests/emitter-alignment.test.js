@@ -13,6 +13,7 @@ function alignment(record=records[0],custom=null){
  a.fields.distance={number:{min:.5,max:L.MAX_DISTANCE,step:L.DISTANCE_STEP,value:2},slider:{max:L.MAX_DISTANCE,value:2}};
  a.fields.lens={number:{value:1},slider:{value:1},preset:{}};
  a.ideal={disabled:true};
+ a.setup={disabled:false};a.legacyButton={setAttribute(k,v){this[k]=v;}};
  a.update=()=>{};
  return a;
 }
@@ -85,4 +86,32 @@ test('switching Square and Diamond keeps manual distance until the ideal action'
  a.schedule(true);flush();assert.notEqual(a.values.distance,1);assert.equal(a.result.status,'good');
  a.values.distance=1;a.values.diamond=false;a.schedule();flush();assert.equal(a.values.distance,1);
  a.schedule(true);flush();assert.equal(a.values.distance,square);
+});
+
+test('legacy locks controls, fixes Square at 0.711 and restores every previous choice',()=>{
+ for(const record of records){
+  const a=alignment(record);Object.assign(a.values,{inches:55,distance:2,lens:record.addOnLens?.67:1});a.schedule();flush();
+  const values=JSON.stringify(a.values),result=JSON.stringify(a.result),idealDisabled=a.ideal.disabled;
+  a.toggleLegacy();flush();
+  assert.ok(a.setup.disabled);assert.equal(a.legacyButton['aria-pressed'],'true');
+  assert.equal(a.result.ratio,.711);assert.equal(a.result.base,.711*a.result.height);
+  assert.equal(JSON.stringify(a.values),values,'legacy must not overwrite setup choices');
+  a.toggleLegacy();flush();
+  assert.equal(a.setup.disabled,false);assert.equal(a.legacyButton['aria-pressed'],'false');
+  assert.equal(JSON.stringify(a.values),values);assert.equal(JSON.stringify(a.result),result);assert.equal(a.ideal.disabled,idealDisabled);
+  assert.equal(a.fields.lens.number.disabled,record.addOnLens===false,'native lens restrictions survive the legacy toggle');
+ }
+});
+
+test('legacy Diamond keeps the edge centres and needs no camera optics',()=>{
+ const a=alignment();a.values.diamond=true;a.record=null;
+ a.toggleLegacy();flush();assert.ok(a.result.settings.diamond);
+ assert.equal(a.result.ratio,a.values.aspect);assert.ok(Math.abs(a.result.base-a.result.width)<1e-12);
+});
+
+test('legacy cancels pending ideal distance changes and rapid toggles restore normal mode',()=>{
+ const a=alignment();a.values.distance=.8;a.schedule(true);a.toggleLegacy();flush();
+ assert.equal(a.values.distance,.8);assert.equal(a.result.settings.distance,.8);assert.equal(a.result.ratio,.711);
+ a.toggleLegacy();a.toggleLegacy();a.toggleLegacy();flush();
+ assert.equal(a.legacy,false);assert.equal(a.setup.disabled,false);assert.equal(a.result.settings.distance,.8);assert.ok(a.result.optics);
 });

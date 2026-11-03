@@ -9,7 +9,7 @@
     class EmitterAlignment {
         constructor(win,options={}) {
             this.win=win;this.records=OF.Boards.shared.cameraOptics||[];this.fields={};this.values={inches:55,distance:2,aspect:16/9,diamond:!!options.diamond,lens:1};
-            this.model=options.cameraModel;this.custom=options.lensValues;this.factor=1;
+            this.model=options.cameraModel;this.custom=options.lensValues;this.factor=1;this.legacy=false;
             this.record=this.records.find(r=>r.model===this.model)||this.records[0];
         }
         mount() {
@@ -22,15 +22,16 @@
             this.body=node('div','alignment-body');
             const controls=node('section','alignment-card alignment-controls');
             controls.append(node('h2','',t('Your setup')));
+            this.setup=node('fieldset','alignment-settings');this.setup.setAttribute('aria-label',t('Your setup'));controls.append(this.setup);
             const modes=node('div','alignment-layouts');
             for(const [key,label] of [['square','Square'],['diamond','Diamond']]) {
                 const b=node('button','',label);b.type='button';b.dataset.layout=key;b.setAttribute('aria-pressed',(key==='diamond')===this.values.diamond?'true':'false');
                 b.onclick=()=>{this.values.diamond=key==='diamond';for(const n of modes.children)n.setAttribute('aria-pressed',n===b?'true':'false');this.schedule();};modes.append(b);
             }
-            controls.append(modes);
+            this.setup.append(modes);
             // EN/IT: Three groups: screen, camera, play / Tre gruppi: schermo, camera, gioco.
             const screen=node('div','alignment-group'),camera=node('div','alignment-group'),play=node('div','alignment-group');
-            controls.append(screen,camera,play);
+            this.setup.append(screen,camera,play);
             // EN: Include every format in the preferences; ultrawide additions are
             // planner-only and do not add or change firmware profile enum values.
             // IT: Tutti i formati delle preferenze; gli ultrawide aggiuntivi valgono
@@ -46,6 +47,7 @@
             const distance=this.range(play,'distance','Playing distance','m',.5,OF.EmitterLayout.MAX_DISTANCE,OF.EmitterLayout.DISTANCE_STEP,[.5,1,1.5,2,2.5,3,4,5,6,8,10]);
             this.ideal=node('button','alignment-ideal-distance',t('Set ideal minimum distance'));this.ideal.type='button';this.ideal.id='alignment-ideal-distance';this.ideal.disabled=true;this.ideal.onclick=()=>this.schedule(true);
             distance.append(this.ideal,node('p','alignment-hint alignment-distance-hint',t('Measured from the gun to the screen.')));
+            this.legacyButton=node('button','alignment-legacy',t('Force legacy placement'));this.legacyButton.type='button';this.legacyButton.id='alignment-legacy';this.legacyButton.setAttribute('aria-pressed','false');this.legacyButton.onclick=()=>this.toggleLegacy();controls.append(this.legacyButton);
             this.results=node('section','alignment-card alignment-results');
             this.results.setAttribute('aria-live','polite');this.results.setAttribute('aria-atomic','true');
             this.body.append(controls,this.results);
@@ -84,22 +86,40 @@
         setLens(value) {
             const f=this.fields.lens;this.values.lens=value;f.number.value=f.slider.value=value;
         }
+        toggleLegacy() {
+            this.legacy=!this.legacy;
+            // EN: The fieldset locks every setting without overwriting individual disabled states.
+            // IT: Il fieldset blocca tutte le impostazioni senza alterarne le disabilitazioni individuali.
+            this.setup.disabled=this.legacy;
+            this.legacyButton.setAttribute('aria-pressed',String(this.legacy));
+            this.schedule();
+        }
         schedule(useIdealDistance=false) {
-            if(!this.record)return;
             clearTimeout(this.timer);
+            if(!this.legacy&&!this.record)return;
             // R3 already has a very wide native field. This is metadata driven,
             // not a camera ID check; future wide records get the same behaviour.
-            const wide=this.record.addOnLens===false;
-            for(const field of Object.values(this.fields.lens))field.disabled=wide;
-            if(wide)this.setLens(1);
-            this.factor=this.values.lens;
+            if(!this.legacy){
+                const wide=this.record.addOnLens===false;
+                for(const field of Object.values(this.fields.lens))field.disabled=wide;
+                if(wide)this.setLens(1);
+                this.factor=this.values.lens;
+            }
             this.timer=setTimeout(()=>{
                 if(this.win.closed)return;
-                const custom=this.record.model===this.model?this.custom:null;
-                const ideal=this.idealDistance(custom);
-                if(useIdealDistance){this.values.distance=ideal;this.fields.distance.number.value=this.fields.distance.slider.value=ideal;}
-                this.ideal.disabled=this.values.distance===ideal;
-                this.result=OF.EmitterLayout.calculate(this.values,this.record,this.factor,custom);
+                if(this.legacy){
+                    // EN/IT: Fixed geometry only; camera and distance do not move the legacy LEDs /
+                    // Solo geometria fissa: camera e distanza non spostano i LED legacy.
+                    const s=OF.EmitterLayout.settings(this.values),dim=OF.EmitterLayout.dimensions(s.inches,s.aspect);
+                    const ratio=s.diamond?s.aspect:OF.EmitterLayout.DEFAULT_RATIO;
+                    this.result={...dim,settings:s,ratio,base:ratio*dim.height};
+                }else{
+                    const custom=this.record.model===this.model?this.custom:null;
+                    const ideal=this.idealDistance(custom);
+                    if(useIdealDistance){this.values.distance=ideal;this.fields.distance.number.value=this.fields.distance.slider.value=ideal;}
+                    this.ideal.disabled=this.values.distance===ideal;
+                    this.result=OF.EmitterLayout.calculate(this.values,this.record,this.factor,custom);
+                }
                 this.update();this.win.render();
             },70);
         }
@@ -118,20 +138,29 @@
         }
         update() {
             const r=this.result,s=r.settings;
-            this.results.replaceChildren(node('h2','',t('Suggested placement')));
-            const badge=node('p','alignment-status '+r.status,t(r.status==='good'?'Good movement margin':r.status==='limited'?'Limited movement margin':'Reduced LED coverage'));
+            this.results.replaceChildren(node('h2','',t(this.legacy?'Legacy placement':'Suggested placement')));
+            const badge=node('p','alignment-status '+(this.legacy?'legacy':r.status),t(this.legacy?'Legacy placement active':r.status==='good'?'Good movement margin':r.status==='limited'?'Limited movement margin':'Reduced LED coverage'));
             this.results.append(badge);
             const title=s.diamond?t('Diamond: centre of each screen edge'):t('Square: two emitters above and two below');
             this.results.append(node('p','alignment-placement',title));
             const grid=node('dl','alignment-measures');
             const entry=(key,value)=>grid.append(node('dt','',t(key)),node('dd','',value));
             entry('Screen size',cm(r.width)+' × '+cm(r.height)+' cm');
-            if(!s.diamond){entry('Horizontal LED spacing',cm(r.base)+' cm');entry('From the screen centre','± '+cm(r.base/2)+' cm');entry('From each side edge',cm((r.width-r.base)/2)+' cm');entry('Base / height',r.ratio.toLocaleString(OF.i18n.currentLang,{maximumFractionDigits:2}));}
+            if(!s.diamond){entry('Horizontal LED spacing',cm(r.base)+' cm');entry('From the screen centre','± '+cm(r.base/2)+' cm');entry('From each side edge',cm((r.width-r.base)/2)+' cm');entry('Base / height',r.ratio.toLocaleString(OF.i18n.currentLang,{maximumFractionDigits:this.legacy?3:2}));}
             entry('Vertical LED spacing',cm(r.height)+' cm');
-            if(r.moveTo!==null)entry('For fuller LED coverage',r.moveTo.toLocaleString(OF.i18n.currentLang,{maximumFractionDigits:1})+' m');
-            if(r.moveTo===null||r.moveTo!==r.minDistance)entry(r.status!=='good'?'For more freedom of movement':'Suggested minimum distance',r.minDistance===null?t('More than 10 m'):r.minDistance.toLocaleString(OF.i18n.currentLang,{maximumFractionDigits:1})+' m');
+            if(!this.legacy){
+                if(r.moveTo!==null)entry('For fuller LED coverage',r.moveTo.toLocaleString(OF.i18n.currentLang,{maximumFractionDigits:1})+' m');
+                if(r.moveTo===null||r.moveTo!==r.minDistance)entry(r.status!=='good'?'For more freedom of movement':'Suggested minimum distance',r.minDistance===null?t('More than 10 m'):r.minDistance.toLocaleString(OF.i18n.currentLang,{maximumFractionDigits:1})+' m');
+            }
             this.results.append(grid);
             const notes=node('div','alignment-notes');
+            if(this.legacy){
+                if(!s.diamond)notes.append(node('p','',t('Square uses the fixed legacy base / height ratio of 0.711.')));
+                notes.append(node('p','',t('This placement does not adapt to the camera or playing distance.')));
+                notes.append(node('p','',t('Your choices are preserved. Press the legacy button again to return to automatic placement.')));
+                notes.append(node('p','',t('Check all four screen corners from your playing positions in the IR camera test.')));
+                this.results.append(notes);return;
+            }
             if(r.status==='limited')notes.append(node('p','',t('Usable at the selected distance, with less room to move. Move farther back for more freedom.')));
             if(r.status==='close')notes.append(node('p','',t(r.moveTo!==null?'Showing the first usable placement farther back. The colour refers to your selected distance.':'No tested placement meets the visibility checks within 10 m.')));
             if(r.status==='close')notes.append(node('p','',t('Some LEDs may leave the view even with the gun upright. Aim may be less precise or tracking may be lost.')));
