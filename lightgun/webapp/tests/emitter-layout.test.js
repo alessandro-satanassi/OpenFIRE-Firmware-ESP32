@@ -10,6 +10,8 @@ const nonSquare=r=>r<=.85+1e-12||r>=1.3-1e-12;
 test('manufacturer fields and firmware optical coefficients are generated together',()=>{
  assert.equal(records.length,3);assert.equal(records[0].vertical,23);assert.equal(records[0].horizontal,33);
  assert.equal(records[2].horizontal,111.3);assert.equal(records[2].k1,-.128946);assert.equal(records[2].sensorX,98);
+ assert.equal(records[0].coordinateX,1024);assert.equal(records[0].coordinateY,768);
+ assert.equal(records[2].coordinateX,4096);
 });
 test('physical dimensions use diagonal AND aspect ratio',()=>{
  const d=L.dimensions(55,16/9);assert.ok(Math.abs(d.width-1.2176)<.001);assert.ok(Math.abs(d.height-.6849)<.001);
@@ -83,7 +85,8 @@ test('candidates avoid near-square shapes: upright up to 0.85, wide from 1.5 or 
  for(const aspect of [16/9,16/10,3/2,5/4,4/3,21/9,32/9]){
   const c=L.candidates(L.settings({aspect}));
   assert.ok(c.includes(.85));assert.ok(c.every(r=>r<=.85||r>=1.5||(r===c[c.length-1]&&r>=1.3)));
-  assert.ok(c.every(r=>r>=L.DEFAULT_RATIO),'never narrower than the proportion recommended so far');
+  assert.ok(c.includes(.5)&&c.includes(.6)&&c.includes(.8),'close play can use narrower or intermediate rectangles');
+  assert.ok(c.every(r=>r>=.5),'do not trade too much precision for a few centimetres');
   assert.ok(c.every(r=>r<=aspect+1e-12));
  }
  assert.ok(!L.candidates(L.settings({aspect:5/4})).includes(5/4));
@@ -104,8 +107,9 @@ test('the suggested minimum distance uses the same step-forward margin as the la
  for(const r of records)for(const inches of [32,55,85])for(const distance of [1.5,2.5,3.5,5,7]){
   const x=L.calculate({inches,distance},r);
   if(x.minDistance===null)continue;
-  if(x.status==='good')assert.ok(x.minDistance<=distance+.05,`${r.label} ${inches} ${distance}: ${x.minDistance}`);
-  if(x.moveTo!==null)assert.ok(x.minDistance<=x.moveTo+.05,`${r.label} ${inches} ${distance}: ${x.minDistance} > ${x.moveTo}`);
+  if(x.status==='good')assert.ok(x.minDistance<=distance+.1,`${r.label} ${inches} ${distance}: ${x.minDistance}`);
+  if(x.moveTo!==null)assert.ok(x.minDistance>=x.moveTo-.1,'full movement room cannot precede the first usable distance');
+  assert.ok(L.fits(x.settings,x.optics,x.ratio,L.poses(x.settings,x.minDistance*L.STEP_FORWARD)),'full-margin distance keeps the required reserve for the displayed layout');
   const there=L.calculate({inches,distance:x.minDistance},r,1,null,false);
   assert.notEqual(there.status,'close',`${r.label} ${inches} ${distance}: close at ${x.minDistance}`);
  }
@@ -113,26 +117,115 @@ test('the suggested minimum distance uses the same step-forward margin as the la
 test('lean-forward reserve is 10%, while near-square wide shapes keep the 15% reserve',()=>{
  assert.equal(L.STEP_FORWARD,.9);assert.equal(L.FAR_STEP,.85);
 });
-test('moving away, the advice never goes back to a layout it already left',()=>{
+test('moving away never narrows the LEDs, including close and limited advice',()=>{
  for(const r of records)for(const inches of [27,55]){
-  const seen=[];
-  for(let d=1;d<=7.001;d+=.05){const x=L.calculate({inches,distance:d},r,1,null,false);
-   if(seen[seen.length-1]!==x.ratio){assert.ok(!seen.includes(x.ratio),`${r.label} ${inches} ${d.toFixed(2)}: back to ${x.ratio}`);seen.push(x.ratio);}}
+  let previous=0,wasGood=false;
+  for(let d=.3;d<=10.001;d+=.025){const x=L.calculate({inches,distance:d},r,1,null,false);
+   assert.ok(x.ratio>=previous,`${r.label} ${inches} ${d.toFixed(3)}: ${previous} -> ${x.ratio}`);
+   if(wasGood)assert.equal(x.status,'good','more distance never removes the green movement reserve');
+   previous=x.ratio;wasGood=x.status==='good';}
  }
 });
-test('too close: the advice does not change while moving back, and the suggested distance works',()=>{
- for(const r of records)for(const inches of [32,55,85]){
-  const near=[.5,.8,1.1].map(distance=>L.calculate({inches,distance},r,1,null,false)).filter(x=>x.status==='close'&&x.moveTo!==null);
-  for(const x of near){
-   assert.equal(x.ratio,near[0].ratio);assert.equal(x.moveTo,near[0].moveTo);
-   const there=L.calculate({inches,distance:x.moveTo},r,1,null,false);
-   assert.notEqual(there.status,'close');assert.equal(there.ratio,x.ratio);
+
+test('close-play recovery keeps the actual layout and does not require moving back',()=>{
+ for(const [inches,distance,factor] of [[32,1.5,1],[55,2,.67],[65,3.5,1]]){
+  const x=L.calculate({inches,distance,aspect:16/9},records[1],factor);
+  assert.equal(x.status,'limited');assert.equal(x.moveTo,null);
+  assert.ok(L.fits(x.settings,x.optics,x.ratio,L.poses(x.settings,distance),0),'actual distance keeps the required LEDs');
+  assert.ok(x.minDistance>distance,'more movement room needs additional distance');
+  assert.ok(L.fits(x.settings,x.optics,x.ratio,L.poses(x.settings,x.minDistance*L.STEP_FORWARD)),'distance label refers to this same layout');
+ }
+});
+
+test('DFRobot 27 inch advice starts with the first useful layout and never narrows',()=>{
+ const rows=[1.5,1.8,1.85,2.05,2.2].map(distance=>L.calculate({inches:27,distance},records[0]));
+ assert.equal(rows[0].status,'close');assert.ok(rows[0].moveTo>1.5);
+ assert.equal(rows[1].status,'limited');assert.equal(rows[2].status,'limited');assert.equal(rows[3].status,'limited');assert.equal(rows[4].status,'good');
+ assert.ok(rows.every((r,i)=>!i||r.ratio>=rows[i-1].ratio));
+ assert.equal(rows[0].ratio,rows[1].ratio,'red advice already shows the first useful layout');
+ assert.notEqual(rows[0].ratio,.5,'too close does not force a compact rectangle');
+});
+
+test('a layout usable at the actual distance is retained even when compact layouts fail',()=>{
+ const x=L.calculate({inches:27,aspect:4/3,distance:2.1},records[0]);
+ assert.equal(x.status,'limited');assert.ok(x.ratio>1);
+ assert.ok(L.fits(x.settings,x.optics,x.ratio,L.poses(x.settings,2.1),0));
+ assert.ok(!L.fits(x.settings,x.optics,.5,L.poses(x.settings,2.1),0));
+});
+
+test('distance is capped at ten metres and recommendations use ten-centimetre steps',()=>{
+ assert.equal(L.MAX_DISTANCE,10);assert.equal(L.DISTANCE_STEP,.1);
+ for(const r of records)for(const distance of[.5,2,5,10,20]){
+  const x=L.calculate({inches:120,aspect:4/3,distance},r);
+  assert.ok(x.settings.distance<=10);
+  for(const d of[x.minDistance,x.moveTo])if(d!==null){assert.ok(d<=10);assert.ok(Math.abs(d*10-Math.round(d*10))<1e-10);}
+ }
+});
+
+test('the distance plan depends on setup and optics, never on slider history',()=>{
+ const input={inches:55,aspect:16/9},order=[3.5,.5,2,1,5,2,.5,3.5];
+ const seen=new Map();
+ for(const distance of order){
+  const x=L.calculate({...input,distance},records[1]);
+  if(seen.has(distance))assert.equal(JSON.stringify(x),seen.get(distance));
+  seen.set(distance,JSON.stringify(x));
+ }
+ const before=L.calculate({...input,distance:2},records[1]);
+ L.calculate({...input,inches:27,distance:2},records[2]);
+ L.calculate({...input,distance:2},records[1],.45);
+ L.calculate({...input,distance:2},records[1],1,{focal:records[1].focal*1.2});
+ assert.equal(JSON.stringify(L.calculate({...input,distance:2},records[1])),JSON.stringify(before));
+});
+
+test('good and limited labels agree with the actual geometry, including add-on lenses',()=>{
+ for(const record of records)for(const factor of record.addOnLens?[1,.45]:[1])for(const inches of [27,65])for(const distance of [.5,1.5,3.5]){
+  const x=L.calculate({inches,distance},record,factor,null,false);
+  if(x.status==='good')assert.ok(L.fits(x.settings,x.optics,x.ratio,L.poses(x.settings,distance*L.STEP_FORWARD)));
+  if(x.status==='limited'){
+   assert.equal(x.moveTo,null);
+   assert.ok(L.fits(x.settings,x.optics,x.ratio,L.poses(x.settings,distance),0));
   }
  }
 });
-test('play profile: gun straight needs four LEDs, rolled 20 or 45 degrees may lose one',()=>{
+test('too close: show the first usable placement, with honest distance labels',()=>{
+ for(const r of records)for(const inches of [32,55,85]){
+  const near=[.5,.8,1.1].map(distance=>L.calculate({inches,distance},r,1,null,false)).filter(x=>x.status==='close'&&x.moveTo!==null);
+  for(const x of near){
+   assert.equal(x.ratio,near[0].ratio,'red advice remains the first useful layout');
+   assert.ok(L.fits(x.settings,x.optics,x.ratio,L.poses(x.settings,x.moveTo),0));
+   const there=L.calculate({inches,distance:x.moveTo},r,1,null,false);
+   assert.notEqual(there.status,'close');assert.ok(there.ratio>=x.ratio);
+  }
+ }
+});
+
+test('precision estimates use record geometry and both coordinate resolutions',()=>{
+ const s=L.settings({inches:55,distance:2}),o=L.optics(records[2]);
+ const a=L.precision(s,o,.711,2),b=L.precision(s,o,1.68,2);
+ for(const q of[a,b]){assert.ok(Number.isFinite(q.fine)&&Number.isFinite(q.coarse));assert.ok(q.fine<=q.coarse);assert.ok(q.full>=0&&q.full<=1);}
+ for(const q of[a,b]){assert.ok(q.worstFine>=q.fine);assert.ok(q.worstCoarse>=q.coarse);}
+ assert.ok(b.fine<a.fine&&b.coarse<a.coarse,'spread-out visible points reduce sensitivity');
+ const pixelOnly=L.precision(s,{...o,coordinateX:o.sensorX,coordinateY:o.sensorY},.711,2);
+ assert.equal(pixelOnly.fine,pixelOnly.coarse,'equal spatial scales must have equal estimates');
+ const renamed=L.calculate(s,{...records[2],model:876,label:'Different name'});
+ assert.equal(renamed.ratio,L.calculate(s,records[2]).ratio,'camera identity does not select the layout');
+});
+
+test('converter focal geometry scales on a copy without modifying the camera record',()=>{
+ const original=records[1].focal,o=L.optics(records[1],.67);
+ assert.ok(Math.abs(o.focal-original*.67)<1e-12);assert.equal(records[1].focal,original);
+});
+test('play profile: gun straight needs four LEDs; up to 15 degrees may lose one',()=>{
  const s=L.settings({inches:55,distance:3}),p=L.poses(s,3);
  assert.ok(p.every(q=>q.spare===0||q.spare===1));
- assert.equal(p.filter(q=>q.spare===0).length*4,p.filter(q=>q.spare===1).length);
+ assert.equal(p.filter(q=>q.spare===0).length*6,p.filter(q=>q.spare===1).length);
  assert.ok(p.filter(q=>q.spare===0).every(q=>Math.abs(q.right[1])<1e-12),'straight poses have no roll');
+ for(let i=0;i<p.length;i+=7){
+  const straight=p[i+3];
+  for(let j=0;j<7;++j){
+   const cosine=straight.right.reduce((sum,x,k)=>sum+x*p[i+j].right[k],0);
+   assert.ok(Math.abs(Math.acos(Math.max(-1,Math.min(1,cosine)))*180/Math.PI-Math.abs(j-3)*5)<1e-5);
+   assert.equal(JSON.stringify(straight.f),JSON.stringify(p[i+j].f),'roll does not change the aiming direction');
+  }
+ }
 });

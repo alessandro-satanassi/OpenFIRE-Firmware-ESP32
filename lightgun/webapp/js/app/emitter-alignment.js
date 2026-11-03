@@ -42,24 +42,26 @@
             this.select(camera,'camera','Camera',this.records.map(r=>[r.model,r.label]),this.record?.model);
             // EN: Add-on wide converter as a factor: 1 = none, any value down to 0.30x.
             // IT: Convertitore grandangolare come fattore: 1 = nessuno, qualsiasi valore fino a 0,30x.
-            this.range(camera,'lens','Additional lens','×',.3,1,.01,[.3,.45,.5,.6,.67,.75,1],{label:'Common lenses',prompt:'Choose a common lens…',entries:[[1,t('None')],[.67,t('0.67x converter (estimate)')],[.45,t('0.45x converter (estimate)')]]});
-            this.range(play,'distance','Playing distance','m',.5,10,.05,[.5,.75,1,1.5,2,2.5,3,4,5,6,8,10]).append(node('p','alignment-hint',t('Measured from the gun to the screen.')));
+            this.range(camera,'lens','Additional lens','×',.3,1,.01,[.3,.45,.5,.6,.67,.75,1],{label:'Common lenses',prompt:'Choose a common lens…',entries:[[1,t('None')],[.67,t('0.67x converter')],[.45,t('0.45x converter')]]});
+            const distance=this.range(play,'distance','Playing distance','m',.5,OF.EmitterLayout.MAX_DISTANCE,OF.EmitterLayout.DISTANCE_STEP,[.5,1,1.5,2,2.5,3,4,5,6,8,10]);
+            this.ideal=node('button','alignment-ideal-distance',t('Set ideal minimum distance'));this.ideal.type='button';this.ideal.id='alignment-ideal-distance';this.ideal.disabled=true;this.ideal.onclick=()=>this.schedule(true);
+            distance.append(this.ideal,node('p','alignment-hint alignment-distance-hint',t('Measured from the gun to the screen.')));
             this.results=node('section','alignment-card alignment-results');
             this.results.setAttribute('aria-live','polite');this.results.setAttribute('aria-atomic','true');
             this.body.append(controls,this.results);
             this.footer=node('footer','alignment-footer',t('Measure between LED centres. After moving the emitters, calibrate again.'));
             overlay.append(this.header,this.body,this.footer);
             if(!this.record){this.results.append(node('p','',t('Camera optics are unavailable. Rebuild the WebApp.')));return;}
-            this.schedule();
+            this.schedule(true);
         }
         range(parent,key,label,unit,min,max,step,ticks,presets) {
             const box=node('div','alignment-field'),id='alignment-'+key;
             const title=node('label','',t(label));title.htmlFor=id;
-            const line=node('div','alignment-value'),number=node('input');number.type='number';number.min=min;number.max=key==='distance'?20:max;number.step=step;number.id=id;number.value=this.values[key];number.setAttribute('aria-label',t(label));
+            const line=node('div','alignment-value'),number=node('input');number.type='number';number.min=min;number.max=max;number.step=step;number.id=id;number.value=this.values[key];number.setAttribute('aria-label',t(label));
             const slider=node('input');slider.type='range';slider.min=min;slider.max=max;slider.step=step;slider.value=this.values[key];slider.setAttribute('aria-label',t(label)+' — '+t('Slider'));
             const list=node('datalist');list.id=id+'-ticks';for(const tick of ticks){const o=node('option');o.value=tick;list.append(o);}slider.setAttribute('list',list.id);
             line.append(title,number,node('span','',unit));box.append(line,slider,list);parent.append(box);this.fields[key]={number,slider};
-            const update=e=>{const value=Number(e.target.value);if(!e.target.value||!Number.isFinite(value))return;this.values[key]=Math.max(min,Math.min(Number(number.max),value));if(e.target!==number)number.value=this.values[key];slider.value=this.values[key];this.schedule();};
+            const update=e=>{const value=Number(e.target.value);if(!e.target.value||!Number.isFinite(value))return;const rounded=key==='distance'?Math.round(value*(1/step))/(1/step):value;this.values[key]=Math.max(min,Math.min(max,rounded));if(e.target!==number||value>max)number.value=this.values[key];slider.value=this.values[key];this.schedule();};
             number.oninput=slider.oninput=update;number.onchange=()=>{number.value=this.values[key];};
             if(presets){
                 const preset=node('select','alignment-preset');preset.setAttribute('aria-label',t(presets.label));
@@ -82,7 +84,7 @@
         setLens(value) {
             const f=this.fields.lens;this.values.lens=value;f.number.value=f.slider.value=value;
         }
-        schedule() {
+        schedule(useIdealDistance=false) {
             if(!this.record)return;
             clearTimeout(this.timer);
             // R3 already has a very wide native field. This is metadata driven,
@@ -94,14 +96,30 @@
             this.timer=setTimeout(()=>{
                 if(this.win.closed)return;
                 const custom=this.record.model===this.model?this.custom:null;
+                const ideal=this.idealDistance(custom);
+                if(useIdealDistance){this.values.distance=ideal;this.fields.distance.number.value=this.fields.distance.slider.value=ideal;}
+                this.ideal.disabled=this.values.distance===ideal;
                 this.result=OF.EmitterLayout.calculate(this.values,this.record,this.factor,custom);
                 this.update();this.win.render();
             },70);
         }
+        idealDistance(custom) {
+            // EN: Read the cached geometry to find the first green step (or the range limit).
+            //     Also used to disable the button when applying it would change nothing.
+            // IT: Consulta la geometria gia' calcolata per trovare il primo passo verde
+            //     (o il limite). Serve anche a disabilitare il pulsante se non cambierebbe nulla.
+            const f=this.fields.distance,min=Number(f.number.min),max=Number(f.number.max),scale=1/Number(f.number.step);
+            const good=distance=>OF.EmitterLayout.calculate({...this.values,distance},this.record,this.factor,custom,false).status==='good';
+            let lo=Math.ceil(min*scale),hi=Math.floor(max*scale);
+            while(lo<hi){const mid=Math.floor((lo+hi)/2);if(good(mid/scale))hi=mid;else lo=mid+1;}
+            // EN/IT: If no green distance fits the range, keep its upper limit and the
+            // honest warning / Se il verde e' fuori intervallo, mostrare il limite e l'avviso.
+            return hi/scale;
+        }
         update() {
             const r=this.result,s=r.settings;
             this.results.replaceChildren(node('h2','',t('Suggested placement')));
-            const badge=node('p','alignment-status '+(r.optics.estimated&&r.status==='good'?'limited':r.status),t(r.status==='good'?(r.optics.estimated?'Estimated movement margin':'Good movement margin'):r.status==='limited'?'Limited movement margin':'Move farther back'));
+            const badge=node('p','alignment-status '+r.status,t(r.status==='good'?'Good movement margin':r.status==='limited'?'Limited movement margin':'Reduced LED coverage'));
             this.results.append(badge);
             const title=s.diamond?t('Diamond: centre of each screen edge'):t('Square: two emitters above and two below');
             this.results.append(node('p','alignment-placement',title));
@@ -110,13 +128,17 @@
             entry('Screen size',cm(r.width)+' × '+cm(r.height)+' cm');
             if(!s.diamond){entry('Horizontal LED spacing',cm(r.base)+' cm');entry('From the screen centre','± '+cm(r.base/2)+' cm');entry('From each side edge',cm((r.width-r.base)/2)+' cm');entry('Base / height',r.ratio.toLocaleString(OF.i18n.currentLang,{maximumFractionDigits:2}));}
             entry('Vertical LED spacing',cm(r.height)+' cm');
-            if(r.moveTo===null||r.moveTo!==r.minDistance)entry('Suggested minimum distance',r.minDistance===null?t('More than 20 m'):r.minDistance.toLocaleString(OF.i18n.currentLang,{maximumFractionDigits:2})+' m');
-            if(r.moveTo!==null)entry('Move back to at least',r.moveTo.toLocaleString(OF.i18n.currentLang,{maximumFractionDigits:2})+' m');
+            if(r.moveTo!==null)entry('For fuller LED coverage',r.moveTo.toLocaleString(OF.i18n.currentLang,{maximumFractionDigits:1})+' m');
+            if(r.moveTo===null||r.moveTo!==r.minDistance)entry(r.status!=='good'?'For more freedom of movement':'Suggested minimum distance',r.minDistance===null?t('More than 10 m'):r.minDistance.toLocaleString(OF.i18n.currentLang,{maximumFractionDigits:1})+' m');
             this.results.append(grid);
             const notes=node('div','alignment-notes');
-            notes.append(node('p','',t('Includes side movements and gun roll up to 45°.')));
+            if(r.status==='limited')notes.append(node('p','',t('Usable at the selected distance, with less room to move. Move farther back for more freedom.')));
+            if(r.status==='close')notes.append(node('p','',t(r.moveTo!==null?'Showing the first usable placement farther back. The colour refers to your selected distance.':'No tested placement meets the visibility checks within 10 m.')));
+            if(r.status==='close')notes.append(node('p','',t('Some LEDs may leave the view even with the gun upright. Aim may be less precise or tracking may be lost.')));
+            notes.append(node('p','',t('The placement prioritises aiming precision, then LED visibility. You can calibrate farther back without moving the LEDs.')));
+            notes.append(node('p','',t('Checks four LEDs with the gun upright and at least three when rolled up to 15° to either side, including side movements.')));
             notes.append(node('p','',t('When you tilt the gun, one LED may leave the view: the gun fills it in, with slightly less precise aim.')));
-            if(r.optics.estimated)notes.append(node('p','alignment-estimate',t('Unmeasured add-on lens: approximate geometry only. Check the real field of view with the IR camera test.')));
+            if(r.optics.estimated)notes.append(node('p','alignment-estimate',t('Uses the entered lens factor combined with the camera’s native field of view.')));
             if(this.factor>=.5&&this.factor<1)notes.append(node('p','alignment-estimate',t('After fitting the lens, use Refine lens in the App, so the gun knows the new lens.')));
             else if(this.factor<.5)notes.append(node('p','alignment-estimate',t('This lens may be too strong for Refine lens in the App: aiming may be less precise.')));
             if(r.optics.refined)notes.append(node('p','',t('Uses the lens refinement currently selected in the App.')));

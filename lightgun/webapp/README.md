@@ -49,11 +49,21 @@ boards/OpenFIREshared.js   from src/boards/OpenFIREshared.h
 lang/translations.js       from lang/*.json
 ```
 
-The generated shared data also includes `cameraOptics`: sensor and lens coefficients are read from
+The generated shared data also includes `cameraOptics`: sensor/output resolutions and lens coefficients are read from
 `lib/OpenFIREPosition/OpenFIRECameraProfile.h`; manufacturer FOV limits and tolerances come from
 `boards/camera-optics.json`. Add a metadata entry when adding a camera. The placement solver consumes
-records without camera-ID branches. Phone lens converter options are estimates, not measured profiles.
+records without camera-ID branches. Add-on lenses combine the entered conversion factor with the
+native camera FOV; their geometric status uses the same visibility checks as native lenses.
+The cached distance progression uses a geometric precision estimate: reconstruction bias and
+inverse-homography sensitivity at camera-output and physical-sensor resolution. It changes the
+visibility-based reference only when both scales improve in mean and worst poses, without postponing its first green
+10 cm step. It never narrows the LEDs while moving farther away. Below the usable range it shows
+the first usable placement, with the status still evaluated at the selected distance. These are
+model estimates, not measured pointing errors or spot-separation guarantees.
 All placement work runs in the browser; the lightgun's tracking and serial protocol are unchanged.
+On opening, the planner selects the first green distance. Later setup edits preserve the chosen
+distance; **Set ideal minimum distance**, below the distance slider, recomputes it on request.
+The button uses the current screen, optics and layout, with the same 10 m cap and honest warning.
 
 ## Translations
 

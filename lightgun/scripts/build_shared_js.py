@@ -268,6 +268,7 @@ def camera_optics(project_dir, shared):
             raise ValueError('Camera optics metadata/MakeProfile needs updating: ' + model)
         row = dict(metadata[model])
         row.update(model=shared['cameraModel_e'][model],
+                   coordinateX=number(args[1]), coordinateY=number(args[2]),
                    sensorX=number(args[4]), sensorY=number(args[5]),
                    k1=number(args[9]), k2=number(args[10]),
                    max=number(args[11]), min=number(args[12]), focal=number(args[13]))

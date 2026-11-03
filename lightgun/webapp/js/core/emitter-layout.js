@@ -1,16 +1,21 @@
 /* EN: Offline emitter planner. Geometry and uncertainty only; no device writes.
    IT: Assistente emettitori offline. Solo geometria e stime; nessuna scrittura sul dispositivo.
-   The camera is a record, never a model-specific algorithm. Add-on optics are
-   explicitly approximate: a conversion factor is not a measured IR lens profile. */
+   The camera is a record, never a model-specific algorithm. Add-on optics use
+   the entered conversion factor combined with the native field of view. */
 (function (root) {
     'use strict';
     const OF = root.OF = root.OF || {};
     const R = Math.PI / 180;
+    const PLAY_ROLLS = [-15,-10,-5,0,5,10,15].map(roll=>({
+        c:Math.cos(roll*R),sn:Math.sin(roll*R),spare:roll?1:0
+    }));
     const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
     const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
     const norm = (v) => { const n = Math.hypot(...v); return v.map((x) => x / n); };
     const cross = (a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
     const DEFAULT_RATIO = 0.711;
+    const MAX_DISTANCE = 10, DISTANCE_STEP = .1;
+    const distanceCeil = value => Math.ceil(value * (1 / DISTANCE_STEP)) / (1 / DISTANCE_STEP);
     function optics(record, factor = 1, custom = null) {
         if (!record || !(record.horizontal > 0 && record.vertical > 0 && record.focal > 0))
             throw new Error('Missing camera optics');
@@ -32,7 +37,7 @@
             if (!(factor >= .3 && factor <= 1)) throw new Error('Invalid converter');
             o.horizontal = 2 * Math.atan(Math.tan(record.horizontal * R / 2) / factor) / R;
             o.vertical = 2 * Math.atan(Math.tan(record.vertical * R / 2) / factor) / R;
-            o.k1 = o.k2 = 0; // Unknown added distortion: never pretend to have measured it.
+            o.focal *= factor; o.k1 = o.k2 = 0; // Ideal converter model; the factor describes the combined FOV.
         }
         o.tx = Math.tan(o.horizontal * (1 - o.tolerance) * R / 2);
         o.ty = Math.tan(o.vertical * (1 - o.tolerance) * R / 2);
@@ -46,24 +51,22 @@
     function settings(input) {
         const finite = (v, a, b, fallback) => Number.isFinite(+v) ? clamp(+v, a, b) : fallback;
         return { inches: finite(input.inches, 20, 120, 55), aspect: finite(input.aspect, 1, 4, 16/9),
-            distance: finite(input.distance, .3, 20, 2), diamond: !!input.diamond };
+            distance: finite(input.distance, .3, MAX_DISTANCE, 2), diamond: !!input.diamond };
     }
     function poses(s, distance) {
         const { width: w, height: h } = dimensions(s.inches, s.aspect);
         // EN: One play profile: side moves up to 20% of the screen width, the gun held straight
-        //     (all four LEDs) or rolled up to 20° and 45°: then one LED may leave the view, the
+        //     (all four LEDs) or rolled up to 15Â°: then one LED may leave the view, the
         //     firmware rebuilds it from the other three (spare). Larger rolls are rare: not checked.
         // IT: Un solo profilo di gioco: spostamenti laterali fino al 20% della larghezza schermo,
-        //     arma dritta (tutti e 4 i LED) o ruotata fino a 20° e 45°: allora un LED puo' uscire
+        //     arma dritta (tutti e 4 i LED) o ruotata fino a 15Â°: allora un LED puo' uscire
         //     dall'inquadratura, il firmware lo ricostruisce dagli altri tre (spare). Oltre: raro.
         const sides = [-w*.2, 0, w*.2];
-        const rolls = [-45, -20, 0, 20, 45];
         const list = [];
         for (const side of sides) for (const up of [-h*.1, h*.1]) for (const ax of [-.5, 0, .5]) for (const ay of [-.5, 0, .5]) {
             const f = norm([ax*w-side, ay*h-up, distance]), right = norm([f[2], 0, -f[0]]), down = cross(f, right);
-            for (const roll of rolls) {
-                const c = Math.cos(roll*R), sn = Math.sin(roll*R);
-                list.push({ eye: [side, up, -distance], f, spare: roll ? 1 : 0,
+            for (const {c,sn,spare} of PLAY_ROLLS) {
+                list.push({ eye: [side, up, -distance], f, spare,
                     right: right.map((v, i) => v*c+down[i]*sn), down: down.map((v, i) => v*c-right[i]*sn) });
             }
         }
@@ -117,38 +120,120 @@
         }
         return true;
     }
-    // Conditioning proxy: evaluate the inverse homography at the camera centre.
-    // Sensor jitter is perturbed BEFORE lens correction, as in the real pipeline.
-    function query(o, raw, aspect, ratio) {
+    // EN: Pointing sensitivity in screen-height units, using the firmware radial map.
+    // IT: Sensibilita della mira in unita di altezza schermo, con la stessa mappa radiale.
+    function pointer(s,o,ratio,raw) {
         const q=raw.map(([x,y])=>{const r=x*x+y*y,g=clamp(1+o.k1*r+o.k2*r*r,o.min,o.max);return[x*g,y*g];});
         const [[x0,y0],[x1,y1],[x3,y3],[x2,y2]]=q;
         const dx1=x1-x2,dy1=y1-y2,dx2=x3-x2,dy2=y3-y2,sx=x0-x1+x2-x3,sy=y0-y1+y2-y3;
-        const det=dx1*dy2-dx2*dy1; if(Math.abs(det)<1e-15) return null;
+        const det=dx1*dy2-dx2*dy1;if(Math.abs(det)<1e-12)return null;
         const g=(sx*dy2-dx2*sy)/det,h=(dx1*sy-sx*dy1)/det;
         const a=x1-x0+g*x1,b=x3-x0+h*x3,c=x0,d=y1-y0+g*y1,e=y3-y0+h*y3,f=y0;
-        const den=a*e-b*d; if(Math.abs(den)<1e-15) return null;
-        return [((b*f-c*e)/den-.5)*ratio/aspect, (c*d-a*f)/den-.5];
+        const den=a*e-b*d;if(Math.abs(den)<1e-12)return null;
+        return [((b*f-c*e)/den-.5)*ratio,(c*d-a*f)/den-.5];
     }
-    function conditioning(s,o,ratio,scenePoses) {
-        if(s.diamond) return 1;
-        const points=leds(s,ratio); let sum=0,n=0;
-        // A representative subset suffices to rank geometry; coverage uses every pose.
-        for(let i=0;i<scenePoses.length;i+=Math.max(1,Math.floor(scenePoses.length/36))) {
-            const raw=points.map(p=>project(o,scenePoses[i],p));
-            if(raw.some(q=>Math.max(Math.abs(q[0]),Math.abs(q[1]))>1)) continue;
-            let cost=0;
-            for(let k=0;k<4;++k) for(let axis=0;axis<2;++axis) {
-                const value=raw[k][axis],eps=1e-4;raw[k][axis]=value+eps;const a=query(o,raw,s.aspect,ratio);
-                raw[k][axis]=value-eps;const b=query(o,raw,s.aspect,ratio);raw[k][axis]=value;
-                if(!a||!b) return Infinity;
-                const pixel=2/(axis?o.sensorY:o.sensorX);
-                // Equal physical aiming error on X/Y (both measured in screen-height units).
-                cost+=(((a[0]-b[0])*s.aspect)**2+(a[1]-b[1])**2)*pixel*pixel/(4*eps*eps);
-            }
-            sum+=cost; ++n;
+    // EN: Approximate hidden points with the same virtual-camera geometry as Anchor.
+    // IT: Stima dei punti nascosti con la stessa geometria di camera virtuale di Anchor.
+    function anchorPlane(points,focal) {
+        if(!(focal>0))return {to:p=>p,from:p=>p};
+        const mean=[0,0,0];
+        for(const [x,y] of points){const n=Math.hypot(x,y,focal);mean[0]+=x/n;mean[1]+=y/n;mean[2]+=focal/n;}
+        const [mx,my,mz]=norm(mean),vx=my,vy=-mx,c=1/(1+mz);
+        const r=[1-vy*vy*c,vx*vy*c,vy,vx*vy*c,1-vx*vx*c,-vx,-vy,vx,1-(vx*vx+vy*vy)*c];
+        return {
+            to:([x,y])=>{const z=r[6]*x+r[7]*y+r[8]*focal;return z>0?[(r[0]*x+r[1]*y+r[2]*focal)*focal/z,(r[3]*x+r[4]*y+r[5]*focal)*focal/z]:null;},
+            from:([x,y])=>{const z=r[2]*x+r[5]*y+r[8]*focal;return z>0?[(r[0]*x+r[3]*y+r[6]*focal)*focal/z,(r[1]*x+r[4]*y+r[7]*focal)*focal/z]:null;}
+        };
+    }
+    // EN: Keep the complete reference fixed while perturbing current measurements.
+    // IT: Il riferimento completo resta fisso mentre si perturbano le misure correnti.
+    function reconstruction(o,reference,visible,focal) {
+        if(visible.length===4)return current=>current;
+        if(!visible.length)return ()=>reference;
+        const sensor=p=>[p[0]*o.sensorX/2,p[1]*o.sensorY/2];
+        const old=visible.map(i=>sensor(reference[i]));
+        if(visible.length===1)return current=>{
+            const now=sensor(current[visible[0]]),dx=now[0]-old[0][0],dy=now[1]-old[0][1];
+            return reference.map(p=>[p[0]+2*dx/o.sensorX,p[1]+2*dy/o.sensorY]);
+        };
+        const P=anchorPlane(old,focal),p=old.map(P.to);
+        if(p.some(x=>!x))return null;
+        const a=[p[1][0]-p[0][0],p[1][1]-p[0][1]],b=visible.length===2?[-a[1],a[0]]:[p[2][0]-p[0][0],p[2][1]-p[0][1]];
+        const det=a[0]*b[1]-a[1]*b[0];if(Math.abs(det)<1e-12)return null;
+        const hidden=[];
+        for(let i=0;i<4;++i)if(!visible.includes(i)){
+            const h=P.to(sensor(reference[i]));if(!h)return null;
+            const x=h[0]-p[0][0],y=h[1]-p[0][1];
+            hidden.push({i,s:(x*b[1]-y*b[0])/det,t:(a[0]*y-a[1]*x)/det});
         }
-        return n ? Math.sqrt(sum/n) : Infinity;
+        return current=>{
+            const now=visible.map(i=>sensor(current[i])),Q=anchorPlane(now,focal),q=now.map(Q.to);
+            if(q.some(x=>!x))return null;
+            const u=[q[1][0]-q[0][0],q[1][1]-q[0][1]],v=visible.length===2?[-u[1],u[0]]:[q[2][0]-q[0][0],q[2][1]-q[0][1]];
+            const result=current.slice();
+            for(const {i,s,t} of hidden){
+                const h=Q.from([q[0][0]+s*u[0]+t*v[0],q[0][1]+s*u[1]+t*v[1]]);if(!h)return null;
+                result[i]=[2*h[0]/o.sensorX,2*h[1]/o.sensorY];
+            }
+            return result;
+        };
     }
+    // EN: A geometric index, not a measured pointing error. It combines reconstruction
+    // bias and sensitivity at camera-output and sensor-pixel scales, in mean and worst poses.
+    // No camera IDs, fitted per-model weights or calculations in the firmware loop.
+    // IT: Indice geometrico, non errore di mira misurato. Combina errore di ricostruzione
+    // e sensibilita alle scale di uscita camera e pixel fisico, in media e nelle pose peggiori.
+    // Nessun ID camera, peso tarato per modello o calcolo nel ciclo del firmware.
+    function precision(s,o,ratio,distance) {
+        const {width,height}=dimensions(s.inches,s.aspect),points=leds(s,ratio),focal=o.sensorX*.5*o.focal;
+        const resolution=[o.coordinateX||o.sensorX,o.coordinateY||o.sensorY];
+        const invalid={fine:Infinity,coarse:Infinity,worstFine:Infinity,worstCoarse:Infinity,full:0};
+        let fine=0,coarse=0,worstFine=0,worstCoarse=0,count=0,full=0;
+        // EN: Radial optics and centred LEDs are mirror symmetric: the same average
+        // needs one height and two lateral positions (the mirrored side counts twice).
+        // IT: Ottica radiale e LED centrati sono simmetrici: stessa media con una sola
+        // altezza e due posizioni laterali, contando due volte il lato speculare.
+        for(const depth of[distance,distance*STEP_FORWARD])for(const side of[0,.2])for(const up of[.1]){
+            const weight=side?2:1;
+            const eye=[side*width,up*height,-depth],f=norm([-eye[0],-eye[1],depth]),right=norm([f[2],0,-f[0]]),down=cross(f,right);
+            const centre=points.map(p=>project(o,{eye,f,right,down},p));
+            for(const [ax,ay] of[[0,0],[-.5,-.5],[.5,-.5],[-.5,.5],[.5,.5]])for(const roll of[-15,0,15]){
+                const view=t=>{
+                    const f=norm([t*ax*width-eye[0],t*ay*height-eye[1],depth]),base=norm([f[2],0,-f[0]]),vertical=cross(f,base),c=Math.cos(t*roll*R),sn=Math.sin(t*roll*R);
+                    const pose={eye,f,right:base.map((v,i)=>v*c+vertical[i]*sn),down:vertical.map((v,i)=>v*c-base[i]*sn)};
+                    return points.map(p=>project(o,pose,p));
+                };
+                const raw=view(1),visible=[0,1,2,3].filter(i=>Math.max(...raw[i].map(Math.abs))<=1);
+                let ref=centre;
+                // EN/IT: A nearby complete view along a centre-to-target sweep /
+                // Riferimento completo vicino lungo una mira dal centro al bersaglio.
+                if(visible.length<4&&centre.every(p=>Math.max(...p.map(Math.abs))<=1)){
+                    let lo=0,hi=1;
+                    for(let n=0;n<Math.ceil(Math.log2(Math.max(...resolution)));++n){const mid=(lo+hi)/2,q=view(mid);if(q.every(p=>Math.max(...p.map(Math.abs))<=1)){lo=mid;ref=q;}else hi=mid;}
+                }
+                const reconstruct=reconstruction(o,ref,visible,focal);
+                const evaluate=raw=>{const quad=reconstruct&&reconstruct(raw);return quad&&pointer(s,o,ratio,quad);};
+                const q=evaluate(raw);if(!q)return invalid;
+                let viewFine=(q[0]-ax*s.aspect)**2+(q[1]-ay)**2,viewCoarse=viewFine;
+                if(visible.length===4)full+=weight;
+                for(const i of visible)for(let axis=0;axis<2;++axis){
+                    const value=raw[i][axis],epsilon=1/resolution[axis];
+                    raw[i][axis]=value+epsilon;const a=evaluate(raw);
+                    raw[i][axis]=value-epsilon;const b=evaluate(raw);raw[i][axis]=value;
+                    if(!a||!b)return invalid;
+                    // EN/IT: Uniform quantisation variance: step squared / 12 /
+                    // Varianza di quantizzazione uniforme: passo al quadrato / 12.
+                    const delta=((a[0]-b[0])**2+(a[1]-b[1])**2)/12;
+                    viewFine+=delta;viewCoarse+=delta*(resolution[axis]/(axis?o.sensorY:o.sensorX))**2;
+                }
+                fine+=weight*viewFine;coarse+=weight*viewCoarse;
+                worstFine=Math.max(worstFine,viewFine);worstCoarse=Math.max(worstCoarse,viewCoarse);
+                count+=weight;
+            }
+        }
+        return {fine:fine/count,coarse:coarse/count,worstFine,worstCoarse,full:full/count};
+    }
+
     // EN: The layout must keep working when the player leans forward: it is checked at this
     //     share of the playing distance (gun to screen). IT: La disposizione deve reggere anche
     //     sporgendosi in avanti: si verifica a questa frazione della distanza pistola-schermo.
@@ -158,85 +243,120 @@
     const FAR_STEP = .85;
     // EN: Shapes close to a square let the firmware swap the LEDs when seen up close (tracking
     //     simulations): upright up to 0.85, wide from 1.5 or at the screen corners (4:3 and wider).
-    //     1.3 and 1.4 only from 4 screen heights, even one step forward: no swaps seen there.
-    //     Never narrower than 0.711, the proportion recommended so far.
+    //     1.3 and 1.4 keep the extra distance reserve of 4 screen heights.
+    //     0.711 remains the reference; 0.50/0.60 can restore visibility for close play.
     // IT: Rettangoli quasi quadrati fanno scambiare i LED al firmware visti da vicino (simulazioni
     //     del tracking): verticali fino a 0,85, larghi da 1,5 o agli angoli (dal 4:3 in su).
-    //     1,3 e 1,4 solo da 4 altezze schermo, anche col passo avanti: li' nessuno scambio.
-    //     Mai piu' stretto di 0,711, la proporzione consigliata finora.
+    //     1,3 e 1,4 mantengono la riserva aggiuntiva di 4 altezze schermo.
+    //     0,711 resta il riferimento; 0,50/0,60 possono recuperare visibilita' da vicino.
     const FAR_HEIGHTS = 4;
     function candidates(s,distance=0) {
         if(s.diamond) return [s.aspect];
         const far=distance*FAR_STEP>=FAR_HEIGHTS*dimensions(s.inches,s.aspect).height;
-        return [DEFAULT_RATIO,.85,1.3,1.4,1.5,1.6,1.68,s.aspect]
+        const list=[.5,.6,DEFAULT_RATIO,.8,.85,1.3,1.4,1.5,1.6,1.68,s.aspect];
+        return list
             .filter((r,i,a)=>r<=s.aspect && (r<=.85 || r>=1.5 || (r===s.aspect && r>=1.3) || (far && (r===1.3 || r===1.4))) && a.indexOf(r)===i);
     }
-    function rowsAt(s,o,distance) {
-        const check=poses(s,distance*STEP_FORWARD);
-        return candidates(s,distance).map(r=>({ratio:r,...coverage(s,o,r,check)}));
-    }
-    // EN/IT: 'good', 'limited' or null (no layout keeps the LEDs in view) / nessuna disposizione va.
-    // Same thresholds as choose(), with the faster direct boundary test.
-    function viable(s,o,distance) {
-        const check=poses(s,distance*STEP_FORWARD),list=candidates(s,distance);
-        return list.some(r=>fits(s,o,r,check))?'good':list.some(r=>fits(s,o,r,check,0))?'limited':null;
-    }
-    // EN/IT: Best layout at this playing distance, or null when no layout keeps the LEDs in view.
-    function choose(s,o,distance) {
-        const rows=rowsAt(s,o,distance);
-        const safe=rows.filter(r=>r.margin>=.05),complete=rows.filter(r=>r.full===1);
-        const pool=safe.length?safe:complete;
-        if(!pool.length) return null;
-        const scenePoses=poses(s,distance);
-        for(const r of pool) r.noise=conditioning(s,o,r.ratio,scenePoses);
-        // EN: Limited: no layout keeps the border margin, take the one with the most room.
-        //     Good: steadiest aim, but a gain under 10% does not justify less room, so the
-        //     advice does not change at every few centimetres.
-        // IT: Ridotto: nessuna disposizione tiene il margine dal bordo, si prende quella con piu'
-        //     spazio. Buono: mira piu' ferma, ma un guadagno sotto il 10% non vale meno spazio,
-        //     cosi' il consiglio non cambia ogni pochi centimetri.
-        let list=pool;
-        if(safe.length) {
-            const best=Math.min(...pool.map(r=>r.noise));
-            if(Number.isFinite(best)) list=pool.filter(r=>r.noise<=best*1.1);
+    // EN: Cache the whole progression once per setup. Start with the first usable
+    // placement, even if the chosen playing distance is too short. Precision may
+    // override the visibility-based reference only if both spatial scales improve.
+    // IT: La progressione si calcola una volta per configurazione. Si parte dalla
+    // prima disposizione utile, anche se la distanza scelta e troppo breve. La stima
+    // di precisione cambia il riferimento solo se migliora a entrambe le scale.
+    let planKey='',cachedPlan;
+    function distancePlan(s,o) {
+        const key=JSON.stringify([s.inches,s.aspect,s.diamond,o]);
+        if(key===planKey)return cachedPlan;
+        const height=dimensions(s.inches,s.aspect).height;
+        const immediate=candidates(s,0);
+        // EN/IT: Reuse the identical search endpoints for every rectangle /
+        // Riutilizza gli stessi estremi della ricerca per tutti i rettangoli.
+        const endpoints=new Map([[.3,poses(s,.3)],[MAX_DISTANCE,poses(s,MAX_DISTANCE)]]);
+        const rows=candidates(s,MAX_DISTANCE).map(ratio=>{
+            // EN/IT: Physical limits first; apply the FAR rule separately / Prima i limiti
+            // ottici; la regola FAR si applica a parte, senza dividerla per STEP_FORWARD.
+            const limit=border=>{
+                const accepts=d=>fits(s,o,ratio,endpoints.get(d)||poses(s,d),border);
+                if(!accepts(MAX_DISTANCE))return Infinity;
+                let lo=.3,hi=MAX_DISTANCE;
+                if(accepts(lo))return lo;
+                for(let i=0;i<16;++i){const mid=(lo+hi)/2;if(accepts(mid))hi=mid;else lo=mid;}
+                return hi;
+            };
+            const gate=immediate.includes(ratio)?0:FAR_HEIGHTS*height/FAR_STEP;
+            const usable=Math.max(limit(0),gate),good=Math.max(limit(.05)/STEP_FORWARD,gate);
+            return {ratio,usable,good,at:ratio<=DEFAULT_RATIO?usable:good};
+        });
+        const reference=rows.reduce((a,b)=>b.usable<a.usable||(b.usable===a.usable&&b.ratio>a.ratio)?b:a);
+        let firstGood=reference.good;
+        for(const row of rows)if(row.ratio>reference.ratio){
+            if(row.at>firstGood)row.at=row.good;
+            firstGood=Math.min(firstGood,row.good);
         }
-        // EN/IT: LEDs at the screen corners (if allowed) win a tie: proven solid, easy to mount.
-        //        LED agli angoli dello schermo (se ammessi) vincono il pareggio: solidi, facili da montare.
-        list.sort((a,b)=>(safe.length?(b.ratio===s.aspect)-(a.ratio===s.aspect):0)||b.margin-a.margin);
-        return {...list[0],status:safe.length?'good':'limited'};
+        const scoreCache=new Map();
+        const score=(row,distance)=>{
+            const key=row.ratio+':'+distance;
+            if(!scoreCache.has(key)){
+                const q=precision(s,o,row.ratio,distance);
+                scoreCache.set(key,q);
+            }
+            return scoreCache.get(key);
+        };
+        // EN: Preserve the reference when the model is ambiguous. A preferred layout
+        // must improve both mean and worst poses and keep the first green control step;
+        // visibility breaks precision ties.
+        // IT: Se il modello e ambiguo si conserva il riferimento. La disposizione preferita
+        // deve migliorare media e pose peggiori e conservare il primo passo verde;
+        // a pari precisione decide la visibilita.
+        const choose=(baseline,eligible,distance)=>{
+            const alternatives=eligible.filter(r=>r!==baseline&&distanceCeil(r.good)<=distanceCeil(baseline.good));
+            if(!alternatives.length)return baseline;
+            const ref=score(baseline,distance);let best=baseline,bestRegret=1;
+            const bounds=['fine','coarse','worstFine','worstCoarse'];
+            for(const row of alternatives){
+                const q=score(row,distance);
+                if(!Number.isFinite(q.coarse)||!bounds.every(k=>q[k]<=ref[k]))continue;
+                const regret=Math.max(...bounds.map(k=>q[k]/(Number.isFinite(ref[k])&&ref[k]>0?ref[k]:1)));
+                if(regret<bestRegret||(regret===bestRegret&&q.full>score(best,distance).full)){best=row;bestRegret=regret;}
+            }
+            return best;
+        };
+        const firstDistance=Math.min(MAX_DISTANCE,distanceCeil(reference.usable));
+        let baseline=reference;
+        for(const row of rows)if(row.ratio>baseline.ratio&&row.at<=firstDistance)baseline=row;
+        const initial=rows.filter(r=>r.usable<=firstDistance);
+        const first=choose(baseline,initial.length?initial:rows,firstDistance),steps=[];
+        let selected=first;
+        // EN/IT: Only wider successors; no dependence on the slider history /
+        // Solo successori piu larghi, senza dipendere dai movimenti dello slider.
+        for(let n=Math.round(firstDistance/DISTANCE_STEP)+1;n<=MAX_DISTANCE/DISTANCE_STEP;++n){
+            const distance=n/(1/DISTANCE_STEP);
+            let baseline=selected;
+            for(const row of rows)if(row.ratio>baseline.ratio&&row.at<=distance)baseline=row;
+            const eligible=rows.filter(r=>r.ratio>=selected.ratio&&(r===selected||r.at<=distance));
+            const next=choose(baseline,eligible,distance);
+            if(next!==selected){steps.push({at:distance,row:next});selected=next;}
+        }
+        planKey=key;
+        return cachedPlan={rows,first,steps};
+
     }
     function calculate(input, record, factor=1, custom=null, withDistance=true) {
         const s=settings(input),o=optics(record,factor,custom),dim=dimensions(s.inches,s.aspect);
-        let chosen=choose(s,o,s.distance),moveTo=null;
-        if(!chosen||chosen.status==='limited') {
-            // EN: Too close (or limited): suggest the layout of the nearest distance that works fully,
-            //     and that distance, so the advice stays the same while the player moves back.
-            // IT: Troppo vicino (o margine ridotto): si suggerisce la disposizione della distanza piu'
-            //     vicina che funziona del tutto, e quella distanza, cosi' il consiglio resta lo stesso
-            //     mentre il giocatore arretra.
-            const now=chosen,want=viable(s,o,20);
-            if(want&&!(now&&want==='limited')) {
-                let lo=.3,hi=20,there=null; // fixed interval: the same answer from every closer distance
-                for(let n=0;n<11;++n){const mid=(lo+hi)/2;if(viable(s,o,mid)===want)hi=mid;else lo=mid;}
-                moveTo=Math.ceil(hi*20)/20;there=choose(s,o,moveTo);
-                if(there)chosen=there;else moveTo=null;
-            }
-            if(!chosen) {
-                let pool=rowsAt(s,o,s.distance);
-                const best=Math.max(...pool.map(r=>r.full));pool=pool.filter(r=>r.full===best);
-                const v=Math.max(...pool.map(r=>r.visible));chosen=pool.find(r=>r.visible===v);
-            }
-            chosen={...chosen,status:now?'limited':'close'};
-        }
-        const result={...chosen,...dim,settings:s,optics:o,base:s.diamond?dim.width:chosen.ratio*dim.height,
-            minDistance:null,moveTo};
-        if(withDistance) {
-            // EN/IT: Same step-forward margin as the layout choice / Stesso margine della scelta.
-            const accepts=d=>fits(s,o,chosen.ratio,poses(s,d*STEP_FORWARD))&&candidates(s,d).includes(chosen.ratio);
-            let lo=.3,hi=20;
-            if(accepts(hi)) {for(let n=0;n<12;++n){const mid=(lo+hi)/2;if(accepts(mid))hi=mid;else lo=mid;}result.minDistance=Math.ceil(hi*20)/20;}
-        }
-        return result;
+        const plan=distancePlan(s,o);
+        // EN: A red result keeps the next useful placement. The colour and distance
+        // labels still refer to the actual input and to this same displayed rectangle.
+        // IT: In rosso resta la prima disposizione utile successiva. Colore e distanze
+        // si riferiscono sempre al valore impostato e al rettangolo effettivamente mostrato.
+        let chosen=plan.first;
+        for(const step of plan.steps)if(step.at<=s.distance)chosen=step.row;
+        const status=s.distance<chosen.usable?'close':s.distance<chosen.good?'limited':'good';
+        return {ratio:chosen.ratio,status,...dim,settings:s,optics:o,
+            base:s.diamond?dim.width:chosen.ratio*dim.height,
+            // EN/IT: Future distance always refers to the displayed layout / La distanza
+            // futura si riferisce sempre alla disposizione mostrata, anche quando e' rossa.
+            minDistance:withDistance&&chosen.good<=MAX_DISTANCE?distanceCeil(chosen.good):null,
+            moveTo:status==='close'&&chosen.usable<=MAX_DISTANCE?distanceCeil(chosen.usable):null};
     }
-    OF.EmitterLayout={calculate,candidates,dimensions,optics,settings,poses,leds,project,coverage,fits,DEFAULT_RATIO,STEP_FORWARD,FAR_STEP,FAR_HEIGHTS};
+    OF.EmitterLayout={precision,calculate,candidates,dimensions,optics,settings,poses,leds,project,coverage,fits,DEFAULT_RATIO,MAX_DISTANCE,DISTANCE_STEP,STEP_FORWARD,FAR_STEP,FAR_HEIGHTS};
 })(typeof globalThis!=='undefined'?globalThis:this);
