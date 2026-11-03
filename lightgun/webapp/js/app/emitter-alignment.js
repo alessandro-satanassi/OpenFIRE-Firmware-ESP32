@@ -43,7 +43,7 @@
             // EN: Add-on wide converter as a factor: 1 = none, any value down to 0.30x.
             // IT: Convertitore grandangolare come fattore: 1 = nessuno, qualsiasi valore fino a 0,30x.
             this.range(camera,'lens','Additional lens','×',.3,1,.01,[.3,.45,.5,.6,.67,.75,1],{label:'Common lenses',prompt:'Choose a common lens…',entries:[[1,t('None')],[.67,t('0.67x converter (estimate)')],[.45,t('0.45x converter (estimate)')]]});
-            this.range(play,'distance','Playing distance','m',.5,10,.05,[.5,.75,1,1.5,2,2.5,3,4,5,6,8,10]);
+            this.range(play,'distance','Playing distance','m',.5,10,.05,[.5,.75,1,1.5,2,2.5,3,4,5,6,8,10]).append(node('p','alignment-hint',t('Measured from the gun to the screen.')));
             this.results=node('section','alignment-card alignment-results');
             this.results.setAttribute('aria-live','polite');this.results.setAttribute('aria-atomic','true');
             this.body.append(controls,this.results);

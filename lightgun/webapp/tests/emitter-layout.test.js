@@ -88,7 +88,7 @@ test('candidates avoid near-square shapes: upright up to 0.85, wide from 1.5 or 
  }
  assert.ok(!L.candidates(L.settings({aspect:5/4})).includes(5/4));
  // 1.3 and 1.4 only when even one step forward the player stays 4 screen heights away.
- const s=L.settings({inches:55,aspect:16/9}),h=L.dimensions(55,16/9).height,edge=L.FAR_HEIGHTS*h/L.STEP_FORWARD;
+ const s=L.settings({inches:55,aspect:16/9}),h=L.dimensions(55,16/9).height,edge=L.FAR_HEIGHTS*h/L.FAR_STEP;
  for(const d of [edge*.99,edge*1.01]){
   const c=L.candidates(s,d),far=d>=edge;
   assert.equal(c.includes(1.3),far);assert.equal(c.includes(1.4),far);
@@ -109,6 +109,9 @@ test('the suggested minimum distance uses the same step-forward margin as the la
   const there=L.calculate({inches,distance:x.minDistance},r,1,null,false);
   assert.notEqual(there.status,'close',`${r.label} ${inches} ${distance}: close at ${x.minDistance}`);
  }
+});
+test('lean-forward reserve is 10%, while near-square wide shapes keep the 15% reserve',()=>{
+ assert.equal(L.STEP_FORWARD,.9);assert.equal(L.FAR_STEP,.85);
 });
 test('too close: the advice does not change while moving back, and the suggested distance works',()=>{
  for(const r of records)for(const inches of [32,55,85]){

@@ -149,10 +149,13 @@
         }
         return n ? Math.sqrt(sum/n) : Infinity;
     }
-    // EN: The layout must keep working when the player steps forward: it is checked at this
-    //     share of the playing distance. IT: La disposizione deve reggere anche un passo avanti:
-    //     si verifica a questa frazione della distanza di gioco.
-    const STEP_FORWARD = .85;
+    // EN: The layout must keep working when the player leans forward: it is checked at this
+    //     share of the playing distance (gun to screen). IT: La disposizione deve reggere anche
+    //     sporgendosi in avanti: si verifica a questa frazione della distanza pistola-schermo.
+    const STEP_FORWARD = .9;
+    // EN: Near-square wide shapes keep the stricter 15% reserve: stability comes first.
+    // IT: I rettangoli larghi quasi quadrati tengono la riserva piu' severa del 15%: prima la stabilita'.
+    const FAR_STEP = .85;
     // EN: Shapes close to a square let the firmware swap the LEDs when seen up close (tracking
     //     simulations): upright up to 0.85, wide from 1.5 or at the screen corners (4:3 and wider).
     //     1.3 and 1.4 only from 4 screen heights, even one step forward: no swaps seen there.
@@ -164,7 +167,7 @@
     const FAR_HEIGHTS = 4;
     function candidates(s,distance=0) {
         if(s.diamond) return [s.aspect];
-        const far=distance*STEP_FORWARD>=FAR_HEIGHTS*dimensions(s.inches,s.aspect).height;
+        const far=distance*FAR_STEP>=FAR_HEIGHTS*dimensions(s.inches,s.aspect).height;
         return [DEFAULT_RATIO,.75,.8,.85,1.3,1.4,1.5,1.6,1.68,s.aspect]
             .filter((r,i,a)=>r<=s.aspect && (r<=.85 || r>=1.5 || (r===s.aspect && r>=1.3) || (far && (r===1.3 || r===1.4))) && a.indexOf(r)===i);
     }
@@ -220,5 +223,5 @@
         }
         return result;
     }
-    OF.EmitterLayout={calculate,candidates,dimensions,optics,settings,poses,leds,project,coverage,fits,DEFAULT_RATIO,STEP_FORWARD,FAR_HEIGHTS};
+    OF.EmitterLayout={calculate,candidates,dimensions,optics,settings,poses,leds,project,coverage,fits,DEFAULT_RATIO,STEP_FORWARD,FAR_STEP,FAR_HEIGHTS};
 })(typeof globalThis!=='undefined'?globalThis:this);
