@@ -113,6 +113,13 @@ test('the suggested minimum distance uses the same step-forward margin as the la
 test('lean-forward reserve is 10%, while near-square wide shapes keep the 15% reserve',()=>{
  assert.equal(L.STEP_FORWARD,.9);assert.equal(L.FAR_STEP,.85);
 });
+test('moving away, the advice never goes back to a layout it already left',()=>{
+ for(const r of records)for(const inches of [27,55]){
+  const seen=[];
+  for(let d=1;d<=7.001;d+=.05){const x=L.calculate({inches,distance:d},r,1,null,false);
+   if(seen[seen.length-1]!==x.ratio){assert.ok(!seen.includes(x.ratio),`${r.label} ${inches} ${d.toFixed(2)}: back to ${x.ratio}`);seen.push(x.ratio);}}
+ }
+});
 test('too close: the advice does not change while moving back, and the suggested distance works',()=>{
  for(const r of records)for(const inches of [32,55,85]){
   const near=[.5,.8,1.1].map(distance=>L.calculate({inches,distance},r,1,null,false)).filter(x=>x.status==='close'&&x.moveTo!==null);

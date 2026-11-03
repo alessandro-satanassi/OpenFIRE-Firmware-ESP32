@@ -168,7 +168,7 @@
     function candidates(s,distance=0) {
         if(s.diamond) return [s.aspect];
         const far=distance*FAR_STEP>=FAR_HEIGHTS*dimensions(s.inches,s.aspect).height;
-        return [DEFAULT_RATIO,.75,.8,.85,1.3,1.4,1.5,1.6,1.68,s.aspect]
+        return [DEFAULT_RATIO,.85,1.3,1.4,1.5,1.6,1.68,s.aspect]
             .filter((r,i,a)=>r<=s.aspect && (r<=.85 || r>=1.5 || (r===s.aspect && r>=1.3) || (far && (r===1.3 || r===1.4))) && a.indexOf(r)===i);
     }
     function rowsAt(s,o,distance) {
@@ -189,29 +189,44 @@
         if(!pool.length) return null;
         const scenePoses=poses(s,distance);
         for(const r of pool) r.noise=conditioning(s,o,r.ratio,scenePoses);
-        pool.sort((a,b)=>(Number.isFinite(a.noise)&&Number.isFinite(b.noise)?a.noise-b.noise:0)||b.margin-a.margin);
-        return {...pool[0],status:safe.length?'good':'limited'};
+        // EN: Limited: no layout keeps the border margin, take the one with the most room.
+        //     Good: steadiest aim, but a gain under 10% does not justify less room, so the
+        //     advice does not change at every few centimetres.
+        // IT: Ridotto: nessuna disposizione tiene il margine dal bordo, si prende quella con piu'
+        //     spazio. Buono: mira piu' ferma, ma un guadagno sotto il 10% non vale meno spazio,
+        //     cosi' il consiglio non cambia ogni pochi centimetri.
+        let list=pool;
+        if(safe.length) {
+            const best=Math.min(...pool.map(r=>r.noise));
+            if(Number.isFinite(best)) list=pool.filter(r=>r.noise<=best*1.1);
+        }
+        // EN/IT: LEDs at the screen corners (if allowed) win a tie: proven solid, easy to mount.
+        //        LED agli angoli dello schermo (se ammessi) vincono il pareggio: solidi, facili da montare.
+        list.sort((a,b)=>(safe.length?(b.ratio===s.aspect)-(a.ratio===s.aspect):0)||b.margin-a.margin);
+        return {...list[0],status:safe.length?'good':'limited'};
     }
     function calculate(input, record, factor=1, custom=null, withDistance=true) {
         const s=settings(input),o=optics(record,factor,custom),dim=dimensions(s.inches,s.aspect);
         let chosen=choose(s,o,s.distance),moveTo=null;
-        if(!chosen) {
-            // EN: Too close: suggest the layout of the nearest distance that works, and that distance,
-            //     so the advice stays the same while the player moves back.
-            // IT: Troppo vicino: si suggerisce la disposizione della distanza piu' vicina che funziona,
-            //     e quella distanza, cosi' il consiglio resta lo stesso mentre il giocatore arretra.
-            const want=viable(s,o,20);
-            if(want) {
-                let lo=.3,hi=20; // fixed interval: the same answer from every closer distance
+        if(!chosen||chosen.status==='limited') {
+            // EN: Too close (or limited): suggest the layout of the nearest distance that works fully,
+            //     and that distance, so the advice stays the same while the player moves back.
+            // IT: Troppo vicino (o margine ridotto): si suggerisce la disposizione della distanza piu'
+            //     vicina che funziona del tutto, e quella distanza, cosi' il consiglio resta lo stesso
+            //     mentre il giocatore arretra.
+            const now=chosen,want=viable(s,o,20);
+            if(want&&!(now&&want==='limited')) {
+                let lo=.3,hi=20,there=null; // fixed interval: the same answer from every closer distance
                 for(let n=0;n<11;++n){const mid=(lo+hi)/2;if(viable(s,o,mid)===want)hi=mid;else lo=mid;}
-                moveTo=Math.ceil(hi*20)/20;chosen=choose(s,o,moveTo);
+                moveTo=Math.ceil(hi*20)/20;there=choose(s,o,moveTo);
+                if(there)chosen=there;else moveTo=null;
             }
             if(!chosen) {
                 let pool=rowsAt(s,o,s.distance);
                 const best=Math.max(...pool.map(r=>r.full));pool=pool.filter(r=>r.full===best);
                 const v=Math.max(...pool.map(r=>r.visible));chosen=pool.find(r=>r.visible===v);
             }
-            chosen={...chosen,status:'close'};
+            chosen={...chosen,status:now?'limited':'close'};
         }
         const result={...chosen,...dim,settings:s,optics:o,base:s.diamond?dim.width:chosen.ratio*dim.height,
             minDistance:null,moveTo};
