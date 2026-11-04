@@ -14,9 +14,16 @@
     #warning "OPENFIRE_STANDBY_MINUTES is ignored: use OPENFIRE_STANDBY_MINUTES_FORCE"
 #endif
 
+// EN: Used by main.cpp: Begin() at the end of setup(), Check() in ExecRunMode() after GetPosition()
+//     when standbyRequested is set, WaitIfPaused() at the start of every loop1() cycle.
+//     Without ESP32 + OPENFIRE_WIRELESS_ENABLE everything below is empty and the compiler removes it.
+// IT: Usata da main.cpp: Begin() alla fine di setup(), Check() in ExecRunMode() dopo GetPosition()
+//     quando standbyRequested e' alzato, WaitIfPaused() all'inizio di ogni ciclo di loop1().
+//     Senza ESP32 + OPENFIRE_WIRELESS_ENABLE tutto quello che segue e' vuoto e il compilatore lo elimina.
 class OF_Standby {
 public:
 #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
+    // EN/IT: raised by the timer, cleared by Check() and on entering Run / alzato dal timer, azzerato da Check() e all'ingresso nel Run
     static volatile bool standbyRequested;
     static void Begin(); // EN/IT: one-minute timer, started once in setup / timer di un minuto, avviato una volta nel setup
     static void WaitIfPaused(); // EN/IT: input loop waits here during standby / il ciclo degli input attende qui durante lo standby
