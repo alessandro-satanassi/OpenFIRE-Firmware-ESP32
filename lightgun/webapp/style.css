@@ -1094,6 +1094,9 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
 .alignment-body[hidden], .alignment-planner [hidden] { display: none !important; }
 .alignment-card { background: #101e30f5; border: 1px solid #2a405a; border-radius: 14px; padding: 18px 20px; box-shadow: 0 12px 40px #0003; min-width: 0; }
 .alignment-card h2 { font-size: 16px; font-weight: 600; margin: 0 0 14px; }
+/* EN: The results never size the row: the setup card keeps its place and size, long advice scrolls inside.
+   IT: I risultati non dimensionano la riga: la configurazione resta ferma, i consigli lunghi scorrono dentro. */
+.alignment-results { contain: size; overflow-y: auto; scrollbar-width: thin; }
 .alignment-settings { min-width: 0; border: 0; padding: 0; margin: 0; }
 .alignment-settings:disabled { opacity: .45; filter: grayscale(1); }
 .alignment-planner .alignment-legacy { width: 100%; margin-top: 16px; border-color: #b76d38; color: #ffce9b; background: #3b251b; }
@@ -1136,6 +1139,7 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
 @media (max-width: 760px) {
     .alignment-body { width: calc(100% - 64px); grid-template-columns: 1fr; align-content: start; top: 96px; bottom: 76px; gap: 12px; }
     .alignment-card { padding: 14px 16px; }
+    .alignment-results { contain: none; overflow-y: visible; }
     .alignment-header { left: 14px; right: 14px; }
     .alignment-actions button { font-size: 11px; padding: 6px 8px; }
     .alignment-header h1 { font-size: 16px; }
