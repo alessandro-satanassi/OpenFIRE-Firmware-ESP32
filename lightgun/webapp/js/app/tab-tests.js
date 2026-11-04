@@ -1,6 +1,6 @@
 /*  OpenFIRE Web App - "Gun Tests" tab (Qt: testsTab).
 
-    Live button/temperature/analog stick readings sent by the docked board, feedback tests,
+    Live button/switch/temperature/analog stick readings sent by the docked board, feedback tests,
     the IR camera tester and the board actions (bootloader, clear save memory).
     It describes the board as it was loaded or last saved (state.testPins).
 */
@@ -8,6 +8,10 @@
     'use strict';
 
     const OF = root.OF = root.OF || {};
+
+    // Last switch update from the board: { read, on } bit masks, null until one arrives (older
+    // firmware never sends it). Outside build(), so a rebuilt page (language) keeps it.
+    let switchState = null;
 
     function build(app) {
         const { el, t } = OF.UI;
@@ -26,8 +30,25 @@
             buttonLabels.push(label);
             buttonGrid.append(label);
         }
+        const buttonsGroup = el('fieldset', { class: 'group buttons-group' }, el('legend', { text: t('Buttons') }), buttonGrid);
+
+        // Rumble, solenoid and autofire switches: on, off, or dashed without a pin. The board
+        // reads them with the normally closed setting applied, as in Run mode (sSwitchStateUpd).
+        const SWITCHES = [
+            { fn: E.rumbleSwitch, label: 'Rumble' },
+            { fn: E.solenoidSwitch, label: 'Solenoid' },
+            { fn: E.autofireSwitch, label: 'Autofire' },
+        ];
+        const switchItems = SWITCHES.map((sw) => {
+            const name = el('span', { class: 'switch-name' });
+            const item = el('div', { class: 'test-switch', attrs: { role: 'img' } }, name, el('span', { class: 'switch-pill' }));
+            return { ...sw, item, name };
+        });
+        const switchesGroup = el('fieldset', { class: 'group switches-group' }, el('legend', { text: t('Switch') }),
+            el('div', { class: 'test-switches' }, ...switchItems.map((sw) => sw.item)));
+
         const temperature = el('div', { class: 'temperature' });
-        const buttonsGroup = el('fieldset', { class: 'group' }, el('legend', { text: t('Buttons') }), buttonGrid, temperature);
+        const temperatureBox = el('div', { class: 'temperature-box' }, temperature);
 
         const positionLabel = el('div', { class: 'analog-label mono' });
         const dot = el('svg:circle', { attrs: { cx: 128, cy: 128, r: 8 } });
@@ -35,10 +56,14 @@
             el('svg:line', { class: 'axis', attrs: { x1: 128, y1: 0, x2: 128, y2: 256 } }),
             el('svg:line', { class: 'axis', attrs: { x1: 0, y1: 128, x2: 256, y2: 128 } }),
             dot);
-        const analogGroup = el('fieldset', { class: 'group analog-group' }, el('legend', { text: t('Analog Stick') }), positionLabel, analogView);
+        // The stick is as tall as the buttons, its square view shrinks to fit.
+        const analogViewBox = el('div', { class: 'analog-view-box' }, analogView);
+        const analogGroup = el('fieldset', { class: 'group analog-group' }, el('legend', { text: t('Analog Stick') }), positionLabel,
+            analogViewBox);
 
-        const inputsTest = el('fieldset', { class: 'group' }, el('legend', { text: t('Inputs Test') }),
-            el('div', { class: 'inputs-test' }, buttonsGroup, analogGroup));
+        // Two rows: buttons and analog stick, then the switches with the temperature beside them.
+        const inputsGrid = el('div', { class: 'inputs-test' }, buttonsGroup, analogGroup, switchesGroup, temperatureBox);
+        const inputsTest = el('fieldset', { class: 'group' }, el('legend', { text: t('Inputs Test') }), inputsGrid);
 
         // ----- Feedback tests -----------------------------------------------------------------
         const testButton = (label, command, message) => el('button', { text: t(label), on: { click: async () => {
@@ -68,7 +93,28 @@
         // Like the board layout: the whole tab is shown, it shrinks instead of being scrolled
         // (on narrow screens the single column is scrolled as usual).
         const wide = root.matchMedia ? root.matchMedia('(min-width: 761px)') : null;
-        const fit = () => OF.UI.fitToHeight(scroll, content, 0.6, !wide || wide.matches);
+        /** The stick column as wide as the square view is tall (the height the buttons leave it),
+            so the view stays square and the buttons take the rest. Not in the single column. */
+        function squareAnalog() {
+            if (!analogViewBox.clientHeight) return; // tab not shown
+            if (wide && !wide.matches) {
+                inputsGrid.style.removeProperty('--analog-width');
+            } else {
+                for (let pass = 0; pass < 3; ++pass) {
+                    const sides = analogGroup.offsetWidth - analogViewBox.clientWidth;
+                    const width = Math.ceil(analogViewBox.clientHeight + sides);
+                    if (Math.abs(width - analogGroup.offsetWidth) <= 1) break;
+                    inputsGrid.style.setProperty('--analog-width', width + 'px');
+                }
+            }
+            // Square whatever is left (the legend may make the column wider than the view is tall).
+            const side = Math.min(analogViewBox.clientWidth, analogViewBox.clientHeight);
+            analogView.style.width = analogView.style.height = side + 'px';
+        }
+        const fit = () => {
+            squareAnalog();
+            OF.UI.fitToHeight(scroll, content, 0.6, !wide || wide.matches);
+        };
         OF.UI.fitOnResize(scroll, fit);
         if (wide && wide.addEventListener) wide.addEventListener('change', fit);
 
@@ -80,7 +126,9 @@
          * they say so, and add that nothing answered when no pedal is paired.
          */
         function inputLabel(index) {
-            const name = t(names[index + 1]);
+            // Short name where the box is small: in Italian "Pedale alternativo (wireless, disconnesso)"
+            // took four lines and made the tab shrink to fit the window.
+            const name = names[index + 1] === 'Alt Pedal' ? t('Alt. Pedal') : t(names[index + 1]);
             if (mapped(index))
                 return { text: name, connected: true };
             if (state.isPedal(index) && state.pedalWirelessMode)
@@ -88,6 +136,26 @@
                     { text: t('%1 (wireless)', name), connected: true } :
                     { text: t('%1 (wireless, disconnected)', name), connected: false };
             return { text: `${name} (N/C)`, connected: false };
+        }
+
+        /** The three switches, from the pins at the last load/save and the board's last update. */
+        function updateSwitches() {
+            switchItems.forEach((sw, i) => {
+                const connected = mapped(sw.fn);
+                const known = connected && switchState !== null;
+                // Without that bit the board does not read the switch (a build without it).
+                const read = known && !!((switchState.read >> i) & 1);
+                const on = read && !!((switchState.on >> i) & 1);
+                const off = !connected || (known && !read);
+                sw.name.textContent = t(sw.label);
+                sw.item.classList.toggle('on', on);
+                sw.item.classList.toggle('not-connected', off);
+                sw.item.classList.toggle('unknown', connected && !known);
+                const state = off ? t('Not Connected') : !known ? t('Switch state not available: update the firmware.') :
+                    on ? t('Enabled') : t('Disabled');
+                sw.item.title = state;
+                sw.item.setAttribute('aria-label', `${t(sw.label)}: ${state}`);
+            });
         }
 
         /** Qt LabelsUpdate: on load and after a save. */
@@ -110,6 +178,15 @@
             positionLabel.textContent = analog ? '' : t('Not Connected');
             dot.setAttribute('cx', 128);
             dot.setAttribute('cy', 128);
+            // The last switch states stay: the board repeats them twice a second, with the
+            // pins and the normally closed setting it has after a save.
+            updateSwitches();
+        }
+
+        /** A new board session: nothing known about its switches yet. */
+        function onLoad() {
+            switchState = null;
+            resetReadings();
         }
 
         function update() {
@@ -137,6 +214,12 @@
             case C.sBtnReleased:
                 if (payload.length === 1 && payload[0] < buttonLabels.length)
                     buttonLabels[payload[0]].classList.toggle('pressed', command === C.sBtnPressed);
+                return true;
+            case C.sSwitchStateUpd:
+                if (payload.length >= 2) {
+                    switchState = { read: payload[0], on: payload[1] };
+                    updateSwitches();
+                }
                 return true;
             case C.sTemperatureUpd: {
                 if (payload.length !== 1) return true;
@@ -169,7 +252,7 @@
             }
         }
 
-        return { root: rootNode, update, onEvent, resetReadings, onLoad: resetReadings };
+        return { root: rootNode, update, onEvent, resetReadings, onLoad };
     }
 
     OF.Tabs = OF.Tabs || {};

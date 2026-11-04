@@ -257,6 +257,7 @@ node --test --test-concurrency=1 tests/*.test.js     # protocol, sessions, trans
 node tests/sim-server.js --root .                    # open http://localhost:8080/?ws
 node tests/sim-server.js --root ../dist/device       # the page exactly as served by the gun
 node tests/browser-e2e.js                            # browser checks of the three builds (needs Playwright)
+node tests/gun-tests-switches-e2e.js                 # browser checks of the Gun Tests switches (needs Playwright)
 python tests/site-build.test.py                      # what the build writes: App and home page
 ```
 

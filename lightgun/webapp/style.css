@@ -895,20 +895,25 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
 
 /* ----- Gun Tests ----------------------------------------------------------------------------------- */
 
+/* Two rows: buttons | analog stick, then switches | temperature, so the edges line up.
+   The legends have a fixed height: the box border runs through their middle (0.625rem down),
+   so the 3px row gap plus that half legend looks like the 12px column gap. */
 .inputs-test {
-    display: flex;
-    gap: 12px;
+    display: grid;
+    /* tab-tests.js sets --analog-width so the stick view is square (at least its legend and label). */
+    grid-template-columns: minmax(0, 1fr) minmax(10.5rem, var(--analog-width, 11.5rem));
+    gap: 3px 12px;
     align-items: stretch;
-    flex-wrap: wrap;
 }
+.inputs-test > .group { margin: 0; }
+.inputs-test > .group > legend { line-height: 1.25rem; }
 
-/* Qt: the buttons fill the height of the box, with the temperature at the bottom. */
-.inputs-test > .group:first-child { flex: 1 1 380px; display: flex; flex-direction: column; }
-.analog-group { flex: 0 0 auto; text-align: center; }
+.buttons-group { display: flex; flex-direction: column; }
+.analog-group { display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 0; }
 
 .test-buttons {
     flex: 1;
-    grid-auto-rows: minmax(2.1rem, 1fr);
+    grid-auto-rows: minmax(2.6rem, 1fr);
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 6px;
@@ -938,18 +943,39 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
 
 .test-button.not-connected, .temperature.not-connected { color: var(--faint); border-color: var(--border); background: transparent; }
 .test-button.pressed { background: #ff0000; border-color: #ff0000; color: #fff; font-weight: 700; }
-.temperature { margin-top: 10px; border: 0; }
+.temperature { border: 0; white-space: normal; }
+
+/* Next to the switches: from the top edge of their box (below its legend) to its bottom. */
+.temperature-box { display: flex; align-items: stretch; padding-top: 0.625rem; min-width: 0; }
+.temperature-box > .temperature { flex: 1; }
+
+/* Switches: the name and a toggle, green when enabled, dashed without a pin. */
+.inputs-test > .switches-group { padding-top: 6px; padding-bottom: 9px; }
+.test-switches { display: flex; flex-wrap: wrap; justify-content: space-around; align-items: center; gap: 4px 22px; }
+.test-switch { display: inline-flex; align-items: center; gap: 8px; padding: 2px 6px; font-size: 0.9rem; }
+.switch-pill { position: relative; flex: none; box-sizing: border-box; width: 42px; height: 22px; border-radius: 11px; background: var(--border-strong); transition: background-color 0.1s; }
+.switch-pill::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); transition: left 0.1s; }
+.test-switch.on .switch-pill { background: #11d00a; }
+.test-switch.on .switch-pill::after { left: 23px; }
+.test-switch.not-connected { color: var(--faint); }
+.test-switch.not-connected .switch-pill, .test-switch.unknown .switch-pill { background: transparent; border: 1px dashed var(--border-strong); }
+.test-switch.not-connected .switch-pill::after, .test-switch.unknown .switch-pill::after { display: none; }
+@media (prefers-reduced-motion: reduce) { .switch-pill, .switch-pill::after { transition: none; } }
 .temperature.hot, .temperature.fault { background: #ff0000; color: #fff; font-weight: 700; }
 .temperature.warm { background: #eabd2b; color: #1c1c1c; font-weight: 700; }
 .temperature.ok { background: #11d00a; color: #000; font-weight: 700; }
 
 .analog-label { min-height: 1.4em; color: var(--muted); }
 
+/* The box takes the height the buttons leave and adds none of its own (contain: size). */
+.analog-view-box { flex: 1 1 0; width: 100%; min-height: 0; contain: size; display: flex; justify-content: center; }
+
 .analog-view {
-    width: 256px;
-    height: 256px;
+    height: 100%;
+    max-width: 100%;
+    aspect-ratio: 1;
     display: block;
-    margin: 4px auto 0;
+    margin: 0 auto;
     background: var(--surface-2);
     border: 1px solid var(--border);
     border-radius: 6px;
@@ -1303,7 +1329,10 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
     .grid-4 { grid-template-columns: auto auto; }
     .cali-buttons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .test-buttons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .analog-group { flex: 1 1 100%; }
+    .inputs-test { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+    .analog-view-box { flex: none; height: 180px; }
+    .temperature-box { padding-top: 0; }
+    .test-switches { justify-content: flex-start; }
     .row.fill.board-actions > button { flex-basis: 100%; }
 
     /* Description: a bar with the name of the touched option, opened with a tap. */

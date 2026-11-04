@@ -1671,6 +1671,16 @@ void ExecGunModeDocked()
     unsigned long aStickChecked = millis();
     unsigned long currentMillis = millis();
 
+    #ifdef USES_SWITCHES
+        // EN: Switches for the Gun Tests (sSwitchStateUpd): sent at once when one changes and
+        //     repeated regularly, so an App that just docked or just saved gets them too.
+        // IT: Switch per i Gun Tests (sSwitchStateUpd): inviati subito quando uno cambia e
+        //     ripetuti a intervalli, cosi' li riceve anche una App appena agganciata o che ha salvato.
+        unsigned long switchesChecked = millis();
+        unsigned long switchesSent = 0;
+        int switchesLast = -1; // nothing sent yet / ancora nulla inviato
+    #endif // USES_SWITCHES
+
     // Board information: version, board name, USB table and the trailer markers, the
     // longest of which is the complete version. 64 bytes were already nearly all used.
     char buf[96];
@@ -1758,6 +1768,48 @@ void ExecGunModeDocked()
                         OF_Serial::AppSerialSendEvent(OF_Const::sBtnReleased, buf, 1);
                     }
             }
+
+            #ifdef USES_SWITCHES
+                // EN: Read as in Run mode (main loop): enabled when the contact reads LOW, the other
+                //     way round when the input is set as normally closed (invertMask).
+                //     Payload: byte 0 = switches read (bit 0 rumble, 1 solenoid, 2 autofire),
+                //     byte 1 = those that are enabled.
+                // IT: Letti come in modalita' di gioco (loop principale): abilitato quando il contatto
+                //     legge LOW, al contrario se l'ingresso e' impostato come normalmente chiuso (invertMask).
+                //     Dati: byte 0 = switch letti (bit 0 rumble, 1 solenoide, 2 autofire),
+                //     byte 1 = quelli abilitati.
+                if(currentMillis - switchesChecked >= 10) {
+                    switchesChecked = currentMillis;
+
+                    static const uint8_t switchInputs[3] = {
+                        OF_Const::rumbleSwitch, OF_Const::solenoidSwitch, OF_Const::autofireSwitch };
+                    uint8_t switchesRead = 0;
+                    uint8_t switchesOn = 0;
+                    for(uint8_t i = 0; i < 3; ++i) {
+                        #ifndef USES_RUMBLE
+                            if(switchInputs[i] == OF_Const::rumbleSwitch) continue;
+                        #endif // USES_RUMBLE
+                        #ifndef USES_SOLENOID
+                            if(switchInputs[i] == OF_Const::solenoidSwitch) continue;
+                        #endif // USES_SOLENOID
+                        const int pin = OF_Prefs::pins[switchInputs[i]];
+                        if(pin < 0)
+                            continue;
+                        switchesRead |= 1 << i;
+                        if(!(digitalRead(pin) ^ ((LightgunButtons::invertMask >> switchInputs[i]) & 1)))
+                            switchesOn |= 1 << i;
+                    }
+
+                    const int switchesNow = switchesRead | (switchesOn << 8);
+                    if(switchesNow != switchesLast || currentMillis - switchesSent >= 500) {
+                        buf[0] = switchesRead;
+                        buf[1] = switchesOn;
+                        OF_Serial::AppSerialSendEvent(OF_Const::sSwitchStateUpd, buf, 2);
+                        switchesLast = switchesNow;
+                        switchesSent = currentMillis;
+                    }
+                }
+            #endif // USES_SWITCHES
 
             #ifdef USES_TEMP
                 if(OF_Prefs::pins[OF_Const::tempPin] > -1) {

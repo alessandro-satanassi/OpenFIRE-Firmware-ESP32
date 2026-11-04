@@ -337,11 +337,17 @@ async function installFakeSerial(context, sim) {
     await sleep(400);
     ok(await dev.evaluate(() => {
         const scroll = document.querySelector('#tab-tests .tab-scroll');
-        const buttons = document.querySelector('#tab-tests .test-buttons').getBoundingClientRect();
-        const temp = document.querySelector('#tab-tests .temperature').getBoundingClientRect();
-        const box = document.querySelector('#tab-tests .test-buttons').closest('.group').getBoundingClientRect();
-        return scroll.scrollHeight <= scroll.clientHeight + 1 && buttons.height > 120 && temp.bottom <= box.bottom;
-    }), 'gun tests fit the window, the buttons fill the box with the temperature at the bottom');
+        const rect = (selector) => document.querySelector('#tab-tests ' + selector).getBoundingClientRect();
+        const buttons = rect('.test-buttons'), box = rect('.buttons-group'), analog = rect('.analog-group');
+        const switches = rect('.switches-group'), temp = rect('.temperature');
+        const near = (a, b) => Math.abs(a - b) <= 1.5;
+        return scroll.scrollHeight <= scroll.clientHeight + 1 && buttons.height > 120 &&
+            near(analog.bottom, box.bottom) && near(temp.bottom, switches.bottom) && temp.top > analog.bottom &&
+            near(temp.left, analog.left) && near(switches.left, box.left);
+    }), 'gun tests fit the window: the analog stick as tall as the buttons, the temperature beside the switches');
+    // rpipico preset: no pin for the three switches, dashed whatever the board reports.
+    ok(await waitFor(() => dev.$$eval('#tab-tests .test-switch', (items) => items.length === 3 &&
+        items.every((item) => item.classList.contains('not-connected')))), 'switches without a pin are shown as not connected');
 
     await dev.dblclick('text=Open IR Camera Tester...');
     ok(await waitFor(() => fw.runMode === 'processing'), 'IR test mode on the board');

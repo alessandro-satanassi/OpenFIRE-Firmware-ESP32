@@ -182,6 +182,9 @@ class MockFirmware {
         this.pendingEvents = [];
         this.trigger = false;
         this.buttonA = false;
+        // Contacts of the rumble, solenoid and autofire switches: true = closed (the pin reads LOW).
+        this.switchClosed = [false, false, false];
+        this.switchReports = options.switchReports !== false; // false = firmware before sSwitchStateUpd
         this.rebootedToBootloader = false;
         this.flashCleared = false;
         this.mouse = { x: 1200, y: 90 };
@@ -1128,9 +1131,25 @@ class MockFirmware {
         }
     }
 
+    /** main.cpp, ExecGunModeDocked: sSwitchStateUpd payload [read, enabled], bit 0 rumble, 1 solenoid, 2 autofire.
+        Read as in Run mode: enabled when the contact is closed, the other way round when normally closed. */
+    switchState() {
+        const E = this.S.boardInputs_e;
+        const mask = this.toggles[this.S.boolTypes_e.customPins] ? this.getSetting(this.S.settingsTypes_e.inputInvertMask) : 0;
+        let read = 0, on = 0;
+        [E.rumbleSwitch, E.solenoidSwitch, E.autofireSwitch].forEach((fn, i) => {
+            if (this.pins[fn] < 0) return;
+            read |= 1 << i;
+            const level = this.switchClosed[i] ? 0 : 1;
+            if (!(level ^ ((mask >>> fn) & 1))) on |= 1 << i;
+        });
+        return Uint8Array.of(read, on);
+    }
+
     async _execGunModeDocked() {
         let sendBoardInfo = true;
         let lastCoords = 0;
+        let switchesChecked = Date.now(), switchesSent = 0, switchesLast = -1;
         while (this.running) {
             if (sendBoardInfo) {
                 const sent = await this.sendResponse(this.C.sDock2, this.boardInfo());
@@ -1147,6 +1166,17 @@ class MockFirmware {
                 while (this.pendingEvents.length) {
                     const [command, payload] = this.pendingEvents.shift();
                     this.sendEvent(command, payload);
+                }
+                const now = Date.now();
+                if (this.switchReports && now - switchesChecked >= 10) {
+                    switchesChecked = now;
+                    const state = this.switchState();
+                    const packed = state[0] | (state[1] << 8);
+                    if (packed !== switchesLast || now - switchesSent >= 500) {
+                        this.sendEvent(this.C.sSwitchStateUpd, state);
+                        switchesLast = packed;
+                        switchesSent = now;
+                    }
                 }
             }
 

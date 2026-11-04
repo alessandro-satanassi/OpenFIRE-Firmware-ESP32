@@ -46,12 +46,15 @@ async function setup(linkOptions = {}, firmwareOptions = {}) {
     firmware.start();
     const protocol = new OF.Protocol({ shared: S });
     const events = [];
-    protocol.on('event', (command, payload) => events.push({ command, payload: Array.from(payload) }));
+    // The docked board repeats the switch states twice a second (sSwitchStateUpd): left out here so
+    // the tests can check the order of the other events; switchEvents keeps them.
+    const switchEvents = [];
+    protocol.on('event', (command, payload) => (command === C.sSwitchStateUpd ? switchEvents : events).push({ command, payload: Array.from(payload) }));
     const closed = [];
     protocol.on('closed', (reason) => closed.push(reason));
     const transport = createMemoryTransport(OF, link);
     await protocol.connect(transport);
-    return { link, firmware, protocol, transport, events, closed };
+    return { link, firmware, protocol, transport, events, switchEvents, closed };
 }
 
 async function teardown(ctx) {
@@ -408,6 +411,38 @@ test('sync and commit survive random loss, corruption and fragmentation', async 
         assert.equal(ctx.firmware.getProfileName(3), 'Noisy Link');
         assert.equal(ctx.firmware.getSetting(S.settingsTypes_e.holdToPauseLength), 1234);
         assert.ok(ctx.link.stats.dropped + ctx.link.stats.corrupted > 0);
+    } finally {
+        await teardown(ctx);
+    }
+});
+
+// ===== Gun Tests switches ==================================================
+
+test('docked: switch states with normally open and normally closed contacts (sSwitchStateUpd)', async () => {
+    const ctx = await setup();
+    try {
+        assert.equal((await ctx.protocol.getSettings()).ok, true);
+        const E = S.boardInputs_e, fw = ctx.firmware;
+        const last = () => ctx.switchEvents[ctx.switchEvents.length - 1];
+        const waitState = (read, on) => waitUntil(() => {
+            const e = last();
+            return !!e && e.payload.length === 2 && e.payload[0] === read && e.payload[1] === on;
+        });
+        // No pin: nothing read, but the update still comes, so the App knows the firmware sends it.
+        assert.ok(await waitState(0, 0), JSON.stringify(last()));
+
+        // Rumble switch normally open, solenoid switch normally closed, autofire without pin.
+        fw.toggles[S.boolTypes_e.customPins] = 1;
+        fw.pins[E.rumbleSwitch] = 40;
+        fw.pins[E.solenoidSwitch] = 41;
+        new DataView(fw.settings.buffer).setUint32(S.settingsTypes_e.inputInvertMask * 4, 1 << E.solenoidSwitch, true);
+        assert.ok(await waitState(0b011, 0b010), 'open contacts: rumble off, solenoid on');
+        fw.switchClosed = [true, true, true];
+        assert.ok(await waitState(0b011, 0b001), 'closed contacts: rumble on, solenoid off');
+
+        // Repeated while nothing changes.
+        const count = ctx.switchEvents.length;
+        assert.ok(await waitUntil(() => ctx.switchEvents.length > count, 1500), 'state repeated');
     } finally {
         await teardown(ctx);
     }

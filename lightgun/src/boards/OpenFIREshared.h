@@ -431,6 +431,7 @@ public:
         sCaliIrWarning, // 153: calibration target shot refused: bit 0 emitter missing (IR view), bit 1 gun rolled too far
         sLensInfo,      // 154: IR test with irTestFlagLens: camera coordinate space and lens values (see OpenFIREserial.cpp)
         sLensSample,    // 155: IR test with irTestFlagLens: the four tracker vertices, full resolution
+        sSwitchStateUpd, // 156: docked, Gun Tests: byte 0 switches read, byte 1 switches enabled (bit 0 rumble, 1 solenoid, 2 autofire)
 
         // Push settings to board
         sCommitStart = 0xAA, // 170
