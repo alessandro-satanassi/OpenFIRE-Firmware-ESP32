@@ -188,9 +188,12 @@
             const color=r.settings.diamond?'#ffbd66':'#58d6e8';
             ctx.strokeStyle=color+'50';ctx.setLineDash([6,8]);ctx.beginPath();
             for(const [i,p] of (r.settings.diamond?[0,1,2,3,0]:[0,1,3,2,0]).map((k,i)=>[i,points[k]])){if(i)ctx.lineTo(x+p[0]*rw,y+p[1]*rh);else ctx.moveTo(x+p[0]*rw,y+p[1]*rh);}ctx.stroke();ctx.setLineDash([]);
+            // EN: Keep labels inside the preview, reducing margins in compact views.
+            // IT: Etichette dentro l'anteprima, con margini ridotti nelle viste compatte.
+            const mx=Math.min(35,rw/4),mt=Math.min(38,rh/3),mb=Math.min(46,rh/3);
             for(let i=0;i<points.length;++i){const [u,v]=points[i],px=x+u*rw,py=y+v*rh;
                 ctx.fillStyle=color+'25';ctx.beginPath();ctx.arc(px,py,24,0,Math.PI*2);ctx.fill();ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();ctx.arc(px,py,13,0,Math.PI*2);ctx.stroke();ctx.fillStyle=color;ctx.beginPath();ctx.arc(px,py,5,0,Math.PI*2);ctx.fill();
-                const lx=Math.max(35,Math.min(w-35,px)),ly=Math.max(38,Math.min(h-46,py));ctx.font='600 12px system-ui';ctx.textAlign='center';ctx.fillText('LED '+(i+1),lx,ly);
+                const lx=Math.max(x+mx,Math.min(x+rw-mx,px)),ly=Math.max(y+mt,Math.min(y+rh-mb,py));ctx.font='600 12px system-ui';ctx.textAlign='center';ctx.fillText('LED '+(i+1),lx,ly);
             }
             if(!r.settings.diamond){
                 const left=x+points[0][0]*rw,right=x+points[1][0]*rw,dy=Math.max(y+55,64);
