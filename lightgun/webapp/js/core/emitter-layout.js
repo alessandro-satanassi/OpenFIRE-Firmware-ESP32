@@ -15,6 +15,22 @@
     const cross = (a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
     const DEFAULT_RATIO = 0.711;
     const MAX_DISTANCE = 10, DISTANCE_STEP = .1;
+    // EN: The layout must keep working when the player leans forward: it is checked at this
+    //     share of the playing distance (gun to screen). IT: La disposizione deve reggere anche
+    //     sporgendosi in avanti: si verifica a questa frazione della distanza pistola-schermo.
+    const STEP_FORWARD = .9;
+    // EN: Near-square wide shapes keep the stricter 15% reserve: stability comes first.
+    // IT: I rettangoli larghi quasi quadrati tengono la riserva piu' severa del 15%: prima la stabilita'.
+    const FAR_STEP = .85;
+    // EN: Shapes close to a square let the firmware swap the LEDs when seen up close (tracking
+    //     simulations): upright up to 0.85, wide from 1.5 or at the screen corners (4:3 and wider).
+    //     1.3 and 1.4 keep the extra distance reserve of 4 screen heights.
+    //     0.711 remains the reference; 0.50/0.60 can restore visibility for close play.
+    // IT: Rettangoli quasi quadrati fanno scambiare i LED al firmware visti da vicino (simulazioni
+    //     del tracking): verticali fino a 0,85, larghi da 1,5 o agli angoli (dal 4:3 in su).
+    //     1,3 e 1,4 mantengono la riserva aggiuntiva di 4 altezze schermo.
+    //     0,711 resta il riferimento; 0,50/0,60 possono recuperare visibilita' da vicino.
+    const FAR_HEIGHTS = 4;
     const distanceCeil = value => Math.ceil(value * (1 / DISTANCE_STEP)) / (1 / DISTANCE_STEP);
     function optics(record, factor = 1, custom = null) {
         if (!record || !(record.horizontal > 0 && record.vertical > 0 && record.focal > 0))
@@ -56,10 +72,10 @@
     function poses(s, distance) {
         const { width: w, height: h } = dimensions(s.inches, s.aspect);
         // EN: One play profile: side moves up to 20% of the screen width, the gun held straight
-        //     (all four LEDs) or rolled up to 15Â°: then one LED may leave the view, the
+        //     (all four LEDs) or rolled up to 15°: then one LED may leave the view, the
         //     firmware rebuilds it from the other three (spare). Larger rolls are rare: not checked.
         // IT: Un solo profilo di gioco: spostamenti laterali fino al 20% della larghezza schermo,
-        //     arma dritta (tutti e 4 i LED) o ruotata fino a 15Â°: allora un LED puo' uscire
+        //     arma dritta (tutti e 4 i LED) o ruotata fino a 15°: allora un LED puo' uscire
         //     dall'inquadratura, il firmware lo ricostruisce dagli altri tre (spare). Oltre: raro.
         const sides = [-w*.2, 0, w*.2];
         const list = [];
@@ -234,22 +250,6 @@
         return {fine:fine/count,coarse:coarse/count,worstFine,worstCoarse,full:full/count};
     }
 
-    // EN: The layout must keep working when the player leans forward: it is checked at this
-    //     share of the playing distance (gun to screen). IT: La disposizione deve reggere anche
-    //     sporgendosi in avanti: si verifica a questa frazione della distanza pistola-schermo.
-    const STEP_FORWARD = .9;
-    // EN: Near-square wide shapes keep the stricter 15% reserve: stability comes first.
-    // IT: I rettangoli larghi quasi quadrati tengono la riserva piu' severa del 15%: prima la stabilita'.
-    const FAR_STEP = .85;
-    // EN: Shapes close to a square let the firmware swap the LEDs when seen up close (tracking
-    //     simulations): upright up to 0.85, wide from 1.5 or at the screen corners (4:3 and wider).
-    //     1.3 and 1.4 keep the extra distance reserve of 4 screen heights.
-    //     0.711 remains the reference; 0.50/0.60 can restore visibility for close play.
-    // IT: Rettangoli quasi quadrati fanno scambiare i LED al firmware visti da vicino (simulazioni
-    //     del tracking): verticali fino a 0,85, larghi da 1,5 o agli angoli (dal 4:3 in su).
-    //     1,3 e 1,4 mantengono la riserva aggiuntiva di 4 altezze schermo.
-    //     0,711 resta il riferimento; 0,50/0,60 possono recuperare visibilita' da vicino.
-    const FAR_HEIGHTS = 4;
     function candidates(s,distance=0) {
         if(s.diamond) return [s.aspect];
         const far=distance*FAR_STEP>=FAR_HEIGHTS*dimensions(s.inches,s.aspect).height;
@@ -337,8 +337,16 @@
             const next=choose(baseline,eligible,distance);
             if(next!==selected){steps.push({at:distance,row:next});selected=next;}
         }
+        // EN/IT: First green distance of this same progression (the ideal-distance button
+        // finds the same value) / Prima distanza verde della stessa progressione.
+        let green=null;
+        for(let n=Math.round(.3/DISTANCE_STEP);green===null&&n<=MAX_DISTANCE/DISTANCE_STEP;++n){
+            const distance=n/(1/DISTANCE_STEP);let row=first;
+            for(const step of steps)if(step.at<=distance)row=step.row;
+            if(distance>=row.good)green=distance;
+        }
         planKey=key;
-        return cachedPlan={rows,first,steps};
+        return cachedPlan={rows,first,steps,green};
 
     }
     function calculate(input, record, factor=1, custom=null, withDistance=true) {
@@ -353,9 +361,11 @@
         const status=s.distance<chosen.usable?'close':s.distance<chosen.good?'limited':'good';
         return {ratio:chosen.ratio,status,...dim,settings:s,optics:o,
             base:s.diamond?dim.width:chosen.ratio*dim.height,
-            // EN/IT: Future distance always refers to the displayed layout / La distanza
-            // futura si riferisce sempre alla disposizione mostrata, anche quando e' rossa.
-            minDistance:withDistance&&chosen.good<=MAX_DISTANCE?distanceCeil(chosen.good):null,
+            // EN: Green: the displayed layout's own limit. Otherwise the first green distance:
+            //     farther back the progression may already show wider LEDs.
+            // IT: In verde: il limite della disposizione mostrata. Altrimenti la prima distanza
+            //     verde: piu' indietro la progressione puo' gia' mostrare LED piu' distanziati.
+            minDistance:!withDistance?null:status==='good'?distanceCeil(chosen.good):plan.green,
             moveTo:status==='close'&&chosen.usable<=MAX_DISTANCE?distanceCeil(chosen.usable):null};
     }
     OF.EmitterLayout={precision,calculate,candidates,dimensions,optics,settings,poses,leds,project,coverage,fits,DEFAULT_RATIO,MAX_DISTANCE,DISTANCE_STEP,STEP_FORWARD,FAR_STEP,FAR_HEIGHTS};

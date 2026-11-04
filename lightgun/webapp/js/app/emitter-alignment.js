@@ -146,7 +146,7 @@
             const grid=node('dl','alignment-measures');
             const entry=(key,value)=>grid.append(node('dt','',t(key)),node('dd','',value));
             entry('Screen size',cm(r.width)+' × '+cm(r.height)+' cm');
-            if(!s.diamond){entry('Horizontal LED spacing',cm(r.base)+' cm');entry('From the screen centre','± '+cm(r.base/2)+' cm');entry('From each side edge',cm((r.width-r.base)/2)+' cm');entry('Base / height',r.ratio.toLocaleString(OF.i18n.currentLang,{maximumFractionDigits:this.legacy?3:2}));}
+            if(!s.diamond){entry('Horizontal LED spacing',cm(r.base)+' cm');entry('From the screen centre','± '+cm(r.base/2)+' cm');entry('From each side edge',cm((r.width-r.base)/2)+' cm');entry('Base / height',r.ratio.toLocaleString(OF.i18n.currentLang,{maximumFractionDigits:3}));}
             entry('Vertical LED spacing',cm(r.height)+' cm');
             if(!this.legacy){
                 if(r.moveTo!==null)entry('For fuller LED coverage',r.moveTo.toLocaleString(OF.i18n.currentLang,{maximumFractionDigits:1})+' m');
@@ -156,6 +156,7 @@
             const notes=node('div','alignment-notes');
             if(this.legacy){
                 if(!s.diamond)notes.append(node('p','',t('Square uses the fixed legacy base / height ratio of 0.711.')));
+                notes.append(node('p','',t('These LED positions work well in most situations, but they are not optimised for your setup.')));
                 notes.append(node('p','',t('This placement does not adapt to the camera or playing distance.')));
                 notes.append(node('p','',t('Your choices are preserved. Press the legacy button again to return to automatic placement.')));
                 notes.append(node('p','',t('Check all four screen corners from your playing positions in the IR camera test.')));

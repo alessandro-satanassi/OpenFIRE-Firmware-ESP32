@@ -229,3 +229,15 @@ test('play profile: gun straight needs four LEDs; up to 15 degrees may lose one'
   }
  }
 });
+
+test('the distance shown for more freedom is where the advice turns green',()=>{
+ for(const r of records)for(const [inches,aspect] of [[27,16/9],[43,32/9],[55,16/9],[65,16/9]]){
+  let first=null;
+  for(let n=5;n<=100&&first===null;++n)if(L.calculate({inches,aspect,distance:n/10},r,1,null,false).status==='good')first=n/10;
+  for(let n=5;n<=100;++n){
+   const x=L.calculate({inches,aspect,distance:n/10},r);
+   if(x.status==='good')continue;
+   assert.equal(x.minDistance,first,`${r.label} ${inches} ${n/10}: ${x.minDistance} vs ${first}`);
+  }
+ }
+});
