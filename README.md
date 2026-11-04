@@ -116,8 +116,11 @@ If something does not work, see [Common Problems](lightgun/src/README.md#common-
 * **Wireless power saving for the lightgun:** on battery, playing through the dongle, the gun goes into standby after 15 minutes without use (or 5, 30, 60 minutes, or never, as set in the WebApp). Pull the trigger to resume, still paired to the same dongle.
 * **Wireless power saving for the pedal:** the pedal switches off its radio after 15 minutes without presses and wakes up with a press.
 * **Parallax correction:** for guns with the camera mounted below the sight, it keeps the aim on target when you play closer to or farther from the screen than where you calibrated.
+* **Camera lens refinement:** sweeping the gun over the screen, the WebApp computes the lens values of your own camera and shows them next to the current ones, so you choose whether to apply them; useful above all with the wide-angle PAJ7025R3 (**Gun Settings → CAMERA Model → Refine lens...**). Do it before calibrating, then calibrate each profile again.
 * **Steadier tracking:** hidden emitters are rebuilt more accurately when only two or three are in view, and the Diamond layout now uses the refined tracking too.
 * **Calibration help:** a shot is refused while the gun is rotated too much around the barrel, and the manual lists the minimum calibration distance for each camera and screen size.
+* **IR emitter alignment assistant by distance:** set your playing distance and the assistant places the Square LEDs for the best precision at that distance, with green, orange or red showing how much room you have to move. **Force legacy placement** keeps the fixed 0.711 ratio.
+* **Switches in Gun Tests:** the WebApp shows whether the Rumble, Solenoid and Autofire switches are on, taking the **NC** setting into account.
 
 **Updating from 7.0.0:** a normal update keeps settings and calibrations; calibrate each profile again to benefit from the corners. Use lightgun, dongle and pedal firmware from the same release.
 
@@ -433,8 +436,11 @@ Se qualcosa non funziona, consulta [Problemi comuni](lightgun/src/README.md#prob
 * **Risparmio energetico wireless della lightgun:** a batteria, giocando tramite il dongle, la pistola entra in standby dopo 15 minuti senza utilizzo (oppure 5, 30, 60 minuti, o mai, come impostato nella WebApp). Premi il grilletto per riprendere, sempre associata allo stesso dongle.
 * **Risparmio energetico wireless del pedale:** il pedale spegne la radio dopo 15 minuti senza pressioni e si risveglia con una pressione.
 * **Correzione parallasse:** per le pistole con la telecamera montata sotto il mirino, mantiene la mira sul bersaglio quando giochi più vicino o più lontano dallo schermo rispetto a dove hai calibrato.
+* **Affinamento della lente della telecamera:** muovendo la pistola sullo schermo, la WebApp calcola i valori della lente della tua telecamera e li mostra accanto a quelli attuali, così scegli tu se applicarli; utile soprattutto con la grandangolare PAJ7025R3 (**Impostazioni Gun → Modello TELECAMERA → Affina lente...**). Va fatto prima di calibrare, poi calibra di nuovo ogni profilo.
 * **Tracciamento più stabile:** gli emettitori nascosti vengono ricostruiti con più precisione quando se ne vedono solo due o tre, e anche il layout Diamond usa ora il tracciamento affinato.
 * **Aiuti alla calibrazione:** un tiro viene rifiutato quando la pistola è troppo ruotata attorno alla canna, e il manuale riporta la distanza minima di calibrazione per ogni telecamera e dimensione dello schermo.
+* **Assistente di allineamento degli emettitori IR in base alla distanza:** imposti la distanza di gioco e l'assistente posiziona i LED Square per la massima precisione a quella distanza, con verde, arancione o rosso che indicano quanta libertà di movimento hai. **Forza posizione legacy** mantiene il rapporto fisso di 0,711.
+* **Interruttori in Gun Tests:** la WebApp mostra se gli interruttori Rumble, Solenoide e Autofire sono accesi, tenendo conto dell'impostazione **NC**.
 
 **Aggiornamento dalla 7.0.0:** un aggiornamento normale mantiene impostazioni e calibrazioni; calibra di nuovo ogni profilo per sfruttare gli angoli. Usa firmware della stessa release per lightgun, dongle e pedale.
 

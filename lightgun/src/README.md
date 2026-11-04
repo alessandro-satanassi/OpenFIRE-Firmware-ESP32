@@ -127,6 +127,8 @@ Buttons, pedals and switches are normally open: they connect their pin to GND wh
 
 The **NC** box appears only for buttons, pedals wired to the gun (not the wireless pedal) and the Rumble, Solenoid and Autofire switches. The inversion belongs to the function, so it follows it if you move it to another pin. If you take the function off its pin, its NC box is cleared. With the board's default layout (Use Custom Pins off) no input is inverted. The inversion also applies to the startup shortcuts (Trigger + A, B).
 
+After saving, check the result in the **Gun Tests** tab: a button lights up only while it is pressed and a switch is green only while it is on, whatever its contact type.
+
 <a id="saving-the-pin-layout-to-a-file"></a>
 
 ### Saving the pin layout to a file
@@ -345,6 +347,8 @@ The Simple Pause Menu has the same options. The state is kept when you save and 
 Calibrations, profile settings and gun options such as pin mapping and rumble strength are saved in the gun's memory with Start + Select in Hotkey pause mode, with Save Settings in the Simple Pause Menu, or by saving in the WebApp and waiting for the confirmation. The profile selected when you save becomes the one used at the next start; gun settings (pins, force feedback, etc.) apply to *all profiles*. In the WebApp and the desktop App, **Save and Send Settings** pulses while there are unsaved changes.
 
 #### Test Mode
+The WebApp's *Gun Tests* tab shows the inputs live while the gun is connected. A box turns red while its button is pressed, and the **Analog Stick** box shows where the stick points. The **Switch** row shows the Rumble, Solenoid and Autofire switches: green when the switch is on, grey when it is off, dashed when no pin is assigned to it. Buttons and switches follow the **NC** setting, so a normally closed contact looks the same as a normally open one. The switch state needs lightgun firmware 7.1.0 or later: with an older firmware the switches appear dashed and their tooltip asks you to update. When a TMP36 is fitted, the temperature is shown next to the switches.
+
 The IR camera test shows the IR points as the camera sees them. Open it from the WebApp's *Gun Tests* tab with **Open IR Camera Tester...**. Use it to align the camera while building the gun, to check that all four emitters are tracked and to find reflections. The test uses the settings stored in the gun, so save any change to the IR layout or the sensitivity before opening it; the shape joining the points (a rectangle for Square, a diamond for Diamond) follows the layout of the current profile.
 
 Each emitter circle shows what the camera measures:
@@ -373,7 +377,7 @@ The grey crosshair shows where the gun is aiming and the red circle marks the ce
 - **The OLED display stays blank:** it is disabled by default; enable it as explained in [Camera, display and startup settings](#camera-display-and-startup-settings).
 - **The temperature reading is far too high** (for example about 90 °C at room temperature): give the TMP36 its own ground wire to the board, not shared with the camera ([wiring tip](../README.md#optional-modules)).
 - **The wireless connection drops or has a short range:** keep a small clear area around the antenna of the gun's board, with no wires over or right next to it and no metal covering it ([antenna tip](../README.md#mandatory-components-essentials)); the same applies to a home-made dongle or pedal. Also use solenoid power wires of at least 24 AWG, as thinner wires can cause disconnections.
-- **A button always reads as pressed, or a switch works the other way round:** it probably has a normally closed (NC) contact. Tick **NC** next to its pin; see [Normally closed (NC) inputs](#normally-closed-nc-inputs).
+- **A button always reads as pressed, or a switch works the other way round:** it probably has a normally closed (NC) contact. Tick **NC** next to its pin; see [Normally closed (NC) inputs](#normally-closed-nc-inputs). The **Gun Tests** tab shows each input as the gun reads it.
 - **Importing a layout file gives "File Read Error" or "Board Doesn't Match":** the file is damaged, was exported with 6.2.1, or was made for another board. Set the pins again and export a new file; see [Saving the pin layout to a file](#saving-the-pin-layout-to-a-file).
 
 Some behaviours are limits of the system rather than faults: see [Known Limitations](#known-limitations).
@@ -551,6 +555,8 @@ Pulsanti, pedali e interruttori sono normalmente aperti: collegano il loro pin a
 3. Spunta **NC** accanto all'ingresso, poi **Salva e invia impostazioni**.
 
 La casella **NC** compare solo per pulsanti, pedali collegati alla pistola (non il pedale wireless) e gli interruttori Rumble, Solenoide e Autofire. L'inversione appartiene alla funzione, quindi la segue se la sposti su un altro pin. Se togli la funzione dal pin, la casella NC viene deselezionata. Con il layout predefinito della scheda (Usa pin personalizzati disattivato) nessun ingresso è invertito. L'inversione vale anche per le scorciatoie all'avvio (Grilletto + A, B).
+
+Dopo il salvataggio controlla il risultato nella scheda **Gun Tests**: un pulsante si accende solo mentre è premuto e un interruttore è verde solo quando è acceso, qualunque sia il tipo di contatto.
 
 <a id="salvare-il-layout-dei-pin-in-un-file"></a>
 
@@ -794,6 +800,8 @@ Calibrazioni, impostazioni dei profili e opzioni della pistola come la mappatura
 <a id="modalità-di-test-italiano"></a>
 
 #### Modalità di Test
+La scheda *Gun Tests* della WebApp mostra gli ingressi in tempo reale mentre la pistola è collegata. Un riquadro diventa rosso mentre premi il suo pulsante, e il riquadro **Stick Analogico** mostra dove punta lo stick. La riga **Switch** mostra gli interruttori Rumble, Solenoide e Autofire: verde quando l'interruttore è acceso, grigio quando è spento, tratteggiato quando non ha un pin assegnato. Pulsanti e interruttori tengono conto dell'impostazione **NC**, quindi un contatto normalmente chiuso appare come uno normalmente aperto. Lo stato degli interruttori richiede il firmware della lightgun 7.1.0 o successivo: con un firmware precedente gli interruttori appaiono tratteggiati e il loro suggerimento invita ad aggiornarlo. Se è montato un TMP36, la temperatura è mostrata accanto agli interruttori.
+
 Il test della telecamera IR mostra i punti IR come li vede la telecamera. Aprilo dalla scheda *Gun Tests* della WebApp con **Apri Tester telecamera IR...**. Serve per allineare la telecamera durante la costruzione, per verificare che tutti e quattro gli emettitori siano seguiti e per trovare i riflessi. Il test usa le impostazioni memorizzate nella pistola, quindi salva le modifiche al layout IR o alla sensibilità prima di aprirlo; la forma che unisce i punti (un rettangolo per Square, un rombo per Diamond) segue il layout del profilo corrente.
 
 Ogni cerchio degli emettitori mostra ciò che la telecamera misura:
@@ -824,7 +832,7 @@ Il mirino grigio indica dove punta la pistola e il cerchio rosso il centro dei q
 - **Il display OLED resta spento:** è disattivato per impostazione predefinita; attivalo come spiegato in [Telecamera, display e impostazioni di avvio](#telecamera-display-e-impostazioni-di-avvio).
 - **La temperatura letta è troppo alta** (ad esempio circa 90 °C a temperatura ambiente): collega il TMP36 alla scheda con un proprio filo di massa, non condiviso con la telecamera ([consiglio di cablaggio](../README.md#moduli-opzionali)).
 - **Il collegamento wireless si interrompe o ha poca portata:** lascia libera una piccola area intorno all'antenna della scheda della pistola, senza fili sopra o a ridosso e senza metallo che la copra ([consiglio sull'antenna](../README.md#componenti-obbligatori-essenziali)); lo stesso vale per un dongle o un pedale autocostruiti. Usa inoltre fili di alimentazione del solenoide di almeno 24 AWG, perché fili più sottili possono causare disconnessioni.
-- **Un pulsante risulta sempre premuto, o un interruttore funziona al contrario:** probabilmente ha un contatto normalmente chiuso (NC). Spunta **NC** accanto al suo pin; vedi [Ingressi normalmente chiusi (NC)](#ingressi-normalmente-chiusi-nc).
+- **Un pulsante risulta sempre premuto, o un interruttore funziona al contrario:** probabilmente ha un contatto normalmente chiuso (NC). Spunta **NC** accanto al suo pin; vedi [Ingressi normalmente chiusi (NC)](#ingressi-normalmente-chiusi-nc). La scheda **Gun Tests** mostra ogni ingresso come lo legge la pistola.
 - **L'importazione di un file di layout dà "Errore di lettura del file" o "La scheda non corrisponde":** il file è danneggiato, è stato esportato con la 6.2.1 o è stato creato per un'altra scheda. Reimposta i pin ed esporta un nuovo file; vedi [Salvare il layout dei pin in un file](#salvare-il-layout-dei-pin-in-un-file).
 
 Alcuni comportamenti sono limiti del sistema e non guasti: vedi [Limiti noti](#limiti-noti-italiano).
