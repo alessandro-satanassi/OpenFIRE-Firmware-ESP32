@@ -85,8 +85,8 @@ test('candidates avoid near-square shapes: upright up to 0.85, wide from 1.5 or 
  for(const aspect of [16/9,16/10,3/2,5/4,4/3,21/9,32/9]){
   const c=L.candidates(L.settings({aspect}));
   assert.ok(c.includes(.85));assert.ok(c.every(r=>r<=.85||r>=1.5||(r===c[c.length-1]&&r>=1.3)));
-  assert.ok(c.includes(.5)&&c.includes(.6)&&c.includes(.8),'close play can use narrower or intermediate rectangles');
-  assert.ok(c.every(r=>r>=.5),'do not trade too much precision for a few centimetres');
+  assert.ok(c.includes(.8),'intermediate rectangle between 0.711 and 0.85');
+  assert.ok(c.every(r=>r>=L.DEFAULT_RATIO),'0.711 is the minimum: no precision traded for a few centimetres');
   assert.ok(c.every(r=>r<=aspect+1e-12));
  }
  assert.ok(!L.candidates(L.settings({aspect:5/4})).includes(5/4));
@@ -128,7 +128,7 @@ test('moving away never narrows the LEDs, including close and limited advice',()
 });
 
 test('close-play recovery keeps the actual layout and does not require moving back',()=>{
- for(const [inches,distance,factor] of [[32,1.5,1],[55,2,.67],[65,3.5,1]]){
+ for(const [inches,distance,factor] of [[32,1.7,1],[55,2,.67],[65,3.5,1]]){
   const x=L.calculate({inches,distance,aspect:16/9},records[1],factor);
   assert.equal(x.status,'limited');assert.equal(x.moveTo,null);
   assert.ok(L.fits(x.settings,x.optics,x.ratio,L.poses(x.settings,distance),0),'actual distance keeps the required LEDs');

@@ -25,11 +25,11 @@
     // EN: Shapes close to a square let the firmware swap the LEDs when seen up close (tracking
     //     simulations): upright up to 0.85, wide from 1.5 or at the screen corners (4:3 and wider).
     //     1.3 and 1.4 keep the extra distance reserve of 4 screen heights.
-    //     0.711 remains the reference; 0.50/0.60 can restore visibility for close play.
+    //     0.711 is the minimum: narrower shapes trade precision for a few centimetres.
     // IT: Rettangoli quasi quadrati fanno scambiare i LED al firmware visti da vicino (simulazioni
     //     del tracking): verticali fino a 0,85, larghi da 1,5 o agli angoli (dal 4:3 in su).
     //     1,3 e 1,4 mantengono la riserva aggiuntiva di 4 altezze schermo.
-    //     0,711 resta il riferimento; 0,50/0,60 possono recuperare visibilita' da vicino.
+    //     0,711 e' il minimo: rettangoli piu' stretti cedono precisione per pochi centimetri.
     const FAR_HEIGHTS = 4;
     const distanceCeil = value => Math.ceil(value * (1 / DISTANCE_STEP)) / (1 / DISTANCE_STEP);
     function optics(record, factor = 1, custom = null) {
@@ -253,7 +253,7 @@
     function candidates(s,distance=0) {
         if(s.diamond) return [s.aspect];
         const far=distance*FAR_STEP>=FAR_HEIGHTS*dimensions(s.inches,s.aspect).height;
-        const list=[.5,.6,DEFAULT_RATIO,.8,.85,1.3,1.4,1.5,1.6,1.68,s.aspect];
+        const list=[DEFAULT_RATIO,.8,.85,1.3,1.4,1.5,1.6,1.68,s.aspect];
         return list
             .filter((r,i,a)=>r<=s.aspect && (r<=.85 || r>=1.5 || (r===s.aspect && r>=1.3) || (far && (r===1.3 || r===1.4))) && a.indexOf(r)===i);
     }
