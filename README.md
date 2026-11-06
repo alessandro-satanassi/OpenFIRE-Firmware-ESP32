@@ -122,7 +122,7 @@ If something does not work, see [Common Problems](lightgun/src/README.md#common-
 * **IR emitter alignment assistant by distance:** set your playing distance and the assistant places the Square LEDs for the best precision at that distance, with green, orange or red showing how much room you have to move. **Force legacy placement** keeps the fixed 0.711 ratio.
 * **Switches in Gun Tests:** the WebApp shows whether the Rumble, Solenoid and Autofire switches are on, taking the **NC** setting into account.
 
-**Updating from 7.0.0:** a normal update keeps settings and calibrations; calibrate each profile again to benefit from the corners. Use lightgun, dongle and pedal firmware from the same release.
+**Updating from 7.0.0:** a normal update keeps settings and calibrations; calibrate each profile again to benefit from the corners. Use lightgun, dongle and pedal firmware from the same release. On a 4 MB lightgun (Waveshare ESP32-S3 Zero N4R2) do a clean installation instead: this version changes the flash partitions, so settings and calibrations go back to their defaults.
 
 ### Introduced in 7.0.0
 
@@ -442,7 +442,7 @@ Se qualcosa non funziona, consulta [Problemi comuni](lightgun/src/README.md#prob
 * **Assistente di allineamento degli emettitori IR in base alla distanza:** imposti la distanza di gioco e l'assistente posiziona i LED Square per la massima precisione a quella distanza, con verde, arancione o rosso che indicano quanta libertà di movimento hai. **Forza posizione legacy** mantiene il rapporto fisso di 0,711.
 * **Interruttori in Gun Tests:** la WebApp mostra se gli interruttori Rumble, Solenoide e Autofire sono accesi, tenendo conto dell'impostazione **NC**.
 
-**Aggiornamento dalla 7.0.0:** un aggiornamento normale mantiene impostazioni e calibrazioni; calibra di nuovo ogni profilo per sfruttare gli angoli. Usa firmware della stessa release per lightgun, dongle e pedale.
+**Aggiornamento dalla 7.0.0:** un aggiornamento normale mantiene impostazioni e calibrazioni; calibra di nuovo ogni profilo per sfruttare gli angoli. Usa firmware della stessa release per lightgun, dongle e pedale. Su una lightgun da 4 MB (Waveshare ESP32-S3 Zero N4R2) fai invece un'installazione pulita: questa versione cambia le partizioni della flash, quindi impostazioni e calibrazioni tornano ai valori predefiniti.
 
 ### Introdotte con la 7.0.0
 

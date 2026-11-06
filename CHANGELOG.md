@@ -40,6 +40,7 @@ All notable changes to this project will be documented in this file.
 ### Updating from 7.0.0
 
 * A normal update is enough: settings, pins and calibration profiles are kept. Calibrate each profile again to get the corner refinement and, if you use it, the parallax correction.
+* **Lightgun on a 4 MB board (Waveshare ESP32-S3 Zero N4R2):** this version changes the flash partitions, so do a clean installation: settings, pins and calibration profiles go back to their defaults. Note them down before updating. The 4 MB dongle and pedal are not affected.
 * Use lightgun, dongle and pedal firmware from the same release.
 * The lens refinement is optional: without it each camera keeps its default lens values, as before.
 * Wireless power saving is enabled by default (15 minutes): choose another time, or **Disabled**, in **Gun Settings → Input / Output**.
@@ -154,6 +155,7 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 ### Aggiornamento dalla 7.0.0
 
 * Basta un aggiornamento normale: impostazioni, pin e profili di calibrazione vengono mantenuti. Calibra di nuovo ogni profilo per avere l'affinamento con gli angoli e, se la usi, la correzione parallasse.
+* **Lightgun su scheda da 4 MB (Waveshare ESP32-S3 Zero N4R2):** questa versione cambia le partizioni della flash, quindi fai un'installazione pulita: impostazioni, pin e profili di calibrazione tornano ai valori predefiniti. Annotali prima di aggiornare. Dongle e pedale da 4 MB non sono interessati.
 * Usa firmware di lightgun, dongle e pedale della stessa release.
 * L'affinamento della lente è facoltativo: senza, ogni telecamera mantiene i suoi valori predefiniti della lente, come prima.
 * Il risparmio energetico wireless è attivo per impostazione predefinita (15 minuti): scegli un altro tempo, o **Disabilitato**, in **Impostazioni Gun → Input / Output**.
