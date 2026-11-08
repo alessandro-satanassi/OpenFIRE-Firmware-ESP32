@@ -95,6 +95,7 @@ bool OpenFIRE_Diamond::ConvexCycle(const float* x, const float* y)
 
 void OpenFIRE_Diamond::begin(const int* px, const int* py, unsigned int seen)
 {
+    frameUpdated = false;
     seenFlags = seen;
 
     // Punti visti, nello spazio del mouse
@@ -385,6 +386,7 @@ void OpenFIRE_Diamond::begin(const int* px, const int* py, unsigned int seen)
     prevSeenMask = mask;
     prevNumSeen = n;
     darkFrames = 0;
+    frameUpdated = true;
     if (n == 4) {
         start = 0xFF;
         for (uint8_t k = 0; k < 4; k++) { anchorX[k] = Gx[k]; anchorY[k] = Gy[k]; }

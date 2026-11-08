@@ -16,6 +16,24 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [7.1.1] - 2026-11-07
+
+### Added
+
+* **Tolerant calibration (WebApp):** a new **Tolerant calibration** option below the *Calibrate Profile* buttons of the **Calibration Profiles** tab, for those who cannot step back far enough for the standard calibration. The two shots at the centre still need all four emitters; at the edges two emitters in view are enough, and at the corners even fewer: a corner with fewer than two emitters turns the crosshair grey, can be skipped and is left out of the calculation. The emitters out of view are rebuilt from the last complete shape. With at least two emitters in view a shot is still refused while the gun is rotated too much, while the aim is still far from the target, or while the position has not been updated yet (`HOLD AIM STEADY` on the OLED display). When the camera sees at least two emitters at the corners too, the result is usually very close to the standard calibration; when there is not enough data the verification shows *Calibration not completed* and A or B repeats it. The option is off every time the WebApp opens, and the calibration from the gun stays standard. It needs the 7.1.1 lightgun firmware: with an older one the calibration stays standard. See [Tolerant calibration](lightgun/src/README.md#tolerant-calibration).
+
+### Changed
+
+* **Longer solenoid timings in the WebApp:** **Solenoid Autofire Wait Time** in **Gun Settings** now goes up to 9999 ms and **Solenoid ON Length** up to 500 ms, instead of 99 ms. Heavy arcade solenoids, such as the 24 V ones of *Time Crisis 4*, need more time for their return stroke: with 99 ms the hold-to-repeat recoil became a weak buzz instead of distinct kicks. A value above 99 ms already stored in the gun is no longer lowered to 99 when the WebApp loads the settings. The firmware does not change.
+
+### Updating from 7.1.0
+
+* A normal update is enough: settings, pins and calibration profiles are kept, and there is no need to calibrate again.
+* Only the lightgun firmware changes: the dongle and pedal firmware are the same as 7.1.0 apart from the version number.
+* Coming from 7.0.0, also follow [Updating from 7.0.0](#updating-from-700) of 7.1.0.
+
+---
+
 ## [7.1.0] - 2026-11-07
 
 ### Added
@@ -128,6 +146,24 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 ### Modifiche
 ### Correzioni
 ### Modifiche Incompatibili
+
+---
+
+## [7.1.1] - 2026-11-07
+
+### Aggiunte
+
+* **Calibrazione tollerante (WebApp):** una nuova opzione **Calibrazione tollerante** sotto i pulsanti *Calibra profilo* della scheda **Profili di calibrazione**, per chi non può allontanarsi abbastanza per la calibrazione standard. I due tiri al centro richiedono ancora tutti e quattro gli emettitori; ai bordi bastano due emettitori in vista, agli angoli anche meno: un angolo con meno di due emettitori rende grigio il mirino, si può saltare e non entra nel calcolo. Gli emettitori fuori vista vengono ricostruiti dall'ultima forma completa. Con almeno due emettitori in vista un tiro viene comunque rifiutato quando la pistola è troppo ruotata, quando la mira è ancora lontana dal bersaglio o quando la posizione non è ancora stata aggiornata (`HOLD AIM STEADY` sul display OLED). Quando la telecamera vede almeno due emettitori anche agli angoli, il risultato è di solito molto vicino alla calibrazione standard; se i dati non bastano la verifica mostra *Calibrazione non completata* e A o B la ripetono. L'opzione è disattivata a ogni apertura della WebApp e la calibrazione dalla pistola resta standard. Richiede il firmware della lightgun 7.1.1: con uno precedente la calibrazione resta standard. Vedi [Calibrazione tollerante](lightgun/src/README.md#calibrazione-tollerante-italiano).
+
+### Modifiche
+
+* **Tempi del solenoide più lunghi nella WebApp:** in **Impostazioni Gun** il **Solenoid Autofire Wait Time** arriva ora a 9999 ms e il **Solenoid ON Length** a 500 ms, invece di 99 ms. I solenoidi arcade pesanti, come quelli a 24 V di *Time Crisis 4*, hanno bisogno di più tempo per la corsa di ritorno: con 99 ms il rinculo a ripetizione diventava un ronzio debole invece di colpi distinti. Un valore sopra 99 ms già salvato nella pistola non viene più abbassato a 99 quando la WebApp carica le impostazioni. Il firmware non cambia.
+
+### Aggiornamento dalla 7.1.0
+
+* Basta un aggiornamento normale: impostazioni, pin e profili di calibrazione vengono mantenuti, e non serve calibrare di nuovo.
+* Cambia solo il firmware della lightgun: i firmware di dongle e pedale sono uguali alla 7.1.0, a parte il numero di versione.
+* Se arrivi dalla 7.0.0, segui anche [Aggiornamento dalla 7.0.0](#aggiornamento-dalla-700) della 7.1.0.
 
 ---
 

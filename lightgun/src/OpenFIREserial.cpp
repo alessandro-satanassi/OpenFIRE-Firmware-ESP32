@@ -1975,9 +1975,12 @@ void OF_Serial::AppSerialDispatchRequest(const AppSerialFrame_s &frame)
                                         (frame.payload[3] & OF_Const::caliFlagIrView) != 0;
                 FW_Common::caliCorners = frame.length >= 4 &&
                                          (frame.payload[3] & OF_Const::caliFlagCorners) != 0;
+                FW_Common::caliTolerant = frame.length >= 4 &&
+                                          (frame.payload[3] & OF_Const::caliFlagTolerant) != 0;
                 FW_Common::ExecCalMode(true);
                 FW_Common::caliIrView = false;
                 FW_Common::caliCorners = false;
+                FW_Common::caliTolerant = false;
 
                 // A full App disconnect received inside ExecCalMode()
                 // first cancels calibration so that the backed-up profile

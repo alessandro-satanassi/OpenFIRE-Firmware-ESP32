@@ -893,6 +893,8 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
     margin-top: 12px;
 }
 
+.cali-tolerant { display: flex; width: fit-content; margin-top: 10px; }
+
 /* ----- Gun Tests ----------------------------------------------------------------------------------- */
 
 /* Two rows: buttons | analog stick, then switches | temperature, so the edges line up.

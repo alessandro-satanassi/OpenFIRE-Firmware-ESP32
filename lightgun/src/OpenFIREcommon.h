@@ -183,6 +183,10 @@ public:
     // Calibration started by an App that asked for the four corner targets (sCaliStart,
     // caliFlagCorners). Without an App the corners are always used (see ExecCalMode).
     static inline bool caliCorners = false;
+    // Tolerant calibration asked by the WebApp (sCaliStart, caliFlagTolerant, with the corners):
+    // the edge shots need two emitters, the corners none, the centre shots still four (see
+    // ExecCalMode). Never used without an App. False in every other case.
+    static inline bool caliTolerant = false;
     // EN: IR test started by the WebApp lens refinement (sIRTest + irTestFlagLens).
     // IT: Test IR avviato dall'affinamento lente della WebApp (sIRTest + irTestFlagLens).
     static inline bool lensSamples = false;

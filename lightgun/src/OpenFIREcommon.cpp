@@ -40,15 +40,22 @@
 // on, so a shot taken just after straightening the gun has its whole history.
 // Measured on the frame itself, nothing to set. Only a frame with all four emitters seen is
 // judged (a missing emitter keeps its own handling).
-static bool CaliRollWithin(float share)
+// CaliTrackerRollWithin: the same limit on the tracker geometry whatever the emitters seen (the
+// tracker rebuilds the missing ones), for the tolerant calibration.
+static bool CaliTrackerRollWithin(float share)
 {
-    if((OpenFIRECamera::Seen() & 15) != 15)
-        return true;
     const bool diamond = OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout;
     const float w = fabsf(diamond ? FW_Common::OpenFIREdiamond.W() : FW_Common::OpenFIREsquare.W());
     const float h = fabsf(diamond ? FW_Common::OpenFIREdiamond.H() : FW_Common::OpenFIREsquare.H());
     const float roll = diamond ? FW_Common::OpenFIREdiamond.Ang() : FW_Common::OpenFIREsquare.Ang();
     return fabsf(roll) <= share*atan2f(fminf(w, h), fmaxf(w, h));
+}
+
+static bool CaliRollWithin(float share)
+{
+    if((OpenFIRECamera::Seen() & 15) != 15)
+        return true;
+    return CaliTrackerRollWithin(share);
 }
 
 #if defined(USE_SQUARE_ADVANCED) && defined(USE_DIAMOND_ADVANCED) && defined(USE_PERSPECTIVE_ADVANCED)
@@ -58,15 +65,17 @@ static bool CaliRollWithin(float share)
 
 namespace {
 OpenFIRECalibration::Session* calibrationSession = nullptr;
+bool calibrationTolerant = false;   // the session takes frames with two or three emitters seen
 
 // Session storage is temporary and outside the small task stack. Allocation
 // failure keeps the existing calibration; every exit (including goto) frees it.
 struct CalibrationScope {
-    explicit CalibrationScope(const CameraProfile& profile, bool diamond)
-        : session(new(std::nothrow) OpenFIRECalibration::Session(profile,diamond)) {
+    CalibrationScope(const CameraProfile& profile, bool diamond, bool tolerant)
+        : session(new(std::nothrow) OpenFIRECalibration::Session(profile,diamond,tolerant)) {
         calibrationSession = session;
+        calibrationTolerant = session && tolerant;
     }
-    ~CalibrationScope() { calibrationSession = nullptr; delete session; }
+    ~CalibrationScope() { calibrationSession = nullptr; calibrationTolerant = false; delete session; }
     OpenFIRECalibration::Session* const session;
     CalibrationScope(const CalibrationScope&) = delete;
     CalibrationScope& operator=(const CalibrationScope&) = delete;
@@ -94,7 +103,31 @@ __attribute__((noinline)) void CaptureCalibrationFrame() {
         }
         valid = matched;
     }
-    if(valid) calibrationSession->observe(xy,micros());
+    // Tolerant calibration: a frame with two or three emitters seen, the others rebuilt by the
+    // tracker in this same frame, with the same roll limit. Each emitter seen must be exactly one
+    // vertex of THIS camera read; those vertices are the measured ones.
+    uint8_t measured = 0x0F;
+    if(!valid && calibrationTolerant) {
+        const unsigned int seen = OpenFIRECamera::Seen() & 15;
+        const uint8_t seenCount = (seen & 1) + ((seen >> 1) & 1) + ((seen >> 2) & 1) + ((seen >> 3) & 1);
+        uint8_t trackerCount = 0;
+        valid = seenCount >= 2 && seenCount <= 3 && CaliTrackerRollWithin(1) &&
+            (diamond ? FW_Common::OpenFIREdiamond.calibrationPointsTolerant(xy,trackerCount)
+                     : FW_Common::OpenFIREsquare.calibrationPointsTolerant(xy,trackerCount)) &&
+            trackerCount == seenCount;
+        measured = 0;
+        for(uint8_t j = 0; valid && j < 4; ++j) if(seen & (1u << j)) {
+            const int32_t x = (diamond ? OpenFIRECamera::XPositions()[j]
+                                       : p.camMaxX-OpenFIRECamera::XPositions()[j])*p.camToMouseMult;
+            const int32_t y = OpenFIRECamera::YPositions()[j]*p.camToMouseMult;
+            bool matched = false;
+            for(uint8_t i = 0; i < 4; ++i) if(!(measured & (1u << i)) && xy[2*i] == x && xy[2*i+1] == y) {
+                measured |= 1u << i;matched = true;break;
+            }
+            valid = matched;
+        }
+    }
+    if(valid) calibrationSession->observe(xy,micros(),measured);
     else calibrationSession->invalidate();
 }
 
@@ -532,6 +565,9 @@ static_assert(IR_WEAK_HYSTERESIS < IR_WEAK_MAX_BRIGHTNESS &&
 // Problem of the IR emitters for a calibration target shot (sCaliIrWarning bit).
 constexpr uint8_t CALI_IR_MISSING = 0x01;   // the camera does not see all four emitters
 constexpr uint8_t CALI_IR_ROLL = 0x02;      // the gun is rolled too far (CaliRollWithin)
+constexpr uint8_t CALI_IR_AIM = 0x04;       // tolerant calibration: the gun is not aimed at the target
+constexpr uint8_t CALI_IR_UNREFINED = 0x08; // tolerant calibration: not refined, it cannot be confirmed
+constexpr uint8_t CALI_IR_STALE = 0x10;     // tolerant calibration: the tracker did not update the position in this frame
 // OLED: how long the reason of a refused shot stays in the header, as in the WebApp window.
 constexpr uint32_t CALI_WARNING_MS = 4000;
 
@@ -554,6 +590,46 @@ static uint8_t CaliIrProblems()
 
     return 0;
 }
+
+#ifdef OPENFIRE_CALIBRATION_REFINEMENT
+// Tolerant calibration (WebApp option, caliFlagTolerant): checks of a target shot. The two centre
+// shots keep all four emitters (CaliIrProblems, with or without the IR view) and the roll limit.
+// An edge needs two emitters seen, a corner none; with two or more emitters the tracker must have
+// updated the position in this frame, the roll (tracker geometry) stays within the limit, and the
+// shot must be at least half way from the centre towards its target on each axis of the target,
+// so that a shot fired before reaching the target is refused (CALI_IR_AIM).
+static uint8_t CaliTolerantShotProblems(uint8_t calStage, uint8_t corner)
+{
+    const bool cornerShot = corner < 4;
+    if(!cornerShot && (calStage == FW_Const::Cali_Init || calStage == FW_Const::Cali_Center))
+        return uint8_t(CaliIrProblems() | (CaliRollWithin(.5f) ? 0 : CALI_IR_ROLL));
+
+    // Direction of the target: edges Top, Bottom, Left, Right; corners as cornerX/cornerY of ExecCalMode.
+    static constexpr int8_t edgeX[4] = {0, 0, -1, 1}, edgeY[4] = {-1, 1, 0, 0};
+    static constexpr int8_t cornerX[4] = {1, 1, -1, -1}, cornerY[4] = {-1, 1, 1, -1};
+    if(!cornerShot && (calStage < FW_Const::Cali_Top || calStage > FW_Const::Cali_Right))
+        return CALI_IR_MISSING;   // not a target shot of the tolerant sequence
+    const int8_t dirX = cornerShot ? cornerX[corner] : edgeX[calStage - FW_Const::Cali_Top];
+    const int8_t dirY = cornerShot ? cornerY[corner] : edgeY[calStage - FW_Const::Cali_Top];
+
+    const unsigned int seen = OpenFIRECamera::Seen() & 0x0FU;
+    const uint8_t seenCount = (seen & 1) + ((seen >> 1) & 1) + ((seen >> 2) & 1) + ((seen >> 3) & 1);
+    if(seenCount < 2)
+        return cornerShot ? 0 : CALI_IR_MISSING;
+    const bool diamond = OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout;
+    if(!(diamond ? FW_Common::OpenFIREdiamond.updatedThisFrame() : FW_Common::OpenFIREsquare.updatedThisFrame()))
+        return CALI_IR_STALE;
+
+    uint8_t problems = CaliTrackerRollWithin(.5f) ? 0 : CALI_IR_ROLL;
+    const float x = (FW_Common::mouseX - res_x / 2.0f) / (res_x / 2.0f);
+    const float y = (FW_Common::mouseY - res_y / 2.0f) / (res_y / 2.0f);
+    if(!((dirX == 0 || x * dirX >= .5f) && (dirY == 0 || y * dirY >= .5f)))
+        problems |= CALI_IR_AIM;
+    return problems;
+}
+#else
+static uint8_t CaliTolerantShotProblems(uint8_t, uint8_t) { return 0; }
+#endif
 
 // Calibration IR view: weak flag last sent for each vertex (SendTestBlobs), for
 // IR_WEAK_HYSTERESIS. None (plain limit for the next flag) when the vertex is not seen,
@@ -654,6 +730,7 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
     uint8_t calStage = 0;
     uint8_t corner = 4;     // corner target being shot, 4 = none (see Cali_Corner)
     bool communicationFailed = false;
+    bool tolerantUnrefined = false;   // tolerant calibration whose refinement failed: no confirmation
     uint8_t caliPayload[5];
 
     // Queste sostituiscono i vecchi valori hardcoded (512 e 384) e 
@@ -665,12 +742,15 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
 
     #ifdef OPENFIRE_CALIBRATION_REFINEMENT
         CalibrationScope calibrationCapture(cameraProfile,
-            OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout);
+            OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout, fromDesktop && caliTolerant && caliCorners);
         // Only the refinement uses the four corners: always without an App, with an App
         // only when it asks for them (caliFlagCorners). Older Apps keep six targets.
         const bool cornerTargets = calibrationSession && (!fromDesktop || caliCorners);
+        // Tolerant calibration: only when the WebApp asks for it with the corners (caliFlagTolerant).
+        const bool tolerantShots = calibrationTolerant && cornerTargets;
     #else
         const bool cornerTargets = false;
+        const bool tolerantShots = false;
     #endif
     // Cursor targets of the corners, in the order of Cali_Corner.
     static constexpr int32_t cornerX[4] = {32767, 32767, 0, 0};
@@ -817,16 +897,19 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
         // the player then steps back. The confirmation of the verify stage is not checked.
         // Every target shot is also refused, in every case, while the gun is rolled beyond half
         // the angle that would swap the emitters (CaliRollWithin).
+        // The tolerant calibration has its own checks (CaliTolerantShotProblems).
         // The stage does not change; the Apps are told why (sCaliIrWarning), and the OLED shows
         // it in the header.
         const bool targetShot = buttons.pressed == FW_Const::BtnMask_Trigger && !mouseMoving &&
                                 calStage <= FW_Const::Cali_Center;
-        const uint8_t shotRefusal = targetShot
-            ? uint8_t(((!fromDesktop || caliIrView) ? CaliIrProblems() : 0) | (CaliRollWithin(.5f) ? 0 : CALI_IR_ROLL)) : 0;
+        const uint8_t shotRefusal = !targetShot ? 0 : tolerantShots ? CaliTolerantShotProblems(calStage, corner)
+            : uint8_t(((!fromDesktop || caliIrView) ? CaliIrProblems() : 0) | (CaliRollWithin(.5f) ? 0 : CALI_IR_ROLL));
         #ifdef USES_DISPLAY
             // The header goes back to the profile after CALI_WARNING_MS or at the next accepted shot.
             if(shotRefusal) {
-                OLED.TopPanelUpdate("", (shotRefusal & CALI_IR_MISSING) ? "LED NOT SEEN" : "HOLD GUN UPRIGHT");
+                OLED.TopPanelUpdate("", (shotRefusal & CALI_IR_MISSING) ? "LED NOT SEEN" :
+                                        (shotRefusal & CALI_IR_ROLL) ? "HOLD GUN UPRIGHT" :
+                                        (shotRefusal & CALI_IR_STALE) ? "HOLD AIM STEADY" : "AIM AT TARGET");
                 caliWarningStamp = millis();
                 caliWarningShown = true;
             } else if(caliWarningShown && (targetShot || millis() - caliWarningStamp >= CALI_WARNING_MS)) {
@@ -1030,6 +1113,9 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                                             OF_Const::sCaliInfoUpd,caliPayload,sizeof(caliPayload)))
                                         goto calibration_failed;
                                 }
+                            } else if(tolerantShots) {
+                                // Tolerant: the edge values alone may come from rebuilt emitters.
+                                tolerantUnrefined = true;
                             }
                         }
                     #endif
@@ -1058,6 +1144,11 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                     #ifdef USES_DISPLAY
                         OLED.CalibrationStageUpdate(FW_Const::Cali_Verify);
                     #endif // USES_DISPLAY
+                    // Tolerant calibration not refined: the App asks to repeat it (A/B), the
+                    // trigger does not confirm it.
+                    if(tolerantUnrefined && fromDesktop &&
+                       !OF_Serial::AppSerialSendResponse(OF_Const::sCaliIrWarning, &CALI_IR_UNREFINED, 1))
+                        goto calibration_failed;
                     while(gunMode == FW_Const::GunMode_Verification) {
                         buttons.Poll();
 
@@ -1079,13 +1170,17 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                             goto calibration_cancelled;
 
                         // If it's good, move onto calibration finish.
-                        if(buttons.pressed == FW_Const::BtnMask_Trigger) {
+                        if(buttons.pressed == FW_Const::BtnMask_Trigger && tolerantUnrefined) {
+                            if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliIrWarning, &CALI_IR_UNREFINED, 1))
+                                goto calibration_failed;
+                        } else if(buttons.pressed == FW_Const::BtnMask_Trigger) {
                             calStage++;
                             // Stay in Verification Mode; the code outside of the calibration loop will catch us.
                             break;
                         // Press A/B to restart calibration for current profile
                         } else if(buttons.pressedReleased & FW_Const::ExitPauseModeHoldBtnMask) {
                             calStage = 0;
+                            tolerantUnrefined = false;
                             #ifdef OPENFIRE_CALIBRATION_REFINEMENT
                                 if(calibrationSession) calibrationSession->reset();
                                 SetProfileShape(OF_Prefs::profiles[OF_Prefs::currentProfile], {});

@@ -59,6 +59,17 @@ public:
         return true;
     }
 
+    // Tolerant calibration: the geometry of THIS frame (before spring and OneEuro), the LEDs out of
+    // view reconstructed by the tracker. seenCount = LEDs measured in this frame. false when the
+    // last begin() did not publish a new geometry (rejected or dark frame).
+    bool calibrationPointsTolerant(int32_t* xy, uint8_t& seenCount) const {
+        if(!start || !frameUpdated) return false;
+        for(uint8_t i = 0; i < 4; ++i) { xy[2*i] = prev_GeomX[i]; xy[2*i+1] = prev_GeomY[i]; }
+        seenCount = prev_num_points_seen;
+        return true;
+    }
+    bool updatedThisFrame() const { return frameUpdated; }
+
     void setCalibrationMode(bool enabled) { calibrationMode = enabled; }
     //void setWideLayout(bool enabled) { wideLayout = enabled; }
 
@@ -212,6 +223,7 @@ private:
     AnchorReconstruction anchorReconstruction;
     float focal = 0.0f;              // lunghezza focale nominale della camera, in unita' mouse
 
+    bool frameUpdated = false;      // the last begin() published a new geometry
     bool calibrationMode = false;    // true = è in corso la calibrazione
     bool wideLayout = true;          // true = configurazione con base maggiore di altezza ad esempio per sensori sugli angoli del monitor
 

@@ -481,8 +481,10 @@ public:
     enum {
         caliFlagIrView = 0x01,  // send the IR emitters during calibration (sTestBlobs + sTestCoords)
                                 // and refuse the target shots while an emitter is missing
-        caliFlagCorners = 0x02  // four more targets at the screen corners after the right edge
+        caliFlagCorners = 0x02, // four more targets at the screen corners after the right edge
                                 // (sCaliStageUpd 8..11: top-right, bottom-right, bottom-left, top-left)
+        caliFlagTolerant = 0x04 // tolerant calibration (WebApp option, with the corners): the edges
+                                // need two emitters, the corners none; centre shots still need four
     } caliStartFlags_e;
 
     // Optional second byte of sIRTest (App to board). Older Apps send one byte and older

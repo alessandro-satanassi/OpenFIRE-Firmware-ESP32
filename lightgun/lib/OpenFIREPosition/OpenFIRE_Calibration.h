@@ -34,6 +34,7 @@ struct Parameters {
 struct Measurement {
     std::array<float, 8> mean{};
     bool valid = false;
+    bool estimated = false;   // tolerant calibration: some LEDs reconstructed by the tracker
 };
 
 // Pure calibration solve. Failure leaves result exactly equal to original.
@@ -57,10 +58,15 @@ void ApplyParallax(float offset, float calibrationArea, float area, float angle,
 // Allocate this session on the heap, only while calibrating (about 10 KiB).
 class Session {
 public:
-    Session(const CameraProfile& profile, bool diamond);
+    Session(const CameraProfile& profile, bool diamond, bool tolerant = false);
     void reset();
     void invalidate();
-    void observe(const int32_t* xy, uint32_t nowMicros);
+    // measured: bit i set when LED i of xy was measured in this frame (0x0F: all four, the
+    // only case accepted by a standard session). A tolerant session (WebApp option) also takes
+    // frames with two or three measured LEDs: the hidden ones come from the tracker (xy) and,
+    // with a lens model in the profile, are reconstructed again here from the last four-LED
+    // frame in lens-corrected space, where a pure rotation of the gun is exact.
+    void observe(const int32_t* xy, uint32_t nowMicros, uint8_t measured = 0x0F);
     uint32_t frameCount() const { return frames; }
     bool capture(uint8_t shot, uint32_t nowMicros);
     bool refine(const Parameters& original, Parameters& result) const;
@@ -68,12 +74,17 @@ public:
 private:
     CameraProfile profile;
     bool diamond;
+    bool tolerant;
     uint32_t maxGap, maxAge;
     uint32_t lastStamp = 0;
     uint32_t frames = 0;
     uint16_t next = 0, count = 0;
     int32_t history[256][8];
     uint32_t stamps[256];
+    uint8_t estimatedFrames[256];
+    float anchor[8] = {};   // last four-LED frame, lens corrected
+    bool anchorValid = false;
+    bool reconstruct(uint8_t measured, int32_t* xy) const;
     std::array<Measurement, ShotSlots> shots{};
 };
 

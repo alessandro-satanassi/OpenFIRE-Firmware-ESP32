@@ -42,12 +42,15 @@
         return text;
     }
 
-    /** Ranges of the spin boxes of the Qt App (appmainwindow.ui), by settingsTypes_e name. */
+    /** Ranges of the spin boxes of the Qt App (appmainwindow.ui), by settingsTypes_e name. The two
+     *  solenoid lengths go beyond the Qt limit of 99 ms (heavy arcade solenoids need a longer return
+     *  stroke): OFF up to 9999 ms like the other timings, ON up to 500 ms, since the coil stays powered
+     *  for that time at every shot and during the solenoid test. The firmware stores both as uint32. */
     const SETTING_RANGES = {
         rumbleStrength: [0, 255],
         rumbleInterval: [0, 9999],
-        solenoidOnLength: [0, 99],
-        solenoidOffLength: [0, 99],
+        solenoidOnLength: [0, 500],
+        solenoidOffLength: [0, 9999],
         solenoidHoldLength: [0, 9999],
         holdToPauseLength: [0, 9999],
         customLEDcount: [1, 100],

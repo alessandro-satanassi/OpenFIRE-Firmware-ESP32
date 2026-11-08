@@ -896,9 +896,11 @@ class MockFirmware {
                     // Optional fourth byte (caliStartFlags_e): older Apps send three bytes.
                     this.caliIrView = frame.payload.length >= 4 && (frame.payload[3] & this.S.caliStartFlags_e.caliFlagIrView) !== 0;
                     this.caliCorners = frame.payload.length >= 4 && (frame.payload[3] & this.S.caliStartFlags_e.caliFlagCorners) !== 0;
+                    this.caliTolerant = frame.payload.length >= 4 && (frame.payload[3] & this.S.caliStartFlags_e.caliFlagTolerant) !== 0;
                     await this.execCalMode(true);
                     this.caliIrView = false;
                     this.caliCorners = false;
+                    this.caliTolerant = false;
                     if (!this.sessionActive) {
                         this.sessionEnd();
                         this.restoreRunState();

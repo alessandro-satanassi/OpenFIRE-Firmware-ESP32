@@ -1,6 +1,7 @@
 #include "OpenFIRE_Calibration.h"
 #include "OpenFIREConst.h"
 #include "OpenFIRE_Perspective_Advanced.h"
+#include "OpenFIRE_Anchor.h"
 #include <algorithm>
 #include <cmath>
 
@@ -20,6 +21,8 @@ constexpr unsigned FitParameters = 4;
 constexpr unsigned ShapeParameters = 8;
 // 2 ln 2: median of a squared two-dimensional normal error, in units of its per-axis variance.
 constexpr float SquaredError2DMedian = 1.3862944f;
+// Tolerant calibration: reconstructed LEDs may lie outside the image, within the trackers' limit.
+constexpr float EstimatedCoordLimit = 16383.f;
 
 struct Point { float x = 0, y = 0; };
 struct Line { float x = 0, y = 0, z = 0; };
@@ -268,7 +271,9 @@ bool Refine(const CameraProfile& p, bool diamond, const Shots& shots,
     for(unsigned k = 0; k < ShotCount; ++k) {
         used[k] = shots[k].valid;
         for(unsigned a = 0; a < 8; ++a)
-            if(!std::isfinite(shots[k].mean[a]) || shots[k].mean[a] < 0 || shots[k].mean[a] > (a&1 ? p.mouseMaxY : p.mouseMaxX)) used[k] = false;
+            if(!std::isfinite(shots[k].mean[a]) ||
+               (shots[k].estimated ? std::abs(shots[k].mean[a]) > EstimatedCoordLimit
+                                   : (shots[k].mean[a] < 0 || shots[k].mean[a] > (a&1 ? p.mouseMaxY : p.mouseMaxX)))) used[k] = false;
         tx[k] = TargetX[k]*res_x; ty[k] = TargetY[k]*res_y; weight[k] = used[k];
         taken += used[k];
     }
@@ -361,7 +366,7 @@ void ApplyParallax(float offset, float calibrationArea, float area, float angle,
     y = int32_t(std::lround(std::clamp(y+shift*std::cos(angle), -range, range)));
 }
 
-Session::Session(const CameraProfile& p, bool d):profile(p),diamond(d) {
+Session::Session(const CameraProfile& p, bool d, bool t):profile(p),diamond(d),tolerant(t) {
     const uint32_t fps=p.fps?p.fps:209;
     // OLED/I/O work can briefly delay calibration reads. Keep those valid
     // samples, while timestamps still bound the total age of each window.
@@ -370,14 +375,49 @@ Session::Session(const CameraProfile& p, bool d):profile(p),diamond(d) {
 }
 void Session::invalidate() {count=0;next=0;}
 void Session::reset() {invalidate();shots={};}
-void Session::observe(const int32_t* xy, uint32_t now) {
+void Session::observe(const int32_t* xy, uint32_t now, uint8_t measured) {
     if(count && uint32_t(now-lastStamp)>maxGap) invalidate();
+    measured&=0x0F;
+    const bool estimated=measured!=0x0F;
+    if(estimated && (!tolerant || (measured&(measured-1))==0)) {invalidate();return;}   // at least two measured LEDs
     for(unsigned a=0;a<8;++a) {
-        if(xy[a]<0 || xy[a]>(a&1?profile.mouseMaxY:profile.mouseMaxX)) {invalidate();return;}
+        const bool inImage=xy[a]>=0 && xy[a]<=(a&1?profile.mouseMaxY:profile.mouseMaxX);
+        if((measured>>(a>>1))&1 ? !inImage : (xy[a] < -int32_t(EstimatedCoordLimit) || xy[a] > int32_t(EstimatedCoordLimit))) {invalidate();return;}
     }
-    for(unsigned a=0;a<8;++a) history[next][a]=xy[a];
+    int32_t v[8];
+    for(unsigned a=0;a<8;++a) v[a]=xy[a];
+    if(!estimated) {
+        if(tolerant) {   // reference for the reconstruction below
+            for(unsigned j=0;j<4;++j) { const Point q=corrected(profile,{float(xy[2*j]),float(xy[2*j+1])}); anchor[2*j]=q.x; anchor[2*j+1]=q.y; }
+            anchorValid=true;
+        }
+    } else if((profile.lensRadialK1!=0 || profile.lensRadialK2!=0) && !reconstruct(measured,v)) {invalidate();return;}
+    for(unsigned a=0;a<8;++a) history[next][a]=v[a];
     stamps[next]=now;
+    estimatedFrames[next]=estimated;
     next=(next+1)&255;if(count<256) ++count;lastStamp=now;++frames;
+}
+// Hidden LEDs of a tolerant frame from the last four-LED frame: the same similarity (two
+// LEDs) or affinity (three) as the trackers, but on lens-corrected points, where a pure
+// rotation of the gun is exact; then back to camera space, where the solve expects them.
+bool Session::reconstruct(uint8_t measured, int32_t* xy) const {
+    if(!anchorValid || !(profile.lensFocalRatio > 0)) return false;
+    float px[3],py[3],qx[3],qy[3],hx[2],hy[2]; uint8_t hidden[2],n=0,m=0;
+    for(uint8_t j=0;j<4;++j) {
+        if((measured>>j)&1) {
+            if(n==3) return false;
+            const Point q=corrected(profile,{float(xy[2*j]),float(xy[2*j+1])});
+            px[n]=anchor[2*j]; py[n]=anchor[2*j+1]; qx[n]=q.x; qy[n]=q.y; ++n;
+        } else { hx[m]=anchor[2*j]; hy[m]=anchor[2*j+1]; hidden[m++]=j; }
+    }
+    if(n<2 || n+m!=4) return false;
+    if(!LedsFromAnchor(profile.mouseResX*.5f*profile.lensFocalRatio,profile.mouseResX*.5f,profile.mouseResY*.5f,n,px,py,qx,qy,m,hx,hy)) return false;
+    for(uint8_t i=0;i<m;++i) {
+        const Point d=distorted(profile,{hx[i],hy[i]});
+        if(!(std::fabs(d.x)<=EstimatedCoordLimit && std::fabs(d.y)<=EstimatedCoordLimit)) return false;
+        xy[2*hidden[i]]=int32_t(std::lround(d.x)); xy[2*hidden[i]+1]=int32_t(std::lround(d.y));
+    }
+    return true;
 }
 bool Session::capture(uint8_t shot, uint32_t now) {
     if(shot>=shots.size()) return false;
@@ -407,6 +447,9 @@ bool Session::capture(uint8_t shot, uint32_t now) {
     for(unsigned w=0;w<windows;++w) weights[w]=product[w]-(w+1<windows?product[w+1]:0);
     for(unsigned a=0;a<8;++a)
         for(unsigned w=0;w<windows;++w) shots[shot].mean[a]+=weights[w]*mean[w][a];
+    // A shot whose averaged frames include reconstructed LEDs is marked (tolerant calibration).
+    for(unsigned w=0,j=0;w<windows;++w) if(weights[w]>0)
+        for(;j<sizes[w];++j) if(estimatedFrames[(next+256-1-j)&255]) shots[shot].estimated=true;
     shots[shot].valid=true;
     invalidate(); // The next target starts its own pre-trigger history.
     return true;

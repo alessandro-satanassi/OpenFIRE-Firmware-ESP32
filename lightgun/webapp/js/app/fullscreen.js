@@ -100,6 +100,11 @@
     const CALI_IR_WARNING_TIME = 4000;     // ms the refusal message stays on screen
     const CALI_IR_MISSING = 0x01;          // sCaliIrWarning bit
     const CALI_IR_ROLL = 0x02;             // sCaliIrWarning bit
+    // Tolerant calibration (caliFlagTolerant): a shot at an edge or a corner fired before reaching
+    // its target, and a calibration that could not be refined (the trigger does not confirm it).
+    const CALI_IR_AIM = 0x04;              // sCaliIrWarning bit
+    const CALI_IR_UNREFINED = 0x08;        // sCaliIrWarning bit, during verification
+    const CALI_IR_STALE = 0x10;            // sCaliIrWarning bit: emitters seen, but the position was not updated in that frame
     const CALI_IR_PANEL_COLOR = [160, 160, 164]; // panel border and completed progress dots, fixed
     const CALI_LEGEND_SIZE = 268.8;        // same square as the IR panel at 1920x1080
     // Colour of each emitter seen in the panel, and of the crosshair from the emitter with the
@@ -115,6 +120,7 @@
     const CALI_IR_FULL_GREEN = 230;
     const CALI_IR_SCALE = {
         missing: [255, 20, 20],
+        skipped: [170, 170, 170],                             // tolerant calibration: corner not measured
         weakLow: [255, 40, 40], weakHigh: [255, 190, 90],     // 130, limit - blend
         goodLow: [170, 255, 140], goodHigh: [0, 220, 0],      // limit + blend, full green
     };
@@ -373,6 +379,8 @@
             this.acceptedShot = null; // { stage, positionStage, time }: acquisition and held visual target
             this.travel = null;       // { stage, from, start }: target gliding to the point of stage
             this.corners = !!options.corners; // corner targets asked for (the board may still skip them)
+            this.tolerant = !!options.tolerant; // tolerant calibration asked for (caliFlagTolerant)
+            this.caliUnrefined = false;         // tolerant calibration not refined (CALI_IR_UNREFINED)
             this.resetValues();
         }
 
@@ -513,6 +521,7 @@
             else if (stage === STAGE.center && this.stage === STAGE.right) this.corners = false;
             this._setCalibrationStage(stage);
             this.irWarning = null; // a new stage: the refused shot is no longer current
+            if (stage !== STAGE.verify) this.caliUnrefined = false;
             if (stage === STAGE.init) {
                 this.resetValues();
                 this.mouse = null;
@@ -590,6 +599,12 @@
         /** Calibration: the board refused a target shot (sCaliIrWarning bit 1: an emitter is missing, bit 2: the gun is rolled too far). */
         showIrWarning(bits) {
             if (this.closed || this.mode !== MODE_CALIBRATE || !bits) return;
+            if (bits & CALI_IR_UNREFINED) {
+                // Shown in place of the verification text until the calibration restarts.
+                this.caliUnrefined = this.stage === STAGE.verify;
+                bits &= ~CALI_IR_UNREFINED;
+                if (!bits) { this.render(); return; }
+            }
             this.irWarning = { bits, time: Date.now() };
             clearTimeout(this._irWarningTimer);
             this._irWarningTimer = setTimeout(() => this.render(), CALI_IR_WARNING_TIME + 50);
@@ -782,7 +797,13 @@
                 stageY = h * 0.15;
                 const v = this.values;
                 const inRange = CALI_KEYS.every((key) => v[key] >= -32768 && v[key] <= 32768);
-                if (inRange) {
+                if (this.caliUnrefined) {
+                    tint = red;
+                    stageText = lines('Calibration not completed');
+                    header = lines('Not enough data to complete the calibration.', 'Repeat it holding your aim steady before', 'each shot; if needed, step back a little.');
+                    tutorial = lines('Press Button A or Button B to restart calibration.', '',
+                        '[You can also exit calibration without saving changes', '        by pressing Button C (if available).]        ');
+                } else if (inRange) {
                     stageText = lines('Verify aiming:');
                     header = lines('    Confirm that the bullseye     ', '   lines up with the gun sight.   ', 'If this calibration is acceptable,', '  confirm by pulling the trigger. ');
                     tutorial = lines("       If this target accuracy isn't desirable,      ", '          press either Button A or Button B          ',
@@ -883,7 +904,8 @@
                     <div class="legend-labels"><span data-legend-key="Small"></span><span data-legend-key="Large"></span></div></section>
                 <div class="legend-missing"><span class="legend-missing-mark" aria-hidden="true"></span><span data-legend-key="IR not detected"></span></div>
                 <div class="legend-notes"><p data-legend-key="The crosshair colour indicates the emitter with the weakest signal."></p>
-                    <p data-legend-key="All 4 emitters must be detected to proceed."></p></div>`;
+                    <p data-legend-key="${this.tolerant ? 'Tolerant: 4 emitters at the centre, 2 at the edges; a grey corner can be skipped.'
+                        : 'All 4 emitters must be detected to proceed.'}"></p></div>`;
             const crosshairs = legend.querySelector('.legend-crosshairs');
             const circles = legend.querySelector('.legend-circles');
             const diameters = [3, 5, 8, 11, 15, 19, 23];
@@ -1042,12 +1064,21 @@
          * Calibration IR view: crosshair colour [r, g, b] from the worst emitter, or null without
          * IR data (older firmware: the crosshair keeps its colour). Red when the board refuses the
          * shot (an emitter missing), otherwise the continuous scale of the weakest emitter.
+         * Tolerant calibration, at the edges and corners: the scale of the emitters seen when there
+         * are at least two; with fewer, red at an edge (refused) and grey at a corner (accepted,
+         * not measured). The two centre shots keep the rule above.
          */
         _caliIrColor() {
             if (!this.coords || Date.now() - this.coordsTime > CALI_IR_MAX_AGE) return null;
-            const blobs = this._freshBlobs();
+            let blobs = this._freshBlobs();
             if (!blobs) return null;
-            if (blobs.some((b) => !b.seen)) return CALI_IR_SCALE.missing;
+            if (blobs.some((b) => !b.seen)) {
+                const corner = this.stage >= STAGE.cornerTR && this.stage <= STAGE.cornerTL;
+                const edge = this.stage >= STAGE.top && this.stage <= STAGE.right;
+                if (!this.tolerant || !(corner || edge)) return CALI_IR_SCALE.missing;
+                blobs = blobs.filter((b) => b.seen);
+                if (blobs.length < 2) return corner ? CALI_IR_SCALE.skipped : CALI_IR_SCALE.missing;
+            }
             // The emitter with the lowest brightness gives the colour, so the crosshair always has
             // the colour of one of the four circles.
             const worst = blobs.reduce((a, b) => (b.max < a.max ? b : a));
@@ -1135,16 +1166,24 @@
 
         /** Calibration: lines explaining why the board refused a target shot (sCaliIrWarning bits). */
         _caliIrWarningText(bits) {
+            // Tolerant calibration: two emitters are enough at the edges (the corners never refuse
+            // a missing emitter), all four at the two centre shots.
+            const missing = this.tolerant && this.stage !== STAGE.init && this.stage !== STAGE.center
+                ? 'Shot refused: the camera does not see at least two IR emitters.'
+                : 'Shot refused: the camera does not see all four IR emitters.';
+            if (bits & CALI_IR_STALE) return lines('Shot refused: the position was not updated.', 'Keep aiming at the target, then shoot again.');
+            const aim = bits & CALI_IR_AIM ? ['Shot refused: aim at the target before shooting.'] : [];
             if (!(bits & CALI_IR_ROLL)) {
+                if (!(bits & CALI_IR_MISSING) && aim.length) return lines(...aim);
                 return lines(
-                    bits & CALI_IR_MISSING ? 'Shot refused: the camera does not see all four IR emitters.' : '',
-                    'Check the emitters, your distance and the IR sensitivity, then shoot again.');
+                    bits & CALI_IR_MISSING ? missing : '',
+                    'Check the emitters, your distance and the IR sensitivity, then shoot again.', ...aim);
             }
             return lines(...(bits & CALI_IR_MISSING ? [
-                'Shot refused: the camera does not see all four IR emitters.',
+                missing,
                 'Check the emitters, your distance and the IR sensitivity, then shoot again.'] : []),
                 'Shot refused: lightgun rotated too much.',
-                'Hold the lightgun upright, then shoot again.');
+                'Hold the lightgun upright, then shoot again.', ...aim);
         }
 
         _drawAlignment(ctx) {

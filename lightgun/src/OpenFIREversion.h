@@ -25,7 +25,7 @@
 // Esempi: 7.0.0  |  7.0.0-beta1  |  7.0.1-rc2
 #define OPENFIRE_VERSION_MAJOR 7
 #define OPENFIRE_VERSION_MINOR 1
-#define OPENFIRE_VERSION_PATCH 0
+#define OPENFIRE_VERSION_PATCH 1
 #define OPENFIRE_VERSION_SUFFIX ""
 
 // Deve valere MAJOR.MINOR. E' il primo campo della prima risposta della lightgun,

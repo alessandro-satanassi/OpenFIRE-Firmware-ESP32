@@ -312,6 +312,23 @@ async function installFakeSerial(context, sim) {
     ok(await waitFor(() => dev.locator('.fullscreen-window').count().then((n) => n === 0)), 'ESC cancels the calibration through the board');
     ok((await statusText(dev)).includes('Cancelled Calibration for Profile 1'), 'cancelled calibration reported');
 
+    // Tolerant calibration: off by default, the check box adds caliFlagTolerant (with the corners).
+    const tolerantBox = dev.locator('.cali-tolerant input');
+    ok(await tolerantBox.count() === 1 && !(await tolerantBox.isChecked()), 'tolerant calibration check box, off');
+    await dev.click('text=Calibrate Profile 1');
+    await sleep(300);
+    ok(fw.caliCorners === true && fw.caliTolerant === false, 'standard calibration without caliFlagTolerant');
+    await dev.keyboard.press('Escape');
+    ok(await waitFor(() => dev.locator('.fullscreen-window').count().then((n) => n === 0)), 'standard calibration cancelled');
+    await tolerantBox.check();
+    await shot(dev, 'dev-cali-tolerant-option');
+    await dev.click('text=Calibrate Profile 1');
+    await sleep(300);
+    ok(fw.caliCorners === true && fw.caliTolerant === true, 'tolerant calibration sends caliFlagTolerant');
+    await dev.keyboard.press('Escape');
+    ok(await waitFor(() => dev.locator('.fullscreen-window').count().then((n) => n === 0)), 'tolerant calibration cancelled');
+    await tolerantBox.uncheck();
+
     // Link lost with the Save question open and a calibration not saved yet.
     await dev.click('.save-button');
     ok(await dev.locator('dialog', { hasText: 'Are these settings okay?' }).count() === 1, 'save question open');

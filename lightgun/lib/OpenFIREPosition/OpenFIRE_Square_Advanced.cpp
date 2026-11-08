@@ -177,6 +177,7 @@ void OpenFIRE_Square::configure(const CameraProfile& profile) {
 }
 
 void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
+    frameUpdated = false;
 
     // =========================================================================//
     // ================= FASE 0: INIT E ACQUISIZIONE DATI REALI ================//
@@ -1295,6 +1296,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
                  atan2f((float)(FinalY[C] - FinalY[D]), (float)(FinalX[D] - FinalX[C]))) * 0.5f;      
 
         is_tracking_stable = true;
+        frameUpdated = true;
         prev_point_seen_mask = next_point_seen_mask; 
         dark_frames = num_points_seen >= 3 ? 0 : 255;
     }

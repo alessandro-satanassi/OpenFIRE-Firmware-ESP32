@@ -652,3 +652,85 @@ test('the legend is not updated in alignment or IR-test mode', () => {
         assert.equal(drawn, true);
     }
 });
+
+test('tolerant calibration: two-emitter text at the edges, aim warning, unrefined verification in both languages', () => {
+    for (const language of ['en', 'it']) {
+        const translations = JSON.parse(fs.readFileSync(path.join(__dirname, '../lang/', language + '.json'), 'utf8'));
+        const tr = (key) => (translations[key] || key).trim();
+        const four = tr('Shot refused: the camera does not see all four IR emitters.');
+        const two = tr('Shot refused: the camera does not see at least two IR emitters.');
+        const aim = tr('Shot refused: aim at the target before shooting.');
+
+        const standard = setup(language);
+        standard.win.setStage(0); standard.win.setStage(1);
+        assert.equal(standard.win._caliIrWarningText(1)[0], four);   // standard calibration unchanged
+
+        const s = setup(language, { tolerant: true, corners: true }), w = s.win;
+        s.language = language;
+        w.setStage(0);
+        assert.equal(w._caliIrWarningText(1)[0], four);              // initial centre: four emitters
+        w.setStage(1);
+        assert.equal(w._caliIrWarningText(1)[0], two);               // edge: two emitters
+        assert.deepEqual([...w._caliIrWarningText(4)], [aim]);
+        assert.deepEqual([...w._caliIrWarningText(16)], [tr('Shot refused: the position was not updated.'),
+            tr('Keep aiming at the target, then shoot again.')]);   // emitters seen, position not updated
+        assert.ok([...w._caliIrWarningText(6)].includes(aim));       // roll + aim
+        w.showIrWarning(8);                                          // not during verification: ignored
+        assert.equal(w.caliUnrefined, false); assert.equal(w.irWarning, null);
+
+        for (const stage of [2, 3, 4, 8, 9, 10, 11, 5, 6]) w.setStage(stage);
+        assert.equal(w.stage, 6);
+        w.showIrWarning(8);
+        assert.equal(w.caliUnrefined, true); assert.equal(w.irWarning, null);
+        w.infoVisible = false;                                       // values drawn with the bitmap font
+        const { texts } = drawCalibration(s);
+        const title = texts.find(text => text.lines[0] === tr('Calibration not completed'));
+        assert.ok(title); assert.deepEqual([...title.tint], [225, 25, 25]);
+        assert.ok(!texts.some(text => text.lines.includes(tr('Verify aiming:'))));
+        for (const [width, height] of [[800, 600], [1280, 720], [1920, 1080]]) {   // the text stays on screen
+            w.width = width; w.height = height;
+            for (const text of drawCalibration(s).texts) {
+                // At 800 px the existing Button C note of the verification is already wider: only the new text is checked there.
+                if (width < 1280 && !text.lines.includes(tr('Not enough data to complete the calibration.'))) continue;
+                assert.ok(text.x >= 0 && text.x + text.width <= width, `${language} ${width}: ${text.lines}`);
+            }
+        }
+        w.setStage(0);                                               // A/B restart
+        assert.equal(w.caliUnrefined, false);
+    }
+});
+
+test('tolerant calibration: crosshair red at an edge only below two emitters, grey at a corner without two, centre unchanged', () => {
+    const blob = (seen, max = 220) => ({ seen, max });
+    const colour = (w, entries) => {
+        w.coords = new Array(12).fill(0); w.coordsTime = 1000000;
+        w.blobs = { time: 1000000, entries };
+        const c = w._caliIrColor();
+        return c && [...c];
+    };
+    const two = [blob(true), blob(true, 150), blob(false), blob(false)];
+    const one = [blob(true), blob(false), blob(false), blob(false)];
+    const four = [blob(true), blob(true), blob(true), blob(true, 150)];
+    const red = [255, 20, 20], grey = [170, 170, 170];
+
+    const standard = setup('en', { corners: true });
+    standard.win.setStage(0); standard.win.setStage(1);
+    assert.deepEqual(colour(standard.win, two), red);                 // standard: any missing emitter is red
+
+    const w = setup('en', { tolerant: true, corners: true }).win;
+    w.setStage(0);
+    assert.deepEqual(colour(w, two), red);                            // initial centre: four needed
+    const fourColour = colour(w, four);
+    w.setStage(1);
+    assert.deepEqual(colour(w, one), red);                            // edge: fewer than two
+    const edgeTwo = colour(w, two);
+    assert.notDeepEqual(edgeTwo, red); assert.notDeepEqual(edgeTwo, grey);
+    assert.deepEqual(colour(w, four), fourColour);                    // four seen: as before
+    for (const stage of [2, 3, 4, 8]) w.setStage(stage);
+    assert.equal(w.stage, 8);
+    assert.deepEqual(colour(w, one), grey);                           // corner, not measured
+    assert.deepEqual(colour(w, [blob(false), blob(false), blob(false), blob(false)]), grey);
+    assert.deepEqual(colour(w, two), edgeTwo);                        // corner with two: weakest seen
+    for (const stage of [9, 10, 11, 5]) w.setStage(stage);
+    assert.deepEqual(colour(w, two), red);                            // final centre: four needed
+});

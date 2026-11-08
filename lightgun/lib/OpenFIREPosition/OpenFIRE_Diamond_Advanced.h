@@ -64,6 +64,7 @@ class OpenFIRE_Diamond {
     bool anchor_ok = false;
     uint8_t prevNumSeen = 0;        // LED visti nel frame precedente accettato (0 = buio)
     uint8_t darkFrames = 255;       // fotogrammi di buio dopo l'ultimo frame accettato, fermo a 255
+    bool frameUpdated = false;      // l'ultimo begin() ha pubblicato una geometria nuova
     uint8_t shortDarkFrames = 8;    // durata massima del buio breve, in fotogrammi (dagli fps del profilo)
     float minLedDist2 = 64.0f;      // distanza minima al quadrato tra 2 LED (un pixel del sensore)
     uint8_t prevSeenMask = 0;       // quali indici erano misurati nel frame precedente
@@ -125,6 +126,17 @@ public:
         for(uint8_t i = 0; i < 4; ++i) { xy[2*i] = (int32_t)prevGeomX[i]; xy[2*i+1] = (int32_t)prevGeomY[i]; }
         return true;
     }
+    // Tolerant calibration (WebApp option): the geometry of THIS frame, the LEDs out of view
+    // reconstructed by the tracker; seenCount = LEDs measured in this frame. false when the
+    // last begin() did not publish a new geometry (rejected or dark frame).
+    bool calibrationPointsTolerant(int32_t* xy, uint8_t& seenCount) const {
+        if(!start || !frameUpdated) return false;
+        for(uint8_t i = 0; i < 4; ++i) { xy[2*i] = (int32_t)prevGeomX[i]; xy[2*i+1] = (int32_t)prevGeomY[i]; }
+        seenCount = prevNumSeen;
+        return true;
+    }
+    /// @brief true when the last begin() published a new geometry (mouse position of this frame)
+    bool updatedThisFrame() const { return frameUpdated; }
 };
 
 #endif // _OpenFIRE_Diamond_Advanced_h_

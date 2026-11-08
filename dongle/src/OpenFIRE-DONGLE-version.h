@@ -20,7 +20,7 @@
 // #define GIT_HASH
 #define OPENFIRE_DONGLE_VERSION_MAJOR 7
 #define OPENFIRE_DONGLE_VERSION_MINOR 1
-#define OPENFIRE_DONGLE_VERSION_PATCH 0
+#define OPENFIRE_DONGLE_VERSION_PATCH 1
 #define OPENFIRE_DONGLE_VERSION_TYPE "stable"  // Per indicare pre-release (alpha, beta, RC(Release Candidate), stable)
 
 // Current version string / Stringa di versione attuale

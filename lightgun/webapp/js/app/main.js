@@ -834,14 +834,16 @@
             this.sendCommand(this.C.sCaliProfile, [this.C.sCaliProfile, profile]);
         }
 
-        calibrate(profile) {
+        /** tolerant: WebApp option (caliFlagTolerant, with the corners): fewer emitters at the edges and corners. */
+        calibrate(profile, tolerant = false) {
             const C = this.C;
             if (!this.connected || this.window && this.window.mode !== OF.FullscreenWindow.MODE_ALIGNMENT) return;
             const settings = this.state.cur.profiles[profile];
             // Fourth byte: ask for the IR emitters and the four corner targets during calibration
             // (older firmware ignores it and keeps six targets).
             const flags = this.S.caliStartFlags_e || {};
-            const caliFlags = (flags.caliFlagIrView || 0) | (flags.caliFlagCorners || 0);
+            const caliFlags = (flags.caliFlagIrView || 0) | (flags.caliFlagCorners || 0) |
+                (tolerant && flags.caliFlagCorners ? flags.caliFlagTolerant || 0 : 0);
             if (this.window) this.window.shutdown();
             this.caliProfile = profile;
             const win = new OF.FullscreenWindow(OF.FullscreenWindow.MODE_CALIBRATE, {
@@ -849,6 +851,7 @@
                 onExit: (mode, values) => this.onWindowExit(win, mode, values),
                 diamond: settings.layoutType === this.S.layoutTypes_e.layoutDiamond, // IR view: emitters in their layout
                 corners: !!flags.caliFlagCorners,
+                tolerant: !!(caliFlags & (flags.caliFlagTolerant || 0)),
             });
             this.window = win;
             win.open();

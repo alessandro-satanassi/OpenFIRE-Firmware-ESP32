@@ -302,6 +302,26 @@ test('load: values the Qt widgets cannot show are corrected and can be saved', (
         assert.ok(T[name] !== undefined && min <= max, name);
 });
 
+test('load: solenoid lengths above 99 ms are kept, ON up to 500 ms and OFF up to 9999 ms', () => {
+    const load = (on, off) => {
+        const config = makeConfig();
+        config.settings[T.solenoidOnLength] = on;
+        config.settings[T.solenoidOffLength] = off;
+        const state = new OF.AppState(S);
+        state.load({ version: '7.1', type: 'rpipico', arch: OF.Boards.arch('rpipico') }, config);
+        return state;
+    };
+    const kept = load(300, 250);
+    assert.equal(kept.setting(T.solenoidOnLength), 300);
+    assert.equal(kept.setting(T.solenoidOffLength), 250);
+    assert.equal(kept.isDirty(), false);         // nothing is written back on the next save
+    const limited = load(800, 20000);
+    assert.equal(limited.setting(T.solenoidOnLength), 500);
+    assert.equal(limited.setting(T.solenoidOffLength), 9999);
+    assert.deepEqual(OF.AppState.SETTING_RANGES.solenoidOnLength, [0, 500]);
+    assert.deepEqual(OF.AppState.SETTING_RANGES.solenoidOffLength, [0, 9999]);
+});
+
 test('unknown board: generic boxes without a default layout (Qt boardsPresetsMap.count)', () => {
     const state = loaded('not-a-known-board');
     assert.equal(state.pinCount, S.boardsBoxPositions.generic.length);

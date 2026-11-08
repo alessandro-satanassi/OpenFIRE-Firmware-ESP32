@@ -57,7 +57,7 @@ OpenFIRE ESP32 turns an ESP32-S3 board into a complete lightgun for modern TVs a
 - **Accurate aiming:** four IR emitters around the screen and a camera in the gun, with tracking refined for the Square layout, even close to the screen and near its edges.
 - **Wireless play:** a small USB dongle receives the data from the gun. The computer sees standard mouse, keyboard and gamepad devices, updated 209 times per second exactly as with the USB cable, with no drivers to install. Up to four guns can play together, each with its own dongle.
 - **Nothing to install:** the firmware is installed from the browser with the [Web Flasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=en), and the gun is configured and tested with the [WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=en), online or, without Internet and even from a phone, through the WebApp stored in the gun.
-- **Guided calibration:** the WebApp shows at every target whether the camera sees the four emitters well, and refuses the shot when one is missing, so every calibration starts from a good view.
+- **Guided calibration:** the WebApp shows at every target whether the camera sees the four emitters well, and refuses the shot when one is missing, so every calibration starts from a good view. When you cannot step back far enough, the tolerant calibration accepts fewer emitters at the edges and corners.
 - **One firmware, three cameras:** Wii Cam / DFRobot SEN0158, PixArt PAJ7025R2 and the wide-angle PixArt PAJ7025R3.
 - **Complete feedback:** solenoid, rumble motor, NeoPixel LEDs and an OLED display for menus, life and ammo, with game-driven force feedback through MAMEHOOKER and similar programs.
 - **Optional wireless pedal** for cover shooters such as the *Time Crisis* series.
@@ -110,7 +110,13 @@ For a first test after calibration, try [OpenFIRE ShootingGallery](https://aless
 
 If something does not work, see [Common Problems](lightgun/src/README.md#common-problems). The [operational manual](lightgun/src/README.md#english-version) explains buttons, pause mode and profiles.
 
-## What's New in 7.1.0
+## What's New in 7.1.1
+
+* **Tolerant calibration:** for those who cannot step back far enough to calibrate, the WebApp offers the **Tolerant calibration** option in the *Calibration Profiles* tab. At the edges two emitters in view are enough and at the corners even fewer, while a shot is still refused when the gun is rotated too much or the aim is still far from the target. The result is usually very close to the standard calibration, which stays the default and the most precise ([how it works](lightgun/src/README.md#tolerant-calibration)).
+
+**Updating from 7.1.0:** a normal update keeps settings and calibrations, and there is no need to calibrate again.
+
+### Introduced in 7.1.0
 
 * **More accurate calibration with the four corners:** the WebApp, the desktop App and the gun now calibrate with ten targets, adding the four corners of the screen. The corners correct small differences in how the emitters are placed, and every shot is used to refine the result, for an aim that stays on target across the whole screen.
 * **Wireless power saving for the lightgun:** on battery, playing through the dongle, the gun goes into standby after 15 minutes without use (or 5, 30, 60 minutes, or never, as set in the WebApp). Pull the trigger to resume, still paired to the same dongle.
@@ -377,7 +383,7 @@ OpenFIRE ESP32 trasforma una scheda ESP32-S3 in una lightgun completa per TV e m
 - **Mira precisa:** quattro emettitori IR intorno allo schermo e una telecamera nella pistola, con un tracciamento affinato per il layout Square, anche vicino allo schermo e ai suoi bordi.
 - **Gioco senza fili:** un piccolo dongle USB riceve i dati dalla pistola. Il computer vede normali dispositivi mouse, tastiera e gamepad, aggiornati 209 volte al secondo esattamente come con il cavo USB, senza driver da installare. Fino a quattro pistole possono giocare insieme, ognuna con il proprio dongle.
 - **Niente da installare:** il firmware si installa dal browser con il [Web Flasher](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=it) e la pistola si configura e si prova con la [WebApp](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebApp/?lang=it), online oppure, senza Internet e anche da telefono, con la WebApp contenuta nella pistola.
-- **Calibrazione guidata:** la WebApp mostra a ogni bersaglio se la telecamera vede bene i quattro emettitori e rifiuta il tiro quando ne manca uno, così ogni calibrazione parte da una buona visuale.
+- **Calibrazione guidata:** la WebApp mostra a ogni bersaglio se la telecamera vede bene i quattro emettitori e rifiuta il tiro quando ne manca uno, così ogni calibrazione parte da una buona visuale. Quando non puoi allontanarti abbastanza, la calibrazione tollerante accetta meno emettitori ai bordi e agli angoli.
 - **Un firmware, tre telecamere:** Wii Cam / DFRobot SEN0158, PixArt PAJ7025R2 e PixArt PAJ7025R3 grandangolare.
 - **Feedback completo:** solenoide, motore rumble, LED NeoPixel e display OLED per menu, vite e munizioni, con force feedback guidato dal gioco tramite MAMEHOOKER e programmi simili.
 - **Pedale wireless facoltativo** per i cover shooter come la serie *Time Crisis*.
@@ -430,7 +436,13 @@ Dopo la calibrazione, prova [OpenFIRE ShootingGallery](https://alessandro-satana
 
 Se qualcosa non funziona, consulta [Problemi comuni](lightgun/src/README.md#problemi-comuni-italiano). Il [manuale operativo](lightgun/src/README.md#versione-italiana) spiega pulsanti, modalità pausa e profili.
 
-## Novità della versione 7.1.0
+## Novità della versione 7.1.1
+
+* **Calibrazione tollerante:** per chi non può allontanarsi abbastanza per calibrare, la WebApp offre l'opzione **Calibrazione tollerante** nella scheda *Profili di calibrazione*. Ai bordi bastano due emettitori in vista e agli angoli anche meno, mentre un tiro viene comunque rifiutato quando la pistola è troppo ruotata o la mira è ancora lontana dal bersaglio. Il risultato è di solito molto vicino alla calibrazione standard, che resta quella predefinita e la più precisa ([come funziona](lightgun/src/README.md#calibrazione-tollerante-italiano)).
+
+**Aggiornamento dalla 7.1.0:** un aggiornamento normale mantiene impostazioni e calibrazioni, e non serve calibrare di nuovo.
+
+### Introdotte con la 7.1.0
 
 * **Calibrazione più precisa con i quattro angoli:** la WebApp, l'App desktop e la pistola calibrano ora con dieci bersagli, aggiungendo i quattro angoli dello schermo. Gli angoli correggono piccole differenze nel posizionamento degli emettitori e ogni tiro serve ad affinare il risultato, per una mira che resta sul bersaglio su tutto lo schermo.
 * **Risparmio energetico wireless della lightgun:** a batteria, giocando tramite il dongle, la pistola entra in standby dopo 15 minuti senza utilizzo (oppure 5, 30, 60 minuti, o mai, come impostato nella WebApp). Premi il grilletto per riprendere, sempre associata allo stesso dongle.

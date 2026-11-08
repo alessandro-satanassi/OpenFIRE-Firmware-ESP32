@@ -56,6 +56,11 @@
             '<p>Each profile can be assigned a color used to identify them when switching profiles on the lightgun itself, ' +
             'which is emitted by a 4-pin RGB LED and/or an active NeoPixel strand.</p>'],
         calibrate: ['Open Calibration Window for Cali Profile %1', 'Click to start the calibration process for this profile.'],
+        tolerant: ['Tolerant calibration',
+            '<p>Tolerant calibration: at the edge shots it is enough for the camera to see two IR emitters, at the corner shots even fewer.</p>' +
+            '<p>When the camera sees at least two emitters at the corners too, the result is usually very close to the standard calibration. ' +
+            'A corner with fewer than two emitters lets you go on but is not used in the calculation, and the precision drops.</p>' +
+            '<p>Use it only if you cannot complete the standard calibration from your playing position. The two shots at the centre still need all four emitters.</p>'],
     };
 
     const VALUE_COLUMNS = [
@@ -81,6 +86,9 @@
         const table = el('table', { class: 'profiles-table' });
         const tableScroll = el('div', { class: 'table-scroll' }, table);
         const buttons = el('div', { class: 'cali-buttons' });
+        // Off at every start of the App: the standard calibration stays the default.
+        const tolerant = OF.UI.checkbox(t(HELP.tolerant[0]), false, null, { class: 'check cali-tolerant' });
+        desc.track(tolerant, t(HELP.tolerant[0]), t(HELP.tolerant[1]));
 
         // The whole table is shown: it shrinks instead of being scrolled sideways
         // (on narrow screens it is scrolled as usual).
@@ -92,7 +100,7 @@
             el('div', { class: 'tab-scroll' },
                 el('div', { class: 'tab-content' },
                     el('fieldset', { class: 'group' }, el('legend', { text: t('Calibration Profiles') }),
-                        tableScroll, buttons))),
+                        tableScroll, buttons, tolerant))),
             desc.root);
 
         let rows = [];
@@ -144,7 +152,7 @@
                     ...options.map((box) => el('td', null, box)),
                     el('td', null, color)));
 
-                const calibrate = el('button', { text: t('Calibrate Profile %1', n), on: { click: () => app.calibrate(i) } });
+                const calibrate = el('button', { text: t('Calibrate Profile %1', n), on: { click: () => app.calibrate(i, tolerant.input.checked) } });
                 desc.track(calibrate, ...help('calibrate', n));
                 buttons.append(calibrate);
 
@@ -191,6 +199,7 @@
                 row.swatch.style.background = OF.UI.toHex(profile.color);
                 row.calibrate.disabled = locked;
             });
+            tolerant.input.disabled = locked;
         }
 
         return { root: rootNode, update, onShow() { desc.reset(); }, reload() { builtCount = -1; update(); } };
