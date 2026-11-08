@@ -906,8 +906,14 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
         // it in the header.
         const bool targetShot = buttons.pressed == FW_Const::BtnMask_Trigger && !mouseMoving &&
                                 calStage <= FW_Const::Cali_Center;
-        const uint8_t shotRefusal = !targetShot ? 0 : tolerantShots ? CaliTolerantShotProblems(calStage, corner)
+        const uint8_t shotProblems = !targetShot ? 0 : tolerantShots ? CaliTolerantShotProblems(calStage, corner)
             : uint8_t(((!fromDesktop || caliIrView) ? CaliIrProblems() : 0) | (CaliRollWithin(.5f) ? 0 : CALI_IR_ROLL));
+        // Tolerant calibration: a corner shot is never refused. With two or three emitters the
+        // tracker can assign them to the wrong vertices until it sees all four again, and the
+        // aim and roll checks then fail with a correct aim: such a corner is taken without
+        // measuring it, so it neither blocks the calibration nor reaches the refinement.
+        const bool cornerSkipped = tolerantShots && corner < 4 && shotProblems != 0;
+        const uint8_t shotRefusal = cornerSkipped ? 0 : shotProblems;
         #ifdef USES_DISPLAY
             // The header goes back to the profile after CALI_WARNING_MS or at the next accepted shot.
             if(shotRefusal) {
@@ -933,7 +939,7 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
             // A corner, between the right edge and the final centre: the stage stays Cali_Center
             // and the edge offsets are already set; only the refinement uses this shot.
             #ifdef OPENFIRE_CALIBRATION_REFINEMENT
-                if(calibrationSession)
+                if(calibrationSession && !cornerSkipped)   // a skipped corner stays invalid
                     calibrationSession->capture(FW_Const::Cali_Center + 1 + corner, micros());
             #endif
             ++corner;
