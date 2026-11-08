@@ -162,9 +162,26 @@ public:
     // Con k1 = k2 = 0 (o dati non validi) nulla cambia.
     void lens(float k1, float k2, float gainMin, float gainMax) {
         ready = false;
-        lensK1 = k1; lensK2 = k2; lensMin = gainMin; lensMax = gainMax;
+        lensK1 = k1; lensK2 = k2; lensMin = gainMin; lensMax = gainMax; lensBend = 0.0f;
         if (!(ox > 0.0f && oy > 0.0f && lensMin > 0.0f && lensMax >= lensMin)) lensK1 = lensK2 = 0.0f;
-        else { invOx = 1.0f / ox; invOy = 1.0f / oy; }
+        else {
+            invOx = 1.0f / ox; invOy = 1.0f / oy;
+            // Una lente rifinita puo' piegare all'indietro fuori dal campo: r * gain(r) smette di
+            // crescere al primo zero positivo di 1 + 3 K1 q + 5 K2 q^2 (q = r^2), che qui si cerca.
+            float q = 0.0f;
+            if (lensK2 == 0.0f) { if (lensK1 < 0.0f) q = -1.0f / (3.0f * lensK1); }
+            else {
+                const float disc = 9.0f * lensK1 * lensK1 - 20.0f * lensK2;
+                if (disc >= 0.0f) {
+                    const float s = sqrtf(disc);
+                    const float q1 = (-3.0f * lensK1 - s) / (10.0f * lensK2);
+                    const float q2 = (-3.0f * lensK1 + s) / (10.0f * lensK2);
+                    if (q1 > 0.0f && !(q2 > 0.0f && q2 < q1)) q = q1;
+                    else if (q2 > 0.0f) q = q2;
+                }
+            }
+            if (q > 0.0f) lensBend = sqrtf(q);
+        }
     }
 
     bool reconstruct(uint8_t n, const float* px, const float* py,
@@ -199,6 +216,7 @@ public:
 
 private:
     float lensK1 = 0.0f, lensK2 = 0.0f, lensMin = 1.0f, lensMax = 1.0f, invOx = 0.0f, invOy = 0.0f;
+    float lensBend = 0.0f;   // raggio della piega (0 = nessuna)
 
     float gain(float r2) const {
         const float g = 1.0f + lensK1 * r2 + lensK2 * r2 * r2;
@@ -210,7 +228,7 @@ private:
         u = ox + dx * g; v = oy + dy * g;
     }
     // Inverso di corrected(): il raggio r con r * gain(r) = raggio corretto. r * gain(r) cresce
-    // con r (come in OpenFIRE_Calibration); dove il guadagno e' al limite la soluzione e' diretta,
+    // con r fino alla piega (lensBend); dove il guadagno e' al limite la soluzione e' diretta,
     // altrimenti Newton protetto da un intervallo, in pochi passi.
     void distorted(float& x, float& y) const {
         const float dx = x - ox, dy = y - oy;
@@ -218,6 +236,9 @@ private:
         const float radius = sqrtf(nx * nx + ny * ny);
         if (!(radius > 0.0f)) return;
         float lo = radius / lensMax, hi = radius / lensMin, r;
+        // Oltre la piega lo stesso punto corretto ha piu' raggi possibili: si tiene il piu' vicino
+        // al centro, quando c'e', che continua quelli dentro il campo.
+        if (lensBend > 0.0f && lensBend < hi && lensBend * gain(lensBend * lensBend) >= radius) hi = lensBend;
         if (gain(lo * lo) >= lensMax) r = lo;
         else if (gain(hi * hi) <= lensMin) r = hi;
         else {

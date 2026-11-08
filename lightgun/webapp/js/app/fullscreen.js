@@ -858,7 +858,10 @@
                 const scale = sub;
                 const warning = warningLines(irWarning.bits);
                 const size = textSize(warning, scale);
-                const top = h * 0.8 - size.height / 2;
+                // A long warning moves down, within the screen, so that the posture reminder above it
+                // stays clear of the values list (small screens only).
+                const below = this.infoVisible ? h / 2 - 24 * sub + (this.infoText.length + 3) * GLYPH * sub + 6 * scale : 0;
+                const top = Math.max(h * 0.8 - size.height / 2, Math.min(below, h - size.height - 6 * scale));
                 instructionsTop = Math.min(instructionsTop, top - 6 * scale);
                 ctx.save();
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
@@ -1176,19 +1179,29 @@
             const missing = this.tolerant && this.stage !== STAGE.init && this.stage !== STAGE.center
                 ? 'Shot refused: the camera does not see at least two IR emitters.'
                 : 'Shot refused: the camera does not see all four IR emitters.';
-            if (bits & CALI_IR_STALE) return lines('Shot refused: the position was not updated.', 'Keep aiming at the target, then shoot again.');
+            // Too close, an emitter leaves the view: step back. Where the standard calibration
+            // needs four emitters at the edges and corners, the tolerant one is the way out.
+            const back = this.tolerant || this.stage === STAGE.init || this.stage === STAGE.center
+                ? 'If an emitter is out of view, step back a little.'
+                : 'If an emitter is out of view, step back a little; if you cannot, exit and tick Tolerant calibration.';
+            // At an edge the tracker can mix up two or three emitters until it sees three again:
+            // then aiming towards the centre, not holding the aim, ends the refusal.
+            const persist = this.tolerant && this.stage >= STAGE.top && this.stage <= STAGE.right &&
+                !(bits & CALI_IR_MISSING) ? ['If it persists, aim towards the centre for a moment, then back at the target.'] : [];
+            if (bits & CALI_IR_STALE) return lines('Shot refused: the position was not updated.', 'Keep aiming at the target, then shoot again.',
+                'If it persists, aim towards the centre for a moment, then back at the target.');
             const aim = bits & CALI_IR_AIM ? ['Shot refused: aim at the target before shooting.'] : [];
             if (!(bits & CALI_IR_ROLL)) {
-                if (!(bits & CALI_IR_MISSING) && aim.length) return lines(...aim);
+                if (!(bits & CALI_IR_MISSING) && aim.length) return lines(...aim, ...persist);
                 return lines(
                     bits & CALI_IR_MISSING ? missing : '',
-                    'Check the emitters, your distance and the IR sensitivity, then shoot again.', ...aim);
+                    'Check the emitters, your distance and the IR sensitivity, then shoot again.', ...(bits & CALI_IR_MISSING ? [back] : []), ...aim);
             }
             return lines(...(bits & CALI_IR_MISSING ? [
                 missing,
-                'Check the emitters, your distance and the IR sensitivity, then shoot again.'] : []),
+                'Check the emitters, your distance and the IR sensitivity, then shoot again.', back] : []),
                 'Shot refused: lightgun rotated too much.',
-                'Hold the lightgun upright, then shoot again.', ...aim);
+                'Hold the lightgun upright, then shoot again.', ...aim, ...persist);
         }
 
         _drawAlignment(ctx) {

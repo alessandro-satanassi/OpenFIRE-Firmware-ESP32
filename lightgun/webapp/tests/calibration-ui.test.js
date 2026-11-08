@@ -576,7 +576,7 @@ test('a shot refused for the roll explains why in both languages and changes not
     for (const language of ['en', 'it']) {
         const s = setup(language);
         assert.deepEqual([...s.win._caliIrWarningText(2)], texts[language]);
-        assert.equal(s.win._caliIrWarningText(1).length, 2);
+        assert.equal(s.win._caliIrWarningText(1).length, 3);           // missing, check, step back
         assert.equal(s.win._caliIrWarningText(1)[0].length > 0, true);
         s.win.showIrWarning(2);
         assert.equal(s.win.stage, 0); assert.equal(s.win.acceptedShot, null);
@@ -664,21 +664,37 @@ test('tolerant calibration: two-emitter text at the edges, aim warning, unrefine
         const standard = setup(language);
         standard.win.setStage(0); standard.win.setStage(1);
         assert.equal(standard.win._caliIrWarningText(1)[0], four);   // standard calibration unchanged
+        const back = tr('If an emitter is out of view, step back a little.');
+        const backTolerant = tr('If an emitter is out of view, step back a little; if you cannot, exit and tick Tolerant calibration.');
+        assert.equal([...standard.win._caliIrWarningText(1)].at(-1), backTolerant);   // standard edge: the way out
+        standard.win.setStage(8);
+        assert.equal([...standard.win._caliIrWarningText(1)].at(-1), backTolerant);   // standard corner too
+        standard.win.setStage(0);
+        assert.equal([...standard.win._caliIrWarningText(1)].at(-1), back);          // centre: step back only
 
         const s = setup(language, { tolerant: true, corners: true }), w = s.win;
         s.language = language;
         w.setStage(0);
         assert.equal(w._caliIrWarningText(1)[0], four);              // initial centre: four emitters
+        assert.equal([...w._caliIrWarningText(1)].at(-1), back);
         w.setStage(1);
         assert.equal(w._caliIrWarningText(1)[0], two);               // edge: two emitters
-        assert.deepEqual([...w._caliIrWarningText(4)], [aim]);
+        assert.equal([...w._caliIrWarningText(1)].at(-1), back);     // already tolerant: step back only
+        const persist = tr('If it persists, aim towards the centre for a moment, then back at the target.');
+        assert.deepEqual([...w._caliIrWarningText(4)], [aim, persist]);   // edge: the emitters may be mixed up
+        assert.equal([...w._caliIrWarningText(2)].at(-1), persist);   // roll at an edge too
         assert.deepEqual([...w._caliIrWarningText(16)], [tr('Shot refused: the position was not updated.'),
-            tr('Keep aiming at the target, then shoot again.')]);   // emitters seen, position not updated
+            tr('Keep aiming at the target, then shoot again.'),
+            tr('If it persists, aim towards the centre for a moment, then back at the target.')]);   // emitters seen, position not updated
         assert.ok([...w._caliIrWarningText(6)].includes(aim));       // roll + aim
+        assert.ok(![...w._caliIrWarningText(1)].includes(persist));   // a missing emitter: no hint
+        assert.ok(![...standard.win._caliIrWarningText(2)].includes(persist)); // standard roll unchanged
         w.showIrWarning(8);                                          // not during verification: ignored
         assert.equal(w.caliUnrefined, false); assert.equal(w.irWarning, null);
 
-        for (const stage of [2, 3, 4, 8, 9, 10, 11, 5, 6]) w.setStage(stage);
+        for (const stage of [2, 3, 4, 8, 9, 10, 11, 5]) w.setStage(stage);
+        assert.ok(![...w._caliIrWarningText(2)].includes(persist));   // final centre: no hint
+        w.setStage(6);
         assert.equal(w.stage, 6);
         w.showIrWarning(8);
         assert.equal(w.caliUnrefined, true); assert.equal(w.irWarning, null);
