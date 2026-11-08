@@ -145,6 +145,7 @@ void OpenFIRE_Square::configure(const CameraProfile& profile) {
     // sensore indicato nel profilo. Basta un valore approssimato; 0 se il profilo non lo indica.
     focal = mouseResX * 0.5f * profile.lensFocalRatio;
     anchorReconstruction.configure(focal, mouseResX * 0.5f, mouseResY * 0.5f);
+    anchorReconstruction.lens(profile.lensRadialK1, profile.lensRadialK2, profile.lensCorrectionMin, profile.lensCorrectionMax);
     FPS_NORMALIZATION = profile.fps ? 209.0f / (float)profile.fps : 1.0f;
     short_dark_frames = profile.fps / 26;   // buio breve: circa 40 ms (8 fotogrammi a 209 fps)
     cold_window_frames = profile.fps < 250 ? (uint8_t)profile.fps : 250;

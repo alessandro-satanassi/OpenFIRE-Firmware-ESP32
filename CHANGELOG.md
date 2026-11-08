@@ -26,6 +26,10 @@ All notable changes to this project will be documented in this file.
 
 * **Longer solenoid timings in the WebApp:** **Solenoid Autofire Wait Time** in **Gun Settings** now goes up to 9999 ms and **Solenoid ON Length** up to 500 ms, instead of 99 ms. Heavy arcade solenoids, such as the 24 V ones of *Time Crisis 4*, need more time for their return stroke: with 99 ms the hold-to-repeat recoil became a weak buzz instead of distinct kicks. A value above 99 ms already stored in the gun is no longer lowered to 99 when the WebApp loads the settings. The firmware does not change.
 
+### Fixed
+
+* **More precise aim with the PAJ7025R3 camera when emitters leave the view:** when the camera sees only two or three emitters, for example close to the screen or aiming at its edges, the hidden ones are now rebuilt taking the camera lens into account. With the wide-angle lens of the PAJ7025R3 they could end up far from their real place: near the edges the pointer moved off target, and the tolerant calibration could refuse edge shots for a rotation that was not there. With all four emitters in view nothing changes; with the DFRobot camera the difference is minimal and the PAJ7025R2 does not change.
+
 ### Updating from 7.1.0
 
 * A normal update is enough: settings, pins and calibration profiles are kept, and there is no need to calibrate again.
@@ -158,6 +162,10 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 ### Modifiche
 
 * **Tempi del solenoide più lunghi nella WebApp:** in **Impostazioni Gun** il **Solenoid Autofire Wait Time** arriva ora a 9999 ms e il **Solenoid ON Length** a 500 ms, invece di 99 ms. I solenoidi arcade pesanti, come quelli a 24 V di *Time Crisis 4*, hanno bisogno di più tempo per la corsa di ritorno: con 99 ms il rinculo a ripetizione diventava un ronzio debole invece di colpi distinti. Un valore sopra 99 ms già salvato nella pistola non viene più abbassato a 99 quando la WebApp carica le impostazioni. Il firmware non cambia.
+
+### Correzioni
+
+* **Mira più precisa con la telecamera PAJ7025R3 quando gli emettitori escono dalla vista:** quando la telecamera ne vede solo due o tre, per esempio da vicino o mirando ai bordi dello schermo, quelli nascosti vengono ora ricostruiti tenendo conto della lente della telecamera. Con la lente grandangolare della PAJ7025R3 potevano finire lontano dalla loro posizione reale: vicino ai bordi il puntatore si spostava dal bersaglio, e la calibrazione tollerante poteva rifiutare i tiri ai bordi per una rotazione che non c'era. Con tutti e quattro gli emettitori in vista non cambia nulla; con la telecamera DFRobot la differenza è minima e la PAJ7025R2 non cambia.
 
 ### Aggiornamento dalla 7.1.0
 

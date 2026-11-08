@@ -28,7 +28,8 @@ static constexpr float ANCHOR_COORD_LIMIT = 16383.0f;
 // la forma con la prospettiva, ciascuna delle due viste si guarda da una camera virtuale ruotata
 // (rotazione minima) verso la direzione media dei suoi LED visti: se l'arma ha solo ruotato le
 // due viste differiscono allora per una rotazione attorno all'asse e la ricostruzione e' esatta.
-// Con focale approssimata o punti ancora distorti dalla lente, e' una stima;
+// Con la lente del profilo (AnchorReconstruction::lens) i punti vengono prima corretti dalla
+// lente; con focale approssimata o lente ignota e' una stima;
 // con focal = 0 si lavora direttamente sull'immagine.
 // false anche se un nascosto esce dal limite numerico delle coordinate.
 struct AnchorView {
@@ -151,11 +152,94 @@ class AnchorReconstruction {
 public:
     void configure(float focal, float cx, float cy) {
         f = focal; ox = cx; oy = cy; ready = false;
+        lensK1 = lensK2 = 0.0f;   // nessuna lente finche' lens() non la indica
+    }
+
+    // Lente del profilo, lo stesso modello radiale di OpenFIRE_Perspective (camera -> corretto).
+    // I LED arrivano come li vede la camera, ma la ricostruzione e' esatta solo su punti corretti
+    // dalla lente (come in OpenFIRE_Calibration): con una lente forte (PAJ7025R3) e un LED vicino
+    // al bordo dell'immagine, senza correzione il nascosto finisce molto lontano dal vero.
+    // Con k1 = k2 = 0 (o dati non validi) nulla cambia.
+    void lens(float k1, float k2, float gainMin, float gainMax) {
+        ready = false;
+        lensK1 = k1; lensK2 = k2; lensMin = gainMin; lensMax = gainMax;
+        if (!(ox > 0.0f && oy > 0.0f && lensMin > 0.0f && lensMax >= lensMin)) lensK1 = lensK2 = 0.0f;
+        else { invOx = 1.0f / ox; invOy = 1.0f / oy; }
     }
 
     bool reconstruct(uint8_t n, const float* px, const float* py,
                      const float* qx, const float* qy, uint8_t m, float* hx, float* hy) {
-        if (!matches(n, px, py, m, hx, hy) && !prepare(n, px, py, m, hx, hy)) return false;
+        if (lensK1 == 0.0f && lensK2 == 0.0f) {
+            if (!matches(n, px, py, m, hx, hy) && !prepare(n, px, py, m, hx, hy)) return false;
+            return apply(n, qx, qy, m, hx, hy);
+        }
+        if (n < 2 || n > 3 || m > 2) return false;
+        if (!matches(n, px, py, m, hx, hy)) {
+            // Il riferimento cambia di rado: lo si corregge solo allora. La chiave della cache
+            // resta quella vista dalla camera, cosi' il confronto non richiede la correzione.
+            float cpx[3], cpy[3], chx[2], chy[2];
+            for (uint8_t i = 0; i < n; ++i) corrected(px[i], py[i], cpx[i], cpy[i]);
+            for (uint8_t j = 0; j < m; ++j) corrected(hx[j], hy[j], chx[j], chy[j]);
+            if (!prepare(n, cpx, cpy, m, chx, chy)) return false;
+            for (uint8_t i = 0; i < n; ++i) { refX[i] = px[i]; refY[i] = py[i]; }
+            for (uint8_t j = 0; j < m; ++j) { hiddenX[j] = hx[j]; hiddenY[j] = hy[j]; }
+        }
+        float cqx[3], cqy[3], rx[2], ry[2];
+        for (uint8_t i = 0; i < n; ++i) corrected(qx[i], qy[i], cqx[i], cqy[i]);
+        if (!apply(n, cqx, cqy, m, rx, ry)) return false;
+        // I nascosti tornano nello spazio della camera, dove li aspettano i tracker e
+        // OpenFIRE_Perspective (che vi riapplica la stessa correzione).
+        for (uint8_t j = 0; j < m; ++j) {
+            distorted(rx[j], ry[j]);
+            if (!(fabsf(rx[j]) <= ANCHOR_COORD_LIMIT && fabsf(ry[j]) <= ANCHOR_COORD_LIMIT)) return false;
+        }
+        for (uint8_t j = 0; j < m; ++j) { hx[j] = rx[j]; hy[j] = ry[j]; }
+        return true;
+    }
+
+private:
+    float lensK1 = 0.0f, lensK2 = 0.0f, lensMin = 1.0f, lensMax = 1.0f, invOx = 0.0f, invOy = 0.0f;
+
+    float gain(float r2) const {
+        const float g = 1.0f + lensK1 * r2 + lensK2 * r2 * r2;
+        return g < lensMin ? lensMin : (g > lensMax ? lensMax : g);
+    }
+    void corrected(float x, float y, float& u, float& v) const {
+        const float dx = x - ox, dy = y - oy;
+        const float nx = dx * invOx, ny = dy * invOy, g = gain(nx * nx + ny * ny);
+        u = ox + dx * g; v = oy + dy * g;
+    }
+    // Inverso di corrected(): il raggio r con r * gain(r) = raggio corretto. r * gain(r) cresce
+    // con r (come in OpenFIRE_Calibration); dove il guadagno e' al limite la soluzione e' diretta,
+    // altrimenti Newton protetto da un intervallo, in pochi passi.
+    void distorted(float& x, float& y) const {
+        const float dx = x - ox, dy = y - oy;
+        const float nx = dx * invOx, ny = dy * invOy;
+        const float radius = sqrtf(nx * nx + ny * ny);
+        if (!(radius > 0.0f)) return;
+        float lo = radius / lensMax, hi = radius / lensMin, r;
+        if (gain(lo * lo) >= lensMax) r = lo;
+        else if (gain(hi * hi) <= lensMin) r = hi;
+        else {
+            r = radius;
+            if (r < lo) r = lo; else if (r > hi) r = hi;
+            for (uint8_t i = 0; i < 12; ++i) {
+                const float r2 = r * r;
+                const float err = r * (1.0f + lensK1 * r2 + lensK2 * r2 * r2) - radius;
+                if (fabsf(err) <= 1e-6f * radius) break;
+                if (err > 0.0f) hi = r; else lo = r;
+                const float slope = 1.0f + 3.0f * lensK1 * r2 + 5.0f * lensK2 * r2 * r2;
+                float next = slope > 0.0f ? r - err / slope : lo - 1.0f;
+                if (!(next > lo && next < hi)) next = 0.5f * (lo + hi);
+                r = next;
+            }
+        }
+        const float k = r / radius;
+        x = ox + dx * k; y = oy + dy * k;
+    }
+
+    // Applica il riferimento preparato ai LED visti ora (qx, qy): nascosti in (hx, hy).
+    bool apply(uint8_t n, const float* qx, const float* qy, uint8_t m, float* hx, float* hy) const {
         AnchorView Q(f, ox, oy);
         if (!Q.aim(qx, qy, n)) return false;
         float qu[3] = {}, qv[3] = {};

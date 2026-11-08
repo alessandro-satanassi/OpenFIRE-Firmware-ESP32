@@ -96,8 +96,15 @@
     function project(o, pose, led) {
         const v = led.map((x, i) => x-pose.eye[i]), z = dot(v, pose.f);
         if (!(z > 0)) return [1e6, 1e6];
-        let x = dot(v, pose.right) / (z * o.tx) * o.sideGain;
-        let y = dot(v, pose.down) / (z * o.ty) * o.sideGain;
+        return distorted(o, dot(v, pose.right) / (z * o.tx) * o.sideGain, dot(v, pose.down) / (z * o.ty) * o.sideGain);
+    }
+    // EN: The firmware radial map (camera -> corrected) and its inverse.
+    // IT: La mappa radiale del firmware (camera -> corretto) e il suo inverso.
+    function corrected(o, [x, y]) {
+        const r = x*x+y*y, g = clamp(1+o.k1*r+o.k2*r*r, o.min, o.max);
+        return [x*g, y*g];
+    }
+    function distorted(o, x, y) {
         const r = Math.hypot(x, y);
         if (r && (o.k1 || o.k2)) {
             let lo = 0, hi = Math.max(2, r / o.min + 1);
@@ -172,24 +179,31 @@
             const now=sensor(current[visible[0]]),dx=now[0]-old[0][0],dy=now[1]-old[0][1];
             return reference.map(p=>[p[0]+2*dx/o.sensorX,p[1]+2*dy/o.sensorY]);
         };
-        const P=anchorPlane(old,focal),p=old.map(P.to);
+        // EN: As in the firmware (OpenFIRE_Anchor): with two or three LEDs the rebuild works on
+        //     lens-corrected points, then the hidden ones go back to camera space.
+        // IT: Come nel firmware (OpenFIRE_Anchor): con due o tre LED si ricostruisce su punti
+        //     corretti dalla lente, poi i nascosti tornano nello spazio della camera.
+        const lens=!!(o.k1||o.k2),view=lens?p=>sensor(corrected(o,p)):sensor;
+        const seen=lens?visible.map(i=>view(reference[i])):old;
+        const P=anchorPlane(seen,focal),p=seen.map(P.to);
         if(p.some(x=>!x))return null;
         const a=[p[1][0]-p[0][0],p[1][1]-p[0][1]],b=visible.length===2?[-a[1],a[0]]:[p[2][0]-p[0][0],p[2][1]-p[0][1]];
         const det=a[0]*b[1]-a[1]*b[0];if(Math.abs(det)<1e-12)return null;
         const hidden=[];
         for(let i=0;i<4;++i)if(!visible.includes(i)){
-            const h=P.to(sensor(reference[i]));if(!h)return null;
+            const h=P.to(view(reference[i]));if(!h)return null;
             const x=h[0]-p[0][0],y=h[1]-p[0][1];
             hidden.push({i,s:(x*b[1]-y*b[0])/det,t:(a[0]*y-a[1]*x)/det});
         }
         return current=>{
-            const now=visible.map(i=>sensor(current[i])),Q=anchorPlane(now,focal),q=now.map(Q.to);
+            const now=visible.map(i=>view(current[i])),Q=anchorPlane(now,focal),q=now.map(Q.to);
             if(q.some(x=>!x))return null;
             const u=[q[1][0]-q[0][0],q[1][1]-q[0][1]],v=visible.length===2?[-u[1],u[0]]:[q[2][0]-q[0][0],q[2][1]-q[0][1]];
             const result=current.slice();
             for(const {i,s,t} of hidden){
                 const h=Q.from([q[0][0]+s*u[0]+t*v[0],q[0][1]+s*u[1]+t*v[1]]);if(!h)return null;
-                result[i]=[2*h[0]/o.sensorX,2*h[1]/o.sensorY];
+                const back=[2*h[0]/o.sensorX,2*h[1]/o.sensorY];
+                result[i]=lens?distorted(o,back[0],back[1]):back;
             }
             return result;
         };

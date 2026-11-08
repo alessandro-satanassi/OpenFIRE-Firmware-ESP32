@@ -113,6 +113,7 @@ If something does not work, see [Common Problems](lightgun/src/README.md#common-
 ## What's New in 7.1.1
 
 * **Tolerant calibration:** for those who cannot step back far enough to calibrate, the WebApp offers the **Tolerant calibration** option in the *Calibration Profiles* tab. At the edges two emitters in view are enough and at the corners even fewer, while a shot is still refused when the gun is rotated too much or the aim is still far from the target. The result is usually very close to the standard calibration, which stays the default and the most precise ([how it works](lightgun/src/README.md#tolerant-calibration)).
+* **More precise aim with the PAJ7025R3 camera:** when only two or three emitters are in view, the hidden ones are rebuilt taking the wide-angle lens into account, so the pointer stays on target near the edges of the screen.
 
 **Updating from 7.1.0:** a normal update keeps settings and calibrations, and there is no need to calibrate again.
 
@@ -439,6 +440,7 @@ Se qualcosa non funziona, consulta [Problemi comuni](lightgun/src/README.md#prob
 ## Novità della versione 7.1.1
 
 * **Calibrazione tollerante:** per chi non può allontanarsi abbastanza per calibrare, la WebApp offre l'opzione **Calibrazione tollerante** nella scheda *Profili di calibrazione*. Ai bordi bastano due emettitori in vista e agli angoli anche meno, mentre un tiro viene comunque rifiutato quando la pistola è troppo ruotata o la mira è ancora lontana dal bersaglio. Il risultato è di solito molto vicino alla calibrazione standard, che resta quella predefinita e la più precisa ([come funziona](lightgun/src/README.md#calibrazione-tollerante-italiano)).
+* **Mira più precisa con la telecamera PAJ7025R3:** quando se ne vedono solo due o tre, gli emettitori nascosti vengono ricostruiti tenendo conto della lente grandangolare, e il puntatore resta sul bersaglio vicino ai bordi dello schermo.
 
 **Aggiornamento dalla 7.1.0:** un aggiornamento normale mantiene impostazioni e calibrazioni, e non serve calibrare di nuovo.
 

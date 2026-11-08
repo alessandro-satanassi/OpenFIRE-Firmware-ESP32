@@ -42,6 +42,7 @@ void OpenFIRE_Diamond::configure(const CameraProfile& profile)
     imageCX = profile.mouseResX * 0.5f;
     imageCY = profile.mouseResY * 0.5f;
     anchorReconstruction.configure(focal, imageCX, imageCY);
+    anchorReconstruction.lens(profile.lensRadialK1, profile.lensRadialK2, profile.lensCorrectionMin, profile.lensCorrectionMax);
 
     FinalX[0] = profile.diamondTCX * camToMouseMult;
     FinalX[1] = profile.diamondRCX * camToMouseMult;

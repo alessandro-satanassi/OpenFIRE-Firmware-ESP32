@@ -27,6 +27,7 @@ New to OpenFIRE? Start from [Getting Started](https://github.com/alessandro-sata
 ### Improvements and Fixes
 
 * **Longer solenoid timings in the WebApp:** **Solenoid Autofire Wait Time** now goes up to 9999 ms and **Solenoid ON Length** up to 500 ms, instead of 99 ms, for heavy arcade solenoids that need a longer return stroke. A value above 99 ms already stored in the gun is no longer lowered when the WebApp loads the settings.
+* **More precise aim with the PAJ7025R3 camera when emitters leave the view:** with only two or three emitters in view, for example close to the screen or aiming at its edges, the hidden ones are now rebuilt taking the camera lens into account. With the wide-angle PAJ7025R3 they could end up far from their real place, moving the pointer off target near the edges and causing refused edge shots in the tolerant calibration. With all four emitters in view nothing changes; the DFRobot changes only minimally and the PAJ7025R2 not at all.
 * This release includes everything introduced in 7.1.0: calibration with the four corners, parallax correction, guided lens refinement, IR LED placement assistant, wireless power saving and more. See the [7.1.0 release notes](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases/tag/v7.1.0).
 * Full list of changes in the [changelog](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/CHANGELOG.md#english-version).
 
