@@ -595,7 +595,8 @@ static uint8_t CaliIrProblems()
 // Tolerant calibration (WebApp option, caliFlagTolerant): checks of a target shot. The two centre
 // shots keep all four emitters (CaliIrProblems, with or without the IR view) and the roll limit.
 // An edge needs two emitters seen, a corner none; with two or more emitters the tracker must have
-// updated the position in this frame, the roll (tracker geometry) stays within the limit, and the
+// updated the position in this frame (a corner without it is skipped, like one with fewer
+// than two emitters), the roll (tracker geometry) stays within the limit, and the
 // shot must be at least half way from the centre towards its target on each axis of the target,
 // so that a shot fired before reaching the target is refused (CALI_IR_AIM).
 static uint8_t CaliTolerantShotProblems(uint8_t calStage, uint8_t corner)
@@ -618,7 +619,10 @@ static uint8_t CaliTolerantShotProblems(uint8_t calStage, uint8_t corner)
         return cornerShot ? 0 : CALI_IR_MISSING;
     const bool diamond = OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout;
     if(!(diamond ? FW_Common::OpenFIREdiamond.updatedThisFrame() : FW_Common::OpenFIREsquare.updatedThisFrame()))
-        return CALI_IR_STALE;
+        // A corner without a new position cannot be measured in this frame (CaptureCalibrationFrame
+        // drops it) and is skipped: after a dark moment the trackers need three emitters to start
+        // again, so with two a refusal would never end.
+        return cornerShot ? 0 : CALI_IR_STALE;
 
     uint8_t problems = CaliTrackerRollWithin(.5f) ? 0 : CALI_IR_ROLL;
     const float x = (FW_Common::mouseX - res_x / 2.0f) / (res_x / 2.0f);

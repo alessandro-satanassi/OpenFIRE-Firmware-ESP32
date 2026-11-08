@@ -734,3 +734,34 @@ test('tolerant calibration: crosshair red at an edge only below two emitters, gr
     for (const stage of [9, 10, 11, 5]) w.setStage(stage);
     assert.deepEqual(colour(w, two), red);                            // final centre: four needed
 });
+
+test('tolerant calibration: a grey corner removes an earlier refusal after one second, other refusals stay', () => {
+    const blob = (seen) => ({ seen, max: 220 });
+    const one = [blob(true), blob(false), blob(false), blob(false)];
+    const two = [blob(true), blob(true), blob(false), blob(false)];
+    const s = setup('en', { tolerant: true, corners: true }), w = s.win;
+    const feed = (entries, now) => {
+        s.time(now); w.coords = new Array(12).fill(0); w.coordsTime = now; w.blobs = { time: now, entries };
+        w.infoVisible = false; drawCalibration(s);
+    };
+    for (const stage of [0, 1, 2, 3, 4]) w.setStage(stage);
+    s.time(1000000); w.showIrWarning(4);                            // edge, aim refused
+    feed(one, 1002000);                                              // red at an edge: kept
+    assert.notEqual(w.irWarning, null);
+    w.setStage(8);                                                   // first corner
+    s.time(1010000); w.showIrWarning(4);
+    feed(two, 1011500);                                              // two seen: kept
+    assert.notEqual(w.irWarning, null);
+    s.time(1020000); w.showIrWarning(4);
+    feed(one, 1020500);                                              // grey, but shown only 0.5 s: kept
+    assert.notEqual(w.irWarning, null);
+    feed(one, 1021000);                                              // grey after one second: removed
+    assert.equal(w.irWarning, null);
+
+    const standard = setup('en', { corners: true }), v = standard.win;
+    for (const stage of [0, 1, 2, 3, 4, 8]) v.setStage(stage);
+    standard.time(1000000); v.showIrWarning(1);
+    standard.time(1002000); v.coords = new Array(12).fill(0); v.coordsTime = 1002000; v.blobs = { time: 1002000, entries: one };
+    v.infoVisible = false; drawCalibration(standard);
+    assert.notEqual(v.irWarning, null);                              // standard calibration unchanged
+});

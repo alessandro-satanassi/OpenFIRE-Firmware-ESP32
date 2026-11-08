@@ -98,6 +98,7 @@
     const CALI_IR_PANEL_MIN_WIDTH = 140;   // px, also on small screens
     const CALI_IR_MAX_AGE = 500;           // ms without coordinates: older firmware, no panel
     const CALI_IR_WARNING_TIME = 4000;     // ms the refusal message stays on screen
+    const CALI_IR_WARNING_MIN_TIME = 1000; // ms it stays at least, also when a grey corner removes it
     const CALI_IR_MISSING = 0x01;          // sCaliIrWarning bit
     const CALI_IR_ROLL = 0x02;             // sCaliIrWarning bit
     // Tolerant calibration (caliFlagTolerant): a shot at an edge or a corner fired before reaching
@@ -756,6 +757,10 @@
             ctx.clearRect(0, 0, w, h);
 
             const irColor = this._caliIrColor();
+            // Tolerant calibration: a grey corner takes the next shot without any check, so the
+            // reason of an earlier refusal is removed once it has been readable for a moment.
+            if (irColor === CALI_IR_SCALE.skipped && this.irWarning &&
+                Date.now() - this.irWarning.time >= CALI_IR_WARNING_MIN_TIME) this.irWarning = null;
             let image = irColor ? loadTintedCrosshair(irColor) : loadCrosshair();
             if (irColor && !(image.complete && image.naturalWidth)) {
                 // A new colour is still loading: keep the previous one for this frame.
