@@ -91,7 +91,7 @@ test('IR layout setter cannot change calibration, alignment or closed windows', 
 
 test('legend uses the applied profile layout and adds no protocol commands', () => {
     const main = fs.readFileSync(path.join(__dirname, '../js/app/main.js'), 'utf8');
-    const start = main.indexOf('async openIRTest()');
+    const start = main.indexOf('async openIRTest(');
     const body = main.slice(start, main.indexOf('/** Qt CaliWindowExiting.', start));
     assert(body.includes('diamond: this.state.orig.profiles[this.state.cur.selectedProfile].layoutType'));
     assert.equal((body.match(/this\.sendCommand\(/g) || []).length, 1);

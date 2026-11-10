@@ -1,7 +1,7 @@
 /*  OpenFIRE Web App - "Gun Tests" tab (Qt: testsTab).
 
     Live button/switch/temperature/analog stick readings sent by the docked board, feedback tests,
-    the IR camera tester and the board actions (bootloader, clear save memory).
+    the IR camera tester, the aim test and the board actions (bootloader, clear save memory).
     It describes the board as it was loaded or last saved (state.testPins).
 */
 (function (root) {
@@ -78,7 +78,10 @@
             el('div', { class: 'row fill feedback-row' }, rumbleTest, solenoidTest),
             el('div', { class: 'row fill feedback-row' }, redTest, greenTest, blueTest));
 
-        const irTest = el('button', { class: 'wide-button', text: t('Open IR Camera Tester...'), on: { click: () => app.openIRTest() } });
+        // The IR camera tester and the aim test share one row (same test mode of the gun).
+        const irTest = el('button', { text: t('Open IR Camera Tester...'), on: { click: () => app.openIRTest() } });
+        const aimTest = el('button', { text: t('Open Aim Test...'), on: { click: () => app.openIRTest(true) } });
+        const testWindows = el('div', { class: 'row fill test-windows' }, irTest, aimTest);
 
         // ----- Board actions --------------------------------------------------------------------
         const reboot = el('button', { on: { click: () => app.rebootToBootloader() } });
@@ -86,7 +89,7 @@
         const boardActions = el('fieldset', { class: 'group' }, el('legend', { text: t('Board Actions') }),
             el('div', { class: 'row fill board-actions' }, reboot, clear));
 
-        const content = el('div', { class: 'tab-content narrow' }, inputsTest, feedbackTests, irTest, el('hr'), boardActions);
+        const content = el('div', { class: 'tab-content narrow' }, inputsTest, feedbackTests, testWindows, el('hr'), boardActions);
         const scroll = el('div', { class: 'tab-scroll' }, content);
         const rootNode = el('div', { class: 'tab-body' }, scroll);
 
@@ -196,6 +199,7 @@
             inputsTest.disabled = recovery || testing;
             feedbackTests.disabled = recovery || testing;
             irTest.disabled = recovery;
+            aimTest.disabled = recovery;
             boardActions.disabled = testing;
             analogGroup.disabled = !(mapped(E.analogX) && mapped(E.analogY));
             rumbleTest.disabled = !state.toggle(state.B.rumble);

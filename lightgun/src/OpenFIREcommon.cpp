@@ -1416,6 +1416,20 @@ static void SendTestBlobs(const int32_t (&vertexXin)[4], const int32_t (&vertexY
     constexpr uint8_t TEST_BLOBS_VERSION = 1;
     constexpr uint8_t TEST_BLOB_SEEN = 0x01;
     constexpr uint8_t TEST_BLOB_WEAK = 0x02;
+    // EN: Same in all four entries: the tracker computed a new position in this frame (WebApp aim
+    //     test: after a dark moment the trackers keep the old one until three emitters are seen).
+    //     Not set with the classic trackers. The IR test views read only bits 0-1.
+    // IT: Uguale nelle quattro voci: il tracker ha calcolato una nuova posizione in questo frame
+    //     (prova puntamento WebApp: dopo il buio i tracker tengono la vecchia finche' non vedono
+    //     tre emettitori). Non impostato con i tracker classici. Le viste del test IR leggono solo i bit 0-1.
+    constexpr uint8_t TEST_BLOB_TRACKED = 0x04;
+    uint8_t tracked = 0;
+    #ifdef USE_DIAMOND_ADVANCED
+        if(diamond && FW_Common::OpenFIREdiamond.updatedThisFrame()) tracked = TEST_BLOB_TRACKED;
+    #endif // USE_DIAMOND_ADVANCED
+    #ifdef USE_SQUARE_ADVANCED
+        if(!diamond && FW_Common::OpenFIREsquare.updatedThisFrame()) tracked = TEST_BLOB_TRACKED;
+    #endif // USE_SQUARE_ADVANCED
     constexpr int32_t MIN_PAIR_DISTANCE = 20; // test-space px, lower bound of the pairing limit
 
     int32_t vertexX[4];
@@ -1514,7 +1528,8 @@ static void SendTestBlobs(const int32_t (&vertexXin)[4], const int32_t (&vertexY
         uint8_t* entry = &payload[1 + i * 5];
         if(vertexBlob[i] < 0) {
             testBlobState[i] = TestBlobState_None;
-            continue; // not seen: all zero
+            entry[0] = tracked;
+            continue; // not seen: all zero but the tracked flag
         }
 
         const OpenFIRECamera::ObjectData& object = OpenFIRECamera::Object((uint8_t)vertexBlob[i]);
@@ -1529,7 +1544,7 @@ static void SendTestBlobs(const int32_t (&vertexXin)[4], const int32_t (&vertexY
         else
             testBlobState[i] = TestBlobState_None;
 
-        entry[0] = TEST_BLOB_SEEN | (weak ? TEST_BLOB_WEAK : 0);
+        entry[0] = TEST_BLOB_SEEN | (weak ? TEST_BLOB_WEAK : 0) | tracked;
         entry[1] = object.averageBrightness;
         entry[2] = object.maxBrightness;
         entry[3] = (uint8_t)(object.area & 0xFF);

@@ -1632,6 +1632,17 @@ void ExecRunModeProcessing()
     for(;;) {
         FW_Common::buttons.Poll(1);
 
+        // EN: Buttons to the App as in the docked loop (Gun Tests, aim test); the IR tester ignores them.
+        // IT: Tasti alla App come nel ciclo docked (Gun Tests, prova puntamento); il tester IR li ignora.
+        if(FW_Common::buttons.pressed || FW_Common::buttons.released) {
+            for(uint8_t i = 0; i < ButtonCount; ++i) {
+                if(bitRead(FW_Common::buttons.pressed, i))
+                    OF_Serial::AppSerialSendEvent(OF_Const::sBtnPressed, &i, 1);
+                if(bitRead(FW_Common::buttons.released, i))
+                    OF_Serial::AppSerialSendEvent(OF_Const::sBtnReleased, &i, 1);
+            }
+        }
+
         const bool sessionInput = WebAppSerial::available() > 0;
         if(sessionInput || OF_Serial::AppSerialInputPending()) {
             OF_Serial::SerialProcessingDocked();

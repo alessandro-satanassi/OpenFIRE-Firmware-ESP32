@@ -987,6 +987,9 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
 .analog-view circle { fill: rgb(255, 125, 0); stroke: rgb(255, 100, 0); }
 
 .wide-button { width: 100%; min-height: 38px; margin-bottom: 4px; }
+/* IR camera tester and aim test side by side (one above the other when narrow). */
+.row.fill.test-windows { margin: 0 0 4px; }
+.row.fill.test-windows > button { min-height: 38px; }
 
 /* ----- Dialogs ----------------------------------------------------------------------------------------- */
 
@@ -1369,6 +1372,11 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
     .save-label { max-width: 42vw; overflow: hidden; text-overflow: ellipsis; }
     .menubar-logo { display: none; }
 }
+
+/* Aim test (Gun Tests): the canvas draws everything. */
+.fullscreen-window.mode-aimtest { background: rgb(14, 14, 18); }
+.mode-aimtest > .fullscreen-canvas { position: relative; z-index: 1; }
+.mode-aimtest > .fullscreen-retry { z-index: 2; }
 
 /* Lens refinement (Gun Settings > camera): fullscreen window and its result panel. */
 .fullscreen-window.mode-lensfit { background: #15181d; }

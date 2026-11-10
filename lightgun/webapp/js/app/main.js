@@ -635,6 +635,10 @@
             if (this.busy && command !== C.sError) return;
             if (!this.state.loaded && command !== C.sError) return;
 
+            // The aim test shows the buttons too (the Gun Tests tab keeps them).
+            if ((command === C.sBtnPressed || command === C.sBtnReleased) && payload.length === 1 &&
+                this.window && this.window.onButton)
+                this.window.onButton(payload[0], command === C.sBtnPressed);
             if (this.tabs.tests && this.tabs.tests.onEvent(command, payload)) return;
 
             switch (command) {
@@ -911,7 +915,8 @@
             this.refresh();
         }
 
-        async openIRTest() {
+        /** aim: the aim test (Gun Tests) instead of the IR camera tester, in the same test mode. */
+        async openIRTest(aim = false) {
             const t = OF.UI.t;
             if (!this.connected || this.irTestStarting || this.irTestActive) return; // double click
             if (this.window && this.window.mode !== OF.FullscreenWindow.MODE_ALIGNMENT) return;
@@ -930,7 +935,11 @@
             }
             if (this.window) this.window.shutdown();
             this.irTestActive = true;
-            const win = new OF.FullscreenWindow(OF.FullscreenWindow.MODE_IRTEST, {
+            const win = aim ? new OF.AimTestWindow({
+                onExit: (mode) => this.onWindowExit(win, mode),
+                onTrigger: () => this.aimTestRecoil(),
+                buttonName: (index) => OF.UI.t(OF.Maps.functionNames(this.S)[index + 1]),
+            }) : new OF.FullscreenWindow(OF.FullscreenWindow.MODE_IRTEST, {
                 onExit: (mode) => this.onWindowExit(win, mode),
                 diamond: this.state.orig.profiles[this.state.cur.selectedProfile].layoutType === this.S.layoutTypes_e.layoutDiamond,
             });
@@ -968,7 +977,7 @@
                 } else {
                     this.failOperation();
                 }
-            } else if (mode === OF.FullscreenWindow.MODE_IRTEST) {
+            } else if (mode === OF.FullscreenWindow.MODE_IRTEST || mode === OF.AimTestWindow.MODE_AIMTEST) {
                 if (!this.connection.isDocked) {
                     this.irTestActive = false;
                     this.refresh();
@@ -979,6 +988,20 @@
                     // Test mode could not be left: the board must be restarted (fatal error dialog).
                     this.failOperation();
                 }
+            }
+        }
+
+        /** Aim test: the trigger fires the solenoid, or the rumble when the solenoid is off; one pulse at a time. */
+        async aimTestRecoil() {
+            const B = this.state.B;
+            const command = this.state.toggle(B.solenoid) ? this.C.sTestSolenoid :
+                this.state.toggle(B.rumble) ? this.C.sTestRumble : 0;
+            if (!command || this.aimRecoilBusy) return;
+            this.aimRecoilBusy = true;
+            try {
+                await this.sendCommand(command);
+            } finally {
+                this.aimRecoilBusy = false;
             }
         }
 

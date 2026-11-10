@@ -1207,7 +1207,8 @@ class MockFirmware {
                 if (this.testBlobs) {
                     // Like FW_Common::GetPosition(): blob data first, then the coordinates.
                     // TL large and bright, TR not seen (outside FOV), BL small and dim, BR medium.
-                    const blobs = [[1, 220, 250, 260], [0, 0, 0, 0], [1, 140, 170, 18], [1, 190, 235, 110]];
+                    // Flag 4 in every entry: the tracker updated the position in this frame.
+                    const blobs = [[5, 220, 250, 260], [4, 0, 0, 0], [5, 140, 170, 18], [5, 190, 235, 110]];
                     const payload = new Uint8Array(21);
                     payload[0] = 1;
                     blobs.forEach(([flags, avg, max, area], i) => payload.set([flags, avg, max, area & 255, area >> 8], 1 + i * 5));
