@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Added
+* **Aim test (WebApp and desktop App):** a new **Open Aim Test...** button in **Gun Tests**, next to **Open IR Camera Tester...**, opens a fullscreen grid with nine targets to check the aim, the buttons and the recoil together. The crosshair follows the aim of the current profile and turns orange when only two or three emitters are seen; the trigger leaves a hit mark that fades out and fires the solenoid, or the rumble, if enabled, when the solenoid is disabled; the other buttons show their name. **H** hides the key line, **F** turns the recoil off and on, **Esc** closes. In test mode the lightgun firmware now also sends the buttons, and tells when the aim was not updated in that frame, so the test shows *Aim unavailable* instead of an old position: the IR camera tester and the calibration do not change. The buttons and *Aim unavailable* need the 7.1.2 lightgun firmware. See [Test Mode](lightgun/src/README.md#test-mode).
 ### Changed
 ### Fixed
 ### Breaking Changes
@@ -147,6 +148,7 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 
 ## [Non rilasciato]
 ### Aggiunte
+* **Prova puntamento (WebApp e App desktop):** un nuovo pulsante **Apri Prova puntamento...** in **Gun Tests**, accanto ad **Apri Tester telecamera IR...**, apre una griglia a schermo intero con nove bersagli per controllare insieme la mira, i pulsanti e il rinculo. Il mirino segue la mira del profilo corrente e diventa arancione quando si vedono solo due o tre emettitori; il grilletto lascia un segno che svanisce e aziona il solenoide, oppure il rumble, se attivo, quando il solenoide è disattivato; gli altri pulsanti mostrano il loro nome. **H** nasconde la riga dei tasti, **F** disattiva e riattiva il rinculo, **Esc** chiude. In modalità di test il firmware della lightgun ora invia anche i pulsanti e segnala quando la mira non è stata aggiornata in quel fotogramma, così la prova mostra *Puntamento non disponibile* invece di una posizione vecchia: il tester della telecamera IR e la calibrazione non cambiano. I pulsanti e *Puntamento non disponibile* richiedono il firmware della lightgun 7.1.2. Vedi [Modalità di Test](lightgun/src/README.md#modalità-di-test-italiano).
 ### Modifiche
 ### Correzioni
 ### Modifiche Incompatibili

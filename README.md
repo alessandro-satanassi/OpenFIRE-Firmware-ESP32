@@ -103,7 +103,7 @@ New to OpenFIRE? Here is what you need and the steps to follow; each step links 
 4. **Set pins and camera:** assign the buttons and the camera pins in **Board Layout**, select your camera in **Gun Settings → CAMERA Model** (after a clean installation it is DFRobot/Wii) and, if fitted, enable the OLED display; then save ([details](lightgun/src/README.md#camera-display-and-startup-settings)).
 5. **Mount the four IR emitters** around the screen ([IR emitter setup](lightgun/src/README.md#ir-emitter-setup)).
 6. **Calibrate** each profile you use, then save ([how to calibrate](lightgun/src/README.md#how-to-calibrate)).
-7. **Test** the buttons in **Gun Tests** and the camera with **Open IR Camera Tester...** ([test mode](lightgun/src/README.md#test-mode)).
+7. **Test** the buttons in **Gun Tests**, the camera with **Open IR Camera Tester...** and the aim with **Open Aim Test...** ([test mode](lightgun/src/README.md#test-mode)).
 8. **Play** with the USB cable, or wirelessly: plug in the [dongle](dongle/README.md#english-version) and wait about 15 seconds, switch on the [wireless pedal](pedal/README.md#english-version) if you use one, then switch on the gun. [Your First Game](lightgun/src/README.md#your-first-game) explains how to leave configuration and set up the game's inputs. For two to four players, see [several guns](lightgun/src/README.md#multiple-guns-and-multiplayer).
 
 For a first test after calibration, try [OpenFIRE ShootingGallery](https://alessandro-satanassi.itch.io/openfire-shootinggallery), a mini-game created for testing your lightgun, playable online or available to download for Windows, Linux and macOS.
@@ -430,7 +430,7 @@ Non conosci ancora OpenFIRE? Ecco cosa ti serve e i passi da seguire; ogni passo
 4. **Imposta pin e telecamera:** assegna i pulsanti e i pin della telecamera in **Layout Scheda**, scegli la telecamera in **Impostazioni Gun → Modello TELECAMERA** (dopo un'installazione pulita è DFRobot/Wii) e, se presente, abilita il display OLED; poi salva ([dettagli](lightgun/src/README.md#telecamera-display-e-impostazioni-di-avvio)).
 5. **Monta i quattro emettitori IR** intorno allo schermo ([configurazione emettitori IR](lightgun/src/README.md#configurazione-emettitori-ir-italiano)).
 6. **Calibra** ogni profilo che usi, poi salva ([come calibrare](lightgun/src/README.md#come-calibrare-italiano)).
-7. **Prova** i pulsanti in **Gun Tests** e la telecamera con **Apri Tester telecamera IR...** ([modalità di test](lightgun/src/README.md#modalità-di-test-italiano)).
+7. **Prova** i pulsanti in **Gun Tests**, la telecamera con **Apri Tester telecamera IR...** e la mira con **Apri Prova puntamento...** ([modalità di test](lightgun/src/README.md#modalità-di-test-italiano)).
 8. **Gioca** con il cavo USB, oppure senza fili: inserisci il [dongle](dongle/README.md#versione-italiana) e attendi circa 15 secondi, accendi il [pedale wireless](pedal/README.md#versione-italiana) se lo usi, poi accendi la pistola. [La prima partita](lightgun/src/README.md#la-prima-partita) spiega come uscire dalla configurazione e impostare i comandi del gioco. Per giocare in due, tre o quattro, vedi [più pistole](lightgun/src/README.md#modifica-dell-id-usb-per-pistole-multiple-italiano).
 
 Dopo la calibrazione, prova [OpenFIRE ShootingGallery](https://alessandro-satanassi.itch.io/openfire-shootinggallery), un mini-gioco pensato per la lightgun, giocabile online oppure scaricabile per Windows, Linux e macOS.
