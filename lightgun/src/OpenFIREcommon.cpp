@@ -939,8 +939,12 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
             // A corner, between the right edge and the final centre: the stage stays Cali_Center
             // and the edge offsets are already set; only the refinement uses this shot.
             #ifdef OPENFIRE_CALIBRATION_REFINEMENT
-                if(calibrationSession && !cornerSkipped)   // a skipped corner stays invalid
-                    calibrationSession->capture(FW_Const::Cali_Center + 1 + corner, micros());
+                if(calibrationSession) {
+                    if(cornerSkipped)   // a skipped corner stays invalid; the next target starts its own history
+                        calibrationSession->invalidate();
+                    else
+                        calibrationSession->capture(FW_Const::Cali_Center + 1 + corner, micros());
+                }
             #endif
             ++corner;
             const uint8_t stage = corner < 4 ? FW_Const::Cali_Corner + corner : FW_Const::Cali_Center;
