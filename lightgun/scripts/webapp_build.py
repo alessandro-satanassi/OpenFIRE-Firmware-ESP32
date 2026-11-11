@@ -228,8 +228,14 @@ def refresh_dev_files(project_dir):
     build_shared_js.generate_shared_js(project_dir, webapp_dir)
     build_lang_js.build_lang_js(webapp_dir)
     build_board_pics.all_pictures(project_dir)
-    _write_bytes_if_changed(os.path.join(webapp_dir, *POLLING_DEV_CSS.split("/")),
-                            polling_css(webapp_dir).encode("utf-8"))
+    # Only for the unbundled home page: whatever goes wrong here must not stop the build of
+    # the firmware (pack_webapp.py calls this before every build). The launcher build itself
+    # stops with the same error, so it does not go unnoticed.
+    try:
+        _write_bytes_if_changed(os.path.join(webapp_dir, *POLLING_DEV_CSS.split("/")),
+                                polling_css(webapp_dir).encode("utf-8"))
+    except Exception as error:
+        print(f"[WebApp] WARNING: webapp/{POLLING_DEV_CSS} not written: {error}")
 
 
 def _gzip(data):
@@ -399,8 +405,8 @@ def _split_top(text, separator):
 
 
 def _css_rules(text, media=()):
-    """Every style rule: (media, selectors, [(property, value)]), or (media, None, raw) for
-    an @keyframes block. Comments must be removed first."""
+    """Every style rule: (media, selectors, [(property, value)], body), or (media, None, raw,
+    raw) for an @keyframes block. Comments must be removed first."""
     for prelude, body in _css_items(text):
         if body is None:
             continue
@@ -408,14 +414,15 @@ def _css_rules(text, media=()):
         if lower.startswith(("@media", "@supports")):
             yield from _css_rules(body, media + (prelude,))
         elif lower.startswith(("@keyframes", "@-webkit-keyframes")):
-            yield media, None, prelude + " {" + body + "}"
+            raw = prelude + " {" + body + "}"
+            yield media, None, raw, raw
         elif not lower.startswith("@"):
             declarations = []
             for part in _split_top(body, ";"):
                 name, colon, value = part.partition(":")
                 if colon:
                     declarations.append((name.strip(), value.strip()))
-            yield media, _split_top(prelude, ","), declarations
+            yield media, _split_top(prelude, ","), declarations, body
 
 
 def _render_css_rule(media, selectors, declarations):
@@ -439,14 +446,22 @@ def polling_css(webapp_dir):
     home = _read_text(os.path.join(webapp_dir, "launcher", "index.html"))
 
     rules, tokens = [], []
-    for media, selectors, declarations in _css_rules(style):
+    for media, selectors, declarations, body in _css_rules(style):
         if selectors is None:
             if "polling" in declarations.split("{", 1)[0]:
                 rules.append(declarations + "\n")
             continue
         chosen = [selector for selector in selectors if "polling" in selector]
         if chosen:
+            # Read from the body, not from the declarations: a nested rule can end up in the
+            # name of one (".child { color: red") or in none at all (".child { }").
+            if "{" in body:
+                raise RuntimeError("launcher: a rule of webapp/style.css for " + ", ".join(chosen) +
+                                   " has rules nested inside it, which polling_css() does not read.")
             rules.append(_render_css_rule(media, chosen, declarations))
+        elif "{" in body and "polling" in body:
+            raise RuntimeError("launcher: webapp/style.css has a rule of the polling rate test nested "
+                               "inside " + ", ".join(selectors) + ", which polling_css() does not read.")
         elif all(selector.startswith(":root") for selector in selectors):
             tokens.append((media, selectors, declarations))
     if not any(rule.startswith(POLLING_SCOPE + " {") for rule in rules):
@@ -457,7 +472,7 @@ def polling_css(webapp_dir):
     # home page adds for the test (its buttons), and those they are made of.
     own = ""
     for block in re.findall(r"<style>(.*?)</style>", home, flags=re.DOTALL):
-        for media, selectors, declarations in _css_rules(_without_comments(block)):
+        for media, selectors, declarations, _ in _css_rules(_without_comments(block)):
             if selectors and any("polling" in selector for selector in selectors):
                 own += " ".join(value for _, value in declarations) + "\n"
     needed = set(re.findall(r"var\(\s*(--[\w-]+)", "".join(rules) + own))
@@ -503,11 +518,16 @@ def _check_polling_helpers(webapp_dir, test_code, home_code):
     for names in re.findall(r"\{([^{}]*)\}\s*=\s*OF\.UI\b", test_code):
         used |= {name.split(":")[0].strip() for name in names.split(",") if name.strip()}
     extra = sorted(used - set(POLLING_UI))
+    # A text that is not written out (t(name)) would not be found by polling_translations().
+    if len(re.findall(r"\bt\(", test_code)) != len(TEXT_KEY.findall(test_code)):
+        raise RuntimeError(f"launcher: {POLLING_SCRIPT} calls t() with a text that is not written "
+                           f"in quotes: its translation would not reach the home page.")
     if extra:
         raise RuntimeError(f"launcher: {POLLING_SCRIPT} uses OF.UI." + ", OF.UI.".join(extra) +
                            ", which the home page does not have: add it to the helpers of the "
                            "polling rate test in launcher/launcher.js.")
-    ui_icons = dict(re.findall(r"^\s*(\w+):\s*'([^']*)'", _read_text(os.path.join(webapp_dir, "js", "app", "ui.js")), re.M))
+    icons_block = re.search(r"const ICONS = \{(.*?)\n\s*\};", _read_text(os.path.join(webapp_dir, "js", "app", "ui.js")), re.DOTALL)
+    ui_icons = dict(re.findall(r"^\s*(\w+):\s*'([^']*)'", icons_block.group(1) if icons_block else "", re.M))
     for name in sorted(set(re.findall(r"\bicon\(\s*'(\w+)'", test_code))):
         if name not in ui_icons or f"{name}: '{ui_icons[name]}'" not in home_code:
             raise RuntimeError(f"launcher: {POLLING_SCRIPT} draws the icon '{name}': "
