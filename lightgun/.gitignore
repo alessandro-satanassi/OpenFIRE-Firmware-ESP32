@@ -9,3 +9,4 @@ scripts/__pycache__
 dist
 webapp/boards/OpenFIREshared.js
 webapp/lang/translations.js
+webapp/launcher/polling-test.css

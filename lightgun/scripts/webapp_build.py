@@ -14,7 +14,8 @@ Outputs
            button, nothing else. It reads the version of the firmware with the same
            transport and protocol as the app, looks it up in versions.json and opens the
            app published for it (v/<version>/); when that version is not there, it offers
-           the ones that are.
+           the ones that are. Under the button it shows the polling rate test of the app,
+           with the app's own script, texts and style (see "The polling rate test").
 
 What gets published: every firmware has its own app, and dist/site is exactly that app -
 one version of it, not a site. Publishing a version means copying dist/site into
@@ -227,6 +228,8 @@ def refresh_dev_files(project_dir):
     build_shared_js.generate_shared_js(project_dir, webapp_dir)
     build_lang_js.build_lang_js(webapp_dir)
     build_board_pics.all_pictures(project_dir)
+    _write_bytes_if_changed(os.path.join(webapp_dir, *POLLING_DEV_CSS.split("/")),
+                            polling_css(webapp_dir).encode("utf-8"))
 
 
 def _gzip(data):
@@ -335,6 +338,182 @@ def build_site(project_dir, out_dir):
     return {"files": files, "version": version, "changed": changed, "removed": removed}
 
 
+# ----- The polling rate test of the home page ------------------------------------------------
+# "Measure Polling Rate" on the home page shows the polling rate test of the app, before the
+# lightgun is docked (it must still be in Run mode, sending its aim as a mouse). It is the
+# app's own test and nothing of it is copied by hand into the home page:
+#   script  js/app/polling-test.js, listed in launcher/index.html and joined like the others;
+#   texts   those of webapp/lang/*.json that the test (and the button) use: polling_translations;
+#   style   the rules of webapp/style.css that name "polling", with the colours of the app they
+#           use, scoped to the test: polling_css. The page links launcher/polling-test.css
+#           unbundled (written by refresh_dev_files) and has the same rules inline once built.
+# The test takes el, t and icon from OF.UI (js/app/ui.js), which the home page cannot load:
+# launcher.js has the same three, and the build checks that the test needs nothing else.
+POLLING_SCRIPT = "js/app/polling-test.js"
+POLLING_DEV_CSS = "launcher/polling-test.css"
+POLLING_STYLE_BLOCK = re.compile(r'<!--\s*OF:POLLING-STYLE\b.*?-->(.*?)<!--\s*/OF:POLLING-STYLE\s*-->', re.DOTALL)
+POLLING_UI = ("el", "t", "icon")
+POLLING_SCOPE = ".polling-test"
+TEXT_KEY = re.compile(r"""\bt\(\s*(?:'((?:[^'\\\n]|\\.)*)'|"((?:[^"\\\n]|\\.)*)")""")
+
+
+def _css_items(text):
+    """The items of a style sheet (comments already removed): [(prelude, body)], body None
+    for a statement such as @import."""
+    items = []
+    i, n = 0, len(text)
+    while i < n:
+        j = i
+        while j < n and text[j] not in "{;}":
+            j += 1
+        prelude = " ".join(text[i:j].split())
+        if j >= n:
+            break
+        if text[j] != "{":
+            if prelude:
+                items.append((prelude, None))
+            i = j + 1
+            continue
+        depth, k = 1, j + 1
+        while k < n and depth:
+            depth += {"{": 1, "}": -1}.get(text[k], 0)
+            k += 1
+        items.append((prelude, text[j + 1:k - 1]))
+        i = k
+    return items
+
+
+def _split_top(text, separator):
+    """Splits at the separators that are not inside brackets or parentheses."""
+    parts, depth, start = [], 0, 0
+    for index, char in enumerate(text):
+        if char in "([":
+            depth += 1
+        elif char in ")]":
+            depth -= 1
+        elif char == separator and depth == 0:
+            parts.append(text[start:index])
+            start = index + 1
+    parts.append(text[start:])
+    return [" ".join(part.split()) for part in parts if part.strip()]
+
+
+def _css_rules(text, media=()):
+    """Every style rule: (media, selectors, [(property, value)]), or (media, None, raw) for
+    an @keyframes block. Comments must be removed first."""
+    for prelude, body in _css_items(text):
+        if body is None:
+            continue
+        lower = prelude.lower()
+        if lower.startswith(("@media", "@supports")):
+            yield from _css_rules(body, media + (prelude,))
+        elif lower.startswith(("@keyframes", "@-webkit-keyframes")):
+            yield media, None, prelude + " {" + body + "}"
+        elif not lower.startswith("@"):
+            declarations = []
+            for part in _split_top(body, ";"):
+                name, colon, value = part.partition(":")
+                if colon:
+                    declarations.append((name.strip(), value.strip()))
+            yield media, _split_top(prelude, ","), declarations
+
+
+def _render_css_rule(media, selectors, declarations):
+    text = ",\n".join(selectors) + " {\n" + "".join(f"    {name}: {value};\n" for name, value in declarations) + "}\n"
+    for prelude in reversed(media):
+        text = prelude + " {\n" + "".join("    " + line + "\n" for line in text.splitlines()) + "}\n"
+    return text
+
+
+def _without_comments(text):
+    return re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
+
+
+def polling_css(webapp_dir):
+    """The style of the polling rate test for the home page, from webapp/style.css: every
+    rule of it that names "polling" (and only the selectors that do), and before them the
+    colours of the app those rules, the test and the home page's own rules for it use,
+    defined on the test only, so the rest of the home page keeps its own."""
+    style = _without_comments(_read_text(os.path.join(webapp_dir, "style.css")))
+    script = _read_text(os.path.join(webapp_dir, *POLLING_SCRIPT.split("/")))
+    home = _read_text(os.path.join(webapp_dir, "launcher", "index.html"))
+
+    rules, tokens = [], []
+    for media, selectors, declarations in _css_rules(style):
+        if selectors is None:
+            if "polling" in declarations.split("{", 1)[0]:
+                rules.append(declarations + "\n")
+            continue
+        chosen = [selector for selector in selectors if "polling" in selector]
+        if chosen:
+            rules.append(_render_css_rule(media, chosen, declarations))
+        elif all(selector.startswith(":root") for selector in selectors):
+            tokens.append((media, selectors, declarations))
+    if not any(rule.startswith(POLLING_SCOPE + " {") for rule in rules):
+        raise RuntimeError(f"launcher: webapp/style.css has no {POLLING_SCOPE} rule: "
+                           f"the polling rate test of the home page would have no style.")
+
+    # The colours used: by the rules taken, by the script (cssColor) and by the rules the
+    # home page adds for the test (its buttons), and those they are made of.
+    own = ""
+    for block in re.findall(r"<style>(.*?)</style>", home, flags=re.DOTALL):
+        for media, selectors, declarations in _css_rules(_without_comments(block)):
+            if selectors and any("polling" in selector for selector in selectors):
+                own += " ".join(value for _, value in declarations) + "\n"
+    needed = set(re.findall(r"var\(\s*(--[\w-]+)", "".join(rules) + own))
+    needed |= set(re.findall(r"""['"](--[\w-]+)['"]""", script))
+    defined = {}
+    for _, _, declarations in tokens:
+        for name, value in declarations:
+            defined.setdefault(name, []).append(value)
+    while True:
+        more = {name for found in needed for value in defined.get(found, [])
+                for name in re.findall(r"var\(\s*(--[\w-]+)", value)} - needed
+        if not more:
+            break
+        needed |= more
+    missing = sorted(name for name in needed if name not in defined)
+    if missing:
+        raise RuntimeError("launcher: the polling rate test uses " + ", ".join(missing) +
+                           ", which webapp/style.css does not define in :root.")
+
+    colours = [_render_css_rule(media, [selector + " " + POLLING_SCOPE for selector in selectors],
+                                [(name, value) for name, value in declarations if name in needed])
+               for media, selectors, declarations in tokens
+               if any(name in needed for name, _ in declarations)]
+    return ("/* AUTO-GENERATED from webapp/style.css by scripts/webapp_build.py - do not edit.\n"
+            "   The style of the polling rate test of the app, for the home page (launcher). */\n"
+            + "".join(colours) + "".join(rules))
+
+
+def polling_translations(webapp_dir, sources):
+    """The translations of webapp/lang/*.json for the texts that `sources` (the test and the
+    home page) pass to t(): the home page carries a few of them, not the whole app."""
+    keys = set()
+    for code in sources:
+        for single, double in TEXT_KEY.findall(code):
+            keys.add(re.sub(r"\\(.)", r"\1", single or double))
+    return {code: {key: text for key, text in table.items() if key in keys}
+            for code, table in build_lang_js.load_translations(webapp_dir).items()}
+
+
+def _check_polling_helpers(webapp_dir, test_code, home_code):
+    """The test runs here with launcher.js's el, t and icon instead of js/app/ui.js."""
+    used = set(re.findall(r"OF\.UI\.(\w+)", test_code))
+    for names in re.findall(r"\{([^{}]*)\}\s*=\s*OF\.UI\b", test_code):
+        used |= {name.split(":")[0].strip() for name in names.split(",") if name.strip()}
+    extra = sorted(used - set(POLLING_UI))
+    if extra:
+        raise RuntimeError(f"launcher: {POLLING_SCRIPT} uses OF.UI." + ", OF.UI.".join(extra) +
+                           ", which the home page does not have: add it to the helpers of the "
+                           "polling rate test in launcher/launcher.js.")
+    ui_icons = dict(re.findall(r"^\s*(\w+):\s*'([^']*)'", _read_text(os.path.join(webapp_dir, "js", "app", "ui.js")), re.M))
+    for name in sorted(set(re.findall(r"\bicon\(\s*'(\w+)'", test_code))):
+        if name not in ui_icons or f"{name}: '{ui_icons[name]}'" not in home_code:
+            raise RuntimeError(f"launcher: {POLLING_SCRIPT} draws the icon '{name}': "
+                               f"launcher/launcher.js (UI_ICONS) must have it as js/app/ui.js draws it.")
+
+
 def launcher_bundle(project_dir):
     """The home page of the published site: {'index.html': bytes, 'launcher.js': bytes}.
 
@@ -350,18 +529,30 @@ def launcher_bundle(project_dir):
     scripts = SCRIPT_SRC.findall(re.sub(r'<!--.*?-->', '', block.group(1), flags=re.DOTALL))
 
     # The page lists them as it would need them unbundled, that is relative to itself.
+    translations_src = "../" + GENERATED_TRANSLATIONS
     generated = {"../" + GENERATED_SHARED: build_shared_js.render_shared_js(
-        build_shared_js.extract_shared(project_dir))}
+        build_shared_js.extract_shared(project_dir)), translations_src: None}
+
+    sources = {}
+    for src in scripts:
+        if src in generated:
+            continue
+        path = os.path.normpath(os.path.join(launcher_dir, *src.split("/")))
+        if not os.path.exists(path):
+            raise RuntimeError(f"launcher/index.html lists {src}, but {path} does not exist")
+        sources[src] = _read_text(path)
+    polling_src = "../" + POLLING_SCRIPT
+    if polling_src in sources:
+        # Only the texts of the polling rate test, not the whole app's.
+        generated[translations_src] = build_lang_js.render_translations_js(
+            polling_translations(webapp_dir, [sources[polling_src], sources.get("launcher.js", "")]))
+        _check_polling_helpers(webapp_dir, sources[polling_src], sources.get("launcher.js", ""))
 
     parts = ["/* OpenFIRE Web App home - generated by scripts/webapp_build.py, do not edit. */\n"]
     for src in scripts:
-        if src in generated:
-            code = generated[src]
-        else:
-            path = os.path.normpath(os.path.join(launcher_dir, *src.split("/")))
-            if not os.path.exists(path):
-                raise RuntimeError(f"launcher/index.html lists {src}, but {path} does not exist")
-            code = _read_text(path)
+        code = generated[src] if src in generated else sources[src]
+        if code is None:
+            raise RuntimeError(f"launcher/index.html lists {src} without {polling_src}")
         parts.append(f"\n/* ---- {src} ---- */\n{code.rstrip()}\n;\n")
 
     code = "".join(parts)
@@ -372,7 +563,7 @@ def launcher_bundle(project_dir):
     # Each marker must be written in one source only, or the check cannot fail: launcher.js
     # also names WebSerialTransport and the generated board data also names serialCmdTypes_e,
     # so those bare names are always found whatever transport.js or protocol.js is joined.
-    for needed in ("_getBoardInfo", "class WebSerialTransport", '"serialCmdTypes_e":'):
+    for needed in ("_getBoardInfo", "class WebSerialTransport", '"serialCmdTypes_e":', "class PollingTest"):
         if needed not in code:
             raise RuntimeError(f"launcher: the joined scripts do not contain {needed}. "
                                f"webapp/js/core/protocol.js, transport.js and the data "
@@ -380,6 +571,11 @@ def launcher_bundle(project_dir):
                                f"ones of this source tree - an old copy breaks the home page.")
 
     page = html[:block.start()] + '<script src="launcher.js"></script>' + html[block.end():]
+    # The style of the polling rate test, inline: the page stays two files.
+    style = POLLING_STYLE_BLOCK.search(page)
+    if not style:
+        raise RuntimeError("launcher/index.html: missing <!-- OF:POLLING-STYLE --> ... <!-- /OF:POLLING-STYLE --> block")
+    page = page[:style.start()] + "<style>\n" + polling_css(webapp_dir) + "</style>" + page[style.end():]
     return {"index.html": page.encode("utf-8"), "launcher.js": code.encode("utf-8")}
 
 

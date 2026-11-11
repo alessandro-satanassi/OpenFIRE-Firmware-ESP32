@@ -16,8 +16,12 @@
         { "latest": "6.2",
           "versions": [ { "id": "6.2", "label": "6.2.0", "type": "stable" } ] }
 
+    Under the button, "Measure Polling Rate" turns the panel into the polling rate test of
+    the app (js/app/polling-test.js, joined into this page): see "The polling rate test" below.
+
     ADDING A LANGUAGE: copy the 'en' block of STRINGS below, change the code and translate.
     .../?lang=it opens the page in that language, and the language is passed on to the app.
+    The texts of the polling rate test are the app's own (webapp/lang/<code>.json).
 */
 (function (root) {
     'use strict';
@@ -126,6 +130,91 @@
 
     let theme = 'system';
     let shownList = null;      // the list of versions, while it is on screen
+
+    // ----- The polling rate test -------------------------------------------------------
+    /*  "Measure Polling Rate" shows the polling rate test of the app in the panel, in place
+        of the Connect button. On this page the lightgun is not docked unless asked to, so it
+        is still in Run mode and sends its aim as a mouse: what the test needs.
+
+        It is the app's own test, not a copy: js/app/polling-test.js is joined into this page
+        (OF:SCRIPTS), its texts are those of the app (webapp/lang/*.json, through OF.i18n) and
+        its style is the one of the app (the rules of style.css, see polling_css() in
+        scripts/webapp_build.py). Changed there, it changes here with the next build.
+
+        The test takes three helpers from OF.UI, which is js/app/ui.js in the app. That file
+        is not loaded here because it also makes every link of the page open in a new tab, so
+        these are the same three, for what the test uses of them. The build stops if the test
+        starts using another helper, or an icon that is not here or is drawn differently. */
+    const UI_ICONS = {
+        gauge: 'M3.5 17a8.5 8.5 0 1 1 17 0M12 17l4.5-6M6.5 17h.01M17.5 17h.01M12 8.5v.01M7.8 10.2l.01.01'
+    };
+    const ui = {
+        t: (text, ...args) => (OF.i18n ? OF.i18n.t(text, ...args) : String(text)),
+
+        /** el(tag, { class, text, html, title, attrs, dataset, style, on, hidden, ... }, ...children) */
+        el(tag, props, ...children) {
+            const doc = root.document;
+            const node = tag.includes(':') ?
+                doc.createElementNS(SVG_NS, tag.split(':')[1]) : doc.createElement(tag);
+            if (props) {
+                for (const [key, value] of Object.entries(props)) {
+                    if (value === undefined || value === null) continue;
+                    switch (key) {
+                    case 'class': node.setAttribute('class', value); break;
+                    case 'text': node.textContent = value; break;
+                    case 'html': node.innerHTML = value; break;
+                    case 'attrs': for (const [name, v] of Object.entries(value)) if (v !== undefined && v !== null && v !== false) node.setAttribute(name, v === true ? '' : v); break;
+                    case 'dataset': Object.assign(node.dataset, value); break;
+                    case 'style':
+                        for (const [name, v] of Object.entries(value)) {
+                            if (name.startsWith('--')) node.style.setProperty(name, v);
+                            else node.style[name] = v;
+                        }
+                        break;
+                    case 'on': for (const [name, handler] of Object.entries(value)) node.addEventListener(name, handler); break;
+                    default: node[key] = value; break;
+                    }
+                }
+            }
+            for (const child of children.flat()) {
+                if (child === null || child === undefined || child === false) continue;
+                node.append(child instanceof root.Node ? child : String(child));
+            }
+            return node;
+        },
+
+        icon(name, extraClass) {
+            const svg = ui.el('svg:svg', { class: 'icon' + (extraClass ? ' ' + extraClass : ''), attrs: { viewBox: '0 0 24 24', 'aria-hidden': 'true' } });
+            svg.append(ui.el('svg:path', { attrs: { d: UI_ICONS[name] || '' } }));
+            return svg;
+        }
+    };
+
+    let pollingTest = null;     // the test, while it is on screen
+
+    /** The panel becomes the test. `stats` keeps the measure when the page is rebuilt. */
+    function openPollingTest(stats) {
+        if (pollingTest || !OF.PollingTest) return;
+        OF.UI = OF.UI || ui;
+        pollingTest = new OF.PollingTest({ onExit: () => closePollingTest(), stats: stats || null });
+        const host = byId('polling-host');
+        host.textContent = '';
+        host.appendChild(pollingTest.root);
+        root.document.body.classList.add('polling-on');
+        host.hidden = false;
+        pollingTest.start();
+    }
+
+    /** Back, or Escape: the panel is the home page again. */
+    function closePollingTest(rebuilding) {
+        if (!pollingTest) return;
+        pollingTest.stop();
+        pollingTest.root.remove();
+        pollingTest = null;
+        byId('polling-host').hidden = true;
+        root.document.body.classList.remove('polling-on');
+        if (!rebuilding) byId('polling-open').focus();
+    }
 
     function icon(name, extra) {
         const svg = root.document.createElementNS(SVG_NS, 'svg');
@@ -429,6 +518,8 @@
     /** Every text of the page, in the language in use: called again when it changes. */
     function render() {
         root.document.documentElement.lang = lang;
+        // The texts of the polling rate test follow the language of the page.
+        if (OF.i18n) OF.i18n.currentLang = OF.i18n.translations[lang] ? lang : 'en';
         byId('lead').textContent = t('lead');
         const compat = byId('compat');
         if (compat) {
@@ -439,6 +530,7 @@
             compat.appendChild(root.document.createTextNode(t('compatAfter')));
         }
         byId('connect-label').textContent = t('connect');
+        byId('polling-label').textContent = ui.t('Measure Polling Rate');
         byId('show-versions').textContent = t('showAll');
         byId('footer').textContent = t('footer');
 
@@ -453,6 +545,12 @@
         applyTheme();
         if (shownList) showVersions(shownList.list, shownList.lead);
         if (lastLine) lastLine();
+        // The test was built in the other language: built again, with the measure it has.
+        if (pollingTest) {
+            const stats = pollingTest.stats;
+            closePollingTest(true);
+            openPollingTest(stats);
+        }
 
         // The address says which language is shown: it can be copied and passed on.
         try {
@@ -469,6 +567,12 @@
         render();
 
         byId('connect').addEventListener('click', () => { connect(); });
+        const polling = byId('polling-open');
+        if (OF.PollingTest && OF.i18n) {
+            polling.insertBefore(ui.icon('gauge'), polling.firstChild);
+            polling.addEventListener('click', () => openPollingTest());
+            polling.hidden = false;
+        }
         byId('show-versions').addEventListener('click', async () => {
             const list = await published();
             if (list) showVersions(list);

@@ -136,6 +136,23 @@ def main():
         ok("versions.json" in code, "and looks the version up in the list")
         ok("tab-settings" not in code, "without a line of the app itself")
 
+        # The polling rate test of the home page is the app's own: script, texts and style.
+        webapp = os.path.join(LIGHTGUN, "webapp")
+        test_script = read(os.path.join(webapp, "js", "app", "polling-test.js")).decode("utf-8")
+        ok(test_script.rstrip() in code,
+           "the polling rate test is the app's js/app/polling-test.js, as it is: one test, not two")
+        ok("OF:POLLING-STYLE" not in page and 'href="polling-test.css"' not in page
+           and webapp_build.polling_css(webapp) in page,
+           "its style is written into the page, taken from the app's style.css")
+        style = read(os.path.join(webapp, "style.css")).decode("utf-8")
+        ok(all(token in style for token in re.findall(r"--(?:ok|mid): [^;]+;", page)),
+           "with the colours of the app")
+        translations = re.search(r"TRANSLATIONS = (\{.*?\});\n", code)
+        texts = translations and __import__("json").loads(translations.group(1))
+        ok(texts and "Measure Polling Rate" in texts.get("it", {})
+           and "Polling Rate Test" in texts.get("it", {}) and len(texts["it"]) < 40,
+           "and the app's translations of its texts, only those")
+
         empty = webapp_build.build_launcher(LIGHTGUN, launcher)
         ok(empty["changed"] == [], "building the home page again writes nothing")
 
