@@ -32,6 +32,8 @@ js/app/tab-*.js         Board Layout, Button Mapping, Gun Settings, Calibration 
 js/app/fullscreen.js    calibration, IR emitter alignment and IR camera test screens
 js/app/emitter-alignment.js  fullscreen placement controls, physical measurements and markers
 js/app/lensfit-window.js  lens refinement screen (Gun Settings, camera, "Refine lens...")
+js/app/polling-test.js  polling rate test of the welcome screen ("Measure Polling Rate", before connecting):
+                        rate of the HID reports of the gun in Run mode (OF.PollingStats has no DOM)
 js/app/testfont.js      8x8 bitmap typeface of those screens (from the Qt App)
 js/app/windows.js       Boards Previewer and About
 js/app/version.js       says so when the lightgun runs a firmware of another version

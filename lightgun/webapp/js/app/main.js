@@ -138,6 +138,10 @@
             const { el, t, icon } = OF.UI;
             const app = doc.getElementById('app');
             const settingsView = this.tabs.settings && this.tabs.settings.saveViewState();
+            // The page is rebuilt (language): the polling test goes with the old welcome area and
+            // opens again in the new one, with the measure taken so far.
+            const pollingStats = this.pollingTest ? this.pollingTest.stats : null;
+            this.closePollingTest();
             app.textContent = '';
             OF.UI.closeMenus();
 
@@ -169,6 +173,7 @@
 
             // Welcome (not connected)
             this.welcome = this.buildWelcome();
+            if (pollingStats) this.openPollingTest(pollingStats);
 
             // Tabs
             this.panels = {};
@@ -276,7 +281,35 @@
                     icon('usb'), el('span', { text: t('Connect') }));
                 children.push(this.connectButton);
             }
-            return el('section', { class: 'welcome' }, ...children);
+            // Polling rate test: before connecting, while the gun is still in Run mode and
+            // sends its aim as a mouse. Not on the lightgun page, which docks the gun by itself.
+            if (!this.isDevice && OF.PollingTest) {
+                this.pollingButton = el('button', { class: 'secondary-button', on: { click: () => this.openPollingTest() } },
+                    icon('gauge'), el('span', { text: t('Measure Polling Rate') }));
+                children.push(this.pollingButton);
+            }
+            this.welcomeHome = el('div', { class: 'welcome-home' }, ...children);
+            return el('section', { class: 'welcome' }, this.welcomeHome);
+        }
+
+        /** Turns the welcome area into the polling rate test (Back or Esc turn it back). */
+        openPollingTest(stats) {
+            if (this.pollingTest || this.state.loaded) return;
+            this.pollingTest = new OF.PollingTest({ onExit: () => this.closePollingTest(), stats: stats || null });
+            this.welcomeHome.hidden = true;
+            this.welcome.classList.add('testing');
+            this.welcome.append(this.pollingTest.root);
+            this.pollingTest.start();
+        }
+
+        closePollingTest() {
+            if (!this.pollingTest) return;
+            this.pollingTest.stop();
+            this.pollingTest.root.remove();
+            this.pollingTest = null;
+            this.welcome.classList.remove('testing');
+            this.welcomeHome.hidden = false;
+            if (this.pollingButton && this.pollingButton.isConnected) this.pollingButton.focus();
         }
 
         updateWelcome() {
@@ -325,6 +358,7 @@
             const t = OF.UI.t;
             const loaded = this.state.loaded;
             this.welcome.hidden = loaded;
+            if (loaded) this.closePollingTest();
             this.updateWelcome();
             for (const id of TAB_ORDER) {
                 const panel = this.panels[id];

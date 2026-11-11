@@ -688,5 +688,22 @@
     "Some LEDs may leave the view even with the gun upright. Aim may be less precise or tracking may be lost.": "Alcuni LED possono uscire dalla vista anche con la pistola dritta. La mira può essere meno precisa o il tracking può interrompersi.",
     "The placement prioritises aiming precision, then LED visibility. You can calibrate farther back without moving the LEDs.": "Il consiglio privilegia la precisione di mira, poi la visibilità dei LED. Puoi calibrare da più lontano senza spostare i LED.",
     "Showing the first usable placement farther back. The colour refers to your selected distance.": "L’assistente mostra la prima disposizione utilizzabile da più lontano. Il colore si riferisce alla distanza scelta.",
-    "No tested placement meets the visibility checks within 10 m.": "Nessuna delle disposizioni valutate soddisfa i requisiti di visibilità entro 10 m."
+    "No tested placement meets the visibility checks within 10 m.": "Nessuna delle disposizioni valutate soddisfa i requisiti di visibilità entro 10 m.",
+    "Measure Polling Rate": "Misura polling rate",
+    "Polling Rate Test": "Test del polling rate",
+    "Reset": "Azzera",
+    "Back": "Indietro",
+    "Aim the lightgun inside this area and keep moving it. The lightgun must be in Run mode (not connected to the App) with mouse output.": "Punta la lightgun dentro quest'area e continua a muoverla. La lightgun deve essere in modalità run (non connessa all'App) con uscita mouse.",
+    "Minimum (last 10 s)": "Minimo (ultimi 10 s)",
+    "Maximum (last 10 s)": "Massimo (ultimi 10 s)",
+    "Measuring": "Misura in corso",
+    "Touch and pen are not measured: use the lightgun": "Tocco e penna non vengono misurati: usa la lightgun",
+    "Waiting for the lightgun: move it inside the area": "In attesa della lightgun: muovila dentro l'area",
+    "Aim outside the area": "Mira fuori dall'area",
+    "Paused: keep moving the lightgun": "In pausa: continua a muovere la lightgun",
+    "This browser does not give the single reports (coalesced events): the rate measured is limited by the refresh of the display. Use Chrome or Edge.": "Questo browser non fornisce i singoli report (eventi coalescenti): la frequenza misurata è limitata dal refresh del monitor. Usa Chrome o Edge.",
+    "Average (last 3 s)": "Media (ultimi 3 s)",
+    "Rate over the last %1 s of movement (line: %2 fps of the camera)": "Frequenza negli ultimi %1 s di movimento (linea: %2 fps della camera)",
+    "Expected value with OpenFIRE: about %1 Hz, the frame rate of the camera (with the USB cable and with the dongle).": "Valore atteso con OpenFIRE: circa %1 Hz, la frequenza della camera (sia con il cavo USB sia con il dongle).",
+    "Rate of the last 3 s of movement: green from 180 Hz, orange from 60 Hz, red below. Indicative thresholds.": "Frequenza degli ultimi 3 s di movimento: verde da 180 Hz, arancione da 60 Hz, rosso sotto. Soglie indicative."
 }

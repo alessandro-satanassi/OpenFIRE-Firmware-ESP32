@@ -19,6 +19,8 @@
     --focus: 0 0 0 3px rgba(10, 127, 194, 0.35);
     --danger: #d0263a;
     --warn: #b27a00;
+    --ok: #1d8a3e;
+    --mid: #e06c00;               /* orange: middle level of the polling test */
     --link: #0a6fb0;
     --desc-title: #8a8400;
     --gpio-i2c0: #0077d9;
@@ -53,6 +55,8 @@
         --focus: 0 0 0 3px rgba(47, 166, 228, 0.4);
         --danger: #ff5a6a;
         --warn: #e5b53a;
+        --ok: #4cc96f;
+        --mid: #fb923c;
         --link: #8ab4f8;
         --desc-title: #e0d44a;
         --gpio-i2c0: #0099ff;
@@ -83,6 +87,8 @@
     --focus: 0 0 0 3px rgba(47, 166, 228, 0.4);
     --danger: #ff5a6a;
     --warn: #e5b53a;
+    --ok: #4cc96f;
+    --mid: #fb923c;
     --link: #8ab4f8;
     --desc-title: #e0d44a;
     --gpio-i2c0: #0099ff;
@@ -588,6 +594,190 @@ input.invalid { color: var(--danger); border-color: var(--danger); }
 
 .welcome-text { color: var(--muted); max-width: 32rem; margin: 0 0 6px; }
 .big-button { min-height: 46px; padding: 0 30px; font-size: 1.05rem; border-radius: 10px; }
+
+.welcome-home {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.welcome-home[hidden] { display: none; }
+
+/* Second action under Connect: same width, quieter. */
+.secondary-button {
+    min-height: 38px;
+    padding: 0 22px;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--muted);
+    border-color: var(--border-strong);
+}
+
+.secondary-button:hover:not(:disabled) { color: var(--text); border-color: var(--accent); }
+
+/* ----- Polling rate test (welcome area) --------------------------------------------- */
+
+.welcome.testing {
+    align-items: stretch;
+    justify-content: flex-start;
+    text-align: left;
+    padding: 16px;
+    overflow: auto;
+}
+
+.polling-test {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: 1100px;
+    min-height: 100%;
+    margin: 0 auto;
+    background: var(--bg);
+}
+
+
+.polling-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.polling-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.polling-title .icon { width: 24px; height: 24px; color: var(--accent); }
+
+.polling-tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.polling-tool { min-height: 34px; padding: 0 14px; }
+.polling-hint { margin: 0; color: var(--muted); font-size: 0.92rem; }
+.polling-note { margin: 0; color: var(--warn); font-size: 0.92rem; }
+
+.polling-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+    border: 1px dashed var(--border-strong);
+    border-radius: 12px;
+    background: var(--surface);
+    cursor: crosshair;
+    user-select: none;
+    outline: none;
+}
+
+.polling-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 4px 0;
+}
+
+.polling-top {
+    display: grid;
+    grid-template-columns: minmax(200px, 260px) 1fr;
+    align-items: center;
+    gap: 12px;
+}
+
+@media (max-width: 720px) {
+    .polling-top { grid-template-columns: 1fr; }
+}
+
+.polling-current { display: flex; align-items: baseline; gap: 8px; }
+
+.polling-current-value {
+    font-size: clamp(2.8rem, 7vw, 4.6rem);
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+}
+
+.polling-current-unit { font-size: 1.4rem; font-weight: 600; color: var(--muted); }
+
+.polling-state {
+    /* Always two lines high: the longer messages wrap, and the layout must not move. */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-height: calc(2 * 1.3em + 8px);
+    max-width: 100%;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    line-height: 1.3;
+    text-align: center;
+    color: var(--muted);
+    background: var(--surface-3);
+}
+
+.polling-state[data-kind="ok"] { color: var(--accent); background: var(--accent-soft); }
+.polling-state[data-kind="warn"] { color: var(--warn); }
+
+.polling-tiles {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.polling-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 10px;
+    border-radius: var(--radius);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+}
+
+.polling-tile-label { font-size: 0.78rem; color: var(--muted); }
+.polling-tile-row { display: flex; align-items: baseline; gap: 4px; }
+.polling-tile-value { font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.polling-tile-unit { font-size: 0.8rem; color: var(--faint); }
+.polling-hint strong { color: var(--text); font-weight: 600; }
+
+/* Average: green good, orange middle, red bad (thresholds in polling-test.js). */
+.polling-tile[data-level="ok"] { border-color: color-mix(in srgb, var(--ok) 55%, var(--border)); }
+.polling-tile[data-level="ok"] .polling-tile-value { color: var(--ok); }
+.polling-tile[data-level="warn"] { border-color: color-mix(in srgb, var(--mid) 55%, var(--border)); }
+.polling-tile[data-level="warn"] .polling-tile-value { color: var(--mid); }
+.polling-tile[data-level="bad"] { border-color: color-mix(in srgb, var(--danger) 55%, var(--border)); }
+.polling-tile[data-level="bad"] .polling-tile-value { color: var(--danger); }
+
+.polling-charts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px;
+    flex: 1;
+    min-height: 180px;
+}
+
+.polling-figure {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0;
+    min-height: 0;
+}
+
+.polling-figure figcaption { font-size: 0.8rem; color: var(--muted); }
+.polling-chart-box { position: relative; flex: 1; min-height: 160px; }
+/* Absolute: the canvas size follows the box and never pushes it (no growth at each redraw). */
+.polling-chart { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
 .spinner {
     width: 30px;

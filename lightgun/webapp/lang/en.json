@@ -688,5 +688,22 @@
     "Some LEDs may leave the view even with the gun upright. Aim may be less precise or tracking may be lost.": "Some LEDs may leave the view even with the gun upright. Aim may be less precise or tracking may be lost.",
     "The placement prioritises aiming precision, then LED visibility. You can calibrate farther back without moving the LEDs.": "The placement prioritises aiming precision, then LED visibility. You can calibrate farther back without moving the LEDs.",
     "Showing the first usable placement farther back. The colour refers to your selected distance.": "Showing the first usable placement farther back. The colour refers to your selected distance.",
-    "No tested placement meets the visibility checks within 10 m.": "No tested placement meets the visibility checks within 10 m."
+    "No tested placement meets the visibility checks within 10 m.": "No tested placement meets the visibility checks within 10 m.",
+    "Measure Polling Rate": "Measure Polling Rate",
+    "Polling Rate Test": "Polling Rate Test",
+    "Reset": "Reset",
+    "Back": "Back",
+    "Aim the lightgun inside this area and keep moving it. The lightgun must be in Run mode (not connected to the App) with mouse output.": "Aim the lightgun inside this area and keep moving it. The lightgun must be in Run mode (not connected to the App) with mouse output.",
+    "Minimum (last 10 s)": "Minimum (last 10 s)",
+    "Maximum (last 10 s)": "Maximum (last 10 s)",
+    "Measuring": "Measuring",
+    "Touch and pen are not measured: use the lightgun": "Touch and pen are not measured: use the lightgun",
+    "Waiting for the lightgun: move it inside the area": "Waiting for the lightgun: move it inside the area",
+    "Aim outside the area": "Aim outside the area",
+    "Paused: keep moving the lightgun": "Paused: keep moving the lightgun",
+    "This browser does not give the single reports (coalesced events): the rate measured is limited by the refresh of the display. Use Chrome or Edge.": "This browser does not give the single reports (coalesced events): the rate measured is limited by the refresh of the display. Use Chrome or Edge.",
+    "Average (last 3 s)": "Average (last 3 s)",
+    "Rate over the last %1 s of movement (line: %2 fps of the camera)": "Rate over the last %1 s of movement (line: %2 fps of the camera)",
+    "Expected value with OpenFIRE: about %1 Hz, the frame rate of the camera (with the USB cable and with the dongle).": "Expected value with OpenFIRE: about %1 Hz, the frame rate of the camera (with the USB cable and with the dongle).",
+    "Rate of the last 3 s of movement: green from 180 Hz, orange from 60 Hz, red below. Indicative thresholds.": "Rate of the last 3 s of movement: green from 180 Hz, orange from 60 Hz, red below. Indicative thresholds."
 }
