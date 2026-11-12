@@ -174,6 +174,8 @@ When installing, choose the file for your **board and its flash/PSRAM variant**;
 
   - **Waking up:** **pull the trigger**. The gun reconnects to the same dongle in a moment, and this pull is not sent to the game as a shot. Other buttons and the wireless pedal do not wake it. If the dongle no longer answers (computer switched off, dongle unplugged or restarted), the gun restarts as at power-on and searches for it again.
 
+- **Wireless transmit power** (**Gun Settings → Input / Output → Wireless transmit power:**, shown only with **View > Show Unsafe Settings**): the power with which the gun transmits to the dongle and the pedal in wireless mode. Choose one of the levels the ESP32-S3 radio really uses: 2, 5, 7, 8.5, 11, 13, 14, 15, **16.5** (default), 18 or 20 dBm. Lower uses less battery but reduces the range; higher increases the range. Save, then restart the gun: it takes effect at the next start. On battery it is also the power of the **OpenFIRE_Config** network, which uses the same radio.
+
 ## First-time Setup
 After a new installation, or a clean installation, the gun has no calibration yet: it waits for the first one and does not move the pointer; the board's RGB LED, if present, blinks orange.
 
@@ -617,6 +619,8 @@ Per l'installazione scegli il file della tua **scheda e della sua variante flash
   - **In standby:** la radio e il display OLED si spengono, rumble e solenoide restano fermi, e il LED RGB integrato della scheda (o, se presente, il primo LED della striscia NeoPixel esterna) lampeggia debolmente in ambra ogni 3 secondi.
 
   - **Risveglio:** **premi il grilletto**. La pistola si ricollega in un attimo allo stesso dongle, e questa pressione non arriva al gioco come sparo. Gli altri pulsanti e il pedale wireless non la risvegliano. Se il dongle non risponde più (computer spento, dongle scollegato o riavviato), la pistola riparte come all'accensione e lo cerca di nuovo.
+
+- **Potenza di trasmissione wireless** (**Impostazioni Gun → Input / Output → Potenza di trasmissione wireless:**, visibile solo con **Visualizza > Mostra Impostazioni Non Sicure**): la potenza con cui la pistola trasmette al dongle e al pedale in modalità wireless. Scegli uno dei livelli che la radio dell'ESP32-S3 usa davvero: 2, 5, 7, 8,5, 11, 13, 14, 15, **16,5** (predefinito), 18 o 20 dBm. Più bassa consuma meno batteria ma riduce la portata; più alta aumenta la portata. Salva, poi riavvia la pistola: vale dal prossimo avvio. A batteria è anche la potenza della rete **OpenFIRE_Config**, che usa la stessa radio.
 
 <a id="prima-configurazione-italiano"></a>
 

@@ -203,6 +203,9 @@
             if (this.shared.lensValueUnset !== undefined)
                 for (const name of ['cameraLensK1', 'cameraLensK2', 'cameraLensFocal'])
                     if (T[name] !== undefined) settings[T[name]] = this.shared.lensValueUnset;
+            // The wireless transmit power a firmware does not send stays the default, as in the firmware.
+            if (T.espnowTxPower !== undefined && this.shared.espnowTxPowerDefault !== undefined)
+                settings[T.espnowTxPower] = this.shared.espnowTxPowerDefault;
 
             return {
                 toggles: new Array(this.boolTypesCount).fill(false),

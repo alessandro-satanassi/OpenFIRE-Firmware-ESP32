@@ -179,6 +179,21 @@ public:
     static constexpr int standbyMinutesChoices[] = { 0, 5, 15, 30, 60 };
     static constexpr int standbyMinutesDefault = 15;
 
+    // Wireless (ESP-NOW) transmit power of the gun (settings[espnowTxPower]), in units of 0.25 dBm as
+    // esp_wifi_set_max_tx_power() takes it. Only the levels the ESP32-S3 radio really uses: it rounds any
+    // other value down to one of them (2, 5, 7, 8.5, 11, 13, 14, 15, 16.5, 18, 20 dBm). The default, 68, is
+    // the value used so far (WIFI_POWER_17dBm): the radio makes it 16.5 dBm. The Apps offer only these
+    // values; any other saved value means espnowTxPowerDefault. It takes effect at the next start.
+    // /
+    // Potenza di trasmissione wireless (ESP-NOW) della pistola (settings[espnowTxPower]), in unita' di
+    // 0,25 dBm come la vuole esp_wifi_set_max_tx_power(). Solo i livelli che la radio dell'ESP32-S3 usa
+    // davvero: ogni altro valore lo arrotonda per difetto a uno di questi (2, 5, 7, 8,5, 11, 13, 14, 15,
+    // 16,5, 18, 20 dBm). Il predefinito, 68, e' il valore usato finora (WIFI_POWER_17dBm): la radio lo
+    // porta a 16,5 dBm. Le App offrono solo questi valori; ogni altro valore salvato vale
+    // espnowTxPowerDefault. Vale dal prossimo avvio.
+    static constexpr int espnowTxPowerChoices[] = { 8, 20, 28, 34, 44, 52, 56, 60, 68, 72, 80 };
+    static constexpr int espnowTxPowerDefault = 68;
+
     // Lens values refined for the fitted camera (settings[cameraLensK1/K2/Focal], WebApp "Refine lens"):
     // the bits of a float. lensValueUnset (all ones, a NaN) keeps the value of the camera record,
     // and every lens value returns to it when the camera model changes.
@@ -262,6 +277,7 @@ public:
         cameraLensK1,       // lens radial K1 refined for the fitted camera (float bits, lensValueUnset = camera record)
         cameraLensK2,       // lens radial K2 refined for the fitted camera (float bits, lensValueUnset = camera record)
         cameraLensFocal,    // lens focal ratio refined for the fitted camera (float bits, lensValueUnset = camera record)
+        espnowTxPower,      // wireless (ESP-NOW) transmit power, one of espnowTxPowerChoices (0.25 dBm)
         // Add here
         settingsTypesCount
     } settingsTypes_e;
@@ -289,6 +305,7 @@ public:
         {"CamLensK1",           cameraLensK1        },
         {"CamLensK2",           cameraLensK2        },
         {"CamLensFocal",        cameraLensFocal     },
+        {"EspNowTxPower",       espnowTxPower       },
     };
 
     enum {

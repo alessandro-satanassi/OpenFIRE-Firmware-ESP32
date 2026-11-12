@@ -166,6 +166,13 @@
                     "whatsThis": "<html><head/><body><p>Power saving, only when the lightgun works <span style=\" font-weight:700;\">wireless on battery.</span></p><p>After the selected time of inactivity, the lightgun goes into standby. Pull the trigger to resume.</p><p><span style=\" font-style:italic;\">Disabled</span> keeps it always awake.</p><p><span style=\" font-weight:700; font-style:italic;\">Default:</span><span style=\" font-style:italic;\"> 15 minutes</span></p></body></html>",
                     "accessibleName": "Wireless Power Saving"
             },
+            "label_espnowTxPower": {
+                    "text": "Wireless transmit power:"
+            },
+            "espnowTxPowerBox": {
+                    "whatsThis": "<html><head/><body><p>Power with which the lightgun transmits to the dongle and the pedal in <span style=\" font-weight:700;\">WIRELESS WI-FI</span> mode.</p><p>Lower uses less battery but reduces the range; higher increases the range.</p><p>It takes effect at the next start of the lightgun.</p><p><span style=\" font-weight:700; font-style:italic;\">Default:</span><span style=\" font-style:italic;\"> 16.5 dBm</span></p></body></html>",
+                    "accessibleName": "Wireless Transmit Power"
+            },
             "lowButtonsToggle": {
                     "whatsThis": "<html><head/><body><p>This setting determines how <span style=\" font-style:italic;\">Button A</span> &amp; <span style=\" font-style:italic;\">Button B</span> behaves during normal use.</p><p><span style=\" font-weight:700;\">When Enabled, </span><span style=\" font-style:italic;\">Button A</span> &amp; <span style=\" font-style:italic;\">Button B</span> will perform different functions when aiming off-screen, instead actuating the functions of <span style=\" font-style:italic;\">Start</span> &amp; <span style=\" font-style:italic;\">Select</span> respectively.<br/><span style=\" font-weight:700;\">When Disabled,</span> all buttons will perform the same functions, regardless of aiming off-screen or not.</p><p>Enabled is recommended for lightguns <span style=\" font-weight:700;\">with two or less sub buttons.</span></p></body></html>",
                     "accessibleName": "Low Buttons Mode Toggle",
@@ -424,11 +431,28 @@
         controls.standbyMinutesBox = standbyMinutesBox;
         track(standbyMinutesBox, 'standbyMinutesBox');
 
+        // Wireless (ESP-NOW) transmit power: only the levels of the shared list (0.25 dBm), shown with
+        // Show Unsafe Settings. The label is the power the radio really uses: it rounds a value down to
+        // one of RADIO_LEVELS (esp_wifi_set_max_tx_power() of ESP-IDF), so 68, the value used so far
+        // (WIFI_POWER_17dBm) and the default, is 16.5 dBm.
+        const RADIO_LEVELS = [8, 20, 28, 34, 44, 52, 56, 60, 66, 72, 80];
+        const radioDbm = (value) => Math.max(...RADIO_LEVELS.filter((level) => level <= value)) / 4;
+        const espnowTxPowerBox = select(state.S.espnowTxPowerChoices.map((value) =>
+            ({ value, label: t('%1 dBm', radioDbm(value).toLocaleString(OF.i18n.currentLang, { maximumFractionDigits: 2 })) })),
+            state.S.espnowTxPowerDefault,
+            (value) => { state.setSetting(T.espnowTxPower, Number(value)); app.refresh(); },
+            { attrs: { 'aria-label': text('espnowTxPowerBox', 'accessibleName') } });
+        controls.espnowTxPowerBox = espnowTxPowerBox;
+        track(espnowTxPowerBox, 'espnowTxPowerBox');
+        const espnowTxPower = el('div', { class: 'row center wrap espnow-tx-power' },
+            el('label', { class: 'field-label', text: text('label_espnowTxPower', 'text') }), espnowTxPowerBox);
+
         const input = fieldset('inputBox',
             el('div', { class: 'row center' }, toggle('lowButtonsToggle', B.lowButtonsMode)),
             el('div', { class: 'row center' }, toggle('pedalWirelessToggle', B.pedalWireless)),
             el('div', { class: 'row center wrap' },
                 el('label', { class: 'field-label', text: text('label_standbyMinutes', 'text') }), standbyMinutesBox),
+            espnowTxPower,
             el('div', { class: 'row center wrap' },
                 el('label', { class: 'field-label', text: text('label_bootOutput', 'text') }), bootOutputModeBox));
         const uiux = fieldset('uiuxBox',
@@ -521,6 +545,7 @@
             controls.solenoidFFBox.disabled = !state.pinMapped(E.solenoidPin);
             solenoidTemp.disabled = !state.pinMapped(E.tempPin);
             solenoidTemp.hidden = !app.showUnsafe;
+            espnowTxPower.hidden = !app.showUnsafe;
             neopixels.disabled = !state.pinMapped(E.neoPixel);
             OF.UI.setEnabled(controls.commonAnodeToggle, state.pinMapped(E.ledR) && state.pinMapped(E.ledG) && state.pinMapped(E.ledB));
             i2c.disabled = !(state.pinMapped(E.periphSDA) && state.pinMapped(E.periphSCL));
@@ -548,6 +573,7 @@
 
             controls.bootOutputModeBox.value = String(settings[T.bootOutputMode]);
             controls.standbyMinutesBox.value = String(settings[T.standbyMinutes]);
+            controls.espnowTxPowerBox.value = String(settings[T.espnowTxPower]);
 
             controls.customLEDstaticSpinbox.prefix = t(state.toggle(B.invertStaticPixels) ? 'Last ' : 'First ');
             const staticCount = settings[T.customLEDstatic];

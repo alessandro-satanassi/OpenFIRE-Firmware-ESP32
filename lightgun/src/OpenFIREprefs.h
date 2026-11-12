@@ -199,6 +199,7 @@ public:
         OF_Const::lensValueUnset,   // lens K1: camera record value
         OF_Const::lensValueUnset,   // lens K2: camera record value
         OF_Const::lensValueUnset,   // lens focal ratio: camera record value
+        OF_Const::espnowTxPowerDefault, // wireless (ESP-NOW) transmit power, 0.25 dBm (68: 16.5 dBm)
     };
 
     typedef struct USBMap_s {

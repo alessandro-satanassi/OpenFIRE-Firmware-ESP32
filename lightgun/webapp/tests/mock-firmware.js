@@ -214,6 +214,7 @@ class MockFirmware {
         const sv = new DataView(this.settings.buffer);
         defaults.forEach((value, i) => sv.setUint32(i * 4, value, true));
         sv.setUint32(S.settingsTypes_e.standbyMinutes * 4, S.standbyMinutesDefault, true);
+        sv.setUint32(S.settingsTypes_e.espnowTxPower * 4, S.espnowTxPowerDefault, true);
         for (const name of ['cameraLensK1', 'cameraLensK2', 'cameraLensFocal'])
             if (S.settingsTypes_e[name] !== undefined) sv.setUint32(S.settingsTypes_e[name] * 4, S.lensValueUnset, true);
 

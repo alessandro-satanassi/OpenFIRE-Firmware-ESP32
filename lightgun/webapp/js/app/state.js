@@ -192,6 +192,10 @@
             const standby = T.standbyMinutes;
             if (standby !== undefined && standby < settings.length && !this.S.standbyMinutesChoices.includes(settings[standby]))
                 settings[standby] = this.S.standbyMinutesDefault;
+            // Wireless transmit power: the same, a value not in the shared list is the default.
+            const txPower = T.espnowTxPower;
+            if (txPower !== undefined && txPower < settings.length && !this.S.espnowTxPowerChoices.includes(settings[txPower]))
+                settings[txPower] = this.S.espnowTxPowerDefault;
             const toggles = config.toggles;
             if (toggles[B.solenoid] && toggles[B.rumbleFF]) toggles[B.solenoid] = false;
             if (!(toggles[B.solenoid] || (toggles[B.rumble] && toggles[B.rumbleFF]))) toggles[B.autofire] = false;

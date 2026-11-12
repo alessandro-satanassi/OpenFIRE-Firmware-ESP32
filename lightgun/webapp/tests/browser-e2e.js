@@ -272,9 +272,26 @@ async function installFakeSerial(context, sim) {
     await intensity.fill('128');
     await intensity.press('Tab');
     ok(await dev.locator('text=Temperature Warning Threshold:').isHidden(), 'unsafe settings hidden by default');
+    ok(await dev.locator('#tab-settings .espnow-tx-power').isHidden(), 'wireless transmit power hidden by default');
     await dev.getByRole('button', { name: 'View', exact: true }).click();
     await dev.click('.menu-item:has-text("Show Unsafe Settings")');
     ok(await dev.locator('text=Temperature Warning Threshold:').isVisible(), 'View > Show Unsafe Settings shows the temperature thresholds');
+    // Wireless (ESP-NOW) transmit power: with the unsafe settings, in Input / Output under the standby.
+    const txPower = dev.locator('#tab-settings .espnow-tx-power select');
+    ok(await txPower.isVisible() && (await dev.locator('#tab-settings .espnow-tx-power').innerText()).includes('Wireless transmit power:'),
+        'View > Show Unsafe Settings shows the wireless transmit power');
+    ok(JSON.stringify(await txPower.locator('option').allInnerTexts()) ===
+        JSON.stringify(['2 dBm', '5 dBm', '7 dBm', '8.5 dBm', '11 dBm', '13 dBm', '14 dBm', '15 dBm', '16.5 dBm', '18 dBm', '20 dBm']),
+        'the 11 levels of the radio: ' + (await txPower.locator('option').allInnerTexts()).join(', '));
+    ok(await txPower.inputValue() === '68' && (await txPower.locator('option:checked').innerText()) === '16.5 dBm',
+        'default: 68, the value used so far (16.5 dBm)');
+    await txPower.hover();
+    ok(await waitFor(async () => (await dev.locator('#tab-settings .desc-text').innerText()).includes('Default: 16.5 dBm')),
+        'the help says the default: 16.5 dBm');
+    ok(await dev.locator('#tab-settings .espnow-tx-power').evaluate((row) =>
+        row.closest('fieldset').contains(document.querySelector('#tab-settings select[aria-label="Wireless Power Saving"]'))),
+        'in the same box as the wireless standby');
+    await txPower.selectOption('44');
     await dev.click('text=Advanced View');
     await dev.fill('.text-input', 'Gun Ω');
     ok((await dev.inputValue('.text-input')) !== 'Gun Ω', 'product name refuses characters outside Latin-1');
@@ -311,6 +328,7 @@ async function installFakeSerial(context, sim) {
     ok((await saveLabel(dev)) === '[Nothing To Save]', 'nothing to save after saving');
     ok(fw.toggles[0] === 1 && fw.pins[E.btnPedal] === 0, 'firmware received the custom pins');
     ok(fw.getSetting(0) === 128, 'firmware received rumble intensity');
+    ok(fw.getSetting(fw.S.settingsTypes_e.espnowTxPower) === 44, 'firmware received the wireless transmit power (11 dBm)');
     ok(fw.getProfileName(1) === 'Living Room', 'firmware received the profile name');
     ok(fw.getUSB().name === 'My Gun', 'firmware received the product name');
     ok((await dev.locator('.board-title').innerText()).startsWith('My Gun |'), 'title shows the saved name');

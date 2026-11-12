@@ -627,6 +627,13 @@ CheckBootRequests();
 
         // FASE 3: Solo se alla fine di tutto NON siamo montati, avviamo il wireless.
         if (!TinyUSBDevice.mounted()) {
+            // EN: Transmit power saved in the settings, used by begin() and by the standby that turns
+            //     the radio back on. Only the listed levels: anything else means the default.
+            // IT: Potenza di trasmissione salvata nelle impostazioni, usata da begin() e dallo standby
+            //     quando riaccende la radio. Solo i livelli in lista: ogni altro valore vale il predefinito.
+            espnow_wifi_power = OF_Const::espnowTxPowerDefault;
+            for(const int choice : OF_Const::espnowTxPowerChoices)
+                if(OF_Prefs::settings[OF_Const::espnowTxPower] == (uint32_t)choice) espnow_wifi_power = (uint8_t)choice;
             SerialWireless.init_wireless();
             SerialWireless.begin();
             if (lastDongleSave) {
