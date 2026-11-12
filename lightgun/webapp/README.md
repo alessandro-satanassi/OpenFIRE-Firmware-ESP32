@@ -91,7 +91,7 @@ The same page is used by the gun, the site and Tauri; differences:
 | Board Previews / View Compatible Boards | hidden (only its own board is included) | all boards |
 | Measure Polling Rate | not included (`SITE_ONLY_SCRIPTS`: over http the browser gives one movement per display frame, not every report) | in the menu bar, before connecting |
 
-View menu: `Show Unsafe Settings` (solenoid temperature thresholds, and `Edit NC Inputs` in Board Layout) and the theme (system, light, dark).
+View menu: `Show Unsafe Settings` (solenoid temperature thresholds, wireless transmit power, and `Edit NC Inputs` in Board Layout) and the theme (system, light, dark).
 The theme is remembered by the browser; `Show Unsafe Settings` starts off every time, like in the Qt App.
 The fullscreen screens use the browser fullscreen mode: ESC works like in the Qt App (leaving the
 browser fullscreen mode in any other way also closes the screen). When the browser refuses fullscreen

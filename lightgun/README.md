@@ -204,6 +204,7 @@ When the gun runs on battery and plays through the dongle, it goes into standby 
 * In standby the radio and the OLED display are off, and the board's LED blinks faintly amber every 3 seconds.
 * **Pull the trigger** to resume: the gun reconnects to the same dongle and this pull is not sent as a shot.
 * If the dongle no longer answers (for example the computer was switched off), the gun restarts as at power-on.
+* **Transmit power:** with **View > Show Unsafe Settings**, **Gun Settings → Input / Output → Wireless transmit power:** sets the power with which the gun transmits to the dongle and the pedal, from 2 to 20 dBm (default **16.5 dBm**). Lower saves battery but reduces the range. It takes effect at the next start.
 * Details in the [operating manual](src/README.md#camera-display-and-startup-settings).
 
 ---
@@ -442,6 +443,7 @@ Quando la pistola funziona a batteria e gioca tramite il dongle, entra in standb
 * In standby la radio e il display OLED sono spenti, e il LED della scheda lampeggia debolmente in ambra ogni 3 secondi.
 * **Premi il grilletto** per riprendere: la pistola si ricollega allo stesso dongle e questa pressione non viene inviata come sparo.
 * Se il dongle non risponde più (per esempio il computer è stato spento), la pistola riparte come all'accensione.
+* **Potenza di trasmissione:** con **Visualizza > Mostra Impostazioni Non Sicure**, **Impostazioni Gun → Input / Output → Potenza di trasmissione wireless:** imposta la potenza con cui la pistola trasmette al dongle e al pedale, da 2 a 20 dBm (predefinito **16,5 dBm**). Più bassa consuma meno batteria ma riduce la portata. Vale dal prossimo avvio.
 * Dettagli nel [manuale operativo](src/README.md#telecamera-display-e-impostazioni-di-avvio).
 
 ---
