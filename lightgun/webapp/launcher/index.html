@@ -14,9 +14,9 @@
     the reading of the first packet are the same files the app uses, so there is one
     implementation of the protocol and not two.
 
-    Under the button, "Measure Polling Rate" shows the polling rate test of the app in the
-    panel. It is the app's own test: its script is in the list below, its texts are those of
-    webapp/lang/*.json and its style is the one of webapp/style.css. The build writes those
+    "Measure Polling Rate", in the middle of the top bar, shows the polling rate test of the
+    app in the panel. It is the app's own test: its script is in the list below, its texts
+    are those of webapp/lang/*.json and its style is the one of webapp/style.css. The build writes those
     rules into this page, in place of polling-test.css (written from the same rules for the
     unbundled page): nothing of the test is copied here by hand.
 
@@ -256,20 +256,13 @@ main { flex: 1; width: 100%; max-width: 920px; margin: 0 auto; padding: 30px 16p
 .connect[disabled] { opacity: 0.6; cursor: default; filter: none; transform: none; }
 .connect .icon { width: 22px; height: 22px; }
 
-/* Il test del polling rate, sotto al pulsante: largo uguale, piu' discreto. */
-.buttons { display: inline-flex; flex-direction: column; align-items: stretch; gap: 12px; }
-.buttons .connect { justify-content: center; }
-.secondary {
-    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    height: 40px; padding: 0 20px;
-    font-size: 0.95rem;
-    color: var(--muted); background: transparent;
-    border: 1px solid var(--border-strong); border-radius: 10px; cursor: pointer;
-    transition: color 0.14s ease, border-color 0.14s ease;
-}
-.secondary:hover { color: var(--text); border-color: var(--accent); }
-.secondary .icon { width: 18px; height: 18px; }
-.secondary[hidden] { display: none; }
+/* Il test del polling rate, nella barra in alto: al centro dello spazio libero fra
+   il marchio e i comandi, come nell'app. Su un telefono resta solo l'icona. */
+.measure-button { font-size: 13px; }
+.measure-button .icon { width: 17px; height: 17px; color: var(--accent); }
+.measure-button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.measure-button[disabled] { opacity: 0.6; cursor: default; }
+.measure-button[hidden] { display: none; }
 
 .state { margin: 18px auto 0; min-height: 1.5em; max-width: 52ch; color: var(--muted); line-height: 1.5; }
 .state.bad { color: var(--danger); }
@@ -285,12 +278,19 @@ main { flex: 1; width: 100%; max-width: 920px; margin: 0 auto; padding: 30px 16p
    style.css). Qui ci sono solo il posto che occupa nel pannello e i pulsanti, che
    nell'app prendono l'aspetto comune a tutti i pulsanti. */
 main { transition: max-width 0.14s ease; }
-body.polling-on main { max-width: 1100px; }
+/* Largo quanto nell'app (16 px dal bordo della finestra, al massimo 1100 px): margini
+   del pannello piu' stretti ai lati, solo mentre il test e' aperto. */
+body.polling-on main { max-width: 1132px; padding-left: 8px; padding-right: 8px; }
+body.polling-on .panel { padding-left: 7px; padding-right: 7px; }
 body.polling-on .hero, body.polling-on .versions { display: none; }
+/* Alto quanto nell'app: il pannello occupa lo spazio fra la barra e il pie' di pagina
+   e il test lo riempie, cosi' cresce e cala con la finestra come quello dell'app. */
+body.polling-on main { display: flex; flex-direction: column; padding-bottom: 40px; }
+body.polling-on .panel { flex: 1; display: flex; flex-direction: column; }
+body.polling-on .polling-host { flex: 1; display: flex; flex-direction: column; }
 .polling-host { padding: 24px 0 4px; }
 .polling-host[hidden] { display: none; }
-.polling-host .polling-test { background: transparent; min-height: 0; }
-.polling-host .polling-area { min-height: 380px; }
+.polling-host .polling-test { flex: 1; background: transparent; min-height: 0; }
 .polling-tool {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     border: 1px solid var(--border); border-radius: 6px;
@@ -356,6 +356,7 @@ footer a:hover { text-decoration: underline; }
 
 @media (max-width: 560px) {
     .topbar { padding: 6px 10px; gap: 6px; }
+    .measure-label { display: none; }   /* solo l'icona: il nome e' nel suggerimento */
     .brand-name { font-size: 0.88rem; }
     .hero { padding: 32px 0 24px; }
     main { padding: 20px 12px 36px; }
@@ -378,6 +379,8 @@ footer a:hover { text-decoration: underline; }
         <span class="brand-name">OpenFIRE ESP32</span>
     </a>
     <span class="spacer"></span>
+    <button class="control measure-button" id="polling-open" type="button" aria-pressed="false" hidden><span class="measure-label" id="polling-label"></span></button>
+    <span class="spacer"></span>
     <span class="controls"></span>
 </header>
 
@@ -392,13 +395,10 @@ footer a:hover { text-decoration: underline; }
         <p class="compat" id="compat"></p>
 
         <div class="actions">
-            <div class="buttons">
-                <button class="connect" id="connect" type="button">
-                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 3.5v6M16.5 3.5v6M5 9.5h14v3a7 7 0 0 1-5 6.7v4.3h-4V19.2a7 7 0 0 1-5-6.7z"/></svg>
-                    <span id="connect-label"></span>
-                </button>
-                <button class="secondary" id="polling-open" type="button" hidden><span id="polling-label"></span></button>
-            </div>
+            <button class="connect" id="connect" type="button">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 3.5v6M16.5 3.5v6M5 9.5h14v3a7 7 0 0 1-5 6.7v4.3h-4V19.2a7 7 0 0 1-5-6.7z"/></svg>
+                <span id="connect-label"></span>
+            </button>
 
             <div class="state" id="state" role="status" aria-live="polite"></div>
             <div class="more"><button type="button" id="show-versions"></button></div>

@@ -16,7 +16,7 @@
         { "latest": "6.2",
           "versions": [ { "id": "6.2", "label": "6.2.0", "type": "stable" } ] }
 
-    Under the button, "Measure Polling Rate" turns the panel into the polling rate test of
+    "Measure Polling Rate", in the top bar, turns the panel into the polling rate test of
     the app (js/app/polling-test.js, joined into this page): see "The polling rate test" below.
 
     ADDING A LANGUAGE: copy the 'en' block of STRINGS below, change the code and translate.
@@ -202,6 +202,7 @@
         host.appendChild(pollingTest.root);
         root.document.body.classList.add('polling-on');
         host.hidden = false;
+        byId('polling-open').setAttribute('aria-pressed', 'true');
         pollingTest.start();
     }
 
@@ -213,6 +214,7 @@
         pollingTest = null;
         byId('polling-host').hidden = true;
         root.document.body.classList.remove('polling-on');
+        byId('polling-open').setAttribute('aria-pressed', 'false');
         if (!rebuilding) byId('polling-open').focus();
     }
 
@@ -478,6 +480,8 @@
         if (!port) return;                       // the chooser was closed: nothing to say
 
         button.disabled = true;
+        // While the version is read the test does not open: the page is about to change.
+        byId('polling-open').disabled = true;
         tell(() => say(t('reading')));
         try {
             const answer = await readVersion(port);
@@ -512,6 +516,7 @@
             root.location.href = 'v/' + encodeURIComponent(entry.id) + '/' + suffix();
         } finally {
             button.disabled = false;
+            byId('polling-open').disabled = false;
         }
     }
 
@@ -531,6 +536,7 @@
         }
         byId('connect-label').textContent = t('connect');
         byId('polling-label').textContent = ui.t('Measure Polling Rate');
+        byId('polling-open').title = ui.t('Measure Polling Rate');
         byId('show-versions').textContent = t('showAll');
         byId('footer').textContent = t('footer');
 
@@ -570,7 +576,8 @@
         const polling = byId('polling-open');
         if (OF.PollingTest && OF.i18n) {
             polling.insertBefore(ui.icon('gauge'), polling.firstChild);
-            polling.addEventListener('click', () => openPollingTest());
+            // Pressed again, it closes the test (as Back does), like in the app.
+            polling.addEventListener('click', () => (pollingTest ? closePollingTest() : openPollingTest()));
             polling.hidden = false;
         }
         byId('show-versions').addEventListener('click', async () => {

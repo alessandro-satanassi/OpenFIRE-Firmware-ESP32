@@ -32,7 +32,7 @@ js/app/tab-*.js         Board Layout, Button Mapping, Gun Settings, Calibration 
 js/app/fullscreen.js    calibration, IR emitter alignment and IR camera test screens
 js/app/emitter-alignment.js  fullscreen placement controls, physical measurements and markers
 js/app/lensfit-window.js  lens refinement screen (Gun Settings, camera, "Refine lens...")
-js/app/polling-test.js  polling rate test of the welcome screen ("Measure Polling Rate", before connecting):
+js/app/polling-test.js  polling rate test of the welcome screen ("Measure Polling Rate" in the menu bar, before connecting):
                         rate of the HID reports of the gun in Run mode (OF.PollingStats has no DOM)
 js/app/testfont.js      8x8 bitmap typeface of those screens (from the Qt App)
 js/app/windows.js       Boards Previewer and About
@@ -87,7 +87,7 @@ The same page is used by the gun, the site and Tauri; differences:
 
 | | lightgun page | site / Tauri |
 | --- | --- | --- |
-| connection | automatic WebSocket, reconnects by itself | `Connect` button (the browser's Web Serial port chooser) |
+| connection | automatic WebSocket, reconnects by itself; after `Disconnect` it waits for `Connect` (no port to choose) | `Connect` button (the browser's Web Serial port chooser) |
 | Board Previews / View Compatible Boards | hidden (only its own board is included) | all boards |
 
 View menu: `Show Unsafe Settings` (solenoid temperature thresholds, and `Edit NC Inputs` in Board Layout) and the theme (system, light, dark).

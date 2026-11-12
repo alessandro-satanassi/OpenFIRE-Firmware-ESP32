@@ -329,6 +329,12 @@ input.invalid { color: var(--danger); border-color: var(--danger); }
 
 .menubar .spacer { flex: 1; }
 
+/* Measure Polling Rate: in the middle of the free space, between a spacer on each side.
+   Highlighted while the test is open; disabled while a gun is connected (button:disabled). */
+.measure-button { gap: 6px; margin: 0 6px; border-color: var(--border); }
+.measure-button .icon { width: 17px; height: 17px; color: var(--accent); }
+.measure-button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
 .lang-selector { min-height: 30px; font-size: 13px; }
 
 /* Theme: the icon of the theme in use, beside the language selector. */
@@ -603,18 +609,6 @@ input.invalid { color: var(--danger); border-color: var(--danger); }
 }
 
 .welcome-home[hidden] { display: none; }
-
-/* Second action under Connect: same width, quieter. */
-.secondary-button {
-    min-height: 38px;
-    padding: 0 22px;
-    border-radius: 10px;
-    background: transparent;
-    color: var(--muted);
-    border-color: var(--border-strong);
-}
-
-.secondary-button:hover:not(:disabled) { color: var(--text); border-color: var(--accent); }
 
 /* ----- Polling rate test (welcome area) --------------------------------------------- */
 
@@ -1496,6 +1490,8 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
     body { font-size: 14px; }
     .menubar { padding: 3px 4px; }
     .menu-button { padding: 0 7px; font-size: 13px; }
+    .measure-label { display: none; }    /* only the icon: the name is in the tooltip */
+    .measure-button { margin: 0 2px; }
     .board-title { font-size: 1.05rem; }
     .tab-content { padding: 10px 8px 14px; }
     .group { padding: 8px 10px 10px; }

@@ -160,10 +160,39 @@ async function installFakeSerial(context, sim) {
     await page.click('#tab-pins .pins-bottom .menu-button');
     ok(await page.locator('.device-bar').count() === 0, 'no device selector on the lightgun page');
     ok(await page.locator('.link-state.on').count() === 1, 'the lightgun page shows the plug as connected too');
-    ok(await page.locator('.disconnect-button').count() === 0, 'no Disconnect button on the lightgun page');
+    ok(await page.locator('.disconnect-button').isVisible(), 'Disconnect in the status bar of the lightgun page too');
+    ok(await page.locator('.measure-button').isDisabled(), 'polling rate test disabled while the lightgun page is docked');
     ok(await page.locator('.menu-button', { hasText: 'Board Previews' }).count() === 0, 'board previews hidden on the lightgun page');
     ok(sim.firmware.gunMode === 'docked' && sim.firmware.sessionActive, 'firmware docked');
     await shot(page, 'device-docked');
+
+    // Disconnect on the lightgun page: the gun goes back to Run mode and the page stays undocked
+    // (no automatic connection) until Connect, which docks again with no port to choose.
+    await page.click('.disconnect-button');
+    ok(await waitFor(async () => !(await loaded(page))), 'lightgun page: Disconnect undocks');
+    ok(await waitFor(() => !sim.firmware.sessionActive && sim.firmware.gunMode === 'run'), 'lightgun page: gun back to Run mode');
+    ok(await page.locator('.disconnect-button').isHidden(), 'lightgun page: Disconnect hidden once undocked');
+    const undockedSessions = sim.firmware.sessionCounter;
+    await sleep(4000);
+    ok(!(await loaded(page)) && sim.firmware.sessionCounter === undockedSessions, 'lightgun page: no automatic connection after Disconnect');
+    ok(await page.evaluate(() => !OF.app.connectButton.hidden && OF.app.reconnectButton.hidden && OF.app.spinner.hidden), 'lightgun page: Connect shown instead of the spinner');
+    ok((await page.locator('.welcome-text').innerText()).includes('Press Connect'), 'lightgun page: the welcome text says to press Connect');
+    ok(await page.locator('.measure-button').isEnabled(), 'polling rate test enabled after Disconnect');
+    await page.click('.measure-button');
+    ok(await page.locator('.welcome .polling-test').isVisible(), 'lightgun page: the polling rate test opens');
+    await shot(page, 'device-polling');
+    await page.click('.measure-button');
+    ok(await page.locator('.welcome .polling-test').count() === 0 && await page.evaluate(() => !OF.app.connectButton.hidden), 'lightgun page: closing the test shows Connect again');
+    await page.click('.measure-button');
+    await page.selectOption('.lang-selector', 'it');
+    ok(await page.locator('.welcome .polling-test').isVisible() && await page.locator('.measure-button').isEnabled(), 'lightgun page: language switch keeps the test open');
+    await page.click('.measure-button');
+    ok((await page.locator('.welcome-text').innerText()).includes('Premi Connetti'), 'lightgun page: the welcome text is translated');
+    await page.selectOption('.lang-selector', 'en');
+    await page.locator('.welcome button', { hasText: /^Connect$/ }).click();
+    ok(await waitFor(() => loaded(page)), 'lightgun page: Connect docks again');
+    ok(sim.firmware.sessionCounter > undockedSessions && sim.firmware.gunMode === 'docked', 'lightgun page: new firmware session after Connect');
+    ok(await page.locator('.measure-button').isDisabled(), 'polling rate test disabled again once docked');
     const s1 = sim.firmware.sessionCounter;
 
     sim.dropClient();
@@ -721,7 +750,29 @@ async function installFakeSerial(context, sim) {
     }) === 'italic', 'in italics, quietly');
     const verso = await compatBox.locator('a').count() ? await compatBox.locator('a').getAttribute('href') : '';
     ok(/OpenFIRE-ESP32-Tools/.test(verso), 'and points at the desktop App: ' + verso);
+    // Measure Polling Rate: in the top bar, in the middle of the space between the name and the controls.
+    const measure = home.locator('.topbar #polling-open');
+    ok(await measure.isVisible() && (await measure.innerText()).includes('Measure Polling Rate'), 'home: Measure Polling Rate in the top bar');
+    ok(await home.locator('.actions #polling-open').count() === 0, 'home: no longer under Connect');
+    ok(await home.evaluate(() => {
+        const box = (sel) => document.querySelector(sel).getBoundingClientRect();
+        const brand = box('.brand'), button = box('#polling-open'), controls = box('.topbar .controls');
+        const left = button.left - brand.right, right = controls.left - button.right;
+        return left > 0 && right > 0 && Math.abs(left - right) <= 2;
+    }), 'home: the button is centred between the name and the controls');
+    await measure.click();
+    ok(await home.locator('#polling-host .polling-test').isVisible() && await measure.getAttribute('aria-pressed') === 'true', 'home: the button opens the test');
+    // As tall as in the App: the test fills the window down to the footer, without scrolling.
+    ok(await home.evaluate(() => document.scrollingElement.scrollHeight <= innerHeight + 1 &&
+        document.querySelector('.polling-area').getBoundingClientRect().height > 500), 'home: the test fills the height of the window');
+    // As wide as in the App: 16 px from the sides of the window, at most 1100 px (after the widening transition).
+    ok(await waitFor(() => home.evaluate(() => Math.abs(document.querySelector('.polling-test').getBoundingClientRect().width -
+        Math.min(1100, document.documentElement.clientWidth - 32)) <= 1)), 'home: the test is as wide as in the App');
+    await measure.click();
+    ok(await home.locator('#polling-host .polling-test').count() === 0 && await home.locator('#connect').isVisible() &&
+        await measure.getAttribute('aria-pressed') === 'false', 'home: pressed again it closes the test');
     await home.selectOption('#lang-select', 'it');
+    ok(await waitFor(async () => (await measure.innerText()).includes('Misura polling rate')), 'home: the button follows the language');
     ok(await waitFor(async () => (await home.locator('#connect-label').innerText()).includes('Collega')),
         'the language changes the page there and then');
     ok(home.url().includes('lang=it'), 'and travels in the address: ' + home.url());

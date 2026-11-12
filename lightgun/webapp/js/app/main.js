@@ -72,6 +72,7 @@
             this.tabs = {};
             this.titleName = '';
             this.versionNotice = '';      // why this page opened, said again once docked
+            this.userUndocked = false;    // lightgun page: Disconnect pressed, no automatic connection
         }
 
         get isDevice() { return OF.Boards.isDevice; }
@@ -164,6 +165,16 @@
                     { label: t('About'), action: () => OF.Windows.openAbout() },
                 ]),
                 el('span', { class: 'spacer' }),
+                // Polling rate test: before connecting, while the gun is still in Run mode and sends
+                // its aim as a mouse (disabled while a gun is connected). In the middle of the free
+                // space of the bar. The lightgun page docks the gun by itself: there the test is
+                // enabled only after Disconnect (see pollingAllowed).
+                this.pollingButton = !OF.PollingTest ? null :
+                    el('button', { class: 'menu-button measure-button', title: t('Measure Polling Rate'),
+                        attrs: { 'aria-pressed': 'false' },
+                        on: { click: () => (this.pollingTest ? this.closePollingTest() : this.openPollingTest()) } },
+                        icon('gauge'), el('span', { class: 'measure-label', text: t('Measure Polling Rate') })),
+                this.pollingButton ? el('span', { class: 'spacer' }) : null,
                 this.themeSelector(), this.languageSelector());
 
             this.titleNode = el('h1', { class: 'board-title' });
@@ -204,8 +215,9 @@
             this.status = new OF.UI.StatusBar(statusText, progress);
             this.status.adopt(previousStatus);
             // The docked lightgun does not shoot: this sends it back to Run mode and frees
-            // its port for another App, without closing the page (never on the lightgun page).
-            this.disconnectButton = this.isDevice ? null :
+            // its port for another App, without closing the page. On the lightgun page it also
+            // stops the automatic connection, until Connect (see deviceIdle).
+            this.disconnectButton =
                 el('button', { class: 'disconnect-button', hidden: true, text: t('Disconnect'), on: { click: () => this.disconnect() } });
             // State of the link with the lightgun, in both builds: plug and socket joined
             // when a board is docked, pulled apart when not (they blink while connecting).
@@ -274,31 +286,47 @@
             if (this.isDevice) {
                 this.spinner = el('div', { class: 'spinner', attrs: { 'aria-hidden': 'true' } });
                 this.reconnectButton = el('button', { class: 'primary big-button', hidden: true, on: { click: () => this.connection.reconnect() } },
-                    icon('wifi'), el('span', { text: t('Reconnect') }));
-                children.push(this.spinner, this.reconnectButton);
+                    icon('network'), el('span', { text: t('Reconnect') }));
+                // After Disconnect: connects again to the lightgun that serves the page (no port to choose).
+                // A generic network icon on both: the page may come over Wi-Fi or over the USB network.
+                this.connectButton = el('button', { class: 'primary big-button', hidden: true, on: { click: () => this.reconnectDevice() } },
+                    icon('network'), el('span', { text: t('Connect') }));
+                children.push(this.spinner, this.reconnectButton, this.connectButton);
             } else if (OF.WebSerialTransport.isSupported()) {
                 this.connectButton = el('button', { class: 'primary big-button', on: { click: () => this.addDevice() } },
                     icon('usb'), el('span', { text: t('Connect') }));
                 children.push(this.connectButton);
             }
-            // Polling rate test: before connecting, while the gun is still in Run mode and
-            // sends its aim as a mouse. Not on the lightgun page, which docks the gun by itself.
-            if (!this.isDevice && OF.PollingTest) {
-                this.pollingButton = el('button', { class: 'secondary-button', on: { click: () => this.openPollingTest() } },
-                    icon('gauge'), el('span', { text: t('Measure Polling Rate') }));
-                children.push(this.pollingButton);
-            }
             this.welcomeHome = el('div', { class: 'welcome-home' }, ...children);
             return el('section', { class: 'welcome' }, this.welcomeHome);
         }
 
+        /** Lightgun page: Disconnect was pressed and Connect not yet (no automatic connection). */
+        get deviceIdle() {
+            return this.isDevice && this.userUndocked && !this.state.loaded && this.connection.state === 'idle';
+        }
+
+        /** The polling rate test needs the gun in Run mode: no gun docked, and on the lightgun
+         *  page none about to dock by itself either (only after Disconnect). */
+        get pollingAllowed() {
+            return !this.state.loaded && (!this.isDevice || this.deviceIdle);
+        }
+
+        /** Lightgun page: Connect after Disconnect, the automatic connection starts again. */
+        reconnectDevice() {
+            this.closePollingTest();
+            this.userUndocked = false;
+            return this.connection.reconnect();
+        }
+
         /** Turns the welcome area into the polling rate test (Back or Esc turn it back). */
         openPollingTest(stats) {
-            if (this.pollingTest || this.state.loaded) return;
+            if (this.pollingTest || !this.pollingAllowed) return;
             this.pollingTest = new OF.PollingTest({ onExit: () => this.closePollingTest(), stats: stats || null });
             this.welcomeHome.hidden = true;
             this.welcome.classList.add('testing');
             this.welcome.append(this.pollingTest.root);
+            if (this.pollingButton) this.pollingButton.setAttribute('aria-pressed', 'true');
             this.pollingTest.start();
         }
 
@@ -309,6 +337,7 @@
             this.pollingTest = null;
             this.welcome.classList.remove('testing');
             this.welcomeHome.hidden = false;
+            if (this.pollingButton) this.pollingButton.setAttribute('aria-pressed', 'false');
             if (this.pollingButton && this.pollingButton.isConnected) this.pollingButton.focus();
         }
 
@@ -316,11 +345,14 @@
             const t = OF.UI.t;
             let text;
             if (this.isDevice) {
-                const stopped = this.connection.autoStopped;
-                text = stopped ? t('The lightgun was taken over by another page. Close the other page, then press Reconnect.') :
+                const idle = this.deviceIdle;
+                const stopped = !idle && this.connection.autoStopped;
+                text = idle ? t('The lightgun is not connected to this page and works as usual. Press Connect to configure it again.') :
+                    stopped ? t('The lightgun was taken over by another page. Close the other page, then press Reconnect.') :
                     this.connection.state === 'error' ? t('Waiting for the lightgun... another App may be using it.') : t('Connecting to the lightgun...');
-                this.spinner.hidden = stopped;
+                this.spinner.hidden = stopped || idle;
                 this.reconnectButton.hidden = !stopped;
+                this.connectButton.hidden = !idle;
             } else if (!OF.WebSerialTransport.isSupported()) {
                 text = t('This browser does not support Web Serial: use Chrome, Edge or Opera on a computer.');
             } else if (this.connection.state === 'connecting') {
@@ -358,7 +390,8 @@
             const t = OF.UI.t;
             const loaded = this.state.loaded;
             this.welcome.hidden = loaded;
-            if (loaded) this.closePollingTest();
+            if (!this.pollingAllowed) this.closePollingTest();
+            if (this.pollingButton) this.pollingButton.disabled = !this.pollingAllowed;
             this.updateWelcome();
             for (const id of TAB_ORDER) {
                 const panel = this.panels[id];
@@ -459,6 +492,8 @@
 
         async disconnect() {
             this.closeWindows(false);
+            // Lightgun page: the page stays undocked until Connect (connection.disconnect stops the retries).
+            if (this.isDevice) this.userUndocked = true;
             await this.connection.disconnect();
             this.activePort = null;
         }

@@ -14,7 +14,7 @@ Outputs
            button, nothing else. It reads the version of the firmware with the same
            transport and protocol as the app, looks it up in versions.json and opens the
            app published for it (v/<version>/); when that version is not there, it offers
-           the ones that are. Under the button it shows the polling rate test of the app,
+           the ones that are. From the top bar it shows the polling rate test of the app,
            with the app's own script, texts and style (see "The polling rate test").
 
 What gets published: every firmware has its own app, and dist/site is exactly that app -
