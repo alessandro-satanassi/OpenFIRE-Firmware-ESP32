@@ -167,8 +167,8 @@
                 el('span', { class: 'spacer' }),
                 // Polling rate test: before connecting, while the gun is still in Run mode and sends
                 // its aim as a mouse (disabled while a gun is connected). In the middle of the free
-                // space of the bar. The lightgun page docks the gun by itself: there the test is
-                // enabled only after Disconnect (see pollingAllowed).
+                // space of the bar. Not on the lightgun page: its build leaves the test out (over
+                // http the browser gives one movement per display frame, not every report).
                 this.pollingButton = !OF.PollingTest ? null :
                     el('button', { class: 'menu-button measure-button', title: t('Measure Polling Rate'),
                         attrs: { 'aria-pressed': 'false' },
@@ -321,7 +321,7 @@
 
         /** Turns the welcome area into the polling rate test (Back or Esc turn it back). */
         openPollingTest(stats) {
-            if (this.pollingTest || !this.pollingAllowed) return;
+            if (this.pollingTest || !OF.PollingTest || !this.pollingAllowed) return;
             this.pollingTest = new OF.PollingTest({ onExit: () => this.closePollingTest(), stats: stats || null });
             this.welcomeHome.hidden = true;
             this.welcome.classList.add('testing');

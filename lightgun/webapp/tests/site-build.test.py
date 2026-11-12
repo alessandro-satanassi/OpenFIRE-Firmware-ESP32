@@ -73,6 +73,7 @@ def main():
         ok('"version": "%s"' % version["id"] in app, "the app knows its own version")
         ok('"versionLabel": "%s"' % version["label"] in app, "and the complete number, to show it")
         ok("OF.Version = {" in app, "and carries the check of the version")
+        ok("OF.PollingTest = " in app, "and the polling rate test")
 
         # Ogni rimando al progetto originale, tranne i due dei crediti, manderebbe chi usa
         # la App altrove: a scaricare un firmware che non e' questo, o su una wiki che
@@ -162,6 +163,8 @@ def main():
            "the app embedded in the lightgun does not carry the check at all")
         ok('"version"' not in device.split("\n")[1],
            "and no version in its build info: include/web_assets.h does not change because of it")
+        ok("OF.PollingTest = " not in device and "js/app/polling-test.js" not in device,
+           "nor the polling rate test: over http it could not measure the reports")
         ok("js/app/main.js" in device and "js/core/protocol.js" in device,
            "everything else is there, as always")
     finally:

@@ -161,7 +161,7 @@ async function installFakeSerial(context, sim) {
     ok(await page.locator('.device-bar').count() === 0, 'no device selector on the lightgun page');
     ok(await page.locator('.link-state.on').count() === 1, 'the lightgun page shows the plug as connected too');
     ok(await page.locator('.disconnect-button').isVisible(), 'Disconnect in the status bar of the lightgun page too');
-    ok(await page.locator('.measure-button').isDisabled(), 'polling rate test disabled while the lightgun page is docked');
+    ok(await page.locator('.measure-button').count() === 0 && await page.evaluate(() => !OF.PollingTest), 'no polling rate test on the lightgun page');
     ok(await page.locator('.menu-button', { hasText: 'Board Previews' }).count() === 0, 'board previews hidden on the lightgun page');
     ok(sim.firmware.gunMode === 'docked' && sim.firmware.sessionActive, 'firmware docked');
     await shot(page, 'device-docked');
@@ -177,22 +177,15 @@ async function installFakeSerial(context, sim) {
     ok(!(await loaded(page)) && sim.firmware.sessionCounter === undockedSessions, 'lightgun page: no automatic connection after Disconnect');
     ok(await page.evaluate(() => !OF.app.connectButton.hidden && OF.app.reconnectButton.hidden && OF.app.spinner.hidden), 'lightgun page: Connect shown instead of the spinner');
     ok((await page.locator('.welcome-text').innerText()).includes('Press Connect'), 'lightgun page: the welcome text says to press Connect');
-    ok(await page.locator('.measure-button').isEnabled(), 'polling rate test enabled after Disconnect');
-    await page.click('.measure-button');
-    ok(await page.locator('.welcome .polling-test').isVisible(), 'lightgun page: the polling rate test opens');
-    await shot(page, 'device-polling');
-    await page.click('.measure-button');
-    ok(await page.locator('.welcome .polling-test').count() === 0 && await page.evaluate(() => !OF.app.connectButton.hidden), 'lightgun page: closing the test shows Connect again');
-    await page.click('.measure-button');
+    ok(await page.locator('.measure-button').count() === 0 && await page.locator('.welcome .polling-test').count() === 0, 'lightgun page: no polling rate test after Disconnect either');
+    await shot(page, 'device-undocked');
     await page.selectOption('.lang-selector', 'it');
-    ok(await page.locator('.welcome .polling-test').isVisible() && await page.locator('.measure-button').isEnabled(), 'lightgun page: language switch keeps the test open');
-    await page.click('.measure-button');
     ok((await page.locator('.welcome-text').innerText()).includes('Premi Connetti'), 'lightgun page: the welcome text is translated');
+    ok(await page.evaluate(() => !OF.app.connectButton.hidden), 'lightgun page: Connect still shown after the language switch');
     await page.selectOption('.lang-selector', 'en');
     await page.locator('.welcome button', { hasText: /^Connect$/ }).click();
     ok(await waitFor(() => loaded(page)), 'lightgun page: Connect docks again');
     ok(sim.firmware.sessionCounter > undockedSessions && sim.firmware.gunMode === 'docked', 'lightgun page: new firmware session after Connect');
-    ok(await page.locator('.measure-button').isDisabled(), 'polling rate test disabled again once docked');
     const s1 = sim.firmware.sessionCounter;
 
     sim.dropClient();

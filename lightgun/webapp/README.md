@@ -89,6 +89,7 @@ The same page is used by the gun, the site and Tauri; differences:
 | --- | --- | --- |
 | connection | automatic WebSocket, reconnects by itself; after `Disconnect` it waits for `Connect` (no port to choose) | `Connect` button (the browser's Web Serial port chooser) |
 | Board Previews / View Compatible Boards | hidden (only its own board is included) | all boards |
+| Measure Polling Rate | not included (`SITE_ONLY_SCRIPTS`: over http the browser gives one movement per display frame, not every report) | in the menu bar, before connecting |
 
 View menu: `Show Unsafe Settings` (solenoid temperature thresholds, and `Edit NC Inputs` in Board Layout) and the theme (system, light, dark).
 The theme is remembered by the browser; `Show Unsafe Settings` starts off every time, like in the Qt App.

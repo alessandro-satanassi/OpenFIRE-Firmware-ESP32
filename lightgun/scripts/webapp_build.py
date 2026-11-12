@@ -59,9 +59,11 @@ SCRIPT_SRC = re.compile(r'<script\b[^>]*\bsrc="([^"]+)"[^>]*>\s*</script>')
 GENERATED_SHARED = "boards/OpenFIREshared.js"
 GENERATED_TRANSLATIONS = "lang/translations.js"
 # Scripts the app embedded in the lightgun does not need: the gun serves the app of its own
-# firmware, so there is no published version to choose. Left out of the device build, which
-# is the flash it saves; every call to them in the rest of the app is guarded.
-SITE_ONLY_SCRIPTS = ("js/app/version.js",)
+# firmware, so there is no published version to choose; and the polling rate test cannot
+# measure there: the page is http, not a secure page, and the browser gives it one movement
+# per display frame instead of every report. Left out of the device build, which is the
+# flash it saves; every call to them in the rest of the app is guarded.
+SITE_ONLY_SCRIPTS = ("js/app/version.js", "js/app/polling-test.js")
 DEVICE_ASSETS = (  # (URL path, C variable, source)
     ("/", "web_index_html", "index.html"),
     ("/style.css", "web_style_css", "style.css"),
@@ -212,6 +214,9 @@ def bundle(project_dir, target, board=None):
                            "source tree leaves the published app without its version check.")
     if target == "device" and "OF.Version = {" in code:
         raise RuntimeError("device: js/app/version.js must not be embedded in the lightgun "
+                           "(see SITE_ONLY_SCRIPTS).")
+    if target == "device" and "OF.PollingTest = " in code:
+        raise RuntimeError("device: js/app/polling-test.js must not be embedded in the lightgun "
                            "(see SITE_ONLY_SCRIPTS).")
 
     page = html[:block.start()] + '<script src="app.js"></script>' + html[block.end():]
