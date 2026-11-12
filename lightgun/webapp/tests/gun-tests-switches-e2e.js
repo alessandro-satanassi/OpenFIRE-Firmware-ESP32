@@ -41,7 +41,8 @@ const loaded = (p) => p.evaluate(() => !!(window.OF && OF.app && OF.app.state.lo
     setSetting(T.inputInvertMask, 1 << E.solenoidSwitch);
 
     const browser = await chromium.launch();
-    const page = await browser.newPage({ viewport: { width: 1280, height: 820 } });
+    // English, whatever the language of the computer: the checks below compare the English texts.
+    const page = await browser.newPage({ locale: 'en-US', viewport: { width: 1280, height: 820 } });
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
