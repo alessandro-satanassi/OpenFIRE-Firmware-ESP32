@@ -629,11 +629,15 @@ CheckBootRequests();
         if (!TinyUSBDevice.mounted()) {
             // EN: Transmit power saved in the settings, used by begin() and by the standby that turns
             //     the radio back on. Only the listed levels: anything else means the default.
+            //     The build flag OPENFIRE_ESPNOW_WIFI_POWER, when given, forces its own value instead.
             // IT: Potenza di trasmissione salvata nelle impostazioni, usata da begin() e dallo standby
             //     quando riaccende la radio. Solo i livelli in lista: ogni altro valore vale il predefinito.
+            //     Il flag di compilazione OPENFIRE_ESPNOW_WIFI_POWER, se messo, forza invece il suo valore.
+            #ifndef OPENFIRE_ESPNOW_WIFI_POWER
             espnow_wifi_power = OF_Const::espnowTxPowerDefault;
             for(const int choice : OF_Const::espnowTxPowerChoices)
                 if(OF_Prefs::settings[OF_Const::espnowTxPower] == (uint32_t)choice) espnow_wifi_power = (uint8_t)choice;
+            #endif // OPENFIRE_ESPNOW_WIFI_POWER
             SerialWireless.init_wireless();
             SerialWireless.begin();
             if (lastDongleSave) {
