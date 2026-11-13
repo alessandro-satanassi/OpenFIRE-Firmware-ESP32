@@ -142,7 +142,7 @@ class Packet
 	void    calcOverhead(uint8_t arr[], uint8_t len);
 	int16_t findLast(uint8_t arr[], uint8_t len);
 	void    stuffPacket(uint8_t arr[], uint8_t len);
-	void    unpackPacket(uint8_t arr[], uint8_t len);
+	bool    unpackPacket(uint8_t arr[], uint8_t len);
 };
 
 #endif //OPENFIRE_WIRELESS_ENABLE

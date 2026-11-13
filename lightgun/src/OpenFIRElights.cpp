@@ -123,7 +123,7 @@ void OF_RGB::InitStaticPixels()
     if(OF_Prefs::settings[OF_Const::customLEDstatic] > 0 &&
        OF_Prefs::settings[OF_Const::customLEDstatic] <= OF_Prefs::settings[OF_Const::customLEDcount]) {
         for(uint i = 0; i < OF_Prefs::settings[OF_Const::customLEDstatic]; ++i) {
-            uint32_t color;
+            uint32_t color = 0; // only three static colors: any further static pixel stays off
             switch(i) {
               case 0:
                 color = OF_Prefs::settings[OF_Const::customLEDcolor1];

@@ -258,7 +258,8 @@
             this.root.addEventListener('pointermove', this._onMove);
             this.root.addEventListener('pointerleave', this._onLeave);
             this.root.addEventListener('pointerenter', this._onEnter);
-            doc.addEventListener('keydown', this._onKey);
+            // Capture phase: the test looks at the menus and dialogs before their own Escape closes them.
+            doc.addEventListener('keydown', this._onKey, true);
             this.root.addEventListener('contextmenu', this._onContext);
             this.root.addEventListener('mousedown', this._onButton);
             this.root.addEventListener('mouseup', this._onButton);
@@ -272,7 +273,7 @@
             this.root.removeEventListener('pointermove', this._onMove);
             this.root.removeEventListener('pointerleave', this._onLeave);
             this.root.removeEventListener('pointerenter', this._onEnter);
-            doc.removeEventListener('keydown', this._onKey);
+            doc.removeEventListener('keydown', this._onKey, true);
             this.root.removeEventListener('contextmenu', this._onContext);
             this.root.removeEventListener('mousedown', this._onButton);
             this.root.removeEventListener('mouseup', this._onButton);
@@ -288,7 +289,20 @@
             this.render(root.performance.now(), true);
         }
 
+        /** Esc and R are the test's only when nothing is over it: a dialog (a modal one, or the one
+            the key is pressed in), an open menu, a fullscreen window (it makes the page behind
+            inert) or a text field keep their keys. */
+        ownsKey(event) {
+            if (event.defaultPrevented || this.root.closest('[inert]')) return false;
+            if (doc.querySelector('dialog[open]:not(.modeless)')) return false;   // a modal dialog is open
+            const target = event.target;
+            if (target && typeof target.closest === 'function' &&
+                target.closest('dialog, [role="menu"], input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return false;
+            return !doc.querySelector('[aria-haspopup][aria-expanded="true"]');
+        }
+
         onKey(event) {
+            if (!this.ownsKey(event)) return;
             if (event.key === 'Escape') { event.preventDefault(); this.onExit(); }
             else if ((event.key === 'r' || event.key === 'R') && !event.ctrlKey && !event.metaKey && !event.altKey) this.reset();
         }
@@ -411,7 +425,6 @@
             ctx.strokeStyle = accent;
             ctx.lineWidth = 2;
             ctx.lineJoin = 'round';
-            ctx.beginPath();
             // Where the gun was still: a faint mark, the line goes on without the pause.
             ctx.save();
             ctx.strokeStyle = border;

@@ -179,7 +179,12 @@ uint8_t Packet::parse(uint8_t recChar, bool valid)
 				
 				// Rimuove l'overhead COBS per riportare i dati alla forma originale 
 				// necessaria per la validazione crittografica.
-				unpackPacket(&rxBuff[PREAMBLE_SIZE], bytesToRec + 1);
+				// Un overhead o un collegamento COBS che punta fuori dal pacchetto (pacchetto
+				// corrotto o estraneo) lo scarta subito, senza scrivere oltre i suoi limiti.
+				if (!unpackPacket(&rxBuff[PREAMBLE_SIZE], bytesToRec + 1)) {
+					reset();
+					return 0;
+				}
 				
 				uint8_t calcCrc = calculate_crc(&rxBuff[2], bytesToRec+2);
 				if (calcCrc == rxBuff[bytesToRec + PREAMBLE_SIZE]) state = find_end_byte;
@@ -265,19 +270,25 @@ void Packet::stuffPacket(uint8_t arr[], uint8_t len)
 	}
 }
 
-void Packet::unpackPacket(uint8_t arr[], uint8_t len)
+// EN: Bounded: an overhead byte or a link that points past the packet (corrupted or foreign
+//     frame) returns false before anything is written outside it, and parse() drops the packet.
+//     A valid packet is decoded exactly as before, with one comparison per stuffed byte.
+// IT: Con limiti: un overhead o un collegamento che punta oltre il pacchetto (pacchetto corrotto
+//     o estraneo) restituisce false prima di scrivere fuori, e parse() scarta il pacchetto.
+//     Un pacchetto valido si decodifica come prima, con un confronto in piu' per byte sostituito.
+bool Packet::unpackPacket(uint8_t arr[], uint8_t len)
 {
-	uint8_t testIndex = recOverheadByte;
-	uint8_t delta     = 0;
+	uint16_t testIndex = recOverheadByte; // 16 bit: the sum below cannot wrap back inside / la somma non puo' tornare dentro
 
-	if (testIndex != MAX_COBS) {
-		while (arr[testIndex]) {
-			delta          = arr[testIndex];
-			arr[testIndex] = START_BYTE;
-			testIndex += delta;
-		}
+	if (testIndex == MAX_COBS) return true; // no START_BYTE in the data / nessuno START_BYTE nei dati
+
+	while (testIndex < len) {
+		const uint8_t delta = arr[testIndex];
 		arr[testIndex] = START_BYTE;
+		if (delta == 0) return true; // last link of the chain / ultimo collegamento della catena
+		testIndex += delta;
 	}
+	return false;
 }
 
 void Packet::reset()

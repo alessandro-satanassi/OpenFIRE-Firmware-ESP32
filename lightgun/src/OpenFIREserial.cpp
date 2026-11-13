@@ -1910,6 +1910,7 @@ void OF_Serial::AppSerialDispatchRequest(const AppSerialFrame_s &frame)
     }
 
     case OF_Const::sIRTest:
+        if(frame.length < 1) { AppSerialSendError(); break; } // malformed request: never act on stale bytes
         // Leaving test mode is always accepted, also when the camera stopped working
         // while testing: the App would otherwise report the camera error twice.
         // Optional second byte: irTestFlagLens = WebApp lens refinement (sLensInfo, then sLensSample).
@@ -1940,6 +1941,11 @@ void OF_Serial::AppSerialDispatchRequest(const AppSerialFrame_s &frame)
         break;
 
     case OF_Const::sCaliProfile: {
+        // Malformed request: never act on stale bytes (sCaliStart also needs the settings byte).
+        if(frame.length < 2 || (frame.payload[0] == OF_Const::sCaliStart && frame.length < 3)) {
+            AppSerialSendError();
+            break;
+        }
         const uint8_t operation = frame.payload[0];
         const uint8_t profile = frame.payload[1];
 
