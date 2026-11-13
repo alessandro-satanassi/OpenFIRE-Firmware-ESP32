@@ -425,11 +425,9 @@ void radioTask(void *pvParameters) {
       // intervene ONLY if the timer has previously failed. / Interveniamo SOLO se il timer ha fallito in precedenza
       if (SerialWireless._serial_needs_recovery && (SerialWireless.availableBufferSerialWrite() > 0)) {
         if (SerialWireless.flush_sem()) {
-          // Recovery successful! Lower the flag. 
-          // SerialWireless._serial_needs_recovery = false; // flush_sem() already does this itself before returning true.
+          // Recovery successful! flush_sem() lowers the flag only when no serial byte is left; otherwise the next round packs the rest.
           // /
-          // Salvataggio riuscito! Abbassiamo la bandierina.
-          // SerialWireless._serial_needs_recovery = false; // flush_sem() lo fa già da sola prima di restituire true.
+          // Salvataggio riuscito! flush_sem() abbassa la bandierina solo quando non resta nessun byte seriale; altrimenti il giro dopo impacchetta il resto.
           progress = true; 
         }
       }
@@ -1228,6 +1226,13 @@ bool SerialWireless_::flush_sem() {
       
       _readerSerialWrite = (r + len_to_pack) & MASK_WRITE_SERIAL;
       packed_data = true;
+      // EN: Only part of the serial data may fit in the radio queue: keep the recovery request up while bytes
+      //     are still waiting, so radioTask packs the rest as soon as there is room. Set here, under the serial
+      //     lock, so it always matches the buffer.
+      // IT: Nella coda radio puo' entrare solo una parte dei dati seriali: teniamo alta la richiesta di recupero
+      //     finche' restano byte in attesa, cosi' radioTask impacchetta il resto appena c'e' spazio. Impostata qui,
+      //     sotto il lucchetto della seriale, cosi' corrisponde sempre al buffer.
+      _serial_needs_recovery = (_writerSerialWrite != _readerSerialWrite);
     }
     
     // Release the radio / Rilasciamo la radio
@@ -1243,8 +1248,10 @@ bool SerialWireless_::flush_sem() {
   // Segnaliamo al Task Radio asincrono che ci sono nuovi pacchetti pronti al decollo.
   if (packed_data) {
     esp_timer_stop(timer_handle_serial);
+    // EN: A write() that landed after the packing above has just had its timer stopped: hand its bytes to radioTask.
+    // IT: Una write() arrivata dopo l'impacchettamento qui sopra si e' appena vista fermare il timer: i suoi byte li prende radioTask.
+    if (availableBufferSerialWrite() > 0) _serial_needs_recovery = true;
     xTaskNotifyGive(xRadioTaskHandle);
-    _serial_needs_recovery = false;
     return true;
   }
 

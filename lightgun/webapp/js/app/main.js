@@ -1022,6 +1022,8 @@
             const t = OF.UI.t;
             if (this.window === win) this.window = null;
             if (mode === OF.FullscreenWindow.MODE_CALIBRATE) {
+                // Releases made during calibration are not sent by the board: clear the Gun Tests buttons.
+                if (this.tabs.tests) this.tabs.tests.clearButtons();
                 const profile = this.caliProfile;
                 if (!this.state.loaded || profile < 0) return;
                 const empty = { topOffset: -1, bottomOffset: -1, leftOffset: -1, rightOffset: -1, TLled: -1, TRled: -1 };

@@ -186,6 +186,12 @@
             updateSwitches();
         }
 
+        /** Buttons only (Qt CaliWindowExiting): the board does not send the releases made
+         *  during calibration, so no button stays shown as pressed when it ends. */
+        function clearButtons() {
+            buttonLabels.forEach((label) => label.classList.remove('pressed'));
+        }
+
         /** A new board session: nothing known about its switches yet. */
         function onLoad() {
             switchState = null;
@@ -256,7 +262,7 @@
             }
         }
 
-        return { root: rootNode, update, onEvent, resetReadings, onLoad };
+        return { root: rootNode, update, onEvent, resetReadings, clearButtons, onLoad };
     }
 
     OF.Tabs = OF.Tabs || {};

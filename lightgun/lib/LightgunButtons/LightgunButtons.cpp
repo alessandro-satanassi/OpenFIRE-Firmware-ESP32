@@ -101,6 +101,7 @@ void LightgunButtons::Unset()
     lastRepeatMillis = 0;
     internalPressedReleased = 0;
     reportedPressed = 0;
+    internalOffscreenMask = 0;      // An off-screen press must not decide a later release. / Una pressione fuori schermo non deve decidere un rilascio successivo.
 }
 
 uint32_t LightgunButtons::Poll(unsigned long minTicks)
@@ -342,6 +343,8 @@ void LightgunButtons::ReleaseAll()
     Keyboard.releaseAll();
     Gamepad16.releaseAll();
     padMask = 0;                    // The D-pad directions are released too, so a stale one cannot come back later.
+    internalOffscreenMask = 0;      // Everything is released: a later release must not use an old off-screen code. / Tutto e' rilasciato: un rilascio successivo non deve usare un vecchio codice fuori schermo.
+    reportedPressed = 0;            // Their reports are cleared: a button still held must not release, later, a code another button pressed meanwhile. / I loro report sono cancellati: un tasto ancora premuto non deve rilasciare, dopo, un codice premuto nel frattempo da un altro tasto.
     SendReports(true);
     releaseAllCount++;
 }
