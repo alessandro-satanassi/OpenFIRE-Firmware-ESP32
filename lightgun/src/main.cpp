@@ -922,6 +922,75 @@ void rp2040pwmIrq(void)
 }
 #endif // ARDUINO_ARCH_RP2040 // [ESP32_PORT] messo qui
 
+#if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE) && defined(OPENFIRE_WIRELESS_DEVICE_ESPNOW) && defined(OPENFIRE_USE_ESPNOW_UNIFIED_PACKET)
+// EN: Wireless, Run mode only. Every report (mouse, keyboard, gamepad) goes out as the unified packet with
+//     the whole state, without any confirmation from the dongle. While the aim moves, a report goes out at
+//     every camera frame, so a lost packet is replaced a few ms later. With the aim off the screen, or steady,
+//     nothing else goes out: a lost release left the key held on the computer, which then repeats it. So,
+//     after a change of keys, gamepad (buttons, D-pad, axes) or mouse buttons, when no report has gone out for
+//     HID_REPEAT_FIRST_MS, the unified packet is sent again, up to HID_REPEAT_COUNT times, each
+//     HID_REPEAT_GAP_MS after the last one, and only with the radio queue empty. The dongle passes a report
+//     to the computer only when it differs from the last one, so a copy changes nothing there. The wireless
+//     library is unchanged.
+// IT: Wireless, solo in modalita' Run. Ogni report (mouse, tastiera, gamepad) parte come pacchetto unico con
+//     lo stato intero, senza conferma dal dongle. Mentre la mira si muove, parte un report a ogni frame della
+//     camera, quindi un pacchetto perso viene sostituito pochi ms dopo. Con la mira fuori dallo schermo, o
+//     ferma, non parte altro: un rilascio perso lasciava il tasto premuto sul computer, che poi lo ripete.
+//     Quindi, dopo un cambio di tasti, gamepad (pulsanti, D-pad, assi) o tasti del mouse, se da
+//     HID_REPEAT_FIRST_MS non e' partito un report, il pacchetto unico viene rinviato, fino a HID_REPEAT_COUNT
+//     volte, ognuna HID_REPEAT_GAP_MS dopo la precedente, e solo con la coda della radio vuota. Il dongle passa
+//     un report al computer solo se e' diverso dall'ultimo, quindi li' una copia non cambia nulla. La libreria
+//     wireless non cambia.
+#define HID_REPEAT_FIRST_MS 50
+#define HID_REPEAT_GAP_MS   30
+#define HID_REPEAT_COUNT    3
+static void WirelessHidRepeat(const bool fullTx)
+{
+    static uint8_t last[sizeof(Keyboard._keyReport) + sizeof(Gamepad16.gamepad16Report) + 1];
+    static uint8_t repeats = HID_REPEAT_COUNT;   // nothing to repeat at start / niente da ripetere all'avvio
+    static uint32_t lastFullMs = 0;              // last report or change / ultimo report o cambio
+
+    if(!TinyUSBDevices.onBattery || TinyUSBDevices.wireless_mode != WIRELESS_MODE::ENABLE_ESP_NOW_TO_DONGLE)
+        return;
+    if(fullTx) lastFullMs = millis();            // EN: a report carried the whole state / IT: un report ha portato lo stato intero
+
+    // EN: Keys, whole gamepad (axes too: a lost stick release), mouse buttons. / IT: Tasti, gamepad intero (anche gli assi: un ritorno dello stick perso), tasti del mouse.
+    uint8_t state[sizeof(last)];
+    memcpy(state, &Keyboard._keyReport, sizeof(Keyboard._keyReport));
+    memcpy(&state[sizeof(Keyboard._keyReport)], &Gamepad16.gamepad16Report, sizeof(Gamepad16.gamepad16Report));
+    state[sizeof(state) - 1] = AbsMouse5.absmouse5Report.buttons;
+
+    if(memcmp(state, last, sizeof(last))) {
+        // EN: The change goes out with its own report: the copies follow it. While copies are still due, a new
+        //     change does not move their time, so a quick series of changes does not postpone them.
+        // IT: Il cambio parte con il suo report: le copie lo seguono. Mentre ci sono copie da inviare, un nuovo
+        //     cambio non ne sposta il tempo, quindi una serie rapida di cambi non le rimanda.
+        memcpy(last, state, sizeof(last));
+        if(repeats >= HID_REPEAT_COUNT) lastFullMs = millis();
+        repeats = 0;
+        return;
+    }
+    if(repeats >= HID_REPEAT_COUNT) return;
+
+    // EN: A report still waiting goes out anyway with the whole state.
+    // IT: Un report ancora in attesa parte comunque con lo stato intero.
+    if(TinyUSBDevices.newReport[TinyUSBDevices_::reportMouse] || TinyUSBDevices.newReport[TinyUSBDevices_::reportKeyboard] ||
+       TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad]) return;
+
+    // EN: Radio busy (its queue not empty yet): the last copy may still be waiting there, a new one now would go
+    //     out in the same frame. So wait until it is empty.
+    // IT: Radio occupata (la sua coda non e' ancora vuota): l'ultima copia puo' essere ancora li', una nuova ora
+    //     partirebbe nello stesso frame. Quindi si aspetta che sia vuota.
+    if(SerialWireless.readIndex != SerialWireless.writeIndex) return;
+
+    if(millis() - lastFullMs < (repeats ? HID_REPEAT_GAP_MS : HID_REPEAT_FIRST_MS)) return;
+
+    report_all_MOUSE_KEY_PAD_TX_wifi_espnow();
+    lastFullMs = millis();
+    ++repeats;
+}
+#endif
+
 #ifdef DUAL_CORE
 // Second core setup
 // does... nothing, since timing is kinda important.
@@ -964,7 +1033,14 @@ void loop1()
                 if(FW_Common::analogIsValid) AnalogStickPoll();
             #endif // USES_ANALOG
             lastUSBpoll = millis();
+            #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE) && defined(OPENFIRE_WIRELESS_DEVICE_ESPNOW) && defined(OPENFIRE_USE_ESPNOW_UNIFIED_PACKET)
+                const bool hidFullTx = TinyUSBDevices.newReport[TinyUSBDevices_::reportMouse] || TinyUSBDevices.newReport[TinyUSBDevices_::reportKeyboard] ||
+                                       TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad];   // EN: every report goes out as the whole state / IT: ogni report parte come stato intero
+            #endif
             FW_Common::buttons.SendReports();
+            #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE) && defined(OPENFIRE_WIRELESS_DEVICE_ESPNOW) && defined(OPENFIRE_USE_ESPNOW_UNIFIED_PACKET)
+                WirelessHidRepeat(hidFullTx);   // EN/IT: see above / vedi sopra
+            #endif
         }
 
         if(Serial.available()) OF_Serial::SerialProcessing();
@@ -1555,7 +1631,14 @@ void ExecRunMode()
                 if(FW_Common::analogIsValid) AnalogStickPoll();
             #endif // USES_ANALOG
             lastUSBpoll = millis();
+            #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE) && defined(OPENFIRE_WIRELESS_DEVICE_ESPNOW) && defined(OPENFIRE_USE_ESPNOW_UNIFIED_PACKET)
+                const bool hidFullTx = TinyUSBDevices.newReport[TinyUSBDevices_::reportMouse] || TinyUSBDevices.newReport[TinyUSBDevices_::reportKeyboard] ||
+                                       TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad];   // EN: every report goes out as the whole state / IT: ogni report parte come stato intero
+            #endif
             FW_Common::buttons.SendReports();
+            #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE) && defined(OPENFIRE_WIRELESS_DEVICE_ESPNOW) && defined(OPENFIRE_USE_ESPNOW_UNIFIED_PACKET)
+                WirelessHidRepeat(hidFullTx);   // EN/IT: see above / vedi sopra
+            #endif
         }
 
         // Run through serial receive buffer once this run, if it has contents.
@@ -1630,6 +1713,54 @@ void ExecRunMode()
     }
 }
 
+// EN: Buttons to the App (Gun Tests, aim test): sBtnPressed / sBtnReleased at every change.
+//     Over the wireless (dongle) link a lost event is not sent again, and a lost release left the button red
+//     in Gun Tests until it was pressed again. So, on the wireless link, every release is repeated
+//     100 and 300 ms later; a new press of that button stops its repeats. Both Apps only clear the
+//     button on a release (the aim test ignores it), so a repeated release changes nothing.
+//     A repeat is never sent while the button is held.
+// IT: Tasti alla App (Gun Tests, prova puntamento): sBtnPressed / sBtnReleased a ogni cambio.
+//     Sul collegamento wireless (dongle) un evento perso non viene rinviato, e un rilascio perso lasciava il
+//     tasto rosso in Gun Tests fino alla pressione successiva. Quindi, sul collegamento wireless, ogni
+//     rilascio viene ripetuto dopo 100 e 300 ms; una nuova pressione di quel tasto ferma le sue ripetizioni.
+//     Entrambe le App al rilascio spengono solo il tasto (la prova puntamento lo ignora), quindi un
+//     rilascio ripetuto non cambia nulla. Un rilascio ripetuto non viene mai inviato mentre il tasto è premuto.
+static void AppSendButtonEvents()
+{
+    static uint32_t repeatMask = 0;
+    static uint8_t repeatCount[ButtonCount];
+    static unsigned long repeatFrom[ButtonCount];
+
+    if(!(FW_Common::buttons.pressed | FW_Common::buttons.released | repeatMask))
+        return;   // EN/IT: nothing to send (almost every call) / niente da inviare (quasi ogni chiamata)
+
+    for(uint8_t i = 0; i < ButtonCount; ++i) {
+        if(bitRead(FW_Common::buttons.pressed, i)) {
+            bitClear(repeatMask, i);
+            OF_Serial::AppSerialSendEvent(OF_Const::sBtnPressed, &i, 1);
+        }
+        if(bitRead(FW_Common::buttons.released, i)) {
+            OF_Serial::AppSerialSendEvent(OF_Const::sBtnReleased, &i, 1);
+            if(TinyUSBDevices.onBattery && !WebAppSerial::IsWebSocket()) {   // EN: not on the Wi-Fi WebSocket (TCP, reliable) / IT: non sul WebSocket Wi-Fi (TCP, affidabile)
+                bitSet(repeatMask, i);
+                repeatCount[i] = 0;
+                repeatFrom[i] = millis();
+            }
+        }
+    }
+
+    if(repeatMask) {
+        const unsigned long now = millis();
+        for(uint8_t i = 0; i < ButtonCount; ++i)
+            if(bitRead(repeatMask, i) && now - repeatFrom[i] >= (repeatCount[i] ? 300UL : 100UL)) {
+                if(!bitRead(FW_Common::buttons.debounced, i))   // EN: never for a held button / IT: mai per un tasto premuto
+                    OF_Serial::AppSerialSendEvent(OF_Const::sBtnReleased, &i, 1);
+                if(++repeatCount[i] >= 2)
+                    bitClear(repeatMask, i);
+            }
+    }
+}
+
 // from Samco_4IR_Test_BETA sketch
 // for use with the Samco_4IR_Processing_Sketch_BETA Processing sketch
 void ExecRunModeProcessing()
@@ -1645,14 +1776,7 @@ void ExecRunModeProcessing()
 
         // EN: Buttons to the App as in the docked loop (Gun Tests, aim test); the IR tester ignores them.
         // IT: Tasti alla App come nel ciclo docked (Gun Tests, prova puntamento); il tester IR li ignora.
-        if(FW_Common::buttons.pressed || FW_Common::buttons.released) {
-            for(uint8_t i = 0; i < ButtonCount; ++i) {
-                if(bitRead(FW_Common::buttons.pressed, i))
-                    OF_Serial::AppSerialSendEvent(OF_Const::sBtnPressed, &i, 1);
-                if(bitRead(FW_Common::buttons.released, i))
-                    OF_Serial::AppSerialSendEvent(OF_Const::sBtnReleased, &i, 1);
-            }
-        }
+        AppSendButtonEvents();
 
         const bool sessionInput = WebAppSerial::available() > 0;
         if(sessionInput || OF_Serial::AppSerialInputPending()) {
@@ -1775,21 +1899,7 @@ void ExecGunModeDocked()
 
         if(!FW_Common::dockedSaving) {
             FW_Common::buttons.Poll(1);
-            if(FW_Common::buttons.pressed) {
-                for(uint i = 0; i < ButtonCount; ++i)
-                    if(bitRead(FW_Common::buttons.pressed, i)) {
-                        buf[0] = i;
-                        OF_Serial::AppSerialSendEvent(OF_Const::sBtnPressed, buf, 1);
-                    }
-            }
-
-            if(FW_Common::buttons.released) {
-                for(uint i = 0; i < ButtonCount; ++i)
-                    if(bitRead(FW_Common::buttons.released, i)) {
-                        buf[0] = i;
-                        OF_Serial::AppSerialSendEvent(OF_Const::sBtnReleased, buf, 1);
-                    }
-            }
+            AppSendButtonEvents();
 
             #ifdef USES_SWITCHES
                 // EN: Read as in Run mode (main loop): enabled when the contact reads LOW, the other

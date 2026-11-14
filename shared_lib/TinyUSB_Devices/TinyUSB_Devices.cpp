@@ -296,7 +296,11 @@ void Keyboard_::report(void)
       #endif // ENABLE_BLUETOOTH_OPENFIRE
       #ifdef OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_ESP_NOW_TO_DONGLE:
+        #ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET   // EN: whole state, as the mouse / IT: stato intero, come il mouse
+        report_all_MOUSE_KEY_PAD_TX_wifi_espnow();
+        #else
         SerialWireless.SendPacket((const uint8_t *)&_keyReport, sizeof(_keyReport), PACKET_TX::KEYBOARD_TX);
+        #endif // OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
         break;
         #endif //OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_WIFI_TO_DONGLE:
@@ -520,7 +524,11 @@ void Gamepad16_::report()
       #endif // ENABLE_BLUETOOTH_OPENFIRE
       #ifdef OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_ESP_NOW_TO_DONGLE:
+        #ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET   // EN: whole state, as the mouse / IT: stato intero, come il mouse
+        report_all_MOUSE_KEY_PAD_TX_wifi_espnow();
+        #else
         SerialWireless.SendPacket((const uint8_t *)&gamepad16Report, sizeof(gamepad16Report), PACKET_TX::GAMEPADE_TX);
+        #endif // OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
         break;
         #endif //OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_WIFI_TO_DONGLE:
