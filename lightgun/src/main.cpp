@@ -961,10 +961,10 @@ static void WirelessHidRepeat(const bool fullTx)
     state[sizeof(state) - 1] = AbsMouse5.absmouse5Report.buttons;
 
     if(memcmp(state, last, sizeof(last))) {
-        // EN: The change goes out with its own report: the copies follow it. While copies are still due, a new
-        //     change does not move their time, so a quick series of changes does not postpone them.
-        // IT: Il cambio parte con il suo report: le copie lo seguono. Mentre ci sono copie da inviare, un nuovo
-        //     cambio non ne sposta il tempo, quindi una serie rapida di cambi non le rimanda.
+        // EN: The change goes out with its own report (fullTx above), and the copies follow the last report. Here
+        //     the time is set only when no copies are due, for a change that went out without fullTx.
+        // IT: Il cambio parte con il suo report (fullTx sopra), e le copie seguono l'ultimo report. Qui il tempo
+        //     si fissa solo se non ci sono copie da inviare, per un cambio partito senza fullTx.
         memcpy(last, state, sizeof(last));
         if(repeats >= HID_REPEAT_COUNT) lastFullMs = millis();
         repeats = 0;
