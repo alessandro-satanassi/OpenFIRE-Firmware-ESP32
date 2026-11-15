@@ -37,6 +37,9 @@
 #include "OpenFIREDefines.h"
 
 #include "OpenFIREweb.h"
+#ifdef DEBUG_WIFI_ESPNOW
+volatile bool dbgWifiScreenRedrawn = false;   // see / vedi OpenFIREdisplay.h
+#endif // DEBUG_WIFI_ESPNOW
 
 bool ExtDisplay::Begin()
 {
@@ -176,6 +179,9 @@ void ExtDisplay::ScreenModeChange(const int &screenMode, const bool &isAnalog)
     if(display != nullptr) {
         idleTimeStamp = millis();
         display->fillRect(0, 16, 128, 48, BLACK);
+        #ifdef DEBUG_WIFI_ESPNOW
+        dbgWifiScreenRedrawn = true;
+        #endif // DEBUG_WIFI_ESPNOW
         if(screenState >= Screen_Mamehook_Single &&
            screenMode == Screen_Normal) {
             currentAmmo = 0, currentLife = 0;

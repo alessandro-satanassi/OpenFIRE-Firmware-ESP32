@@ -137,6 +137,10 @@ SerialWireless_ SerialWireless;
 #ifdef GUN
 volatile uint32_t lastRadioTxMs = 0;
 #endif
+#ifdef DEBUG_WIFI_ESPNOW
+volatile uint32_t dbgWifiTxOk = 0, dbgWifiTxFail = 0, dbgWifiSendErr = 0, dbgWifiTxQueueFull = 0, dbgWifiRxQueueFull = 0;   // see / vedi OpenFIRE_Wireless.h
+DbgWifiRx_t dbgWifiRx[2] = {};
+#endif // DEBUG_WIFI_ESPNOW
 extern Adafruit_USBD_HID usbHid;
 
 // Spinlocks (Hardware Mutexes): Essential for ensuring that reads and writes
@@ -1347,6 +1351,9 @@ void SerialWireless_::SendData_sem() {
     // Ma diamo 1 ms di pausa al sistema per non far intervenire il Watchdog
     // e prevenire un riavvio forzato della Lightgun.
     radioFree = true;   // No callback will arrive for a failed send: free the radio again. / Per un invio fallito non arriverà nessuna callback: liberiamo di nuovo la radio.
+    #ifdef DEBUG_WIFI_ESPNOW
+    dbgWifiSendErr = dbgWifiSendErr + 1;
+    #endif // DEBUG_WIFI_ESPNOW
     vTaskDelay(pdMS_TO_TICKS(1));
   }
 }
@@ -1501,6 +1508,9 @@ void SerialWireless_::SendPacket(const uint8_t *data, uint8_t len, uint8_t packe
     xTaskNotifyGive(xRadioTaskHandle);
   } 
   else {
+    #ifdef DEBUG_WIFI_ESPNOW
+    dbgWifiTxQueueFull = dbgWifiTxQueueFull + 1;   // inside the lock: SendPacket has callers on both cores / dentro il lock: SendPacket ha chiamanti su entrambi i core
+    #endif // DEBUG_WIFI_ESPNOW
     portEXIT_CRITICAL(&mux_radio_tx);
     _overflow_write = true;
   }
@@ -2922,6 +2932,23 @@ static void _esp_now_rx_cb(const esp_now_recv_info_t *info, const uint8_t *data,
   
   // // Broadcast filter / Filtro broadcast
   if ((info->des_addr[0] == 0xFF) && (broadcast_receiver == false)) return;
+  #ifdef DEBUG_WIFI_ESPNOW
+  {
+    // EN: Pedal first, by its known addresses: while reconnecting to it, peerAddress holds the pedal's address.
+    // IT: Prima la pedaliera, dai suoi indirizzi noti: mentre ci si riconnette, peerAddress contiene l'indirizzo della pedaliera.
+    const int8_t src = (!memcmp(info->src_addr, peerAddress_pedal, 6) || !memcmp(info->src_addr, lastPedalAddress, 6)) ? 1 :
+                       (!memcmp(info->src_addr, peerAddress, 6) || !memcmp(info->src_addr, lastDongleAddress, 6)) ? 0 : -1;
+    if (src >= 0 && info->rx_ctrl != nullptr) {
+      DbgWifiRx_t &rx = dbgWifiRx[src];
+      const int8_t rssi = info->rx_ctrl->rssi;
+      if (!rx.count || rssi < rx.rssiMin) rx.rssiMin = rssi;
+      if (!rx.count || rssi > rx.rssiMax) rx.rssiMax = rssi;
+      rx.rssi = rssi;
+      rx.lastMs = millis();
+      rx.count = rx.count + 1;   // last: the display reads count first / per ultimo: il display legge prima count
+    }
+  }
+  #endif // DEBUG_WIFI_ESPNOW
 
   // Local index cache (The heart of Lock-Free) / Cache locale degli indici (Il cuore del Lock-Free)
   uint16_t w = SerialWireless._writer;
@@ -2977,6 +3004,9 @@ static void _esp_now_rx_cb(const esp_now_recv_info_t *info, const uint8_t *data,
     // Insufficient space (or packet discarded to avoid pointer crossing)
     // Spazio insufficiente (o pacchetto scartato per evitare l'incrocio dei puntatori)
     SerialWireless._overflow_read = true;
+    #ifdef DEBUG_WIFI_ESPNOW
+    dbgWifiRxQueueFull = dbgWifiRxQueueFull + 1;
+    #endif // DEBUG_WIFI_ESPNOW
   }
   
   // Task Notification (Bell icon unchanged)
@@ -2992,6 +3022,10 @@ static void _esp_now_rx_cb(const esp_now_recv_info_t *info, const uint8_t *data,
 static void _esp_now_tx_cb(const esp_now_send_info_t *tx_info, esp_now_send_status_t status) { 
   // Let's free up the radio for the next packet. / Liberiamo la radio per il prossimo pacchetto
   radioFree = true;
+  #ifdef DEBUG_WIFI_ESPNOW
+  if (status == ESP_NOW_SEND_SUCCESS) dbgWifiTxOk = dbgWifiTxOk + 1;
+  else dbgWifiTxFail = dbgWifiTxFail + 1;
+  #endif // DEBUG_WIFI_ESPNOW
 
   // Lock-free check: Does the TX buffer still have data to send? / Controllo Lock-Free: Il buffer TX ha ancora dati da spedire?
   if (SerialWireless.writeIndex != SerialWireless.readIndex) {   

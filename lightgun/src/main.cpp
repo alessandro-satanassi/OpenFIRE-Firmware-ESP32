@@ -922,6 +922,104 @@ void rp2040pwmIrq(void)
 }
 #endif // ARDUINO_ARCH_RP2040 // [ESP32_PORT] messo qui
 
+#if defined(DEBUG_WIFI_ESPNOW) && defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE) && defined(OPENFIRE_WIRELESS_DEVICE_ESPNOW) && defined(USES_DISPLAY)
+// EN: Radio counters on the display, only with -D DEBUG_WIFI_ESPNOW. Run mode, on battery towards the dongle, normal
+//     screen (not MiSTer, not MAMEHOOKER). Six text lines between the top panel and the icons, counted since power on:
+//       TX <datagrams sent> lost <not acknowledged after the radio retries>
+//       rej <refused by esp_now_send(), sent again later> full <packets dropped, transmit queue full>
+//       RX <datagrams from the dongle> rxf <datagrams dropped, receive queue full>
+//       <dongle signal, dBm: worst/last/best; "--" if nothing for 2 s>
+//       PD <datagrams from the pedal>                       (the two pedal lines only once it has sent something)
+//       <pedal signal, as above>
+//     Recomposed once a second; then at most one changed line per call, only its changed characters: a line is one
+//     display page (8 rows), so with LovyanGFX (used on ESP32) one I2C transfer of at most 128 bytes, on this core
+//     between two camera frames. Every screen change (ScreenModeChange) draws the lines again.
+// IT: Contatori radio sul display, solo con -D DEBUG_WIFI_ESPNOW. Modalita' Run, a batteria verso il dongle, schermata
+//     normale (non MiSTer, non MAMEHOOKER). Sei righe di testo tra la barra in alto e le icone, contate dall'accensione:
+//       TX <datagrammi inviati> lost <non confermati dopo i tentativi della radio>
+//       rej <rifiutati da esp_now_send(), rispediti dopo> full <pacchetti scartati, coda di trasmissione piena>
+//       RX <datagrammi dal dongle> rxf <datagrammi scartati, coda di ricezione piena>
+//       <segnale del dongle, dBm: peggiore/ultimo/migliore; "--" se niente da 2 s>
+//       PD <datagrammi dalla pedaliera>                     (le due righe della pedaliera solo dopo che ha inviato qualcosa)
+//       <segnale della pedaliera, come sopra>
+//     Ricomposte una volta al secondo; poi al massimo una riga cambiata per chiamata, solo i suoi caratteri cambiati: una
+//     riga e' una pagina del display (8 righe), quindi con LovyanGFX (usata su ESP32) un trasferimento I2C di al massimo
+//     128 byte, su questo core tra due frame camera. Ogni cambio di schermata (ScreenModeChange) ridisegna le righe.
+static void DebugWifiEspNowRssi(char *text, size_t size, const DbgWifiRx_t &rx, const uint32_t now)
+{
+    const uint32_t count = rx.count;
+    if(!count) { snprintf(text, size, "--/--/--"); return; }
+    char last[6] = "--";
+    if(now - rx.lastMs < 2000) snprintf(last, sizeof(last), "%d", (int)rx.rssi);
+    snprintf(text, size, "%d/%s/%d", (int)rx.rssiMin, last, (int)rx.rssiMax);   // at most / al massimo -128/-128/-128: 14
+}
+static void DebugWifiEspNowDisplay()
+{
+    #define DBG_WIFI_LINES 6
+    static const uint8_t lineX[DBG_WIFI_LINES] = { 0, 0, 0, 14, 14, 14 };     // after the connection icon / dopo l'icona di connessione
+    static const uint8_t lineW[DBG_WIFI_LINES] = { 21, 21, 21, 19, 15, 15 };  // characters, up to the mouse/gamepad icon / caratteri, fino all'icona mouse/gamepad
+    static char shown[DBG_WIFI_LINES][22], want[DBG_WIFI_LINES][22];   // on the display (empty = to draw) / sul display (vuota = da disegnare); to show / da mostrare
+    static uint32_t lastMs = 0;
+    static bool pending = false;                 // a line may differ from the display / una riga puo' differire dal display
+    const uint32_t now = millis();
+    if(FW_Common::OLED.display == nullptr || FW_Common::OLED.mister || !TinyUSBDevices.onBattery ||
+       TinyUSBDevices.wireless_mode != WIRELESS_MODE::ENABLE_ESP_NOW_TO_DONGLE
+       #ifdef MAMEHOOKER
+       || OF_Serial::serialMode
+       #endif // MAMEHOOKER
+       ) {
+        for(uint8_t i = 0; i < DBG_WIFI_LINES; ++i) shown[i][0] = 0;
+        return;
+    }
+    if(dbgWifiScreenRedrawn) {                   // the screen was cleared / la schermata e' stata cancellata
+        dbgWifiScreenRedrawn = false;
+        for(uint8_t i = 0; i < DBG_WIFI_LINES; ++i) shown[i][0] = 0;
+        lastMs = now - 1000;
+    }
+    if(!pending && now - lastMs < 1000) return;   // all lines drawn, nothing new / righe tutte disegnate, niente di nuovo
+    if(now - lastMs >= 1000) {
+        lastMs = now;
+        const uint32_t fail = dbgWifiTxFail;
+        char text[40];
+        for(uint8_t i = 0; i < DBG_WIFI_LINES; ++i) {
+            text[0] = 0;
+            switch(i) {
+            case 0: snprintf(text, sizeof(text), "TX %lu lost %lu", (unsigned long)(dbgWifiTxOk + fail), (unsigned long)fail); break;
+            case 1: snprintf(text, sizeof(text), "rej %lu full %lu", (unsigned long)dbgWifiSendErr, (unsigned long)dbgWifiTxQueueFull); break;
+            case 2: snprintf(text, sizeof(text), "RX %lu rxf %lu", (unsigned long)dbgWifiRx[0].count, (unsigned long)dbgWifiRxQueueFull); break;
+            case 3: DebugWifiEspNowRssi(text, sizeof(text), dbgWifiRx[0], now); break;
+            case 4: if(dbgWifiRx[1].count) snprintf(text, sizeof(text), "PD %lu", (unsigned long)dbgWifiRx[1].count); break;
+            case 5: if(dbgWifiRx[1].count) DebugWifiEspNowRssi(text, sizeof(text), dbgWifiRx[1], now); break;
+            }
+            // EN: Spaces up to the line's width clear the old text. / IT: Gli spazi fino alla larghezza della riga cancellano il testo vecchio.
+            snprintf(want[i], sizeof(want[i]), "%-*.*s", lineW[i], lineW[i], text);
+        }
+        pending = true;
+    }
+    for(uint8_t i = 0; i < DBG_WIFI_LINES; ++i) {
+        // EN: Only the characters that changed: the display sends only the area drawn. One line per call.
+        // IT: Solo i caratteri cambiati: il display invia solo la zona disegnata. Una riga per chiamata.
+        uint8_t first = 0, last = strlen(want[i]);
+        if(shown[i][0]) {
+            while(want[i][first] && want[i][first] == shown[i][first]) ++first;
+            if(!want[i][first]) continue;        // unchanged / invariata
+            while(want[i][last - 1] == shown[i][last - 1]) --last;
+        }
+        strcpy(shown[i], want[i]);
+        char part[22];
+        memcpy(part, &want[i][first], last - first);
+        part[last - first] = 0;
+        FW_Common::OLED.display->setTextSize(1);
+        FW_Common::OLED.display->setTextColor(WHITE, BLACK);
+        FW_Common::OLED.display->setCursor(lineX[i] + 6 * first, 16 + 8 * i);
+        FW_Common::OLED.display->print(part);
+        FW_Common::OLED.display->display();
+        return;
+    }
+    pending = false;
+    #undef DBG_WIFI_LINES
+}
+#endif // DEBUG_WIFI_ESPNOW
 #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE) && defined(OPENFIRE_WIRELESS_DEVICE_ESPNOW) && defined(OPENFIRE_USE_ESPNOW_UNIFIED_PACKET)
 // EN: Wireless, Run mode only. Every report (mouse, keyboard, gamepad) goes out as the unified packet with
 //     the whole state, without any confirmation from the dongle. While the aim moves, a report goes out at
@@ -1585,6 +1683,9 @@ void ExecRunMode()
         #ifdef USES_DISPLAY
             else {
                 FW_Common::OLED.IdleOps();
+                #if defined(DEBUG_WIFI_ESPNOW) && defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE) && defined(OPENFIRE_WIRELESS_DEVICE_ESPNOW) && defined(USES_DISPLAY)
+                    DebugWifiEspNowDisplay();   // EN/IT: see its definition / vedi la sua definizione
+                #endif // DEBUG_WIFI_ESPNOW
                 #ifdef MAMEHOOKER
                     // Solenoid feedback on the second core is hella wonky when ammo updates are performed there likely due to blocking I2C transactions,
                     // so just do it here using the signal sent by it.

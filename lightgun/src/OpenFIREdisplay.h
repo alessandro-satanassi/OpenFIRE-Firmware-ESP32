@@ -444,5 +444,9 @@ private:
         0x03, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x03, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x03, 0xc0, 0x00, 0x00
     };
 };
+#ifdef DEBUG_WIFI_ESPNOW
+// EN/IT: Set by ScreenModeChange(): the radio counters in main.cpp must be drawn again / i contatori radio in main.cpp vanno ridisegnati.
+extern volatile bool dbgWifiScreenRedrawn;
+#endif // DEBUG_WIFI_ESPNOW
 
 #endif // _OPENFIREDISPLAY_H_

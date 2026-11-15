@@ -317,6 +317,19 @@ extern SerialWireless_ SerialWireless;
 // EN/IT: Last radio activity used by gun standby / ultima attivita' radio usata dallo standby della pistola.
 extern volatile uint32_t lastRadioTxMs;
 #endif
+#ifdef DEBUG_WIFI_ESPNOW
+// EN: Radio counters for the gun's display, only with -D DEBUG_WIFI_ESPNOW (lightgun platformio.ini).
+// IT: Contatori radio per il display della pistola, solo con -D DEBUG_WIFI_ESPNOW (platformio.ini della pistola).
+extern volatile uint32_t dbgWifiTxOk;         // datagrams acknowledged by the receiver's radio / datagrammi confermati dalla radio del ricevitore
+extern volatile uint32_t dbgWifiTxFail;       // not acknowledged after the radio retries: lost / non confermati dopo i tentativi della radio: persi
+extern volatile uint32_t dbgWifiSendErr;      // esp_now_send() refused (sent again later) / esp_now_send() ha rifiutato (rispedito dopo)
+extern volatile uint32_t dbgWifiTxQueueFull;  // packets dropped, transmit queue full / pacchetti scartati, coda di trasmissione piena
+extern volatile uint32_t dbgWifiRxQueueFull;  // datagrams dropped, receive queue full / datagrammi scartati, coda di ricezione piena
+// EN: Datagrams received from the dongle [0] and from the pedal [1], with their signal: last, worst, best (dBm), and when the last arrived.
+// IT: Datagrammi ricevuti dal dongle [0] e dalla pedaliera [1], con il loro segnale: ultimo, peggiore, migliore (dBm), e quando e' arrivato l'ultimo.
+struct DbgWifiRx_t { volatile uint32_t count, lastMs; volatile int8_t rssi, rssiMin, rssiMax; };
+extern DbgWifiRx_t dbgWifiRx[2];
+#endif // DEBUG_WIFI_ESPNOW
 
 #endif // _SERIAL_STREAM_H_
 

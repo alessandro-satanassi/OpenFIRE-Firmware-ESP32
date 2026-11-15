@@ -88,13 +88,15 @@ Da ulcune prove sembra che tra 240mhz e 80mhz ci siano 4 gradi di differenza e n
 /*
 DEBUG_TEMP: shows the CPU frequency and the chip's internal temperature in the top right corner of the display,
 refreshed every DEBUG_TEMP_INTERVAL_MS. Only for tests: the internal sensor is approximate, compare readings on the same dongle.
+Not drawn with DEBUG_WIFI_ESPNOW: its counters use the whole display.
 /
 DEBUG_TEMP: mostra la frequenza della CPU e la temperatura interna del chip nell'angolo in alto a destra del display,
 aggiornate ogni DEBUG_TEMP_INTERVAL_MS. Solo per prove: il sensore interno è approssimativo, confrontare letture sullo stesso dongle.
+Non disegnato con DEBUG_WIFI_ESPNOW: i suoi contatori usano tutto il display.
 */
 //#define DEBUG_TEMP
 
-#if defined(DEBUG_TEMP) && defined(USES_DISPLAY)
+#if defined(DEBUG_TEMP) && defined(USES_DISPLAY) && !defined(DEBUG_WIFI_ESPNOW)
   #define DEBUG_TEMP_INTERVAL_MS 30000UL
   unsigned long debug_temp_millis = 0;
   bool debug_temp_first = true;
@@ -102,6 +104,104 @@ aggiornate ogni DEBUG_TEMP_INTERVAL_MS. Solo per prove: il sensore interno è ap
 
 bool display_init = false;
 
+#if defined(DEBUG_WIFI_ESPNOW) && defined(USES_DISPLAY) && defined(OPENFIRE_WIRELESS_ENABLE) && defined(OPENFIRE_WIRELESS_DEVICE_ESPNOW)
+// EN: Radio counters on the whole display, only with -D DEBUG_WIFI_ESPNOW: they replace the final screen of setup().
+//     Five lines, font size 2, counted since power on:
+//       TX   <datagrams sent to the gun: PC data (app, MAMEHooker) and connection replies>
+//       lost <not acknowledged by the gun after the radio retries>                          (red if not 0)
+//       RX   <datagrams received from the gun>
+//       ERR  <refused by esp_now_send(), sent again later>/<packets dropped, transmit queue full>/
+//            <datagrams dropped, receive queue full>                                       (red if one is not 0)
+//       <gun signal, dBm: worst/last/best; "--" if nothing for 2 s>  (green, yellow from -68, red below -80)
+//     A line that does not fit in 13 characters is drawn with font size 1 (26 characters): no digit is cut.
+//     Recomposed once a second, only the characters that changed are drawn. loop() has the lowest priority:
+//     the radio and USB tasks interrupt it.
+// IT: Contatori radio su tutto il display, solo con -D DEBUG_WIFI_ESPNOW: sostituiscono la schermata finale di setup().
+//     Cinque righe, font dimensione 2, contate dall'accensione:
+//       TX   <datagrammi inviati alla pistola: dati del PC (app, MAMEHooker) e risposte di connessione>
+//       lost <non confermati dalla pistola dopo i tentativi della radio>                     (rosso se non 0)
+//       RX   <datagrammi ricevuti dalla pistola>
+//       ERR  <rifiutati da esp_now_send(), rispediti dopo>/<pacchetti scartati, coda di trasmissione piena>/
+//            <datagrammi scartati, coda di ricezione piena>                                (rosso se uno non e' 0)
+//       <segnale della pistola, dBm: peggiore/ultimo/migliore; "--" se niente da 2 s>  (verde, giallo da -68, rosso sotto -80)
+//     Una riga che non sta in 13 caratteri e' disegnata con il font dimensione 1 (26 caratteri): nessuna cifra e' tagliata.
+//     Ricomposte una volta al secondo, si disegnano solo i caratteri cambiati. loop() ha la priorita' piu' bassa:
+//     i task della radio e dell'USB lo interrompono.
+#define DBG_WIFI_LINES 5
+#define DBG_WIFI_COLS 13                   // size 2: 12x16 pixels, 13 x 12 = 156 of 160 / dimensione 2: 12x16 pixel, 13 x 12 = 156 su 160
+static void DebugWifiEspNowDisplay()
+{
+  static const char *const label[DBG_WIFI_LINES] = { "TX", "lost", "RX", "ERR", "" };
+  static const uint16_t labelColor[DBG_WIFI_LINES] = { CYAN, CYAN, GREEN, GRAY, GRAY };
+  static char shown[DBG_WIFI_LINES][2 * DBG_WIFI_COLS + 1];   // on the display (empty = to draw) / sul display (vuota = da disegnare)
+  static uint16_t shownColor[DBG_WIFI_LINES];
+  static uint8_t shownSize[DBG_WIFI_LINES];   // font size on the display (0 = none yet) / dimensione del font sul display (0 = ancora nessuna)
+  static uint32_t lastMs = 0;
+  static bool first = true;
+  const uint32_t now = millis();
+  if (!display_init || (!first && now - lastMs < 1000)) return;
+  if (first) {                             // replaces the final screen / sostituisce la schermata finale
+    first = false;
+    tft.fillScreen(BLACK);
+  }
+  lastMs = now;
+  const uint32_t fail = dbgWifiTxFail;
+  const uint32_t sendErr = dbgWifiSendErr, txFull = dbgWifiTxQueueFull, rxFull = dbgWifiRxQueueFull;
+  const DbgWifiRx_t &rx = dbgWifiRx[0];     // [0]: the paired gun (peerAddress) / la pistola accoppiata (peerAddress)
+  for (uint8_t i = 0; i < DBG_WIFI_LINES; ++i) {
+    char value[40], text[40];
+    uint16_t valueColor = WHITE;
+    switch (i) {
+    case 0: snprintf(value, sizeof(value), "%lu", (unsigned long)(dbgWifiTxOk + fail)); break;
+    case 1: snprintf(value, sizeof(value), "%lu", (unsigned long)fail); if (fail) valueColor = RED; break;
+    case 2: snprintf(value, sizeof(value), "%lu", (unsigned long)rx.count); break;
+    case 3: snprintf(value, sizeof(value), "%lu/%lu/%lu", (unsigned long)sendErr, (unsigned long)txFull, (unsigned long)rxFull);
+            if (sendErr || txFull || rxFull) valueColor = RED;
+            break;
+    default: {
+      valueColor = GRAY;
+      if (!rx.count) { snprintf(value, sizeof(value), "--/--/--"); break; }   // count first: the callback sets it last / prima count: la callback lo aggiorna per ultimo
+      char last[6] = "--";
+      // EN: Signed: a datagram arrived after "now" is recent too. / IT: Con segno: anche un datagramma arrivato dopo "now" e' recente.
+      if ((int32_t)(now - rx.lastMs) < 2000) {
+        const int rssi = rx.rssi;
+        snprintf(last, sizeof(last), "%d", rssi);
+        valueColor = (rssi >= -67) ? GREEN : (rssi >= -80) ? YELLOW : RED;
+      }
+      snprintf(value, sizeof(value), "%d/%s/%d", (int)rx.rssiMin, last, (int)rx.rssiMax);
+      } break;
+    }
+    // EN: Value on the right of the label (rssi on the left), spaces clear the old text. Font size 2 if label, a space
+    //     and value fit in 13 characters, otherwise size 1 (26 characters, in the middle of the line's 16 pixels).
+    // IT: Valore a destra dell'etichetta (rssi a sinistra), gli spazi cancellano il testo vecchio. Font dimensione 2 se
+    //     etichetta, uno spazio e valore stanno in 13 caratteri, altrimenti dimensione 1 (26 caratteri, al centro dei 16 pixel della riga).
+    const uint8_t labelLen = strlen(label[i]);
+    const uint8_t size = (labelLen + (labelLen ? 1 : 0) + strlen(value) <= DBG_WIFI_COLS) ? 2 : 1;
+    const uint8_t cols = (size == 2) ? DBG_WIFI_COLS : 2 * DBG_WIFI_COLS;
+    if (labelLen) snprintf(text, sizeof(text), "%s%*s", label[i], cols - labelLen, value);
+    else snprintf(text, sizeof(text), "%-*s", cols, value);
+    text[cols] = 0;
+    if (size != shownSize[i]) {             // size changed: clear the line / dimensione cambiata: cancella la riga
+      if (shownSize[i]) tft.fillRect(0, 16 * i, 160, 16, BLACK);
+      shown[i][0] = 0;
+    }
+    if (valueColor != shownColor[i]) shown[i][0] = 0;   // colour changed: whole line / colore cambiato: tutta la riga
+    const bool all = !shown[i][0];
+    tft.setTextSize(size);
+    for (uint8_t k = 0; k < cols; ++k) {
+      if (!all && text[k] == shown[i][k]) continue;
+      tft.setTextColor((k < labelLen) ? labelColor[i] : valueColor, BLACK);
+      tft.setCursor(2 + 6 * size * k, 16 * i + 8 - 4 * size);
+      tft.print(text[k]);
+    }
+    memcpy(shown[i], text, cols + 1);
+    shownColor[i] = valueColor;
+    shownSize[i] = size;
+  }
+}
+#undef DBG_WIFI_COLS
+#undef DBG_WIFI_LINES
+#endif // DEBUG_WIFI_ESPNOW
 // ===================================================================================
 // MAIN SETUP
 // ===================================================================================
@@ -300,7 +400,7 @@ void loop()
     SerialWireless.flush(); 
   }
 
-  #if defined(DEBUG_TEMP) && defined(USES_DISPLAY)
+  #if defined(DEBUG_TEMP) && defined(USES_DISPLAY) && !defined(DEBUG_WIFI_ESPNOW)
   // Right of the banner (x 120-159, y 0-15), free on every screen after setup. / A destra del banner (x 120-159, y 0-15), libero in ogni schermata dopo il setup.
   if (display_init && (debug_temp_first || (millis() - debug_temp_millis >= DEBUG_TEMP_INTERVAL_MS))) {
     debug_temp_first = false;
@@ -316,4 +416,7 @@ void loop()
     tft.print(debug_temp_buf);
   }
   #endif // DEBUG_TEMP && USES_DISPLAY
+  #if defined(DEBUG_WIFI_ESPNOW) && defined(USES_DISPLAY) && defined(OPENFIRE_WIRELESS_ENABLE) && defined(OPENFIRE_WIRELESS_DEVICE_ESPNOW)
+  DebugWifiEspNowDisplay();
+  #endif // DEBUG_WIFI_ESPNOW
 }
