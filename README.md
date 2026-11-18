@@ -110,7 +110,16 @@ For a first test after calibration, try [OpenFIRE ShootingGallery](https://aless
 
 If something does not work, see [Common Problems](lightgun/src/README.md#common-problems). The [operational manual](lightgun/src/README.md#english-version) explains buttons, pause mode and profiles.
 
-## What's New in 7.1.1
+## What's New in 7.1.2
+
+* **Aim test:** in **Gun Tests**, **Open Aim Test...** opens a fullscreen grid with nine targets to check the aim, the buttons and the recoil together, in the WebApp and in the desktop App ([test mode](lightgun/src/README.md#test-mode)).
+* **Polling rate test:** measures how often the gun really sends its aim to the computer, with the USB cable or through the dongle: **Measure Polling Rate** in the WebApp menu bar, or the button next to the COM port in the desktop App. The expected value is about 209 Hz.
+* **Wireless transmit power:** choose the power with which the gun transmits to the dongle and the pedal, from 2 to 20 dBm, in **Gun Settings → Input / Output** (shown with **View > Show Unsafe Settings**). The default, 16.5 dBm, is the power used so far ([operations manual](lightgun/src/README.md#operations-manual)).
+* **More reliable wireless link:** data from the desktop App or MAMEHooker no longer stays waiting when the radio queue is full, and damaged packets are discarded.
+
+**Updating from 7.1.1:** a normal update keeps settings and calibrations, and there is no need to calibrate again. Update the lightgun, the dongle and the pedal together: all three firmware change.
+
+### Introduced in 7.1.1
 
 * **Tolerant calibration:** for those who cannot step back far enough to calibrate, the WebApp offers the **Tolerant calibration** option in the *Calibration Profiles* tab. At the edges two emitters in view are enough and at the corners even fewer, while a shot is still refused when the gun is rotated too much or the aim is still far from the target. The result is usually very close to the standard calibration, which stays the default and the most precise ([how it works](lightgun/src/README.md#tolerant-calibration)).
 * **More precise aim with the PAJ7025R3 camera:** when only two or three emitters are in view, the hidden ones are rebuilt taking the wide-angle lens into account, so the pointer stays on target near the edges of the screen.
@@ -437,7 +446,16 @@ Dopo la calibrazione, prova [OpenFIRE ShootingGallery](https://alessandro-satana
 
 Se qualcosa non funziona, consulta [Problemi comuni](lightgun/src/README.md#problemi-comuni-italiano). Il [manuale operativo](lightgun/src/README.md#versione-italiana) spiega pulsanti, modalità pausa e profili.
 
-## Novità della versione 7.1.1
+## Novità della versione 7.1.2
+
+* **Prova puntamento:** in **Gun Tests**, **Apri Prova puntamento...** apre una griglia a schermo intero con nove bersagli per controllare insieme la mira, i pulsanti e il rinculo, nella WebApp e nell'App desktop ([modalità di test](lightgun/src/README.md#modalità-di-test-italiano)).
+* **Misura polling rate:** misura quanto spesso la pistola invia davvero la mira al computer, con il cavo USB o tramite il dongle: **Misura polling rate** nella barra dei menù della WebApp, oppure il pulsante accanto alla Porta COM nell'App desktop. Il valore atteso è circa 209 Hz.
+* **Potenza di trasmissione wireless:** scegli la potenza con cui la pistola trasmette al dongle e al pedale, da 2 a 20 dBm, in **Impostazioni Gun → Input / Output** (visibile con **Visualizza > Mostra Impostazioni Non Sicure**). Il predefinito, 16,5 dBm, è la potenza usata finora ([manuale operativo](lightgun/src/README.md#manuale-operativo-italiano)).
+* **Collegamento wireless più affidabile:** i dati dall'App desktop o da MAMEHooker non restano più in attesa quando la coda radio è piena, e i pacchetti danneggiati vengono scartati.
+
+**Aggiornamento dalla 7.1.1:** un aggiornamento normale mantiene impostazioni e calibrazioni, e non serve calibrare di nuovo. Aggiorna insieme lightgun, dongle e pedale: cambiano tutti e tre i firmware.
+
+### Introdotte con la 7.1.1
 
 * **Calibrazione tollerante:** per chi non può allontanarsi abbastanza per calibrare, la WebApp offre l'opzione **Calibrazione tollerante** nella scheda *Profili di calibrazione*. Ai bordi bastano due emettitori in vista e agli angoli anche meno, mentre un tiro viene comunque rifiutato quando la pistola è troppo ruotata o la mira è ancora lontana dal bersaglio. Il risultato è di solito molto vicino alla calibrazione standard, che resta quella predefinita e la più precisa ([come funziona](lightgun/src/README.md#calibrazione-tollerante-italiano)).
 * **Mira più precisa con la telecamera PAJ7025R3:** quando se ne vedono solo due o tre, gli emettitori nascosti vengono ricostruiti tenendo conto della lente grandangolare, e il puntatore resta sul bersaglio vicino ai bordi dello schermo.

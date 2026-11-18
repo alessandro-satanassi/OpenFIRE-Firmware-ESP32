@@ -1,6 +1,6 @@
 <a id="english-version"></a>
 
-# OpenFIRE ESP32 7.1.1 — User documentation
+# OpenFIRE ESP32 7.1.2 — User documentation
 
 - [Overview, hardware and installation](README.md#english-version)
 - [WebApp configuration](src/README.md#configuration-with-the-webapp)
@@ -10,13 +10,13 @@
 - [Tolerant calibration](src/README.md#tolerant-calibration)
 - [Wireless power saving](src/README.md#camera-display-and-startup-settings)
 - [Camera lens refinement (section 12)](lib/OpenFIREPosition/OpenFIRE-Lens-Correction-EN-IT.md#english)
-- [7.1.1 changelog](../CHANGELOG.md#english-version)
+- [7.1.2 changelog](../CHANGELOG.md#english-version)
 
 ---
 
 <a id="versione-italiana"></a>
 
-# OpenFIRE ESP32 7.1.1 — Documentazione utente
+# OpenFIRE ESP32 7.1.2 — Documentazione utente
 
 - [Panoramica, hardware e installazione](README.md#versione-italiana)
 - [Configurazione WebApp](src/README.md#configurazione-con-la-webapp)
@@ -26,4 +26,4 @@
 - [Calibrazione tollerante](src/README.md#calibrazione-tollerante-italiano)
 - [Risparmio energetico wireless](src/README.md#telecamera-display-e-impostazioni-di-avvio)
 - [Affinamento della lente della telecamera (paragrafo 12)](lib/OpenFIREPosition/OpenFIRE-Lens-Correction-EN-IT.md#italiano)
-- [Cronologia modifiche 7.1.1](../CHANGELOG.md#versione-italiana)
+- [Cronologia modifiche 7.1.2](../CHANGELOG.md#versione-italiana)

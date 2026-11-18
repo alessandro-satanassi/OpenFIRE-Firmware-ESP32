@@ -1039,9 +1039,9 @@ static void DebugWifiEspNowDisplay()
 //     volte, ognuna HID_REPEAT_GAP_MS dopo la precedente, e solo con la coda della radio vuota. Il dongle passa
 //     un report al computer solo se e' diverso dall'ultimo, quindi li' una copia non cambia nulla. La libreria
 //     wireless non cambia.
-#define HID_REPEAT_FIRST_MS 50
-#define HID_REPEAT_GAP_MS   30
-#define HID_REPEAT_COUNT    3
+#define HID_REPEAT_FIRST_MS 12
+#define HID_REPEAT_GAP_MS   40
+#define HID_REPEAT_COUNT    5
 static void WirelessHidRepeat(const bool fullTx)
 {
     static uint8_t last[sizeof(Keyboard._keyReport) + sizeof(Gamepad16.gamepad16Report) + 1];

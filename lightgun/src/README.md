@@ -8,7 +8,7 @@
 
 # OpenFIRE - The Enclosed Instruction Book!
 
-*... adapted for ESP32 7.1.1 from the original [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware/blob/OpenFIRE-dev/OpenFIREmain/README.md) project repository.*
+*... adapted for ESP32 7.1.2 from the original [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware/blob/OpenFIRE-dev/OpenFIREmain/README.md) project repository.*
 
 This manual takes you from a freshly flashed gun to your first game: placing the IR emitters, configuring the gun, calibrating it, and everything you can do from the gun itself while playing.
 
@@ -449,7 +449,7 @@ For technical support and to join the discussion, see the [Community & Support s
 
 # OpenFIRE - Il Manuale di utilizzo!
 
-*... adattato per ESP32 7.1.1 dal progetto originale [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware/blob/OpenFIRE-dev/OpenFIREmain/README.md).*
+*... adattato per ESP32 7.1.2 dal progetto originale [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware/blob/OpenFIRE-dev/OpenFIREmain/README.md).*
 
 Questo manuale ti accompagna da una pistola con il firmware appena installato alla prima partita: posizionamento degli emettitori IR, configurazione, calibrazione e tutto quello che puoi fare dalla pistola mentre giochi.
 
