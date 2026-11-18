@@ -680,31 +680,440 @@ void animTask(void *pvParameters) {
 /////////////////////////////////////////////////////////////////////////////
 
 // ===================================================================================
-// Heuristic Best Channel Search (Auto-Channel Configuration) / RICERCA EURISTICA CANALE MIGLIORE (AUTO-CHANNEL CONFIGURATION)
+// Wireless country / PAESE PER LA RADIO
 // ===================================================================================
-// This function, executed by the dongle, activates the radio chip's "promiscuous" mode
-// to sniff the airwaves. It assigns a score to each channel based not only on the
-// number of networks but, more importantly, on the actual noise floor and the
-// packet traffic present at that moment. It selects the channel offering the
-// best Signal-to-Noise Ratio (SNR) for ESP-NOW.
+// EN: Channels 12 and 13 can be used only with a country that allows them. The driver starts in
+//     "world safe" mode (channels 1-11, 12-13 only listened to), and the country is also kept in
+//     flash, so without this call the usable channels would depend on the board's past. It is set the
+//     same way on the lightgun, the dongle (also before the channel search) and the pedal.
+// IT: I canali 12 e 13 si possono usare solo con un paese che li permette. Il driver parte in modalita'
+//     "world safe" (canali 1-11, 12-13 solo in ascolto), e il paese resta anche salvato in flash, quindi
+//     senza questa chiamata i canali utilizzabili dipenderebbero dalla storia della scheda. Si imposta
+//     allo stesso modo su pistola, dongle (anche prima della ricerca del canale) e pedale.
+#ifndef OPENFIRE_WIFI_COUNTRY
+  #define OPENFIRE_WIFI_COUNTRY "IT"           // "EU" va bene uguale
+#endif // OPENFIRE_WIFI_COUNTRY
+#ifndef OPENFIRE_WIFI_COUNTRY_CHANNELS
+  #define OPENFIRE_WIFI_COUNTRY_CHANNELS 13    // channels 1..N allowed / canali 1..N permessi
+#endif // OPENFIRE_WIFI_COUNTRY_CHANNELS
+
+static void applyWirelessCountry() {
+  wifi_country_t country = {
+    .cc = OPENFIRE_WIFI_COUNTRY,
+    .schan = 1,
+    .nchan = OPENFIRE_WIFI_COUNTRY_CHANNELS,
+    .max_tx_power = 20,
+    .policy = WIFI_COUNTRY_POLICY_MANUAL
+  };
+  esp_wifi_set_country(&country);
+}
+
+// ===================================================================================
+// Best Channel Search (Auto-Channel Configuration) / RICERCA DEL CANALE MIGLIORE (AUTO-CHANNEL CONFIGURATION)
+// ===================================================================================
+// EN: Executed once by the dongle at start-up, before ESP-NOW, it looks for the channel where ESP-NOW
+//     meets the least interference:
+//     1. three Wi-Fi scans list the access points with channel, signal (averaged over the scans) and,
+//        for 40 MHz networks, the second half of their band;
+//     2. listening in promiscuous mode, in three passes on every channel, measures how long the
+//        air is really busy (from length and rate of every frame, not from the number of frames), how
+//        strong that traffic is and the noise floor of the radio;
+//     3. every source of interference (access point or measured traffic) is attenuated by its distance
+//        in channels, as a 20 MHz receiver really sees it, and weighted by how long it keeps the air
+//        busy. On the same channel the other device and ESP-NOW hear each other and take turns
+//        (CSMA): the cost is a short wait. One or two channels away they do not decode each other and
+//        their frames collide, so that case weighs more. The channel with the lowest cost wins.
 // /
-// Questa funzione eseguita dal Dongle attiva la modalità "Promiscuous" del chip radio
-// per annusare l'etere (sniffing). Assegna uno score a ciascun canale basato non
-// solo sul numero di reti, ma soprattutto sul rumore reale (Noise Floor) e sul
-// traffico effettivo dei pacchetti che transitano in quell'istante. Sceglie il 
-// canale che offre il SNR (Signal-to-Noise Ratio) migliore per l'ESP-NOW.
+// IT: Eseguita una sola volta dal dongle all'avvio, prima di ESP-NOW, cerca il canale dove ESP-NOW
+//     incontra meno interferenze:
+//     1. tre scansioni Wi-Fi elencano gli access point con canale, segnale (medio tra le scansioni) e,
+//        per le reti a 40 MHz, la seconda meta' della loro banda;
+//     2. l'ascolto in modalita' promiscua, in tre passate su ogni canale, misura quanto a lungo
+//        l'etere e' davvero occupato (da lunghezza e velocita' di ogni frame, non dal numero di frame),
+//        quanto e' forte quel traffico e il rumore di fondo della radio;
+//     3. ogni sorgente di interferenza (access point o traffico misurato) viene attenuata in base alla
+//        sua distanza in canali, come la vede davvero un ricevitore da 20 MHz, e pesata per quanto
+//        tempo occupa l'etere. Sullo stesso canale l'altro dispositivo ed ESP-NOW si sentono e si danno
+//        il turno (CSMA): il costo e' una breve attesa. A uno o due canali di distanza non si decodificano
+//        e i loro frame collidono, quindi quel caso pesa di piu'. Vince il canale con il costo minore.
+// EN: It takes about 17 s: repeated scans and passes spread out in time make the measure more reliable
+//     (traffic in bursts, signals that vary, access points missed by one scan); a longer search would
+//     add little.
+// IT: Dura circa 17 s: scansioni ripetute e passate distribuite nel tempo rendono la misura piu' affidabile
+//     (traffico a raffiche, segnali che variano, access point persi da una singola scansione); una ricerca
+//     piu' lunga aggiungerebbe poco.
 
 // ================= BEST CHANNEL SEARCH FUNCTIONS - USED ONLY BY THE DONGLE / FUNZIONI PER RICERCA MIGLIORE CANALE - USATO SOLO DAL DONGLE =========================
 #ifdef DONGLE
 
-// ================= GLOBAL VARIABLES FOR CALLBACKS / VARIABILI GLOBALI PER CALLBACK =================
-static volatile uint32_t g_packetCounter = 0;
-static volatile bool g_sniffing = false;
+#define BEST_CH_SCAN_MS_PER_CHANNEL 150  // active scan per channel (beacons every ~100 ms) / scansione attiva per canale (beacon ogni ~100 ms)
+#define BEST_CH_SCANS               3    // Wi-Fi scans, averaged per access point / scansioni Wi-Fi, mediate per access point
+#define BEST_CH_SETTLE_MS           15   // after a channel change / dopo un cambio canale
+#define BEST_CH_LISTEN_MS           250  // listening per channel and per pass / ascolto per canale e per passata
+#define BEST_CH_PASSES              3    // passes over all channels / passate su tutti i canali
+#define BEST_CH_MAX_AP              64   // strongest access points kept / access point piu' forti considerati
+#define BEST_CH_RSSI_MIN            -100 // weakest RSSI kept apart (dBm) / RSSI piu' debole tenuto distinto (dBm)
+#define BEST_CH_RSSI_MAX            -10  // strongest RSSI kept apart (dBm) / RSSI piu' forte tenuto distinto (dBm)
+#define BEST_CH_RSSI_BINS           (BEST_CH_RSSI_MAX - BEST_CH_RSSI_MIN + 1)  // one per dBm / uno per dBm
+
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C2
+  #define BEST_CH_HAS_NOISE_FLOOR 1      // rx_ctrl.noise_floor in dBm / rx_ctrl.noise_floor in dBm
+#endif
+
+// ================= MEASUREMENTS / MISURE =================
+typedef struct {
+  uint32_t frames;      // frames received while listening on this channel / frame ricevuti in ascolto su questo canale
+  uint32_t busyUs;      // their estimated airtime (us) / loro tempo d'aria stimato (us)
+  // EN: airtime for every RSSI value, 1 dBm apart as the radio reports it: no mean is ever taken, so a
+  //     lot of weak traffic cannot hide strong traffic
+  // IT: tempo d'aria per ogni valore di RSSI, a 1 dBm di distanza come lo fornisce la radio: non si fa mai
+  //     una media, cosi' tanto traffico debole non puo' nascondere traffico forte
+  uint32_t rssiBinUs[BEST_CH_RSSI_BINS];
+  int32_t  noiseSum;    // sum of the noise floor readings (dBm) / somma delle letture del rumore di fondo (dBm)
+  uint32_t noiseCount;  // number of noise floor readings / numero di letture del rumore di fondo
+  uint32_t listenUs;    // listening time; 0 = channel not measured / tempo di ascolto; 0 = canale non misurato
+} BestChMeasure;
+
+typedef struct {
+  uint8_t ch;           // primary channel / canale primario
+  int8_t  rssi;         // dBm
+  int8_t  second;       // 40 MHz: +1 second half above, -1 below, 0 none / 40 MHz: +1 seconda meta' sopra, -1 sotto, 0 nessuna
+} BestChAp;
+
+static BestChMeasure g_bestChMeasure[14];
+
+// EN: Access points found by the scans, to recognize the frames of their networks (BSSID).
+// IT: Access point trovati dalle scansioni, per riconoscere i frame delle loro reti (BSSID).
+typedef struct {
+  uint8_t bssid[6];
+  uint8_t ch;           // primary channel / canale primario
+  int8_t  second;       // as in BestChAp / come in BestChAp
+} BestChBss;
+
+static BestChBss g_bestChBss[BEST_CH_MAX_AP];
+static uint8_t g_bestChBssCount = 0;
+static volatile uint8_t g_sniffChannel = 0;   // channel being measured, 0 = none / canale in misura, 0 = nessuno
+
+static inline uint32_t bestChCeilDiv(uint32_t a, uint32_t b) { return (a + b - 1) / b; }
+
+// EN: Airtime of a received frame in microseconds, from its PHY header: preamble plus data symbols.
+//     Bytes alone would be misleading: a 100-byte beacon at 1 Mbps keeps the air busy longer than a
+//     1500-byte frame at 65 Mbps.
+// IT: Tempo d'aria di un frame ricevuto in microsecondi, dalla sua intestazione PHY: preambolo piu'
+//     simboli dati. I soli byte ingannerebbero: un beacon da 100 byte a 1 Mbit/s occupa l'etere piu' a
+//     lungo di un frame da 1500 byte a 65 Mbit/s.
+static inline uint32_t bestChFrameAirtimeUs(const wifi_pkt_rx_ctrl_t &rx, wifi_promiscuous_pkt_type_t type) {
+  const uint32_t len = rx.sig_len;  // bytes, FCS included / byte, FCS compreso
+  if (rx.sig_mode == 0) {
+    // 802.11b/g. Rate code as wifi_phy_rate_t, in half Mbps / codice come wifi_phy_rate_t, in mezzi Mbit/s
+    static const uint8_t halfMbps[16] = {2, 4, 11, 22, 2, 4, 11, 22, 96, 48, 24, 12, 108, 72, 36, 18};
+    const uint8_t code = rx.rate & 0x0F;
+    if (code < 8) {  // DSSS/CCK: long (192 us) or short (96 us) preamble / preambolo lungo o corto
+      return ((code >= 5) ? 96 : 192) + bestChCeilDiv(len * 16, halfMbps[code]);
+    }
+    // OFDM: 20 us preamble, 4 us symbols, 6 us signal extension / preambolo 20 us, simboli 4 us, estensione 6 us
+    return 26 + 4 * bestChCeilDiv(22 + 8 * len, 2 * halfMbps[code]);
+  }
+  // 802.11n, also frames the radio cannot decode (WIFI_PKT_MISC, e.g. two spatial streams)
+  // 802.11n, anche frame che la radio non decodifica (WIFI_PKT_MISC, ad es. due flussi spaziali)
+  if (len == 0) return (type == WIFI_PKT_MISC) ? 200 : 40;
+  static const uint16_t ndbps20[8] = {26, 52, 78, 104, 156, 208, 234, 260};
+  static const uint16_t ndbps40[8] = {54, 108, 162, 216, 324, 432, 486, 540};
+  const uint32_t mcs = rx.mcs;
+  uint32_t nss = mcs / 8 + 1;
+  if (nss > 4) nss = 4;
+  const uint32_t ndbps = (rx.cwb ? ndbps40[mcs & 7] : ndbps20[mcs & 7]) * nss;
+  const uint32_t symbols = bestChCeilDiv(22 + 8 * len, ndbps);
+  const uint32_t dataUs = rx.sgi ? bestChCeilDiv(symbols * 36, 10) : symbols * 4;
+  uint32_t preambleUs = 32 + 4 * nss;
+  if (rx.aggregation && rx.ampdu_cnt > 1) preambleUs /= rx.ampdu_cnt;  // one preamble for the whole A-MPDU / un preambolo per tutto l'A-MPDU
+  return preambleUs + dataUs;
+}
+
+// EN: Channel announced by a beacon or probe response (DS Parameter Set), 0 if none. An access point
+//     one or two channels away can be decoded here too: its beacons are already counted from the scan,
+//     at their real channel.
+// IT: Canale annunciato da un beacon o da una probe response (DS Parameter Set), 0 se assente. Un access
+//     point a uno o due canali di distanza si puo' decodificare anche qui: i suoi beacon sono gia'
+//     contati dalla scansione, sul loro canale reale.
+static inline uint8_t bestChAnnouncedChannel(const wifi_promiscuous_pkt_t *pkt) {
+  const uint8_t *p = pkt->payload;
+  const int len = (int)pkt->rx_ctrl.sig_len - 4;  // without FCS / senza FCS
+  if (len < 36) return 0;
+  const uint8_t subtype = p[0] >> 4;
+  if ((p[0] & 0x0C) != 0 || (subtype != 8 && subtype != 5)) return 0;  // beacon / probe response
+  int off = 36;  // 24-byte header + 12 fixed bytes / intestazione 24 byte + 12 byte fissi
+  while (off + 2 <= len) {
+    const uint8_t id = p[off];
+    const uint8_t l = p[off + 1];
+    if (off + 2 + l > len) break;
+    if (id == 3 && l == 1) return p[off + 2];
+    off += 2 + l;
+  }
+  return 0;
+}
+
+// EN: BSSID of a management or data frame without errors, NULL if it has none (control frames,
+//     frames between access points).
+// IT: BSSID di un frame di gestione o dati senza errori, NULL se non ne ha (frame di controllo, frame tra
+//     access point).
+static inline const uint8_t *bestChFrameBssid(const wifi_promiscuous_pkt_t *pkt, wifi_promiscuous_pkt_type_t type) {
+  if (pkt->rx_ctrl.rx_state != 0 || pkt->rx_ctrl.sig_len < 28) return NULL;  // 24-byte header + FCS / intestazione 24 byte + FCS
+  const uint8_t *p = pkt->payload;
+  if (type == WIFI_PKT_MGMT) return p + 16;   // address 3 / indirizzo 3
+  if (type != WIFI_PKT_DATA) return NULL;
+  switch (p[1] & 0x03) {                      // To DS, From DS
+    case 0:  return p + 16;                   // address 3 / indirizzo 3
+    case 1:  return p + 4;                    // to the access point: address 1 / verso l'access point: indirizzo 1
+    case 2:  return p + 10;                   // from the access point: address 2 / dall'access point: indirizzo 2
+    default: return NULL;
+  }
+}
+
+// EN: True if the frame belongs to a known network whose band does not cover this channel: it was
+//     decoded from one or two channels away, and that network is already measured at its real channel.
+// IT: Vero se il frame appartiene a una rete nota la cui banda non copre questo canale: e' stato
+//     decodificato da uno o due canali di distanza, e quella rete e' gia' misurata sul suo canale reale.
+static inline bool bestChFromOtherChannel(const uint8_t *bssid, uint8_t ch) {
+  if (bssid == NULL) return false;
+  for (uint8_t k = 0; k < g_bestChBssCount; k++) {
+    const BestChBss &e = g_bestChBss[k];
+    if (memcmp(e.bssid, bssid, 6) != 0) continue;
+    if (e.ch == ch) return false;
+    if (e.second != 0 && (int)e.ch + 4 * (int)e.second == (int)ch) return false;  // second half of 40 MHz / seconda meta' dei 40 MHz
+    return true;
+  }
+  return false;
+}
+
+static inline uint8_t bestChRssiBin(int rssi) {
+  if (rssi < BEST_CH_RSSI_MIN) rssi = BEST_CH_RSSI_MIN;  // too weak to matter / troppo debole per contare
+  if (rssi > BEST_CH_RSSI_MAX) rssi = BEST_CH_RSSI_MAX;
+  return (uint8_t)(rssi - BEST_CH_RSSI_MIN);
+}
 
 // ================= CALLBACK PROMISCUOUS MODE =================
-void IRAM_ATTR promiscuousCallback(void *buf, wifi_promiscuous_pkt_type_t type) {
-  if (!g_sniffing) return;
-  g_packetCounter = g_packetCounter + 1;
+void promiscuousCallback(void *buf, wifi_promiscuous_pkt_type_t type) {
+  const uint8_t ch = g_sniffChannel;
+  if (ch == 0 || buf == NULL) return;
+  const wifi_promiscuous_pkt_t *pkt = (const wifi_promiscuous_pkt_t *)buf;
+  const wifi_pkt_rx_ctrl_t &rx = pkt->rx_ctrl;
+  if (rx.channel != 0 && rx.channel != ch) return;  // received before the channel change / ricevuto prima del cambio canale
+  if (type == WIFI_PKT_MGMT && rx.rx_state == 0) {
+    const uint8_t announced = bestChAnnouncedChannel(pkt);
+    if (announced != 0 && announced != ch) return;
+  }
+  if (bestChFromOtherChannel(bestChFrameBssid(pkt, type), ch)) return;
+  const uint32_t airtimeUs = bestChFrameAirtimeUs(rx, type);
+  BestChMeasure &m = g_bestChMeasure[ch];
+  m.frames++;
+  m.busyUs += airtimeUs;
+  m.rssiBinUs[bestChRssiBin(rx.rssi)] += airtimeUs;
+  #ifdef BEST_CH_HAS_NOISE_FLOOR
+  m.noiseSum += rx.noise_floor;
+  m.noiseCount++;
+  #endif
+}
+
+// ================= SCORE / PUNTEGGIO =================
+// EN: Cost of every channel and choice of the lowest. Sources of interference:
+//     - the traffic measured on each channel, for every RSSI value (1 dBm steps, as the radio reports
+//       it): share of time busy. Each value counts on its own, so adding traffic never lowers the cost;
+//     - every access point, with a small activity of its own (beacons and the traffic the radio cannot
+//       decode, such as two spatial streams), and for 40 MHz networks also the second half of the band.
+//     Each source is attenuated by its distance in channels (0, 2, 6, 15, 25, 35, 40, 45, 50 dB for
+//     0..8 channels, 5 MHz each) and weighted by its share of busy time:
+//     - same channel: from -90 to -82 dBm (preamble detection) the weight rises to 0.35, because both
+//       sides take turns and ESP-NOW only waits; up to 0.15 more from -80 to -55 dBm, for the devices
+//       the gun cannot hear (hidden node);
+//     - other channel: nobody takes turns and the frames collide: the weight rises from 0 at -85 dBm to
+//       1 at -60 dBm.
+//     A noise floor higher than on the quietest channel counts as interference that is always present.
+// IT: Costo di ogni canale e scelta del minore. Sorgenti di interferenza:
+//     - il traffico misurato su ogni canale, per ogni valore di RSSI (passi di 1 dBm, come lo fornisce la
+//       radio): quota di tempo occupato. Ogni valore conta da solo, quindi aggiungere traffico non abbassa mai il costo;
+//     - ogni access point, con una piccola attivita' propria (beacon e il traffico che la radio non sa
+//       decodificare, come due flussi spaziali), e per le reti a 40 MHz anche la seconda meta' della banda.
+//     Ogni sorgente viene attenuata dalla sua distanza in canali (0, 2, 6, 15, 25, 35, 40, 45, 50 dB per
+//     0..8 canali, da 5 MHz l'uno) e pesata per la sua quota di tempo occupato:
+//     - stesso canale: da -90 a -82 dBm (rilevamento del preambolo) il peso sale a 0,35, perche' ci si da'
+//       il turno ed ESP-NOW deve solo aspettare; fino a 0,15 in piu' da -80 a -55 dBm, per i dispositivi
+//       che la pistola non sente (nodo nascosto);
+//     - altro canale: nessuno si da' il turno e i frame collidono: il peso sale da 0 a -85 dBm a 1 a -60 dBm.
+//     Un rumore di fondo piu' alto che sul canale piu' quieto conta come un'interferenza sempre presente.
+// EN/IT: 0 below lo, 1 above hi, linear in between / 0 sotto lo, 1 sopra hi, lineare in mezzo
+static inline float bestChRamp(float x, float lo, float hi) {
+  if (x <= lo) return 0.0f;
+  if (x >= hi) return 1.0f;
+  return (x - lo) / (hi - lo);
+}
+
+typedef struct { int8_t ch; float dbm; float activity; } BestChSource;
+
+static const uint8_t g_bestChAcrDb[9] = {0, 2, 6, 15, 25, 35, 40, 45, 50};  // attenuation per channel of distance / attenuazione per canale di distanza
+
+// EN/IT: weight of a source of interference d channels away, received at dbm on the candidate channel
+//        peso di una sorgente di interferenza a d canali di distanza, ricevuta a dbm sul canale candidato
+static inline float bestChWeight(int d, float dbm) {
+  if (d == 0) {
+    // EN: same channel: above -82 dBm both sides take turns (a wait), and a small share of
+    //     collisions remains with the devices the gun cannot hear (hidden node)
+    // IT: stesso canale: sopra -82 dBm ci si da' il turno (un'attesa), e resta una piccola quota di
+    //     collisioni con i dispositivi che la pistola non sente (nodo nascosto)
+    return 0.35f * bestChRamp(dbm, -90.0f, -82.0f) + 0.15f * bestChRamp(dbm, -80.0f, -55.0f);
+  }
+  // EN: other channel: no turns, the frames collide when the interference is strong enough
+  // IT: altro canale: nessun turno, i frame collidono quando l'interferenza e' abbastanza forte
+  return bestChRamp(dbm, -85.0f, -60.0f);
+}
+
+static inline int bestChDistance(int a, int b) {
+  int d = a - b;
+  if (d < 0) d = -d;
+  return (d > 8) ? 8 : d;
+}
+
+// EN: Interference cost of candidate channel c, without the noise floor; peak = strongest interference
+//     seen from c (dBm, after the attenuation), for the tie-break.
+// IT: Costo di interferenza del canale candidato c, senza il rumore di fondo; peak = interferenza piu'
+//     forte vista da c (dBm, dopo l'attenuazione), per lo spareggio.
+static float bestChChannelCost(uint8_t c, const BestChMeasure *meas, const BestChSource *apSrc, uint16_t nApSrc, float *peak) {
+  float cost = 0;
+  float top = -127.0f;
+  for (uint8_t s = 1; s <= 13; s++) {
+    if (meas[s].listenUs == 0 || meas[s].busyUs == 0) continue;
+    const int d = bestChDistance(c, s);
+    const float listen = (float)meas[s].listenUs;
+    for (uint8_t b = 0; b < BEST_CH_RSSI_BINS; b++) {
+      const uint32_t us = meas[s].rssiBinUs[b];
+      if (us == 0) continue;
+      const float dbm = (float)(BEST_CH_RSSI_MIN + b) - (float)g_bestChAcrDb[d];
+      if (dbm > top) top = dbm;
+      float activity = (float)us / listen;
+      if (activity > 1.0f) activity = 1.0f;
+      cost += bestChWeight(d, dbm) * activity;
+    }
+  }
+  for (uint16_t i = 0; i < nApSrc; i++) {
+    const int d = bestChDistance(c, apSrc[i].ch);
+    const float dbm = apSrc[i].dbm - (float)g_bestChAcrDb[d];
+    if (dbm > top) top = dbm;
+    cost += bestChWeight(d, dbm) * apSrc[i].activity;
+  }
+  *peak = top;
+  return cost;
+}
+
+static uint8_t bestChChoose(const BestChMeasure *meas, const BestChAp *aps, uint8_t apCount, uint8_t fallback) {
+  const float apActivity = 0.04f;    // beacons and undecodable traffic of an AP / beacon e traffico non decodificabile di un AP
+  const float apActivity40 = 0.08f;  // 40 MHz data the radio cannot decode / dati a 40 MHz che la radio non decodifica
+
+  static BestChSource apSrc[2 * BEST_CH_MAX_AP];  // static: off the caller's stack / statico: fuori dallo stack del chiamante
+  uint16_t nApSrc = 0;
+  for (uint8_t i = 0; i < apCount; i++) {
+    // EN/IT: a 40 MHz AP splits its power over both halves and its 40 MHz data occupies both
+    //        un AP a 40 MHz divide la potenza sulle due meta' e i suoi dati a 40 MHz le occupano entrambe
+    const bool wide = (aps[i].second != 0);
+    apSrc[nApSrc++] = { (int8_t)aps[i].ch, (float)aps[i].rssi - (wide ? 3.0f : 0.0f), wide ? apActivity + apActivity40 : apActivity };
+    if (wide) {
+      const int8_t secondCh = (int8_t)(aps[i].ch + 4 * aps[i].second);
+      if (secondCh >= 1 && secondCh <= 13) apSrc[nApSrc++] = { secondCh, (float)aps[i].rssi - 3.0f, apActivity40 };
+    }
+  }
+
+  bool noiseValid[14] = {false};
+  float noise[14] = {0};
+  float noiseMin = 0;
+  bool anyNoise = false;
+  for (uint8_t c = 1; c <= 13; c++) {
+    if (meas[c].listenUs == 0 || meas[c].noiseCount < 8) continue;
+    noise[c] = (float)meas[c].noiseSum / (float)meas[c].noiseCount;
+    noiseValid[c] = true;
+    if (!anyNoise || noise[c] < noiseMin) noiseMin = noise[c];
+    anyNoise = true;
+  }
+
+  if (fallback < 1 || fallback > 13) fallback = 1;
+  uint8_t bestCh = 0;
+  float bestCost = 0;
+  float bestPeak = 0;
+  for (uint8_t c = 1; c <= 13; c++) {
+    if (meas[c].listenUs == 0) continue;  // channel not usable / canale non utilizzabile
+    float peak;
+    float cost = bestChChannelCost(c, meas, apSrc, nApSrc, &peak);
+    if (noiseValid[c]) cost += bestChRamp(noise[c] - noiseMin, 0.0f, 20.0f) / 3.0f;  // up to 0.33 at +20 dB / fino a 0,33 a +20 dB
+    // EN/IT: on equal cost: weaker strongest source, then the default channel, then the lower one
+    //        a parita' di costo: sorgente piu' forte piu' debole, poi il canale di default, poi il piu' basso
+    bool better = (bestCh == 0) || (cost < bestCost - 0.0001f);
+    if (!better && cost <= bestCost + 0.0001f) {
+      if (peak < bestPeak - 0.5f) better = true;
+      else if (peak <= bestPeak + 0.5f && c == fallback) better = true;
+    }
+    if (better) {
+      bestCh = c;
+      bestCost = cost;
+      bestPeak = peak;
+    }
+  }
+  return (bestCh != 0) ? bestCh : fallback;
+}
+
+// ================= LISTENING ON ONE CHANNEL / ASCOLTO DI UN CANALE =================
+static void bestChListen(uint8_t ch) {
+  if (esp_wifi_set_channel(ch, WIFI_SECOND_CHAN_NONE) != ESP_OK) return;  // stays not measured / resta non misurato
+  vTaskDelay(pdMS_TO_TICKS(BEST_CH_SETTLE_MS));
+  const int64_t startUs = esp_timer_get_time();
+  g_sniffChannel = ch;
+  vTaskDelay(pdMS_TO_TICKS(BEST_CH_LISTEN_MS));
+  g_sniffChannel = 0;
+  g_bestChMeasure[ch].listenUs += (uint32_t)(esp_timer_get_time() - startUs);
+}
+
+// ================= ACCESS POINTS OVER SEVERAL SCANS / ACCESS POINT SU PIU' SCANSIONI =================
+// EN: The same access point (same BSSID) found by several scans counts once, with the mean signal.
+// IT: Lo stesso access point (stesso BSSID) trovato da piu' scansioni conta una volta, con il segnale medio.
+typedef struct {
+  BestChAp ap;
+  uint8_t bssid[6];
+  int16_t rssiSum;  // sum of the readings / somma delle letture
+  uint8_t seen;     // number of scans that found it / numero di scansioni che lo hanno trovato
+} BestChApSeen;
+
+static BestChApSeen g_bestChApSeen[BEST_CH_MAX_AP];
+
+static int8_t bestChApMeanRssi(const BestChApSeen &e) {
+  return (int8_t)(e.rssiSum / (int16_t)e.seen);
+}
+
+static void bestChAddAp(const wifi_ap_record_t *rec, uint8_t &count) {
+  const int8_t second = (rec->second == WIFI_SECOND_CHAN_ABOVE) ? 1 : ((rec->second == WIFI_SECOND_CHAN_BELOW) ? -1 : 0);
+  for (uint8_t k = 0; k < count; k++) {
+    BestChApSeen &e = g_bestChApSeen[k];
+    if (memcmp(e.bssid, rec->bssid, 6) == 0) {
+      e.ap.ch = rec->primary;
+      e.ap.second = second;
+      e.rssiSum += rec->rssi;
+      e.seen++;
+      return;
+    }
+  }
+  uint8_t slot = count;
+  if (count < BEST_CH_MAX_AP) {
+    count++;
+  } else {  // table full: keep the strongest ones / tabella piena: tiene i piu' forti
+    slot = 0;
+    for (uint8_t k = 1; k < count; k++) {
+      if (bestChApMeanRssi(g_bestChApSeen[k]) < bestChApMeanRssi(g_bestChApSeen[slot])) slot = k;
+    }
+    if (rec->rssi <= bestChApMeanRssi(g_bestChApSeen[slot])) return;
+  }
+  BestChApSeen &e = g_bestChApSeen[slot];
+  memcpy(e.bssid, rec->bssid, 6);
+  e.ap.ch = rec->primary;
+  e.ap.rssi = rec->rssi;
+  e.ap.second = second;
+  e.rssiSum = rec->rssi;
+  e.seen = 1;
 }
 
 // ================= MAIN FUNCTION / FUNZIONE PRINCIPALE =================
@@ -728,248 +1137,94 @@ uint8_t findBestChannel() {
   }
   #endif // USES_DISPLAY
 
-
-  // ================= STRUCTURE FOR CHANNEL STATISTICS & CHANNEL SEARCH / STRUTTURA PER STATISTICHE CANALE PER RICERCA BEST CHANNEL=================
-  typedef struct {
-    uint16_t networks;   // Number of APs detected / Numero di AP rilevati
-    float avgRSSI;       // Average AP RSSI / RSSI medio degli AP
-    int8_t maxRSSI;      // Maximum RSSI (strongest interference) / RSSI massimo (interferenza più forte)
-    uint32_t packets;    // Packets captured in 600ms / Pacchetti catturati in 600ms
-    float noise;         // Noise floor estimate / Stima noise floor
-    float score;         // Base channel score / Score base del canale
-  } ChannelStats;
-  
-  ChannelStats channelStats[14];
-  memset(channelStats, 0, sizeof(channelStats));
-  g_packetCounter = 0;
-  g_sniffing = false;
-  for (int i = 0; i < 14; i++) channelStats[i].maxRSSI = -128;
+  memset(g_bestChMeasure, 0, sizeof(g_bestChMeasure));
+  g_sniffChannel = 0;
+  g_bestChBssCount = 0;
 
   // ================= PHASE 1: WiFi Network Scan / FASE 1: SCAN RETI WiFi =================
-  // Time: ~2 seconds (150ms × 13 channels)
-  // /
-  // Tempo: ~2 secondi (150ms × 13 canali)
+  // Time: ~6 seconds (3 scans × 13 channels × 150ms) / Tempo: ~6 secondi (3 scansioni × 13 canali × 150ms)
   WiFi.mode(WIFI_STA);
+  applyWirelessCountry();  // active scan and listening also on 12-13 / scansione attiva e ascolto anche su 12-13
   WiFi.disconnect();
   vTaskDelay(pdMS_TO_TICKS(100));
 
-  // Optimized scan: 150ms per channel captures all beacons
-  // (typical beacon interval: 100ms)
-  // /
-  // Scan ottimizzato: 150ms per canale cattura tutti i beacon
-  // (beacon interval tipico: 100ms)
-  int n = WiFi.scanNetworks(false, true, false, 150UL, 0);
-  if (n < 0) n = 0;
-
-  if (n > 0) {
+  uint8_t seenCount = 0;
+  for (uint8_t scan = 0; scan < BEST_CH_SCANS; scan++) {
+    const int n = WiFi.scanNetworks(false, true, false, BEST_CH_SCAN_MS_PER_CHANNEL, 0);
     for (int i = 0; i < n; i++) {
-      int ch = WiFi.channel(i);
-      int rssi = WiFi.RSSI(i);
-      if (ch >= 1 && ch <= 13) {
-        if (channelStats[ch].networks < 65535) channelStats[ch].networks++;
-        channelStats[ch].avgRSSI += rssi;
-        if (rssi > channelStats[ch].maxRSSI) {
-          channelStats[ch].maxRSSI = (int8_t)rssi;
-        }
+      const wifi_ap_record_t *rec = (const wifi_ap_record_t *)WiFi.getScanInfoByIndex(i);
+      if (rec == NULL || rec->primary < 1 || rec->primary > 13) continue;
+      bestChAddAp(rec, seenCount);
+    }
+    WiFi.scanDelete();
+    vTaskDelay(pdMS_TO_TICKS(50));
+  }
+  BestChAp aps[BEST_CH_MAX_AP];
+  uint8_t apCount = 0;
+  for (uint8_t k = 0; k < seenCount; k++) {
+    aps[apCount] = g_bestChApSeen[k].ap;
+    aps[apCount].rssi = bestChApMeanRssi(g_bestChApSeen[k]);
+    memcpy(g_bestChBss[apCount].bssid, g_bestChApSeen[k].bssid, 6);
+    g_bestChBss[apCount].ch = aps[apCount].ch;
+    g_bestChBss[apCount].second = aps[apCount].second;
+    apCount++;
+  }
+  g_bestChBssCount = apCount;  // before listening starts / prima che inizi l'ascolto
+
+  // ================= PHASE 2: TRAFFIC AND NOISE LISTENING / FASE 2: ASCOLTO DI TRAFFICO E RUMORE =================
+  // Time: ~10 seconds (3 passes × 13 channels × 265ms) / Tempo: ~10 secondi (3 passate × 13 canali × 265ms)
+  // EN: All frames, also control frames and damaged ones: they keep the air busy as well. Each channel
+  //     is heard in every pass, at different moments, so a burst of traffic weighs less. The frames of a
+  //     known network heard from a nearby channel are left out: that network is measured at its own channel.
+  // IT: Tutti i frame, anche quelli di controllo e quelli danneggiati: anche loro occupano l'etere. Ogni
+  //     canale viene ascoltato in ogni passata, in momenti diversi, cosi' una raffica di traffico pesa meno.
+  //     I frame di una rete nota sentiti da un canale vicino sono esclusi: quella rete e' misurata sul suo canale.
+  wifi_promiscuous_filter_t oldFilter = {};
+  wifi_promiscuous_filter_t oldCtrlFilter = {};
+  const bool filtersSaved = (esp_wifi_get_promiscuous_filter(&oldFilter) == ESP_OK) &&
+                            (esp_wifi_get_promiscuous_ctrl_filter(&oldCtrlFilter) == ESP_OK);
+  wifi_promiscuous_filter_t filter = {};
+  filter.filter_mask = WIFI_PROMIS_FILTER_MASK_MGMT | WIFI_PROMIS_FILTER_MASK_CTRL | WIFI_PROMIS_FILTER_MASK_DATA |
+                       WIFI_PROMIS_FILTER_MASK_MISC | WIFI_PROMIS_FILTER_MASK_FCSFAIL;
+  wifi_promiscuous_filter_t ctrlFilter = {};
+  ctrlFilter.filter_mask = WIFI_PROMIS_CTRL_FILTER_MASK_ALL;
+  esp_wifi_set_promiscuous_filter(&filter);
+  esp_wifi_set_promiscuous_ctrl_filter(&ctrlFilter);
+  const bool sniffing = (esp_wifi_set_promiscuous_rx_cb(&promiscuousCallback) == ESP_OK) &&
+                        (esp_wifi_set_promiscuous(true) == ESP_OK);
+
+  if (sniffing) {
+    // EN: Every pass starts 5 channels further on, so the same channel is heard at changing intervals
+    //     (about 2.1 or 5.6 s) and traffic with a fixed period is less likely to fall always in its silent part.
+    // IT: Ogni passata parte 5 canali piu' avanti, cosi' lo stesso canale viene ascoltato a intervalli
+    //     che cambiano (circa 2,1 o 5,6 s) e un traffico con periodo fisso cade meno facilmente sempre nella sua parte muta.
+    for (uint8_t pass = 0; pass < BEST_CH_PASSES; pass++) {
+      for (uint8_t i = 0; i < 13; i++) {
+        bestChListen((uint8_t)((i + pass * 5) % 13 + 1));
       }
     }
-    
-    // Calculate average RSSI
-    // /
-    // Calcola RSSI medio
-    for (int ch = 1; ch <= 13; ch++) {
-      if (channelStats[ch].networks > 0) {
-        channelStats[ch].avgRSSI /= channelStats[ch].networks;
-      } else {
-        channelStats[ch].maxRSSI = -100; // Empty channel / Canale vuoto
-      }
+  } else {
+    // EN: Listening could not start: no channel would look silent by mistake, the choice relies on the
+    //     access points of the scans, on the channels the radio accepts.
+    // IT: L'ascolto non e' partito: nessun canale deve sembrare silenzioso per errore, la scelta si basa
+    //     sugli access point delle scansioni, sui canali che la radio accetta.
+    for (uint8_t i = 1; i <= 13; i++) {
+      if (esp_wifi_set_channel(i, WIFI_SECOND_CHAN_NONE) == ESP_OK) g_bestChMeasure[i].listenUs = 1;
     }
   }
-  
-  WiFi.scanDelete();
-  vTaskDelay(pdMS_TO_TICKS(50));
 
-  // ================= PHASE 2: TRAFFIC SNIFFING AND NOISE / FASE 2: SNIFF TRAFFICO E NOISE =================
-  // Time: ~12 seconds (920ms × 13 channels)
-  // /
-  // Tempo: ~12 secondi (920ms × 13 canali)
-  
-  vTaskDelay(pdMS_TO_TICKS(50));
-  esp_wifi_set_promiscuous(true);
-  esp_wifi_set_promiscuous_rx_cb(&promiscuousCallback);
-
-  for (int ch = 1; ch <= 13; ch++) {
-
-    esp_wifi_set_channel(ch, WIFI_SECOND_CHAN_NONE);
-    vTaskDelay(pdMS_TO_TICKS(70)); // Radio stabilization / Stabilizzazione radio
-    
-    // --- Traffic measurement: 600ms full pattern capture ---
-    // Includes: beacon (100ms), data burst, retry packets
-    // /
-    // --- Misurazione traffico: 600ms cattura pattern completi ---
-    // Include: beacon (100ms), data burst, retry packets
-    g_packetCounter = 0;
-    g_sniffing = true;
-    uint32_t startCount = g_packetCounter;
-    vTaskDelay(pdMS_TO_TICKS(600));
-    uint32_t endCount = g_packetCounter;
-    channelStats[ch].packets = endCount - startCount;
-    
-    // --- Noise Floor Measurement: 15 samples for a stable average ---
-    // /
-    // --- Misurazione Noise Floor: 15 campioni per media stabile ---
-    int32_t noiseSum = 0;
-    const int samples = 15;
-    for (int i = 0; i < samples; i++) {
-      uint32_t start = g_packetCounter;
-      vTaskDelay(pdMS_TO_TICKS(17)); // // Sampling 17ms (total 255ms) / Campionamento 17ms (totale 255ms)
-      uint32_t activity = g_packetCounter - start;
-      
-      // Improved noise formula: logarithmic scale / Formula noise migliorata: scala logaritmica
-      if (activity == 0) {
-        noiseSum += -100; // Complete silence / Silenzio completo
-      } else if (activity <= 3) {
-        noiseSum += -95 + (activity * 3);
-      } else if (activity <= 10) {
-        noiseSum += -86 + (activity - 3) * 2;
-      } else if (activity <= 30) {
-        noiseSum += -72 + (activity - 10);
-      } else {
-        noiseSum += -52 + (activity - 30) / 2;
-      }
-    }
-    
-    channelStats[ch].noise = noiseSum / (float)samples;
-    channelStats[ch].noise = constrain(channelStats[ch].noise, -100, -50);
-  }
-
-  g_sniffing = false;
+  g_sniffChannel = 0;
   esp_wifi_set_promiscuous(false);
   esp_wifi_set_promiscuous_rx_cb(NULL);
-
-  // ================= PHASE 3: OPTIMIZED SCORE CALCULATION / FASE 3: CALCOLO SCORE OTTIMIZZATO =================
-  // Weights based on empirical analysis and Espressif documentation
-  //
-  // PRIORITIES FOR ESP-NOW:
-  // 1. Strong RSSI = direct interference lowering SNR (KILLER #1)
-  // 2. Actual traffic = packet collisions (KILLER #2)
-  // 3. Number of networks = potential congestion (moderate)
-  // 4. Noise floor = low impact (ESP-NOW uses robust MCS0/802.11b)
-  // /
-  // Pesi basati su analisi empirica e documentazione Espressif
-  // 
-  // priority / priorità PER ESP-NOW:
-  // 1. RSSI forte = interferenza diretta che abbassa SNR (KILLER #1)
-  // 2. Traffico reale = collisioni pacchetti (KILLER #2)
-  // 3. Numero reti = congestione potenziale (moderato)
-  // 4. Noise floor = basso impatto (ESP-NOW usa MCS0/802.11b robusto)
-  
-  const float wRSSI  = 0.40f;  // Direct interference = highest priority / Interferenza diretta = priorità massima
-  const float wPkt   = 0.35f;  // Actual collisions = highly critical / Collisioni reali = molto critico
-  const float wNet   = 0.20f;  // Congestion = moderate (log scale) / Congestione = moderato (scala log)
-  const float wNoise = 0.05f;  // Noise = minimal (robust modulation) / Rumore = minimo (modulazione robusta)
-
-  for (int ch = 1; ch <= 13; ch++) {
-    
-    // --- RSSI Score: most dangerous direct interference ---
-    // AP with strong signal (-40dBm) nearby = guaranteed disaster
-    // -100dBm (far away) = 0 points | -40dBm (nearby) = 40 points
-    // /
-    // --- Score RSSI: interferenza diretta più pericolosa ---
-    // AP con segnale forte (-40dBm) vicino = disastro garantito
-    // -100dBm (lontano) = 0 punti | -40dBm (vicino) = 40 punti
-    float sRSSI = 0;
-    if (channelStats[ch].maxRSSI > -100) {
-      int rssiMapped = constrain(channelStats[ch].maxRSSI, -100, -30);
-      sRSSI = map(rssiMapped, -100, -30, 0, 100) * wRSSI;
-    }
-    
-    // --- Packet Score: measured real traffic ---
-    // Normalized to 600ms: 0 pkts = 0 | 100 pkts = 35 points
-    // /
-    // --- Score Pacchetti: traffico reale misurato ---
-    // Normalizzato su 600ms: 0 pkt = 0 | 100 pkt = 35 punti
-    float sPkt = (channelStats[ch].packets / 10.0) * wPkt;
-    if (sPkt > 100 * wPkt) sPkt = 100 * wPkt; // clamp max
-    
-    // --- Goals Score: logarithmic scale to avoid dominance ---
-    // 0 goals = 0 | 1 goal = 4.2 | 5 goals = 9.2 | 10 goals = 13.8
-    // /
-    // --- Score Reti: scala logaritmica per evitare dominanza ---
-    // 0 reti = 0 | 1 rete = 4.2 | 5 reti = 9.2 | 10 reti = 13.8
-    float sNet = (channelStats[ch].networks > 0) 
-                 ? (log(channelStats[ch].networks + 1) * 20.0) * wNet 
-                 : 0;
-
-    // --- RSSI Noise: minimum weight (ESP-NOW resistant) ---
-    // -100dBm (silence) = 0 | -50dBm (noisy) = 5 points
-    // /
-    // --- Score Noise: peso minimo (ESP-NOW resistente) ---
-    // -100dBm (silenzio) = 0 | -50dBm (rumoroso) = 5 punti
-    int noiseMapped = constrain((int)channelStats[ch].noise, -100, -50);
-    float sNoise = map(noiseMapped, -100, -50, 0, 100) * wNoise;
-    
-    channelStats[ch].score = sRSSI + sPkt + sNet + sNoise;
+  if (filtersSaved) {
+    esp_wifi_set_promiscuous_filter(&oldFilter);
+    esp_wifi_set_promiscuous_ctrl_filter(&oldCtrlFilter);
   }
+  vTaskDelay(pdMS_TO_TICKS(50));  // a callback still running ends / una callback ancora in corso termina
 
-  // ================= ADJACENT CHANNEL OVERLAP PENALTY / PENALITÀ OVERLAP CANALI ADIACENTI =================
-  // WiFi 20MHz: each channel overlaps with ±4 channels
-  // Reference: 802.11b uses 22MHz, 802.11g/n uses 20MHz + guardband
-  // Non-overlapping channels: 1, 6, 11 (separated by 5 channels)
-  //
-  // Progressive penalties to simulate actual overlap:
-  // ±1: 50% (maximum overlap, approx. 75% shared spectrum)
-  // ±2: 35% (significant overlap, approx. 50% spectrum)
-  // ±3: 20% (moderate overlap, approx. 25% spectrum)
-  // ±4: 10% (minimal overlap, spectrum edges)
-  // /
-  // WiFi 20MHz: ogni canale si sovrappone con ±4 canali
-  // Riferimento: 802.11b usa 22MHz, 802.11g/n usa 20MHz + guardband
-  // Canali non-overlapping: 1, 6, 11 (separati di 5 canali)
-  //
-  // Penalità progressive per simulare overlap reale:
-  // ±1: 50% (overlap massimo, circa 75% spettro condiviso)
-  // ±2: 35% (overlap significativo, circa 50% spettro)
-  // ±3: 20% (overlap moderato, circa 25% spettro)
-  // ±4: 10% (overlap minimo, bordi spettro)
-  
-  float finalScores[14];
-  for (int ch = 1; ch <= 13; ch++) {
-    finalScores[ch] = channelStats[ch].score;
-    
-    // Full overlap penalty, 20MHz model / Penalità overlap completo modello 20MHz
-    if (ch > 1) finalScores[ch] += channelStats[ch-1].score * 0.50f;
-    if (ch > 2) finalScores[ch] += channelStats[ch-2].score * 0.35f;
-    if (ch > 3) finalScores[ch] += channelStats[ch-3].score * 0.20f;
-    if (ch > 4) finalScores[ch] += channelStats[ch-4].score * 0.10f;
-    
-    if (ch < 13) finalScores[ch] += channelStats[ch+1].score * 0.50f;
-    if (ch < 12) finalScores[ch] += channelStats[ch+2].score * 0.35f;
-    if (ch < 11) finalScores[ch] += channelStats[ch+3].score * 0.20f;
-    if (ch < 10) finalScores[ch] += channelStats[ch+4].score * 0.10f;
-  
-    // After calculating finalScores, award bonuses to the ideal channels / Dopo il calcolo finalScores, dare bonus ai canali ideali
-    if (ch == 1 || ch == 6 || ch == 11) {
-      finalScores[ch] *= 0.92f; // -8% bonus(preference)/(preferenza) 
-    }  
-  }
+  // ================= PHASE 3: SCORE AND CHOICE / FASE 3: PUNTEGGIO E SCELTA =================
+  const uint8_t bestCh = bestChChoose(g_bestChMeasure, aps, apCount, OPENFIRE_ESPNOW_WIFI_CHANNEL);
 
-  // ================= PHASE 4: SELECTION OF THE BEST CHANNEL / FASE 4: SELEZIONE MIGLIOR CANALE =================
-  uint8_t bestCh = 1;
-  float minScore = 999999.0;
-  
-  for (uint8_t ch = 1; ch <= 13; ch++) {
-    if (finalScores[ch] < minScore) {
-      minScore = finalScores[ch];
-      bestCh = ch;
-    }
-  }
-  
-  // ================= Final cleaning / PULIZIA FINALE =================
-  vTaskDelay(pdMS_TO_TICKS(50));
-  g_packetCounter = 0;
-  g_sniffing = false;
-  
   #if defined(DONGLE) && defined(USES_DISPLAY)
     StopAnimTask(animTaskHandle);
   #endif // USES_DISPLAY
@@ -1627,6 +1882,9 @@ void SerialWireless_::begin() {
   // IT: Le API di basso livello disattivano gia' il risparmio Wi-Fi, quindi normalmente dovrebbe funzionare anche senza questa chiamata.
   // Allinea anche la preferenza memorizzata da Arduino prima di avviare la radio (inclusa la scansione dei canali), cosi' STA_START non ripristina il modem sleep.
   WiFi.setSleep(WIFI_PS_NONE);
+  // EN: Wi-Fi settings only in RAM, also for the dongle's channel search, which starts the radio first.
+  // IT: Impostazioni Wi-Fi solo in RAM, anche per la ricerca del canale del dongle, che avvia la radio per prima.
+  WiFi.persistent(false);
 
   #ifdef GUN
     if (lastDongleSave) espnow_wifi_channel=lastDongleChannel;
@@ -1647,20 +1905,13 @@ void SerialWireless_::begin() {
       espnow_wifi_channel=OPENFIRE_ESPNOW_WIFI_CHANNEL;
   #endif //GUN
 
-  WiFi.persistent(false);
   WiFi.mode(WIFI_STA); 
   WiFi.disconnect();
-  #ifdef GUN 
-    // serve per permettere anche i canali 12 e 13 altrimenti se vengono selezioni il 12 e 13 va in crash la creazione dell'AP
-    wifi_country_t country = {
-      .cc = "IT",                            // "EU" va bene uguale
-      .schan = 1,
-      .nchan = 13,
-      .max_tx_power = 20,
-      .policy = WIFI_COUNTRY_POLICY_MANUAL
-    };
-    esp_wifi_set_country(&country);
-  #endif // GUN
+  // EN: On all devices: channels 12 and 13 for ESP-NOW and, on the lightgun, for the access point, whose
+  //     creation would otherwise fail on those channels.
+  // IT: Su tutti i dispositivi: canali 12 e 13 per ESP-NOW e, sulla pistola, per l'access point, la cui
+  //     creazione altrimenti fallirebbe su quei canali.
+  applyWirelessCountry();
 
 
 #ifdef GUN_COMMENT

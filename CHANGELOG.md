@@ -11,7 +11,13 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ### Added
 ### Changed
+
+* **Better automatic channel choice on the dongle:** at start-up the dongle now measures how long each channel is really busy, from the length and the rate of every frame (also control frames and damaged ones), how strong that traffic is and the noise floor of the radio, in three passes of 250 ms per channel spread over about 10 s, instead of counting frames. Three Wi-Fi scans are averaged for every network, so a network missed by one scan or a signal that varies weighs less. Every source of interference is weighted by its distance in channels, as a 20 MHz receiver really sees it: one or two channels away from a busy network, where neither side hears the other and frames collide, now counts more than sharing the channel of that network, where the two take turns. 40 MHz networks are counted on both halves of their band, and the beacons and data of a known network heard on a nearby channel are counted only at its real channel. Traffic is kept apart for every signal strength, in steps of 1 dBm as the radio reports it, so a lot of weak traffic can no longer hide a little strong traffic. Every pass starts from a different channel, so the same channel is heard at changing intervals. With no network around, the dongle stays on channel 11, as with the fixed channel. The search now takes about 17 s instead of about 14 s: the few seconds more make the choice more reliable, while a longer search would add little. No Wi-Fi setting is written to flash any more.
+
 ### Fixed
+
+* **Channels 12 and 13 on the dongle and the pedal:** the country (Italy, channels 1-13) is now set on the dongle, before the channel search, and on the pedal, as it already was on the lightgun. Before, the dongle started in the radio's world-safe mode, where channels 12 and 13 are only listened to: the radio could refuse to move there, so their measure could be wrong, and the pedal could fail to follow a gun on those channels. Country and number of channels can be changed at build time with `-D OPENFIRE_WIFI_COUNTRY=\"XX\"` and `-D OPENFIRE_WIFI_COUNTRY_CHANNELS=N`.
+
 ### Breaking Changes
 
 ---
@@ -172,7 +178,13 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 ## [Non rilasciato]
 ### Aggiunte
 ### Modifiche
+
+* **Scelta automatica del canale del dongle migliorata:** all'avvio il dongle ora misura quanto a lungo ogni canale è davvero occupato, dalla lunghezza e dalla velocità di ogni frame (anche quelli di controllo e quelli danneggiati), quanto è forte quel traffico e il rumore di fondo della radio, in tre passate da 250 ms per canale distribuite su circa 10 s, invece di contare i frame. Tre scansioni Wi-Fi vengono mediate per ogni rete, così una rete persa da una scansione o un segnale che varia pesano meno. Ogni sorgente di interferenza viene pesata in base alla sua distanza in canali, come la vede davvero un ricevitore da 20 MHz: stare a uno o due canali da una rete trafficata, dove nessuno dei due sente l'altro e i frame collidono, ora conta più che condividere il canale di quella rete, dove ci si dà il turno. Le reti a 40 MHz vengono contate su entrambe le metà della loro banda, e i beacon e i dati di una rete nota sentiti su un canale vicino vengono contati solo sul suo canale reale. Il traffico resta separato per ogni forza del segnale, a passi di 1 dBm come la fornisce la radio, così tanto traffico debole non può più nascondere un po' di traffico forte. Ogni passata parte da un canale diverso, così lo stesso canale viene ascoltato a intervalli che cambiano. Senza reti intorno il dongle resta sul canale 11, come con il canale fisso. La ricerca ora dura circa 17 s invece di circa 14 s: i pochi secondi in più rendono la scelta più affidabile, mentre una ricerca più lunga aggiungerebbe poco. Nessuna impostazione Wi-Fi viene più scritta in flash.
+
 ### Correzioni
+
+* **Canali 12 e 13 su dongle e pedale:** il paese (Italia, canali 1-13) ora viene impostato sul dongle, prima della ricerca del canale, e sul pedale, come già avveniva sulla pistola. Prima il dongle partiva nella modalità world safe della radio, in cui i canali 12 e 13 sono solo in ascolto: la radio poteva rifiutare di spostarsi lì, quindi la loro misura poteva essere sbagliata, e il pedale poteva non riuscire a seguire una pistola su quei canali. Paese e numero di canali si possono cambiare in compilazione con `-D OPENFIRE_WIFI_COUNTRY=\"XX\"` e `-D OPENFIRE_WIFI_COUNTRY_CHANNELS=N`.
+
 ### Modifiche Incompatibili
 
 ---
