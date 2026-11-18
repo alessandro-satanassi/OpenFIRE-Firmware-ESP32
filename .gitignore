@@ -1,2 +1,9 @@
 .pio
 .vscode
+
+/lightgun/include/web_assets.h
+/lightgun/scripts/__pycache__/
+/lightgun/dist/
+/lightgun/webapp/boards/OpenFIREshared.js
+/lightgun/webapp/lang/translations.js
+/lightgun/webapp/launcher/polling-test.css
