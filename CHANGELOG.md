@@ -16,7 +16,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-* **Channels 12 and 13 on the dongle and the pedal:** the country (Italy, channels 1-13) is now set on the dongle, before the channel search, and on the pedal, as it already was on the lightgun. Before, the dongle started in the radio's world-safe mode, where channels 12 and 13 are only listened to: the radio could refuse to move there, so their measure could be wrong, and the pedal could fail to follow a gun on those channels. Country and number of channels can be changed at build time with `-D OPENFIRE_WIFI_COUNTRY=\"XX\"` and `-D OPENFIRE_WIFI_COUNTRY_CHANNELS=N`.
+* **Channels 12 and 13 on the dongle and the pedal:** the radio driver starts in world-safe mode, where channels 12 and 13 are only listened to, and it kept the country in flash, so whether those channels could be used depended on the board's past. The country (Italy, channels 1-13) is now set on the dongle, also before its channel search, and on the pedal, as it already was on the lightgun: the dongle can search and choose 12 and 13, and the pedal can follow a gun on those channels. Country and number of channels can be changed at build time with `-D OPENFIRE_WIFI_COUNTRY=\"XX\"` and `-D OPENFIRE_WIFI_COUNTRY_CHANNELS=N`.
 
 ### Breaking Changes
 
@@ -183,7 +183,7 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 
 ### Correzioni
 
-* **Canali 12 e 13 su dongle e pedale:** il paese (Italia, canali 1-13) ora viene impostato sul dongle, prima della ricerca del canale, e sul pedale, come già avveniva sulla pistola. Prima il dongle partiva nella modalità world safe della radio, in cui i canali 12 e 13 sono solo in ascolto: la radio poteva rifiutare di spostarsi lì, quindi la loro misura poteva essere sbagliata, e il pedale poteva non riuscire a seguire una pistola su quei canali. Paese e numero di canali si possono cambiare in compilazione con `-D OPENFIRE_WIFI_COUNTRY=\"XX\"` e `-D OPENFIRE_WIFI_COUNTRY_CHANNELS=N`.
+* **Canali 12 e 13 su dongle e pedale:** il driver della radio parte in modalità world safe, in cui i canali 12 e 13 sono solo ascoltati, e teneva il paese salvato in flash, quindi poter usare quei canali dipendeva dalla storia della scheda. Il paese (Italia, canali 1-13) ora viene impostato sul dongle, anche prima della ricerca del canale, e sul pedale, come già avveniva sulla pistola: il dongle può cercare e scegliere 12 e 13, e il pedale può seguire una pistola su quei canali. Paese e numero di canali si possono cambiare in compilazione con `-D OPENFIRE_WIFI_COUNTRY=\"XX\"` e `-D OPENFIRE_WIFI_COUNTRY_CHANNELS=N`.
 
 ### Modifiche Incompatibili
 

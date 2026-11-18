@@ -247,7 +247,12 @@ void setup() {
     tft.setCursor(0, 0);
     tft.setTextColor(RED);
     tft.drawBitmap(40, 0, customSplashBanner, CUSTSPLASHBANN_WIDTH, CUSTSPLASHBANN_HEIGHT, BLUE);
-    tft.drawBitmap(10, 25, customSplash, CUSTSPLASH_WIDTH, CUSTSPLASH_HEIGHT, RED);
+    // tft.drawBitmap(10, 25, customSplash, CUSTSPLASH_WIDTH, CUSTSPLASH_HEIGHT, RED);
+    #ifdef USE_LOVYAN_GFX
+      tft.pushImage(9, 24, LOGO_RGB_ALPHA_WIDTH, LOGO_RGB_ALPHA_HEIGHT, (uint16_t *)logo_rgb_alpha);
+    #else
+      tft.drawRGBBitmap(9, 24, (uint16_t *)logo_rgb_alpha, LOGO_RGB_ALPHA_WIDTH, LOGO_RGB_ALPHA_HEIGHT);
+    #endif
     tft.setTextSize(2);
     tft.setTextColor(WHITE);
     }
