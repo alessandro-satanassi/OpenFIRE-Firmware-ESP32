@@ -11,18 +11,12 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ### Added
 ### Changed
-
-* **Better automatic channel choice on the dongle:** at start-up the dongle now measures how long each channel is really busy, from the length and the rate of every frame (also control frames and damaged ones), how strong that traffic is and the noise floor of the radio, in three passes of 250 ms per channel spread over about 10 s, instead of counting frames. Three Wi-Fi scans are averaged for every network, so a network missed by one scan or a signal that varies weighs less. Every source of interference is weighted by its distance in channels, as a 20 MHz receiver really sees it: one or two channels away from a busy network, where neither side hears the other and frames collide, now counts more than sharing the channel of that network, where the two take turns. 40 MHz networks are counted on both halves of their band, and the beacons and data of a known network heard on a nearby channel are counted only at its real channel. Traffic is kept apart for every signal strength, in steps of 1 dBm as the radio reports it, so a lot of weak traffic can no longer hide a little strong traffic. Every pass starts from a different channel, so the same channel is heard at changing intervals. With no network around, the dongle stays on channel 11, as with the fixed channel. The search now takes about 17 s instead of about 14 s: the few seconds more make the choice more reliable, while a longer search would add little. No Wi-Fi setting is written to flash any more.
-
 ### Fixed
-
-* **Channels 12 and 13 on the dongle and the pedal:** the radio driver starts in world-safe mode, where channels 12 and 13 are only listened to, and it kept the country in flash, so whether those channels could be used depended on the board's past. The country (Italy, channels 1-13) is now set on the dongle, also before its channel search, and on the pedal, as it already was on the lightgun: the dongle can search and choose 12 and 13, and the pedal can follow a gun on those channels. Country and number of channels can be changed at build time with `-D OPENFIRE_WIFI_COUNTRY=\"XX\"` and `-D OPENFIRE_WIFI_COUNTRY_CHANNELS=N`.
-
 ### Breaking Changes
 
 ---
 
-## [7.1.2] - 2026-11-17
+## [7.1.2] - 2026-11-19
 
 ### Added
 
@@ -31,17 +25,27 @@ All notable changes to this project will be documented in this file.
 * **Wireless transmit power of the lightgun (WebApp and desktop App):** in **Gun Settings → Input / Output**, shown with **View > Show Unsafe Settings**, choose the power with which the gun transmits to the dongle and the pedal: one of the levels the ESP32-S3 radio really uses, from 2 to 20 dBm; the default, 16.5 dBm, is the power used so far. It takes effect at the next start of the gun. See [Operations Manual](lightgun/src/README.md#operations-manual).
 * **Radio diagnostics for developers:** building the lightgun or the dongle with `-D DEBUG_WIFI_ESPNOW` in `platformio.ini`, the display shows the radio counters: datagrams sent, lost and received, transmit and receive errors, and the signal of the other device. It is off in the released firmware.
 
+### Changed
+
+* **Better automatic channel choice on the dongle:** at start-up the dongle now measures how long each channel is really busy, from the length and the rate of every frame (also control frames and damaged ones), how strong that traffic is and the noise floor of the radio, in three passes of 250 ms per channel spread over about 10 s, instead of counting frames. Three Wi-Fi scans are averaged for every network, so a network missed by one scan or a signal that varies weighs less. Every source of interference is weighted by its distance in channels, as a 20 MHz receiver really sees it: one or two channels away from a busy network, where neither side hears the other and frames collide, now counts more than sharing the channel of that network, where the two take turns. 40 MHz networks are counted on both halves of their band, and the beacons and data of a known network heard on a nearby channel are counted only at its real channel. Traffic is kept apart for every signal strength, in steps of 1 dBm as the radio reports it, so a lot of weak traffic can no longer hide a little strong traffic. Every pass starts from a different channel, so the same channel is heard at changing intervals. With no network around, the dongle stays on channel 11, as with the fixed channel. The search now takes about 17 s instead of about 14 s: the few seconds more make the choice more reliable, while a longer search would add little. No Wi-Fi setting is written to flash any more.
+* **New display pins on the Waveshare ESP32-S3 Zero dongle:** the display now uses six pins next to each other, beside VCC and GND: SCL on GPIO 1, SDA on GPIO 2, RES on GPIO 3, DC on GPIO 4, CS on GPIO 5 and BLK on GPIO 6 (until 7.1.1: SDA GPIO 4, SCL GPIO 5, CS GPIO 6, DC GPIO 7, RES GPIO 8, BLK GPIO 9). A dongle wired for 7.1.1 must be rewired, see [Updating from 7.1.1](#updating-from-711). The previous diagram is kept as `DONGLE-esp32-s3-zero_V_7_1_1.svg`. The other dongle boards do not change.
+* **Colour logo on the dongle's main screen:** the logo on the main screen of the dongle display is now in colour, like the one shown at start-up, instead of red only.
+* Updated platform and libraries: Arduino core for ESP32 3.3.13 (ESP-IDF 5.5.6) and Adafruit TinyUSB 3.8.0 (lightgun, dongle and pedal), LovyanGFX 1.3.0 (lightgun and dongle), Adafruit GFX 1.13.0 (lightgun) and arduino-pico 6.4.0 (RP2040 boards).
+
 ### Fixed
 
 * **Data from the computer through the dongle no longer held back:** when the radio queue was full, part of the data sent by the desktop App or by MAMEHooker to a wireless gun could stay waiting until the next data from the computer. Now the rest is sent as soon as there is room.
 * **Keyboard and gamepad over the dongle:** with the unified wireless packet, keyboard and gamepad reports now send the whole state of mouse, keyboard and gamepad together, as the mouse already did.
 * **Damaged wireless packets are discarded:** a corrupted or foreign packet is now dropped before it is decoded, instead of writing past its end. Valid packets are decoded exactly as before. This applies to the lightgun, the dongle and the pedal.
 * **Keys no longer left held over the dongle:** with the aim still or off the screen, after every change of keys, gamepad or mouse buttons the gun now sends its whole state again a few times, from 12 ms up to about 170 ms later, so a release lost to radio interference no longer leaves a key held on the computer. The dongle passes on only what changed, so the copies change nothing there.
+* **Channels 12 and 13 on the dongle and the pedal:** the radio driver starts in world-safe mode, where channels 12 and 13 are only listened to, and it kept the country in flash, so whether those channels could be used depended on the board's past. The country (Italy, channels 1-13) is now set on the dongle, also before its channel search, and on the pedal, as it already was on the lightgun: the dongle can search and choose 12 and 13, and the pedal can follow a gun on those channels. Country and number of channels can be changed at build time with `-D OPENFIRE_WIFI_COUNTRY=\"XX\"` and `-D OPENFIRE_WIFI_COUNTRY_CHANNELS=N`.
 
 ### Updating from 7.1.1
 
 * A normal update is enough: settings, pins and calibration profiles are kept, and there is no need to calibrate again. The wireless transmit power starts at 16.5 dBm, the power used so far.
 * Update the lightgun, the dongle and the pedal: in this release all three firmware change.
+* **Waveshare ESP32-S3 Zero dongle with display:** move the display wires to the new pins before updating, as in the [new diagram](dongle/docs/board_scheme/DONGLE-esp32-s3-zero.svg): SCL GPIO 1, SDA GPIO 2, RES GPIO 3, DC GPIO 4, CS GPIO 5, BLK GPIO 6; VCC and GND do not change. With the old wiring the display stays blank, while the dongle still works. Without a display nothing changes.
+* At start-up the dongle now needs about 20 seconds before it waits for a gun (about 17 s of channel search, plus 3 s of logo with the display): wait for it before switching on the pedal and the gun.
 * Coming from 7.1.0 or 7.0.0, also follow [Updating from 7.1.0](#updating-from-710) of 7.1.1 and [Updating from 7.0.0](#updating-from-700) of 7.1.0.
 
 ---
@@ -178,18 +182,12 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 ## [Non rilasciato]
 ### Aggiunte
 ### Modifiche
-
-* **Scelta automatica del canale del dongle migliorata:** all'avvio il dongle ora misura quanto a lungo ogni canale è davvero occupato, dalla lunghezza e dalla velocità di ogni frame (anche quelli di controllo e quelli danneggiati), quanto è forte quel traffico e il rumore di fondo della radio, in tre passate da 250 ms per canale distribuite su circa 10 s, invece di contare i frame. Tre scansioni Wi-Fi vengono mediate per ogni rete, così una rete persa da una scansione o un segnale che varia pesano meno. Ogni sorgente di interferenza viene pesata in base alla sua distanza in canali, come la vede davvero un ricevitore da 20 MHz: stare a uno o due canali da una rete trafficata, dove nessuno dei due sente l'altro e i frame collidono, ora conta più che condividere il canale di quella rete, dove ci si dà il turno. Le reti a 40 MHz vengono contate su entrambe le metà della loro banda, e i beacon e i dati di una rete nota sentiti su un canale vicino vengono contati solo sul suo canale reale. Il traffico resta separato per ogni forza del segnale, a passi di 1 dBm come la fornisce la radio, così tanto traffico debole non può più nascondere un po' di traffico forte. Ogni passata parte da un canale diverso, così lo stesso canale viene ascoltato a intervalli che cambiano. Senza reti intorno il dongle resta sul canale 11, come con il canale fisso. La ricerca ora dura circa 17 s invece di circa 14 s: i pochi secondi in più rendono la scelta più affidabile, mentre una ricerca più lunga aggiungerebbe poco. Nessuna impostazione Wi-Fi viene più scritta in flash.
-
 ### Correzioni
-
-* **Canali 12 e 13 su dongle e pedale:** il driver della radio parte in modalità world safe, in cui i canali 12 e 13 sono solo ascoltati, e teneva il paese salvato in flash, quindi poter usare quei canali dipendeva dalla storia della scheda. Il paese (Italia, canali 1-13) ora viene impostato sul dongle, anche prima della ricerca del canale, e sul pedale, come già avveniva sulla pistola: il dongle può cercare e scegliere 12 e 13, e il pedale può seguire una pistola su quei canali. Paese e numero di canali si possono cambiare in compilazione con `-D OPENFIRE_WIFI_COUNTRY=\"XX\"` e `-D OPENFIRE_WIFI_COUNTRY_CHANNELS=N`.
-
 ### Modifiche Incompatibili
 
 ---
 
-## [7.1.2] - 2026-11-17
+## [7.1.2] - 2026-11-19
 
 ### Aggiunte
 
@@ -198,17 +196,27 @@ Tutte le modifiche rilevanti apportate a questo progetto saranno documentate in 
 * **Potenza di trasmissione wireless della lightgun (WebApp e App desktop):** in **Impostazioni Gun → Input / Output**, visibile con **Visualizza > Mostra Impostazioni Non Sicure**, scegli la potenza con cui la pistola trasmette al dongle e al pedale: uno dei livelli che la radio dell'ESP32-S3 usa davvero, da 2 a 20 dBm; il predefinito, 16,5 dBm, è la potenza usata finora. Vale dal prossimo avvio della pistola. Vedi [Manuale Operativo](lightgun/src/README.md#manuale-operativo-italiano).
 * **Diagnostica radio per sviluppatori:** compilando la lightgun o il dongle con `-D DEBUG_WIFI_ESPNOW` nel `platformio.ini`, il display mostra i contatori della radio: datagrammi inviati, persi e ricevuti, errori di trasmissione e di ricezione, e il segnale dell'altro dispositivo. Nel firmware rilasciato è disattivata.
 
+### Modifiche
+
+* **Scelta automatica del canale del dongle migliorata:** all'avvio il dongle ora misura quanto a lungo ogni canale è davvero occupato, dalla lunghezza e dalla velocità di ogni frame (anche quelli di controllo e quelli danneggiati), quanto è forte quel traffico e il rumore di fondo della radio, in tre passate da 250 ms per canale distribuite su circa 10 s, invece di contare i frame. Tre scansioni Wi-Fi vengono mediate per ogni rete, così una rete persa da una scansione o un segnale che varia pesano meno. Ogni sorgente di interferenza viene pesata in base alla sua distanza in canali, come la vede davvero un ricevitore da 20 MHz: stare a uno o due canali da una rete trafficata, dove nessuno dei due sente l'altro e i frame collidono, ora conta più che condividere il canale di quella rete, dove ci si dà il turno. Le reti a 40 MHz vengono contate su entrambe le metà della loro banda, e i beacon e i dati di una rete nota sentiti su un canale vicino vengono contati solo sul suo canale reale. Il traffico resta separato per ogni forza del segnale, a passi di 1 dBm come la fornisce la radio, così tanto traffico debole non può più nascondere un po' di traffico forte. Ogni passata parte da un canale diverso, così lo stesso canale viene ascoltato a intervalli che cambiano. Senza reti intorno il dongle resta sul canale 11, come con il canale fisso. La ricerca ora dura circa 17 s invece di circa 14 s: i pochi secondi in più rendono la scelta più affidabile, mentre una ricerca più lunga aggiungerebbe poco. Nessuna impostazione Wi-Fi viene più scritta in flash.
+* **Nuovi pin del display sul dongle Waveshare ESP32-S3 Zero:** il display ora usa sei pin uno accanto all'altro, vicino a VCC e GND: SCL su GPIO 1, SDA su GPIO 2, RES su GPIO 3, DC su GPIO 4, CS su GPIO 5 e BLK su GPIO 6 (fino alla 7.1.1: SDA GPIO 4, SCL GPIO 5, CS GPIO 6, DC GPIO 7, RES GPIO 8, BLK GPIO 9). Un dongle cablato per la 7.1.1 va ricablato, vedi [Aggiornamento dalla 7.1.1](#aggiornamento-dalla-711). Lo schema precedente resta come `DONGLE-esp32-s3-zero_V_7_1_1.svg`. Le altre schede dongle non cambiano.
+* **Logo a colori nella schermata principale del dongle:** il logo nella schermata principale del display del dongle ora è a colori, come quello mostrato all'avvio, invece che solo rosso.
+* Piattaforma e librerie aggiornate: core Arduino per ESP32 3.3.13 (ESP-IDF 5.5.6) e Adafruit TinyUSB 3.8.0 (lightgun, dongle e pedale), LovyanGFX 1.3.0 (lightgun e dongle), Adafruit GFX 1.13.0 (lightgun) e arduino-pico 6.4.0 (schede RP2040).
+
 ### Correzioni
 
 * **I dati dal computer tramite il dongle non restano più indietro:** quando la coda radio era piena, una parte dei dati inviati dall'App desktop o da MAMEHooker a una pistola wireless poteva restare in attesa fino ai dati successivi del computer. Ora il resto viene inviato appena c'è spazio.
 * **Tastiera e gamepad tramite il dongle:** con il pacchetto wireless unificato, anche i report di tastiera e gamepad inviano ora insieme lo stato intero di mouse, tastiera e gamepad, come già faceva il mouse.
 * **I pacchetti wireless danneggiati vengono scartati:** un pacchetto corrotto o estraneo ora viene eliminato prima di essere decodificato, invece di scrivere oltre la sua fine. I pacchetti validi si decodificano esattamente come prima. Vale per lightgun, dongle e pedale.
 * **I tasti non restano più premuti tramite il dongle:** con la mira ferma o fuori dallo schermo, dopo ogni cambio di tasti, gamepad o pulsanti del mouse la pistola ora rinvia lo stato intero alcune volte, da 12 ms fino a circa 170 ms dopo, così un rilascio perso per un'interferenza radio non lascia più un tasto premuto sul computer. Il dongle passa al computer solo ciò che cambia, quindi lì le copie non cambiano nulla.
+* **Canali 12 e 13 su dongle e pedale:** il driver della radio parte in modalità world safe, in cui i canali 12 e 13 sono solo ascoltati, e teneva il paese salvato in flash, quindi poter usare quei canali dipendeva dalla storia della scheda. Il paese (Italia, canali 1-13) ora viene impostato sul dongle, anche prima della ricerca del canale, e sul pedale, come già avveniva sulla pistola: il dongle può cercare e scegliere 12 e 13, e il pedale può seguire una pistola su quei canali. Paese e numero di canali si possono cambiare in compilazione con `-D OPENFIRE_WIFI_COUNTRY=\"XX\"` e `-D OPENFIRE_WIFI_COUNTRY_CHANNELS=N`.
 
 ### Aggiornamento dalla 7.1.1
 
 * Basta un aggiornamento normale: impostazioni, pin e profili di calibrazione vengono mantenuti, e non serve calibrare di nuovo. La potenza di trasmissione wireless parte da 16,5 dBm, la potenza usata finora.
 * Aggiorna lightgun, dongle e pedale: in questa release cambiano tutti e tre i firmware.
+* **Dongle Waveshare ESP32-S3 Zero con display:** prima di aggiornare sposta i fili del display sui nuovi pin, come nel [nuovo schema](dongle/docs/board_scheme/DONGLE-esp32-s3-zero.svg): SCL GPIO 1, SDA GPIO 2, RES GPIO 3, DC GPIO 4, CS GPIO 5, BLK GPIO 6; VCC e GND non cambiano. Con il vecchio cablaggio il display resta spento, mentre il dongle funziona comunque. Senza display non cambia nulla.
+* All'avvio il dongle ora impiega circa 20 secondi prima di attendere una pistola (circa 17 s di ricerca del canale, più 3 s di logo con il display): attendilo prima di accendere il pedale e la pistola.
 * Se arrivi dalla 7.1.0 o dalla 7.0.0, segui anche [Aggiornamento dalla 7.1.0](#aggiornamento-dalla-710) della 7.1.1 e [Aggiornamento dalla 7.0.0](#aggiornamento-dalla-700) della 7.1.0.
 
 ---

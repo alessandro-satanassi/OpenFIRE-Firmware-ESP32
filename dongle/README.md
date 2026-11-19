@@ -66,6 +66,11 @@ Pinouts of the supported boards for use as a dongle:
 | :---: | :---: | :---: |
 | <img src="docs/board_scheme/DONGLE-esp32-s3-pico.svg" width="100%" alt="PICO Dongle Pinout"> | <img src="docs/board_scheme/DONGLE-esp32-s3-zero.svg" width="100%" alt="ZERO Dongle Pinout"> | <img src="docs/board_scheme/DONGLE-ESP32S3-Devkit-C.svg" width="100%" alt="DevKitC Dongle Pinout"> |
 
+<a id="zero-display-pins"></a>
+
+> [!IMPORTANT]
+> **Waveshare ESP32-S3-ZERO with display, from 7.1.2:** the display pins have changed. SCL goes to GPIO 1, SDA to GPIO 2, RES to GPIO 3, DC to GPIO 4, CS to GPIO 5 and BLK to GPIO 6; VCC and GND do not change. If your dongle was wired for 7.1.1 or earlier (SDA GPIO 4, SCL GPIO 5, CS GPIO 6, DC GPIO 7, RES GPIO 8, BLK GPIO 9), move the wires as in the diagram above before updating, otherwise the display stays blank. Without a display nothing changes.
+
 <br>
 
 <p align="center">
@@ -113,14 +118,14 @@ The fastest way, with nothing else to install on the computer.
 
 The dongle needs no buttons and no setup: it does everything by itself. When you plug it into the computer:
 
-1. **Channel selection:** the dongle checks the radio channels around it and picks the one with the least interference (about 15 seconds; with a display you can follow the phases on screen).
+1. **Channel selection:** the dongle checks the radio channels around it and picks the one with the least interference (about 17 seconds; with a display you can follow the phases on screen).
 2. **Waiting:** it then waits for a gun *(with a display you see a search or wait icon)*.
 3. **Pairing:** when you switch on the gun without its USB cable, it announces itself; the first free dongle answers and the two pair exclusively.
 4. **Play:** from now on the dongle turns the gun's data into standard mouse, keyboard and gamepad inputs, and carries the serial port too. The computer handles the gun exactly like a wired controller.
 5. **Fast reconnection:** if you switch the gun off while the dongle stays plugged in, it reconnects almost instantly when you switch it back on.
 
 > [!TIP]
-> **Recommended order:** 1) plug in the dongle and wait about 15 seconds, until it is waiting for a gun; 2) switch on the wireless pedal, if you use one; 3) switch on the gun, without its USB cable connected to the computer. With more guns (up to four), use one dongle per gun: see [several guns](../lightgun/src/README.md#multiple-guns-and-multiplayer).
+> **Recommended order:** 1) plug in the dongle and wait about 20 seconds, until it is waiting for a gun; 2) switch on the wireless pedal, if you use one; 3) switch on the gun, without its USB cable connected to the computer. With more guns (up to four), use one dongle per gun: see [several guns](../lightgun/src/README.md#multiple-guns-and-multiplayer).
 
 > [!IMPORTANT]
 > **Dongle restart and new pairing**
@@ -202,6 +207,11 @@ Pinout delle schede supportate per l'uso come dongle:
 | :---: | :---: | :---: |
 | <img src="docs/board_scheme/DONGLE-esp32-s3-pico.svg" width="100%" alt="Pinout Dongle PICO"> | <img src="docs/board_scheme/DONGLE-esp32-s3-zero.svg" width="100%" alt="Pinout Dongle ZERO"> | <img src="docs/board_scheme/DONGLE-ESP32S3-Devkit-C.svg" width="100%" alt="Pinout Dongle DevKitC"> |
 
+<a id="pin-display-zero"></a>
+
+> [!IMPORTANT]
+> **Waveshare ESP32-S3-ZERO con display, dalla 7.1.2:** i pin del display sono cambiati. SCL va su GPIO 1, SDA su GPIO 2, RES su GPIO 3, DC su GPIO 4, CS su GPIO 5 e BLK su GPIO 6; VCC e GND non cambiano. Se il tuo dongle era cablato per la 7.1.1 o precedenti (SDA GPIO 4, SCL GPIO 5, CS GPIO 6, DC GPIO 7, RES GPIO 8, BLK GPIO 9), prima di aggiornare sposta i fili come nello schema qui sopra, altrimenti il display resta spento. Senza display non cambia nulla.
+
 <br>
 
 <p align="center">
@@ -249,14 +259,14 @@ Il metodo più veloce, senza nient'altro da installare sul computer.
 
 Il dongle non richiede pulsanti né impostazioni: fa tutto da solo. Quando lo inserisci nel computer:
 
-1. **Scelta del canale:** il dongle controlla i canali radio intorno a sé e sceglie quello con meno interferenze (circa 15 secondi; con un display puoi seguire le fasi a schermo).
+1. **Scelta del canale:** il dongle controlla i canali radio intorno a sé e sceglie quello con meno interferenze (circa 17 secondi; con un display puoi seguire le fasi a schermo).
 2. **Attesa:** poi resta in attesa di una pistola *(con un display vedi un'icona di ricerca o di attesa)*.
 3. **Associazione:** quando accendi la pistola senza il cavo USB, questa si annuncia; il primo dongle libero risponde e i due si associano in modo esclusivo.
 4. **Gioco:** da questo momento il dongle trasforma i dati della pistola in normali comandi di mouse, tastiera e gamepad, e inoltra anche i dati della porta seriale. Il computer gestisce la pistola esattamente come un controller cablato.
 5. **Riconnessione rapida:** se spegni la pistola lasciando il dongle inserito, alla riaccensione si ricollega quasi all'istante.
 
 > [!TIP]
-> **Ordine di accensione consigliato:** 1) inserisci il dongle e attendi circa 15 secondi, finché è in attesa di una pistola; 2) accendi il pedale wireless, se lo usi; 3) accendi la pistola, senza il cavo USB collegato al computer. Con più pistole (fino a quattro) usa un dongle per ogni pistola: vedi [più pistole](../lightgun/src/README.md#modifica-dell-id-usb-per-pistole-multiple-italiano).
+> **Ordine di accensione consigliato:** 1) inserisci il dongle e attendi circa 20 secondi, finché è in attesa di una pistola; 2) accendi il pedale wireless, se lo usi; 3) accendi la pistola, senza il cavo USB collegato al computer. Con più pistole (fino a quattro) usa un dongle per ogni pistola: vedi [più pistole](../lightgun/src/README.md#modifica-dell-id-usb-per-pistole-multiple-italiano).
 
 > [!IMPORTANT]
 > **Riavvio del dongle e nuova associazione**

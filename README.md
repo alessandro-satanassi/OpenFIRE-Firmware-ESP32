@@ -104,7 +104,7 @@ New to OpenFIRE? Here is what you need and the steps to follow; each step links 
 5. **Mount the four IR emitters** around the screen ([IR emitter setup](lightgun/src/README.md#ir-emitter-setup)).
 6. **Calibrate** each profile you use, then save ([how to calibrate](lightgun/src/README.md#how-to-calibrate)).
 7. **Test** the buttons in **Gun Tests**, the camera with **Open IR Camera Tester...** and the aim with **Open Aim Test...** ([test mode](lightgun/src/README.md#test-mode)).
-8. **Play** with the USB cable, or wirelessly: plug in the [dongle](dongle/README.md#english-version) and wait about 15 seconds, switch on the [wireless pedal](pedal/README.md#english-version) if you use one, then switch on the gun. [Your First Game](lightgun/src/README.md#your-first-game) explains how to leave configuration and set up the game's inputs. For two to four players, see [several guns](lightgun/src/README.md#multiple-guns-and-multiplayer).
+8. **Play** with the USB cable, or wirelessly: plug in the [dongle](dongle/README.md#english-version) and wait about 20 seconds, switch on the [wireless pedal](pedal/README.md#english-version) if you use one, then switch on the gun. [Your First Game](lightgun/src/README.md#your-first-game) explains how to leave configuration and set up the game's inputs. For two to four players, see [several guns](lightgun/src/README.md#multiple-guns-and-multiplayer).
 
 For a first test after calibration, try [OpenFIRE ShootingGallery](https://alessandro-satanassi.itch.io/openfire-shootinggallery), a mini-game created for testing your lightgun, playable online or available to download for Windows, Linux and macOS.
 
@@ -116,8 +116,9 @@ If something does not work, see [Common Problems](lightgun/src/README.md#common-
 * **Polling rate test:** measures how often the gun really sends its aim to the computer, with the USB cable or through the dongle: **Measure Polling Rate** in the WebApp menu bar, or the button next to the COM port in the desktop App. The expected value is about 209 Hz.
 * **Wireless transmit power:** choose the power with which the gun transmits to the dongle and the pedal, from 2 to 20 dBm, in **Gun Settings → Input / Output** (shown with **View > Show Unsafe Settings**). The default, 16.5 dBm, is the power used so far ([operations manual](lightgun/src/README.md#operations-manual)).
 * **More reliable wireless link:** data from the desktop App or MAMEHooker no longer stays waiting when the radio queue is full, and damaged packets are discarded.
+* **Better channel choice on the dongle:** at start-up the dongle picks the radio channel with the least interference more reliably, and can now also use channels 12 and 13. Wait about 20 seconds after plugging it in before switching on the pedal and the gun.
 
-**Updating from 7.1.1:** a normal update keeps settings and calibrations, and there is no need to calibrate again. Update the lightgun, the dongle and the pedal together: all three firmware change.
+**Updating from 7.1.1:** a normal update keeps settings and calibrations, and there is no need to calibrate again. Update the lightgun, the dongle and the pedal together: all three firmware change. On a Waveshare ESP32-S3 Zero dongle with display, first move the display wires to the [new pins](dongle/README.md#zero-display-pins).
 
 ### Introduced in 7.1.1
 
@@ -440,7 +441,7 @@ Non conosci ancora OpenFIRE? Ecco cosa ti serve e i passi da seguire; ogni passo
 5. **Monta i quattro emettitori IR** intorno allo schermo ([configurazione emettitori IR](lightgun/src/README.md#configurazione-emettitori-ir-italiano)).
 6. **Calibra** ogni profilo che usi, poi salva ([come calibrare](lightgun/src/README.md#come-calibrare-italiano)).
 7. **Prova** i pulsanti in **Gun Tests**, la telecamera con **Apri Tester telecamera IR...** e la mira con **Apri Prova puntamento...** ([modalità di test](lightgun/src/README.md#modalità-di-test-italiano)).
-8. **Gioca** con il cavo USB, oppure senza fili: inserisci il [dongle](dongle/README.md#versione-italiana) e attendi circa 15 secondi, accendi il [pedale wireless](pedal/README.md#versione-italiana) se lo usi, poi accendi la pistola. [La prima partita](lightgun/src/README.md#la-prima-partita) spiega come uscire dalla configurazione e impostare i comandi del gioco. Per giocare in due, tre o quattro, vedi [più pistole](lightgun/src/README.md#modifica-dell-id-usb-per-pistole-multiple-italiano).
+8. **Gioca** con il cavo USB, oppure senza fili: inserisci il [dongle](dongle/README.md#versione-italiana) e attendi circa 20 secondi, accendi il [pedale wireless](pedal/README.md#versione-italiana) se lo usi, poi accendi la pistola. [La prima partita](lightgun/src/README.md#la-prima-partita) spiega come uscire dalla configurazione e impostare i comandi del gioco. Per giocare in due, tre o quattro, vedi [più pistole](lightgun/src/README.md#modifica-dell-id-usb-per-pistole-multiple-italiano).
 
 Dopo la calibrazione, prova [OpenFIRE ShootingGallery](https://alessandro-satanassi.itch.io/openfire-shootinggallery), un mini-gioco pensato per la lightgun, giocabile online oppure scaricabile per Windows, Linux e macOS.
 
@@ -452,8 +453,9 @@ Se qualcosa non funziona, consulta [Problemi comuni](lightgun/src/README.md#prob
 * **Misura polling rate:** misura quanto spesso la pistola invia davvero la mira al computer, con il cavo USB o tramite il dongle: **Misura polling rate** nella barra dei menù della WebApp, oppure il pulsante accanto alla Porta COM nell'App desktop. Il valore atteso è circa 209 Hz.
 * **Potenza di trasmissione wireless:** scegli la potenza con cui la pistola trasmette al dongle e al pedale, da 2 a 20 dBm, in **Impostazioni Gun → Input / Output** (visibile con **Visualizza > Mostra Impostazioni Non Sicure**). Il predefinito, 16,5 dBm, è la potenza usata finora ([manuale operativo](lightgun/src/README.md#manuale-operativo-italiano)).
 * **Collegamento wireless più affidabile:** i dati dall'App desktop o da MAMEHooker non restano più in attesa quando la coda radio è piena, e i pacchetti danneggiati vengono scartati.
+* **Scelta del canale del dongle migliorata:** all'avvio il dongle sceglie in modo più affidabile il canale radio con meno interferenze, e ora può usare anche i canali 12 e 13. Dopo averlo inserito attendi circa 20 secondi prima di accendere il pedale e la pistola.
 
-**Aggiornamento dalla 7.1.1:** un aggiornamento normale mantiene impostazioni e calibrazioni, e non serve calibrare di nuovo. Aggiorna insieme lightgun, dongle e pedale: cambiano tutti e tre i firmware.
+**Aggiornamento dalla 7.1.1:** un aggiornamento normale mantiene impostazioni e calibrazioni, e non serve calibrare di nuovo. Aggiorna insieme lightgun, dongle e pedale: cambiano tutti e tre i firmware. Su un dongle Waveshare ESP32-S3 Zero con display, prima sposta i fili del display sui [nuovi pin](dongle/README.md#pin-display-zero).
 
 ### Introdotte con la 7.1.1
 
