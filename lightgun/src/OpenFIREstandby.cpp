@@ -156,7 +156,7 @@ bool sleepFor(uint32_t ms) {
     if(esp_sleep_enable_timer_wakeup(uint64_t(ms) * 1000) != ESP_OK || esp_light_sleep_start() != ESP_OK)
         return true;
     vTaskDelay(1);   // EN/IT: let the idle tasks run between sleeps / lascia girare i task idle fra un sonno e l'altro
-    return esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_GPIO;
+    return (esp_sleep_get_wakeup_causes() & (1U << ESP_SLEEP_WAKEUP_GPIO)) != 0;
 }
 
 // EN: Radio is off: sleep until the trigger, then reconnect and resume the preserved tracking.

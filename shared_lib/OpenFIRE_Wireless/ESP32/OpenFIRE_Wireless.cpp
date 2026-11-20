@@ -1825,7 +1825,7 @@ bool SerialWireless_::startAccessPoint(const char *ssid, const char *password) {
     if (err != ESP_OK) {
       //Serial.printf("esp_wifi_set_protocol failed! 0x%x", err);
     }
-    err = esp_wifi_set_bandwidth(WIFI_IF_AP, WIFI_BW_HT20);
+    err = esp_wifi_set_bandwidth(WIFI_IF_AP, WIFI_BW20);
     if (err != ESP_OK) {
       //Serial.printf("esp_wifi_set_protocol failed! 0x%x", err);
     }  
@@ -1942,7 +1942,7 @@ void SerialWireless_::begin() {
     //Serial.printf("esp_wifi_set_protocol failed! 0x%x", err);
   }
   
-  err = esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW_HT20);
+  err = esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW20);
   if (err != ESP_OK) {
     //Serial.printf("esp_wifi_set_bandwidth failed! 0x%x", err);
   }
@@ -1955,7 +1955,7 @@ void SerialWireless_::begin() {
     //Serial.printf("esp_wifi_set_protocol failed! 0x%x", err);
   }
   
-  err = esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW_HT20);
+  err = esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW20);
   if (err != ESP_OK) {
     //Serial.printf("esp_wifi_set_bandwidth failed! 0x%x", err);
   }
@@ -1967,8 +1967,8 @@ void SerialWireless_::begin() {
     //Serial.printf("esp_wifi_set_protocol failed! 0x%x", err);
   }
   
-  err = esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW_HT20);
-  err = esp_wifi_set_bandwidth(WIFI_IF_AP, WIFI_BW_HT20);
+  err = esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW20);
+  err = esp_wifi_set_bandwidth(WIFI_IF_AP, WIFI_BW20);
   if (err != ESP_OK) {
     //Serial.printf("esp_wifi_set_bandwidth failed! 0x%x", err);
   }
@@ -2402,7 +2402,7 @@ bool SerialWireless_::connection_gun() {
       WiFi.softAP(WEBAPP_AP_SSID, NULL, espnow_wifi_channel);
       esp_err_t err;
       err = esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N);
-      err = esp_wifi_set_bandwidth(WIFI_IF_AP, WIFI_BW_HT20);
+      err = esp_wifi_set_bandwidth(WIFI_IF_AP, WIFI_BW20);
     }
     */
 
@@ -2697,7 +2697,7 @@ void SerialWireless_::radio_off_pedal() {
 
 void SerialWireless_::radio_on_pedal() {
   esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N); // same settings as begin() / stesse impostazioni di begin()
-  esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW_HT20);
+  esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW20);
   esp_wifi_start();
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_channel(espnow_wifi_channel, WIFI_SECOND_CHAN_NONE);
@@ -2732,7 +2732,7 @@ bool SerialWireless_::radio_on_gun() {
   // IT: Il driver rifiuta 11G da solo: usa il default b/g/n rimasto attivo all'avvio.
   // ESP-NOW mantiene il rate 11G/12 Mbps per peer impostato sotto; un bitmap rifiutato interromperebbe il risveglio.
   if (esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N) != ESP_OK ||
-      esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW_HT20) != ESP_OK ||
+      esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW20) != ESP_OK ||
       esp_wifi_start() != ESP_OK) return false;
   esp_wifi_set_promiscuous(true);
   const esp_err_t channel = esp_wifi_set_channel(espnow_wifi_channel, WIFI_SECOND_CHAN_NONE);

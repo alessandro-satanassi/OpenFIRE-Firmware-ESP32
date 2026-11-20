@@ -207,7 +207,7 @@ void set_leds(uint8_t mask) {
 bool light_sleep_ms(uint32_t ms) {
   esp_sleep_enable_timer_wakeup((uint64_t)ms * 1000);
   esp_light_sleep_start();
-  return esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_GPIO;
+  return (esp_sleep_get_wakeup_causes() & (1U << ESP_SLEEP_WAKEUP_GPIO)) != 0;
 }
 
 /*
