@@ -950,7 +950,7 @@ static void DebugWifiEspNowRssi(char *text, size_t size, const DbgWifiRx_t &rx, 
     const uint32_t count = rx.count;
     if(!count) { snprintf(text, size, "--/--/--"); return; }
     char last[6] = "--";
-    if(now - rx.lastMs < 2000) snprintf(last, sizeof(last), "%d", (int)rx.rssi);
+    if((int32_t)(now - rx.lastMs) < 2000) snprintf(last, sizeof(last), "%d", (int)rx.rssi);
     snprintf(text, size, "%d/%s/%d", (int)rx.rssiMin, last, (int)rx.rssiMax);   // at most / al massimo -128/-128/-128: 14
 }
 static void DebugWifiEspNowDisplay()

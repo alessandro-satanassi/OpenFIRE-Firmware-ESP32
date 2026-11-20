@@ -114,7 +114,7 @@ If something does not work, see [Common Problems](lightgun/src/README.md#common-
 
 * **Aim test:** in **Gun Tests**, **Open Aim Test...** opens a fullscreen grid with nine targets to check the aim, the buttons and the recoil together, in the WebApp and in the desktop App ([test mode](lightgun/src/README.md#test-mode)).
 * **Polling rate test:** measures how often the gun really sends its aim to the computer, with the USB cable or through the dongle: **Measure Polling Rate** in the WebApp menu bar, or the button next to the COM port in the desktop App. The expected value is about 209 Hz.
-* **Wireless transmit power:** choose the power with which the gun transmits to the dongle and the pedal, from 2 to 20 dBm, in **Gun Settings → Input / Output** (shown with **View > Show Unsafe Settings**). The default, 16.5 dBm, is the power used so far ([operations manual](lightgun/src/README.md#operations-manual)).
+* **Wireless transmit power:** choose the power with which the gun transmits to the dongle and the pedal, from 2 to 20 dBm, in **Gun Settings → Input / Output** (shown with **View > Show Unsafe Settings**). The default, 16.5 dBm, is the power used so far ([operations manual](lightgun/src/README.md#camera-display-and-startup-settings)).
 * **More reliable wireless link:** data from the desktop App or MAMEHooker no longer stays waiting when the radio queue is full, and damaged packets are discarded.
 * **Better channel choice on the dongle:** at start-up the dongle picks the radio channel with the least interference more reliably, and can now also use channels 12 and 13. Wait about 20 seconds after plugging it in before switching on the pedal and the gun.
 
@@ -451,7 +451,7 @@ Se qualcosa non funziona, consulta [Problemi comuni](lightgun/src/README.md#prob
 
 * **Prova puntamento:** in **Gun Tests**, **Apri Prova puntamento...** apre una griglia a schermo intero con nove bersagli per controllare insieme la mira, i pulsanti e il rinculo, nella WebApp e nell'App desktop ([modalità di test](lightgun/src/README.md#modalità-di-test-italiano)).
 * **Misura polling rate:** misura quanto spesso la pistola invia davvero la mira al computer, con il cavo USB o tramite il dongle: **Misura polling rate** nella barra dei menù della WebApp, oppure il pulsante accanto alla Porta COM nell'App desktop. Il valore atteso è circa 209 Hz.
-* **Potenza di trasmissione wireless:** scegli la potenza con cui la pistola trasmette al dongle e al pedale, da 2 a 20 dBm, in **Impostazioni Gun → Input / Output** (visibile con **Visualizza > Mostra Impostazioni Non Sicure**). Il predefinito, 16,5 dBm, è la potenza usata finora ([manuale operativo](lightgun/src/README.md#manuale-operativo-italiano)).
+* **Potenza di trasmissione wireless:** scegli la potenza con cui la pistola trasmette al dongle e al pedale, da 2 a 20 dBm, in **Impostazioni Gun → Input / Output** (visibile con **Visualizza > Mostra Impostazioni Non Sicure**). Il predefinito, 16,5 dBm, è la potenza usata finora ([manuale operativo](lightgun/src/README.md#telecamera-display-e-impostazioni-di-avvio)).
 * **Collegamento wireless più affidabile:** i dati dall'App desktop o da MAMEHooker non restano più in attesa quando la coda radio è piena, e i pacchetti danneggiati vengono scartati.
 * **Scelta del canale del dongle migliorata:** all'avvio il dongle sceglie in modo più affidabile il canale radio con meno interferenze, e ora può usare anche i canali 12 e 13. Dopo averlo inserito attendi circa 20 secondi prima di accendere il pedale e la pistola.
 

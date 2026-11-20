@@ -204,9 +204,10 @@ void set_leds(uint8_t mask) {
 }
 
 // Light sleep for the given time; returns true if a pedal press woke the pedal. / Sonno leggero per il tempo indicato; restituisce true se a svegliare il pedale è stata una pressione.
+// If the sleep cannot start (e.g. a pedal is already pressed) it returns true too, as the gun does. / Se il sonno non può partire (es. un pedale è già premuto) restituisce true anche qui, come la pistola.
 bool light_sleep_ms(uint32_t ms) {
-  esp_sleep_enable_timer_wakeup((uint64_t)ms * 1000);
-  esp_light_sleep_start();
+  if (esp_sleep_enable_timer_wakeup((uint64_t)ms * 1000) != ESP_OK || esp_light_sleep_start() != ESP_OK) return true;
+  vTaskDelay(1);  // let the idle tasks run between sleeps / lascia girare i task idle fra un sonno e l'altro
   return (esp_sleep_get_wakeup_causes() & (1U << ESP_SLEEP_WAKEUP_GPIO)) != 0;
 }
 
