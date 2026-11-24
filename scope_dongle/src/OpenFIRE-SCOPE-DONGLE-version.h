@@ -1,0 +1,47 @@
+/*!
+ * @file OpenFIRE-SCOPE-DONGLE-version.h
+ * @brief OpenFIRE-SCOPE-DONGLE-version.h
+ * @n CPP OpenFIRE-SCOPE-DONGLE-version.h
+ *
+ * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2026
+ * @copyright GNU Lesser General Public License
+ *
+ * @author [Alessandro Satanassi](alessandro@cittini.it)
+ * @version V1.0
+ * @date 2026
+ */
+
+#ifndef OPENFIRE_SCOPE_DONGLE_VERSION_H
+#define OPENFIRE_SCOPE_DONGLE_VERSION_H
+
+// Current version / Versione attuale
+#define OPENFIRE_SCOPE_DONGLE_VERSION 7.1
+/////// #define OPENFIRE_CODENAME "Dawn Sigma rc2"
+// #define GIT_HASH
+#define OPENFIRE_SCOPE_DONGLE_VERSION_MAJOR 7
+#define OPENFIRE_SCOPE_DONGLE_VERSION_MINOR 1
+#define OPENFIRE_SCOPE_DONGLE_VERSION_PATCH 2
+#define OPENFIRE_SCOPE_DONGLE_VERSION_TYPE "stable"  // Per indicare pre-release (alpha, beta, RC(Release Candidate), stable)
+
+// Current version string / Stringa di versione attuale
+#define OPENFIRE_SCOPE_DONGLE_VERSION_STRING (String(OPENFIRE_SCOPE_DONGLE_VERSION_MAJOR) + "." + String(OPENFIRE_SCOPE_DONGLE_VERSION_MINOR) + "." + String(OPENFIRE_SCOPE_DONGLE_VERSION_PATCH)+ "-" + OPENFIRE_SCOPE_DONGLE_VERSION_TYPE)
+// #define OPENFIRE_VERSION_STRING TU_STRING(OPENFIRE_VERSION_MAJOR) "." TU_STRING(OPENFIRE_VERSION_MINOR) "." TU_STRING(OPENFIRE_VERSION_PATCH)
+
+// Combined version number of the current version / Numero combinato della versione attuale
+#define OPENFIRE_SCOPE_DONGLE_VERSION_NUMBER (OPENFIRE_SCOPE_DONGLE_VERSION_MAJOR * 10000 + OPENFIRE_SCOPE_DONGLE_VERSION_MINOR * 100 + OPENFIRE_SCOPE_DONGLE_VERSION_PATCH)
+
+// =========== latest compatible version / ultima versione compatibile ===========
+
+// Last compatible previous version / Ultima versione precedente compatibile
+#define OPENFIRE_SCOPE_DONGLE_COMPATIBLE_MAJOR 4
+#define OPENFIRE_SCOPE_DONGLE_COMPATIBLE_MINOR 3
+#define OPENFIRE_SCOPE_DONGLE_COMPATIBLE_PATCH 2
+
+// Previous compatible version string / Stringa di versione compatibile precedente
+#define OPENFIRE_SCOPE_DONGLE_COMPATIBLE_STRING (String(OPENFIRE_SCOPE_DONGLE_COMPATIBLE_MAJOR) + "." + String(OPENFIRE_SCOPE_DONGLE_COMPATIBLE_MINOR) + "." + String(OPENFIRE_SCOPE_DONGLE_COMPATIBLE_PATCH))
+// #define OPENFIRE_SCOPE_DONGLE_COMPATIBLE_STRING TU_STRING(OPENFIRE_SCOPE_DONGLE_COMPATIBLE_MAJOR) "." TU_STRING(OPENFIRE_SCOPE_DONGLE_COMPATIBLE_MINOR) "." TU_STRING(OPENFIRE_SCOPE_DONGLE_COMPATIBLE_PATCH)
+
+// Combined version number of the previous compatible version / Numero combinato della versione precedente compatibile
+#define OPENFIRE_SCOPE_DONGLE_COMPATIBLE_NUMBER (OPENFIRE_SCOPE_DONGLE_COMPATIBLE_MAJOR * 10000 + OPENFIRE_SCOPE_DONGLE_COMPATIBLE_MINOR * 100 + OPENFIRE_SCOPE_DONGLE_COMPATIBLE_PATCH)
+
+#endif  // OPENFIRE_SCOPE_DONGLE_VERSION_H

@@ -14,323 +14,141 @@
 #pragma once
 
 // ===================================================================================
-// ASTRAZIONE MULTI-PIATTAFORMA (WIP) E DIPENDENZE
+// SHARED LIBRARY SCOPE / SCOPE_DONGLE / LIBRERIA CONDIVISA SCOPE / SCOPE_DONGLE
 // ===================================================================================
-// L'obiettivo è mantenere l'hardware sottostante il più possibile astratto,
-// permettendo in futuro porting su altre architetture (es. RP2040) se le librerie
-// radio lo consentiranno. Attualmente la rete è fortemente legata all'ecosistema 
-// Espressif (ESP-NOW) per questioni di latenza ultra-bassa.
+// EN: The same library is built for both devices, the role is chosen by the build flag:
+//     -D SCOPE        -> the scope (station): searches a free dongle, connects, sends the player
+//     -D SCOPE_DONGLE -> the scope dongle (access point): chooses the channel, waits for a scope
+//     Link: Wi-Fi 6 at 5 GHz, 20 MHz, open network, UDP. No ESP-NOW.
+// IT: La stessa libreria e' compilata per entrambi i dispositivi, il ruolo lo sceglie il flag di compilazione:
+//     -D SCOPE        -> il mirino (stazione): cerca un dongle libero, si collega, comunica il giocatore
+//     -D SCOPE_DONGLE -> il dongle del mirino (access point): sceglie il canale, aspetta un mirino
+//     Collegamento: Wi-Fi 6 a 5 GHz, 20 MHz, rete aperta, UDP. Niente ESP-NOW.
 
 #if defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
 
 #include <Arduino.h>
-
-
-#include <Adafruit_TinyUSB.h> // serve per alcune intestazioni
-#include "TinyUSB_Devices.h"
-#include "../OpenFIRE_Packet/OpenFIRE_Packet.h"
-
-#if defined(ARDUINO_ARCH_ESP32)
-  #include <WiFi.h> // serve per leggere max addres
-  #include <esp_now.h>
-  // #include <WiFi.h> // serve per leggere max addres
-  #include <esp_mac.h>  // For the MAC2STR and MACSTR macros
-  #include "MacAddress.h"
-  #include "esp_wifi.h"
-  #include "freertos/semphr.h"
-  #include "esp_timer.h"
-#elif defined(ARDUINO_ARCH_RP2040)
-  // vediamo
-#endif
-
-// numero di secondi massimi a disposizione per la connessione del Pedal
-#define MAX_SECONDI_CONNESSIONE_PEDAL 10
-
-/*****************************
- *   ESP_NOW E VARIABILI DI STATO GLOBALI
- *****************************/
-// ===================================================================================
-// GESTIONE DELLO STATO DISTRIBUITO (EXTERN)
-// ===================================================================================
-// L'uso estensivo di extern permette di condividere lo stato della rete (MAC address, 
-// canali, report USB) tra diversi moduli senza overhead di passaggio parametri. 
-// Le struct report (es. absmouse5Report_last_wifi) fungono da "Shadow State" per 
-// inviare i dati all'host USB solo quando c'è un reale cambiamento hardware.
-
-extern uint8_t espnow_wifi_channel;
-extern uint8_t espnow_wifi_power;
-extern hid_abs_mouse_report_t absmouse5Report_last_wifi;
-extern hid_keyboard_report_t  keyReport_last_wifi;
-extern hid_gamepad16_report_t gamepad16Report_last_wifi;
-extern uint8_t lastDongleAddress[6];
-extern uint8_t lastPedalAddress[6];
-extern uint8_t lastDongleChannel;
-extern uint8_t lastPedalChannel;
-extern uint8_t peerAddress[6];
-extern bool lastDongleSave;
-extern bool lastPedalSave; 
-extern const uint8_t BROADCAST_ADDR[6];
-
-extern uint8_t peerAddress_pedal[6];
- 
-//extern bool OF_WebConfigModeActive;
+#include <WiFi.h>
+#include <WiFiUdp.h>
+#include "esp_wifi.h"
 
 // ===================================================================================
-// DEFINIZIONI DEL PROTOCOLLO (ENUMERATORI) E MACCHINA A STATI DI RETE
+// COMMON SETTINGS / IMPOSTAZIONI COMUNI
 // ===================================================================================
-// Definiscono il vocabolario del nostro livello di trasporto proprietario.
-// PACKET_TX: Identifica il TIPO di payload trasportato (dati USB, force feedback seriale, o comandi di rete).
-// CONNECTION_STATE: Una macchina a stati finiti (FSM) rigorosa che guida la fase di "Handshake" 
-// (ricerca, associazione, conferma) garantendo che i dispositivi (Gun, Dongle, Pedal) non si incrocino.
 
+// EN: Network name, the same for every dongle: the scope connects to a precise dongle by its BSSID.
+// IT: Nome di rete, uguale per tutti i dongle: il mirino si collega a un dongle preciso tramite il suo BSSID.
+#define OPENFIRE_SCOPE_SSID          "OpenFIRE_SCOPE"
 
-enum WIRELESS_MODE {
-  NONE_WIRELESS = 0,   // WIFI SPENTO
-  ENABLE_BLUETOOTH_TO_PC,         //1
-  ENABLE_BLUETOOTH_TO_DONGLE,     //2
-  ENABLE_ESP_NOW_TO_DONGLE,       //3
-  ENABLE_WIFI_TO_DONGLE,          //4
-  ENABLE_NRF_24L01PLUS_TO_DONGLE  //5
+// EN: UDP ports: pairing and video use different ports. / IT: porte UDP: abbinamento e video usano porte diverse.
+#define OPENFIRE_SCOPE_PAIR_PORT     4210
+#define OPENFIRE_SCOPE_VIDEO_PORT    4211
+
+// EN: Fixed addresses: one access point, one station. A fixed address on the scope avoids waiting for DHCP.
+// IT: Indirizzi fissi: un access point, una stazione. L'indirizzo fisso sul mirino evita l'attesa del DHCP.
+#define OPENFIRE_SCOPE_DONGLE_IP     192, 168, 4, 1
+#define OPENFIRE_SCOPE_IP            192, 168, 4, 2
+#define OPENFIRE_SCOPE_NETMASK       255, 255, 255, 0
+
+// EN: 5 GHz channels without DFS (Europe). / IT: canali a 5 GHz senza DFS (Europa).
+#define OPENFIRE_SCOPE_CHANNELS      { 36, 40, 44, 48 }
+#define OPENFIRE_SCOPE_N_CHANNELS    4
+
+#ifndef OPENFIRE_WIFI_CHANNEL
+  #define OPENFIRE_WIFI_CHANNEL 36   // default channel of the dongle / canale predefinito del dongle
+#endif // OPENFIRE_WIFI_CHANNEL
+
+#ifndef OPENFIRE_WIFI_POWER
+  #define OPENFIRE_WIFI_POWER 68     // 0.25 dBm units: 68 = 17 dBm / unita' da 0,25 dBm: 68 = 17 dBm
+#endif // OPENFIRE_WIFI_POWER
+
+#ifndef OPENFIRE_WIFI_COUNTRY
+  #define OPENFIRE_WIFI_COUNTRY "IT"
+#endif // OPENFIRE_WIFI_COUNTRY
+
+// EN: Pairing times (same logic as lightgun and dongle). / IT: tempi dell'abbinamento (stessa logica di lightgun e dongle).
+#define OPENFIRE_SCOPE_SCAN_MS_PER_CHANNEL   30    // scope: active scan per channel / mirino: ricerca attiva per canale
+#define OPENFIRE_SCOPE_PAIR_TIMEOUT_MS       3000  // scope: no OK within 3 s -> disconnect and search again / mirino: niente OK in 3 s -> si scollega e ricerca
+#define OPENFIRE_SCOPE_DONGLE_CONFIRM_MS     2000  // dongle: no Confirm within 2 s from the connection -> frees the place / dongle: niente Conferma in 2 s dal collegamento -> libera il posto
+#define OPENFIRE_SCOPE_OK_REPEAT             3     // dongle: OK sent 3 times... / dongle: OK inviato 3 volte...
+#define OPENFIRE_SCOPE_OK_INTERVAL_MS        69    // ...69 ms apart / ...a 69 ms l'una dall'altra
+
+// ===================================================================================
+// PAIRING MESSAGES (UDP) / MESSAGGI DI ABBINAMENTO (UDP)
+// ===================================================================================
+// EN: Scope -> dongle: CONFIRM, once, with a random number and the player.
+//     Dongle -> scope: OK, 3 times, with the same random number.
+// IT: Mirino -> dongle: CONFERMA, una volta, con un numero casuale e il giocatore.
+//     Dongle -> mirino: OK, 3 volte, con lo stesso numero casuale.
+
+#define OPENFIRE_SCOPE_PAIR_MARKER   0x50   // 'P'
+#define OPENFIRE_SCOPE_PAIR_VERSION  1
+
+enum SCOPE_PAIR_MSG {
+  SCOPE_PAIR_CONFIRM = 1,   // scope -> dongle / mirino -> dongle
+  SCOPE_PAIR_OK      = 2    // dongle -> scope / dongle -> mirino
 };
 
-enum PACKET_TX {
-  SERIAL_TX = 1, // DATI SERIALI
-  KEYBOARD_TX,
-  MOUSE_TX,
-  GAMEPADE_TX,
-  PEDAL_TX,
-  CONNECTION,  // CONNESSIONE E ASSOCIAZIONE DONGLE CON GUN
-  CHECK_CONNECTION_LAST_DONGLE, //VERIFICA LA CONNESSIONE WIRELESS TRA GUN E DONGLE E VICEVERSA
-  CONNECTION_PEDAL,  // CONNESSIONE E ASSOCIAZIONE PEDAL CON GUN
-  CHECK_CONNECTION_LAST_PEDAL, //VERIFICA LA CONNESSIONE WIRELESS TRA GUN E PEDAL E VICEVERSA
-  #ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
-  MOUSE_KEY_PAD_TX,
-  #endif // OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
-  // ========= VALUTARE
-  RESET_DATA_USB,
-  REBOOT,      // REBOOT DEL DONGLE
-  TX_DATA_USB, // TRASMISSIONE DATI DELL'USB DA GUN A DONGLE
-  CHANGE_DATA_USB, // CAMBIO DEI DATI DELL'USB
-  CONN_REQ_TO_GUN,      // RICHIESTA INVIATA DA DONGLE VERSO GUN (INVIA MAC ADDRESS DEL DONGLE ed il MAC ADDRES A CUI E' STATA INVIATA LA RICHIESTA (PUO' ESSERE BROADCAST))
-  CONN_REQ_TO_DONGLE,   // RICHIESTA INVIATA DA GUN A DONGLE, PER ACCETTARE RICHIESTA DI CONNESSIONE (INVIA MAC ADDRESS DEL GUN E MAC ADDRES A CUI E' STATA INVIATA RICHIESTA)
-  CONN_ACCEPT,          // IL DONGLE HA ACCETTATO CONNESSIONE (INVIA ANCHE MAC ADDRES DEL DONGLE E DELLA GUN A CUI E' STATA ACCETTATA LA RICHIESTA)
-};
-
-enum CONNECTION_STATE {
-  NONE_CONNECTION = 0,
-  DEVICES_CONNECTED,  //5
-  // =============================
-  // === per controllo connessione
-  NONE_CONNECTION_DONGLE,
-  TX_CHECK_CONNECTION_LAST_DONGLE, //6  GUN -> DONGLE
-  TX_CONFERM_CONNECTION_LAST_DONGLE, //7 DONGLE -> GUN
-  DEVICES_CONNECTED_WITH_LAST_DONGLE, // 8
-  // ========================================
-  NONE_CONNECTION_PEDAL,
-  TX_CHECK_CONNECTION_LAST_PEDAL,
-  TX_CONFERM_CONNECTION_LAST_PEDAL, //7 DONGLE -> GUN
-  DEVICES_CONNECTED_WITH_LAST_PEDAL, // 8
-  //======CONNESSIONE GUN - DONGLE =========================
-  TX_GUN_SEARCH_DONGLE_BROADCAST,  //9
-  TX_DONGLE_TO_GUN_PRESENCE,  //10
-  TX_GUN_TO_DONGLE_ACCEPT,  //11
-  TX_DONGLE_TO_GUN_CONFERM,  //12
-  //====== CONNESSIONE GUN - PEDAL =========================
-  TX_GUN_SEARCH_PEDAL_BROADCAST,  //9
-  TX_PEDAL_TO_GUN_PRESENCE,  //10
-  TX_GUN_TO_PEDAL_ACCEPT,  //11
-  TX_PEDAL_TO_GUN_CONFERM,  //12
-  // ======= CONNESSIONE ULTIMO PEDAL
-
-
-};
-
-// Struttura vitale per l'USB Spoofing. 
-// Passata via rete all'avvio, permette al Dongle di clonare dinamicamente 
-// l'identità (VID/PID) della specifica pistola connessa in quel momento.
 typedef struct __attribute__ ((packed)) {
-  char deviceManufacturer[21];
-  char deviceName[16];
-  uint16_t deviceVID;
-  uint16_t devicePID;
-  uint8_t devicePlayer;
-  uint8_t channel; // da 0 a 13
-  //char deviceSerial[11];
-} USB_Data_GUN_Wireless;
+  uint8_t  marker;    // OPENFIRE_SCOPE_PAIR_MARKER
+  uint8_t  version;   // OPENFIRE_SCOPE_PAIR_VERSION
+  uint8_t  type;      // SCOPE_PAIR_MSG
+  uint8_t  player;    // 1-4 (CONFIRM); copied back in OK / ricopiato nell'OK
+  uint32_t nonce;     // random number of the Confirm / numero casuale della Conferma
+} Scope_Pair_Msg;
 
-
-extern USB_Data_GUN_Wireless usb_data_wireless;
-
-
-/*****************************
- *   SERIAL WIRELESS SECTION
- *****************************/
 // ===================================================================================
-// CLASSE: SerialWireless_ (INTERFACE PATTERN)
+// LINK STATE / STATO DEL COLLEGAMENTO
 // ===================================================================================
-// Architettura Bridge: Ereditando dalla classe standard `Stream`, facciamo 
-// credere all'ecosistema Arduino (e al modulo Mamehooker) di stare parlando con una 
-// normale porta seriale hardware. Sotto il cofano, i dati vengono manipolati 
-// in modo asincrono, impacchettati via COBS e sparati sull'etere tramite ESP-NOW.
-
-#ifndef _SERIAL_STREAM_H_
-#define _SERIAL_STREAM_H_
-
-class SerialWireless_ : public Stream       
-  {
-    
-  public:
-  
-  uint8_t mac_esp_inteface[6];
-  uint8_t mac_esp_another_card[6];
-  volatile uint8_t stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION; //0;
-
-  // ===================================================================================
-  // STRUTTURE DATI LOCK-FREE: GESTIONE BUFFER (TX/RX)
-  // ===================================================================================
-  // Per garantire operazioni in tempo reale durante gli interrupt (ISR) del WiFi, 
-  // si utilizzano Ring Buffers (Buffer Circolari) basati su potenze di 2 (es. 128, 256).
-  // L'uso di maschere bit a bit (es. & MASK) sostituisce i lenti operatori modulo (%), 
-  // e la logica "writer/reader" evita l'uso di semafori bloccanti nelle fasi critiche.
-  
-  // ======= per FIFO SERIAL ===============
-  // ===== per write === buffer lineare ====
-  #define FIFO_SIZE_WRITE_SERIAL 128 // deve essere una potenza di 2
-  #define TIME_OUT_SERIAL_WRITE 3  // in seguito rimuovere o rideterminare in microsecondi
-  #define TIMER_HANDLE_SERIAL_DURATION_MICROS 3000 // 3000 microsecondi un 3 millisecondi
-  uint8_t bufferSerialWrite[FIFO_SIZE_WRITE_SERIAL];
-  
-  esp_timer_handle_t timer_handle_serial;
-  // Nuove variabili TX Serial (Circolare)
-  volatile uint16_t _writerSerialWrite = 0;
-  volatile uint16_t _readerSerialWrite = 0;
-  const uint16_t MASK_WRITE_SERIAL = FIFO_SIZE_WRITE_SERIAL - 1;
-
-  // ====== per read ====== buffer circolare =====
-  #define FIFO_SIZE_READ_SERIAL 256 // deve essere una potenza di due
-  uint8_t bufferSerialRead[FIFO_SIZE_READ_SERIAL];
-  volatile uint16_t _writerSerialRead = 0;
-  volatile uint16_t _readerSerialRead = 0;
-  bool _overflow_bufferSerialRead = false; 
-  void write_on_rx_serialBuffer(const uint8_t *data, int len);
-
-  // Maschera per RX Serial
-  const uint16_t MASK_READ_SERIAL = FIFO_SIZE_READ_SERIAL - 1;
-  // ============================================
-  volatile bool _serial_needs_recovery = false;
-
-  Packet  packet;
-  
-  // per buffer lettura
-  //volatile uint16_t _readLen = 0;
-  volatile uint16_t _writer = 0;
-  volatile uint16_t _reader = 0;
-  #define FIFO_SIZE_READ 1024 // 1024, 2048, 4096 deve essere una potenza di 2 buffer lettura e si vuole ottimizzazione
-  uint8_t _queue[FIFO_SIZE_READ];
-  bool _overflow_read = false; 
-  // fine per buffer lettura
-
-  // per buffer scrittura 
-  volatile uint16_t writeIndex = 0;
-  volatile uint16_t readIndex = 0;
-  //volatile uint16_t _writeLen = 0;
-  #define BUFFER_SIZE 1024 //buffer scrittura  -- 1024, 2048, 4096 deve essere una potenza di 2
-  uint8_t buffer[BUFFER_SIZE];
-  bool _overflow_write = false; 
-  // fine per buffer scrittura
- 
-  // ===================================================================================
-  // CONTRATTO API: FUNZIONI DELLA CLASSE STREAM E FUNZIONI CUSTOM
-  // ===================================================================================
-  SerialWireless_() : Stream() {}
-  ~SerialWireless_() {}
-  
-  void init_wireless();
-  void begin();
-  bool end();
-  bool startAccessPoint(const char *ssid, const char *password = NULL);
-  IPAddress ipAddressAP();
-  
-  // overrade da ::Stream
-  int peek() override;
-  int read() override;
-  int available() override;
-  // fine override da ::stream
-  
-  // overraid da ::Print
-  int availableForWrite() override;
-  void flush() override;
-  size_t write(uint8_t c) override;
-  size_t write(const uint8_t *data, size_t len) override;
-  using Print::write;
-  // ==== fine override da :: Print
-
-  operator bool();
-
-  // inserire da me per gestione buffer uscita
-  size_t writeBin(uint8_t c);
-  size_t writeBin(const uint8_t *data, size_t len);
-  int availableForWriteBin();
-  bool flush_sem();
-  // inserire da me per gestione buffer ingresso
-  int peekBin();
-  int readBin(); // mai usata
-  int availableBin();
-  int availableBufferSerialWrite();
-
-  
-        
-  // ======== generiche ============
-  void SendData_sem();
-  void SendPacket(const uint8_t *data, uint8_t len,uint8_t packetID); // non penso lo utilizzeremo
-
-  bool checkForRxPacket(); // andrà nel ciclo principale .. messo nella callback
-
-  bool connection_dongle();
-  bool connection_gun();
-  bool connection_pedal(uint32_t timeout_ms = 0); // 0 = wait for a gun forever / 0 = attende una pistola per sempre
-  void radio_off_pedal();
-  void radio_on_pedal();
-  #ifdef GUN
-  // EN/IT: Only the gun sleeps; no changes to dongle/pedal hot paths / dorme solo la pistola.
-  bool radio_off_gun();
-  bool radio_on_gun();
-  #endif
-  bool connection_gun_at_last_dongle();
-  bool connection_gun_at_pedal();
-  bool connection_gun_at_last_pedal();
-  void tx_gun_at_dongle_pedal_ready();
-
-  // ===============================
-  // ===== per i timer ================
-
-void setupTimerSerial();
-
-
-volatile bool is_pedal_wireless_comunication; // serve per sincronizzazione col dongle, ma andrebbe rivisto e poi probabilmente tolto
-
-private:
-
+// EN: Same numbers as the "Scope state" phase sent to the S3. / IT: stessi numeri della fase di "Stato del mirino" mandata all'S3.
+enum SCOPE_LINK_STATE {
+  SCOPE_LINK_WAIT   = 0,   // waiting (scope: no player yet; dongle: channel search) / in attesa (mirino: niente giocatore; dongle: ricerca canale)
+  SCOPE_LINK_SEARCH = 1,   // scope: searching a dongle; dongle: free, access point visible / mirino: cerca il dongle; dongle: libero, access point visibile
+  SCOPE_LINK_PAIRED = 2,   // paired / abbinato
+  SCOPE_LINK_VIDEO  = 3    // video (next steps) / video (prossimi passi)
 };
-extern SerialWireless_ SerialWireless;
-#ifdef GUN
-// EN/IT: Last radio activity used by gun standby / ultima attivita' radio usata dallo standby della pistola.
-extern volatile uint32_t lastRadioTxMs;
-#endif
-#ifdef DEBUG_WIFI_ESPNOW
-// EN: Radio counters for the gun's display, only with -D DEBUG_WIFI_ESPNOW (lightgun platformio.ini).
-// IT: Contatori radio per il display della pistola, solo con -D DEBUG_WIFI_ESPNOW (platformio.ini della pistola).
-extern volatile uint32_t dbgWifiTxOk;         // datagrams acknowledged by the receiver's radio / datagrammi confermati dalla radio del ricevitore
-extern volatile uint32_t dbgWifiTxFail;       // not acknowledged after the radio retries: lost / non confermati dopo i tentativi della radio: persi
-extern volatile uint32_t dbgWifiSendErr;      // esp_now_send() refused (sent again later) / esp_now_send() ha rifiutato (rispedito dopo)
-extern volatile uint32_t dbgWifiTxQueueFull;  // packets dropped, transmit queue full / pacchetti scartati, coda di trasmissione piena
-extern volatile uint32_t dbgWifiRxQueueFull;  // datagrams dropped, receive queue full / datagrammi scartati, coda di ricezione piena
-// EN: Datagrams received from the dongle [0] and from the pedal [1], with their signal: last, worst, best (dBm), and when the last arrived.
-// IT: Datagrammi ricevuti dal dongle [0] e dalla pedaliera [1], con il loro segnale: ultimo, peggiore, migliore (dBm), e quando e' arrivato l'ultimo.
-struct DbgWifiRx_t { volatile uint32_t count, lastMs; volatile int8_t rssi, rssiMin, rssiMax; };
-extern DbgWifiRx_t dbgWifiRx[2];
-#endif // DEBUG_WIFI_ESPNOW
 
-#endif // _SERIAL_STREAM_H_
+// ===================================================================================
+// CLASS / CLASSE
+// ===================================================================================
+class WirelessScope_ {
+  public:
 
-#endif //OPENFIRE_WIRELESS_ENABLE
+  volatile uint8_t link_state = SCOPE_LINK_STATE::SCOPE_LINK_WAIT;
+  uint8_t channel = OPENFIRE_WIFI_CHANNEL;     // channel of the pair / canale della coppia
+  uint8_t player = 0;                          // 1-4, fixed at pairing / fissato all'abbinamento
+  uint8_t mac_local[6];                        // MAC of this board / MAC di questa scheda
+  uint8_t mac_peer[6];                         // MAC of the other board / MAC dell'altra scheda
+  IPAddress ip_peer;                           // IP of the other board / IP dell'altra scheda
+
+  // EN: Common radio start: Wi-Fi 6, 5 GHz only, 20 MHz, power, no power save.
+  //     The dongle also chooses the channel and starts its access point.
+  // IT: Avvio comune della radio: Wi-Fi 6, solo 5 GHz, 20 MHz, potenza, niente risparmio energetico.
+  //     Il dongle sceglie anche il canale e avvia il suo access point.
+  void begin();
+
+  #ifdef SCOPE_DONGLE
+  // EN: Listens to the 4 channels and returns the freest one. skipMask: bit i = 1 excludes channel i of
+  //     OPENFIRE_SCOPE_CHANNELS (for RESCAN;SKIP from the PC daemon).
+  // IT: Ascolta i 4 canali e restituisce il piu' libero. skipMask: bit i = 1 esclude il canale i di
+  //     OPENFIRE_SCOPE_CHANNELS (per RESCAN;SKIP dal demone del PC).
+  uint8_t findBestChannel(uint8_t skipMask = 0);
+  bool startAccessPoint(uint8_t ch);
+  // EN: Blocking: waits for a scope's Confirm, answers OK and becomes busy. / IT: bloccante: aspetta la Conferma di un mirino, risponde OK e diventa occupato.
+  bool connection_scope_dongle();
+  #endif // SCOPE_DONGLE
+
+  #ifdef SCOPE
+  // EN: Blocking: searches the first free dongle, connects and sends the player; returns when paired.
+  // IT: Bloccante: cerca il primo dongle libero, si collega e comunica il giocatore; torna quando e' abbinato.
+  bool connection_scope(uint8_t player_number);
+  #endif // SCOPE
+
+  private:
+  WiFiUDP udp_pair;
+  void applyRadioSettings(wifi_interface_t ifx);
+};
+
+extern WirelessScope_ WirelessScope;
+
+#endif // OPENFIRE_WIRELESS_ENABLE
