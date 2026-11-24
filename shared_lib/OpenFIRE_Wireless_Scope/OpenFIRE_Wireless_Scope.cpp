@@ -230,6 +230,8 @@ uint8_t WirelessScope_::findBestChannel(uint8_t skipMask) {
 
 // EN: Station connected to the access point, not yet confirmed. / IT: stazione collegata all'access point, non ancora confermata.
 static volatile bool     g_staConnected = false;
+// EN: Station present on the access point, confirmed or not. / IT: stazione presente sull'access point, confermata o no.
+static volatile bool     g_staPresent = false;
 static volatile uint32_t g_staConnMs = 0;
 static volatile uint16_t g_staAid = 0;
 static bool g_eventRegistered = false;
@@ -253,9 +255,11 @@ static void scopeDongleWiFiEvent(arduino_event_id_t event, arduino_event_info_t 
       g_staAid = info.wifi_ap_staconnected.aid;
       g_staConnMs = millis();
       g_staConnected = true;
+      g_staPresent = true;
       break;
     case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
       g_staConnected = false;
+      g_staPresent = false;
       // EN: The scope left: the dongle is free and visible again. / IT: il mirino se n'e' andato: il dongle torna libero e visibile.
       if (WirelessScope.link_state >= SCOPE_LINK_STATE::SCOPE_LINK_PAIRED) {
         WirelessScope.link_state = SCOPE_LINK_STATE::SCOPE_LINK_SEARCH;
@@ -318,7 +322,11 @@ bool WirelessScope_::connection_scope_dongle() {
     if (udp_pair.parsePacket() == sizeof(Scope_Pair_Msg)) {
       Scope_Pair_Msg msg;
       udp_pair.read((uint8_t *)&msg, sizeof(msg));
-      if (msg.marker == OPENFIRE_SCOPE_PAIR_MARKER && msg.version == OPENFIRE_SCOPE_PAIR_VERSION &&
+      // EN: Only from the station waiting for its Confirm: a Confirm still in the buffer when the 2 s check
+      //     has just removed the station is ignored (otherwise the dongle would stay busy without a scope).
+      // IT: Solo dalla stazione che aspetta la sua Conferma: una Conferma ancora nel buffer quando il controllo
+      //     dei 2 s ha appena tolto la stazione viene ignorata (altrimenti il dongle resterebbe occupato senza mirino).
+      if (g_staConnected && msg.marker == OPENFIRE_SCOPE_PAIR_MARKER && msg.version == OPENFIRE_SCOPE_PAIR_VERSION &&
           msg.type == SCOPE_PAIR_MSG::SCOPE_PAIR_CONFIRM && msg.player >= 1 && msg.player <= 4) {
         // EN: The first valid Confirm wins: from now on the dongle is busy. / IT: vince la prima Conferma valida: da qui il dongle e' occupato.
         player = msg.player;
@@ -336,7 +344,12 @@ bool WirelessScope_::connection_scope_dongle() {
         }
         setApHidden(true);
         udp_pair.stop();
-        return true;
+        // EN: The scope left while the OKs were going out: the event may have found the dongle not yet busy.
+        //     Back to free: the main calls connection_scope_dongle() again, which makes the network visible.
+        // IT: Il mirino e' uscito mentre partivano gli OK: l'evento puo' aver trovato il dongle non ancora occupato.
+        //     Si torna liberi: il main richiama connection_scope_dongle(), che rende di nuovo visibile la rete.
+        if (!g_staPresent) link_state = SCOPE_LINK_STATE::SCOPE_LINK_SEARCH;
+        return (link_state == SCOPE_LINK_STATE::SCOPE_LINK_PAIRED);
       }
     }
     vTaskDelay(pdMS_TO_TICKS(1));
@@ -402,7 +415,9 @@ bool WirelessScope_::connection_scope(uint8_t player_number) {
     //    IT: Abbinato al primo OK con lo stesso numero casuale; le copie si ignorano. Niente OK entro 3 s: si scollega e ricerca.
     bool paired = false;
     t0 = millis();
-    while (!paired && (millis() - t0 < OPENFIRE_SCOPE_PAIR_TIMEOUT_MS)) {
+    // EN: Also stops if the dongle has already removed the scope (Confirm lost: it does so after 2 s).
+    // IT: Si ferma anche se il dongle ha gia' tolto il mirino (Conferma persa: lo fa dopo 2 s).
+    while (!paired && WiFi.status() == WL_CONNECTED && (millis() - t0 < OPENFIRE_SCOPE_PAIR_TIMEOUT_MS)) {
       if (udp_pair.parsePacket() == sizeof(Scope_Pair_Msg)) {
         Scope_Pair_Msg rx;
         udp_pair.read((uint8_t *)&rx, sizeof(rx));
@@ -418,7 +433,10 @@ bool WirelessScope_::connection_scope(uint8_t player_number) {
       memcpy(mac_peer, bssid, 6);
       ip_peer = IPAddress(OPENFIRE_SCOPE_DONGLE_IP);
       link_state = SCOPE_LINK_STATE::SCOPE_LINK_PAIRED;
-      return true;
+      // EN: The link may have dropped while the OK was arriving: the event found the scope still searching.
+      // IT: Il collegamento puo' essere caduto mentre arrivava l'OK: l'evento ha trovato il mirino ancora in ricerca.
+      if (WiFi.status() == WL_CONNECTED) return true;
+      link_state = SCOPE_LINK_STATE::SCOPE_LINK_SEARCH;
     }
     WiFi.disconnect();   // disconnecting also frees the dongle / scollegandosi libera anche il dongle
   }
