@@ -20,10 +20,10 @@
 // questa classe usa un'architettura statica. I parametri non vengono passati a 
 // runtime, ma risolti dal preprocessore C++ tramite le macro del platformio.ini.
 // Questo azzera l'overhead di memoria e rende il binario compilato strettamente
-// accoppiato alla board target (es. T-Dongle S3).
+// accoppiato alla board target (es. SCOPE su Waveshare ESP32-C5-Zero).
 class LGFX : public lgfx::LGFX_Device
     {
-      lgfx::Panel_ST7735S _panel_instance;
+      lgfx::Panel_GC9A01  _panel_instance;   // display rotondo 1.28" 240x240
       lgfx::Bus_SPI       _bus_instance;
       lgfx::Light_PWM     _light_instance;
 
@@ -35,7 +35,7 @@ class LGFX : public lgfx::LGFX_Device
         // ===================================================================================
         {
           auto cfg = _bus_instance.config();
-          cfg.spi_host   = SPI_HOST; // utilizzabili SPI2_HOST -> HSPI   SPI3_HOST -> VSPI
+          cfg.spi_host   = SPI_HOST; // sull'ESP32-C5 l'unico SPI libero e' SPI2_HOST
           cfg.spi_mode   = SPI_MODE;
           cfg.freq_write = SPI_FREQUENCY; //80000000;  // 50000000
           
@@ -68,14 +68,15 @@ class LGFX : public lgfx::LGFX_Device
           cfg.panel_width  = TFT_WIDTH;
           cfg.panel_height = TFT_HEIGHT;
           
-          // Gestione dei "Fake ST7735": Molti pannelli cinesi 80x160 sono mappati 
-          // internamente dal driver su una matrice più grande. Le macro permettono di 
-          // "spostare" la finestra attiva o invertire i colori senza toccare la classe base.
-          cfg.offset_x     = TFT_OFFSET_X; //26
-          cfg.offset_y     = TFT_OFFSET_Y; //1
-          cfg.offset_rotation = 2;   // la rotazione del displai - 0 -> nessunoa, 1 90°, 2 -> 180 °, 3 -> 270°
+          // GC9A01: la memoria del controller e' 240x240 come il pannello, quindi
+          // nessun offset. I moduli GC9A01 vogliono i colori invertiti (TFT_INVERT=1).
+          cfg.offset_x     = TFT_OFFSET_X; //0
+          cfg.offset_y     = TFT_OFFSET_Y; //0
+          cfg.offset_rotation = 0;   // la rotazione del display - 0 -> nessuna, 1 90°, 2 -> 180 °, 3 -> 270° (da regolare a montaggio fatto)
           cfg.invert       = TFT_INVERT; //true;
           cfg.rgb_order    = TFT_RGB_ORDER; //false;
+          cfg.readable     = false;  // senza MISO non si legge dal display
+          cfg.bus_shared   = false;  // il display e' l'unico dispositivo sul bus SPI
           _panel_instance.config(cfg);
         }
         
