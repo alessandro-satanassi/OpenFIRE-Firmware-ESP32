@@ -14,6 +14,7 @@
 #if defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
 
 #include "OpenFIRE_Wireless_Scope.h"
+#include "freertos/semphr.h"
 
 WirelessScope_ WirelessScope;
 
@@ -47,6 +48,10 @@ void WirelessScope_::applyRadioSettings(wifi_interface_t ifx) {
   esp_wifi_set_ps(WIFI_PS_NONE);
 }
 
+#ifdef SCOPE_DONGLE
+static void scopeVideoInit();   // video queue and task, below / coda e task del video, piu' sotto
+#endif // SCOPE_DONGLE
+
 #ifdef SCOPE
 // EN: The scope leaves the dongle's network after the pairing (link lost): back to the search, the main
 //     repeats the same pairing. During the search and the pairing the disconnections are handled by connection_scope().
@@ -74,6 +79,7 @@ void WirelessScope_::begin() {
       channel = OPENFIRE_WIFI_CHANNEL;
     #endif // OPENFIRE_AUTO_CHANNEL_WIFI
     startAccessPoint(channel);
+    scopeVideoInit();
   #endif // SCOPE_DONGLE
 
   #ifdef SCOPE
@@ -293,6 +299,7 @@ bool WirelessScope_::startAccessPoint(uint8_t ch) {
   //     (65535 s e' il massimo dell'API).
   esp_wifi_set_inactive_time(WIFI_IF_AP, 65535);
 
+  esp_wifi_set_vendor_ie(false, WIFI_VND_IE_TYPE_BEACON, WIFI_VND_IE_ID_0, NULL);   // also after a RESCAN / anche dopo un RESCAN
   esp_wifi_set_vendor_ie(true, WIFI_VND_IE_TYPE_BEACON, WIFI_VND_IE_ID_0, g_scopeVendorIe);
 
   esp_wifi_get_mac(WIFI_IF_AP, mac_local);
@@ -301,6 +308,8 @@ bool WirelessScope_::startAccessPoint(uint8_t ch) {
     g_eventRegistered = true;
   }
   channel = ch;
+  g_staConnected = false;   // new access point: no station yet / access point nuovo: ancora nessuna stazione
+  g_staPresent = false;
   link_state = SCOPE_LINK_STATE::SCOPE_LINK_SEARCH;   // free / libero
   return true;
 }
@@ -312,6 +321,12 @@ bool WirelessScope_::connection_scope_dongle() {
   udp_pair.begin(OPENFIRE_SCOPE_PAIR_PORT);
 
   while (true) {
+    // EN: RESCAN from the PC: the main does the new channel search. / IT: RESCAN dal PC: la nuova ricerca del canale la fa il main.
+    if (rescan_request) {
+      udp_pair.stop();
+      return false;
+    }
+
     // EN: Connected without a Confirm for 2 s: the station is disconnected and the place is free again.
     // IT: Collegato senza Conferma da 2 s: la stazione viene scollegata e il posto torna libero.
     if (g_staConnected && (millis() - g_staConnMs > OPENFIRE_SCOPE_DONGLE_CONFIRM_MS)) {
@@ -354,6 +369,201 @@ bool WirelessScope_::connection_scope_dongle() {
     }
     vTaskDelay(pdMS_TO_TICKS(1));
   }
+}
+
+// ----------------- RESCAN from the PC / RESCAN dal PC -----------------
+// EN: Never with a scope paired: an active pair is never interrupted. / IT: mai con un mirino abbinato: una coppia attiva non si interrompe mai.
+bool WirelessScope_::requestRescan(uint8_t skipMask) {
+  if (link_state != SCOPE_LINK_STATE::SCOPE_LINK_SEARCH) return false;
+  rescan_skip_mask = skipMask;
+  rescan_request = true;
+  return true;
+}
+
+bool WirelessScope_::rescanChannel() {
+  rescan_request = false;
+  if (link_state != SCOPE_LINK_STATE::SCOPE_LINK_SEARCH) return false;   // a scope paired in the meantime / un mirino si e' abbinato nel frattempo
+  channel = findBestChannel(rescan_skip_mask);   // WAIT meanwhile: WHOAMI answers BOOT / intanto WAIT: WHOAMI risponde BOOT
+  const bool ok = startAccessPoint(channel);
+  rescan_count = rescan_count + 1;
+  return ok;
+}
+
+// ----------------- video: queue and transmission / video: coda e trasmissione -----------------
+// EN: The USB task puts the packets of the PC in the queue, the video task passes them to the Wi-Fi one at a time.
+//     When the first slice of a newer frame arrives, the slices of the older frames still waiting are discarded:
+//     the most recent frame always wins. The session and bit 3 are written when the packet enters the queue,
+//     so after a START a slice of the old session never gets the new number.
+// IT: Il task della USB mette in coda i pacchetti del PC, il task del video li passa al Wi-Fi uno alla volta.
+//     Quando arriva la prima fascia di un frame piu' nuovo, le fasce dei frame vecchi ancora in attesa si scartano:
+//     vince sempre il frame piu' recente. Sessione e bit 3 si scrivono quando il pacchetto entra in coda,
+//     cosi' dopo uno START una fascia della sessione vecchia non riceve mai il numero nuovo.
+typedef struct {
+  uint16_t len;
+  uint8_t  data[OPENFIRE_SCOPE_VIDEO_MAX_PACKET];
+} ScopeVideoSlot;
+
+static ScopeVideoSlot     g_vq[OPENFIRE_SCOPE_DONGLE_QUEUE];
+static uint8_t            g_vqHead = 0;
+static uint8_t            g_vqCount = 0;
+static uint16_t           g_vqLastFrame = 0;          // frame of the last slice queued / frame dell'ultima fascia in coda
+static SemaphoreHandle_t  g_vqMutex = NULL;
+static TaskHandle_t       g_videoTask = NULL;
+
+static volatile uint32_t  g_lastVideoMs = 0;          // last video packet from the PC / ultimo pacchetto video dal PC
+static volatile uint32_t  g_lastPauseMs = 0;          // last PAUSE from the PC / ultima PAUSE dal PC
+static volatile bool      g_pauseSeen = false;
+static volatile bool      g_sessionFlagPending = false;   // START received, first video not yet / START ricevuto, primo video non ancora
+static volatile uint32_t  g_sessionVideoMs = 0;       // first video of the session / primo video della sessione
+static volatile uint16_t  g_lastFrameSent = 0;
+
+static inline uint16_t videoFrame(const uint8_t *p) {
+  return (uint16_t)p[SCOPE_VIDEO_B_FRAME] | ((uint16_t)p[SCOPE_VIDEO_B_FRAME + 1] << 8);
+}
+// EN: a more recent than b: 16 bit difference read with sign. / IT: a piu' recente di b: differenza a 16 bit letta con segno.
+static inline bool videoFrameNewer(uint16_t a, uint16_t b) { return (int16_t)(a - b) > 0; }
+
+static inline uint8_t videoFlags(uint8_t flags) {
+  // EN: Version and the flags of the PC, bit 3 only in the first second of video of the session.
+  // IT: Versione e flag del PC, bit 3 solo nel primo secondo di video della sessione.
+  flags &= (uint8_t)~OPENFIRE_SCOPE_VIDEO_FLAG_SESSION;
+  if (!g_sessionFlagPending && (millis() - g_sessionVideoMs < OPENFIRE_SCOPE_SESSION_FLAG_MS)) flags |= OPENFIRE_SCOPE_VIDEO_FLAG_SESSION;
+  return flags;
+}
+
+bool WirelessScope_::videoPush(const uint8_t *pkt, uint16_t len) {
+  if (g_vqMutex == NULL || len < OPENFIRE_SCOPE_VIDEO_HEADER || len > OPENFIRE_SCOPE_VIDEO_MAX_PACKET) return false;
+  g_lastVideoMs = millis();
+  if (link_state < SCOPE_LINK_STATE::SCOPE_LINK_PAIRED) return false;   // no scope: discarded / nessun mirino: scartato
+
+  const uint16_t frame = videoFrame(pkt);
+  xSemaphoreTake(g_vqMutex, portMAX_DELAY);
+  if (g_vqCount > 0 && videoFrameNewer(frame, g_vqLastFrame)) {   // older frames still waiting / frame vecchi ancora in attesa
+    video_drop = video_drop + g_vqCount;
+    g_vqCount = 0;
+  }
+  if (g_vqCount == OPENFIRE_SCOPE_DONGLE_QUEUE) {   // full: the oldest slice goes out / piena: esce la fascia piu' vecchia
+    g_vqHead = (g_vqHead + 1) % OPENFIRE_SCOPE_DONGLE_QUEUE;
+    g_vqCount--;
+    video_drop = video_drop + 1;
+  }
+  if (g_sessionFlagPending) {   // first video after START / primo video dopo START
+    g_sessionFlagPending = false;
+    g_sessionVideoMs = millis();
+  }
+  ScopeVideoSlot &s = g_vq[(g_vqHead + g_vqCount) % OPENFIRE_SCOPE_DONGLE_QUEUE];
+  memcpy(s.data, pkt, len);
+  s.len = len;
+  s.data[SCOPE_VIDEO_B_SESSION] = video_session;
+  s.data[SCOPE_VIDEO_B_FLAGS] = videoFlags(s.data[SCOPE_VIDEO_B_FLAGS]);
+  g_vqCount++;
+  g_vqLastFrame = frame;
+  xSemaphoreGive(g_vqMutex);
+
+  if (g_videoTask != NULL) xTaskNotifyGive(g_videoTask);
+  return true;
+}
+
+void WirelessScope_::videoStart() {
+  if (g_vqMutex == NULL) return;
+  xSemaphoreTake(g_vqMutex, portMAX_DELAY);
+  video_drop = video_drop + g_vqCount;   // the queue is emptied / la coda si svuota
+  g_vqCount = 0;
+  video_session = (video_session >= 255) ? 1 : (uint8_t)(video_session + 1);
+  g_sessionFlagPending = true;
+  xSemaphoreGive(g_vqMutex);
+}
+
+void WirelessScope_::videoPause() {
+  g_lastPauseMs = millis();
+  g_pauseSeen = true;
+}
+
+static bool videoPop(uint8_t *out, uint16_t *len) {
+  bool ok = false;
+  xSemaphoreTake(g_vqMutex, portMAX_DELAY);
+  if (g_vqCount > 0) {
+    const ScopeVideoSlot &s = g_vq[g_vqHead];
+    memcpy(out, s.data, s.len);
+    *len = s.len;
+    g_vqHead = (g_vqHead + 1) % OPENFIRE_SCOPE_DONGLE_QUEUE;
+    g_vqCount--;
+    ok = true;
+  }
+  xSemaphoreGive(g_vqMutex);
+  return ok;
+}
+
+static bool videoNewerWaiting(uint16_t frame) {
+  xSemaphoreTake(g_vqMutex, portMAX_DELAY);
+  const bool newer = (g_vqCount > 0 && videoFrameNewer(g_vqLastFrame, frame));
+  xSemaphoreGive(g_vqMutex);
+  return newer;
+}
+
+static void scopeVideoTask(void *param) {
+  WiFiUDP udp_video;
+  udp_video.begin(OPENFIRE_SCOPE_VIDEO_PORT);
+  static uint8_t pkt[OPENFIRE_SCOPE_VIDEO_MAX_PACKET];
+  uint16_t len = 0;
+  uint32_t lastPresenceMs = 0;
+
+  for (;;) {
+    ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(10));   // a new packet or 10 ms / un pacchetto nuovo oppure 10 ms
+
+    // 1. EN: Video: one packet at a time to the Wi-Fi stack. / IT: video: un pacchetto alla volta allo stack Wi-Fi.
+    while (videoPop(pkt, &len)) {
+      if (WirelessScope.link_state < SCOPE_LINK_STATE::SCOPE_LINK_PAIRED) continue;   // the scope left / il mirino se n'e' andato
+      const uint16_t frame = videoFrame(pkt);
+      g_lastFrameSent = frame;
+      for (uint8_t attempt = 0; attempt < OPENFIRE_SCOPE_TX_RETRY; attempt++) {
+        udp_video.beginPacket(WirelessScope.ip_peer, OPENFIRE_SCOPE_VIDEO_PORT);
+        udp_video.write(pkt, len);
+        if (udp_video.endPacket()) {
+          WirelessScope.video_tx_bytes = WirelessScope.video_tx_bytes + len;
+          break;
+        }
+        // EN: Wi-Fi transmit queue full: a new attempt in 1 ms, unless a newer frame is already waiting.
+        // IT: Coda di trasmissione Wi-Fi piena: nuovo tentativo fra 1 ms, a meno che un frame piu' nuovo sia gia' in attesa.
+        if (attempt == 0) WirelessScope.video_qfull = WirelessScope.video_qfull + 1;
+        if (videoNewerWaiting(frame) || attempt == OPENFIRE_SCOPE_TX_RETRY - 1) {
+          xSemaphoreTake(g_vqMutex, portMAX_DELAY);
+          WirelessScope.video_drop = WirelessScope.video_drop + 1;
+          xSemaphoreGive(g_vqMutex);
+          break;
+        }
+        vTaskDelay(pdMS_TO_TICKS(1));
+      }
+    }
+
+    // 2. EN: Presence: no video from the PC for 200 ms -> header only, slice 0xFF, every 200 ms.
+    //        q = 1 (game paused) only with a PAUSE in the last 500 ms, otherwise q = 0 (no source).
+    //    IT: Presenza: niente video dal PC per 200 ms -> solo intestazione, fascia 0xFF, ogni 200 ms.
+    //        q = 1 (gioco in pausa) solo con una PAUSE negli ultimi 500 ms, altrimenti q = 0 (nessuna sorgente).
+    const uint32_t now = millis();
+    if (WirelessScope.link_state >= SCOPE_LINK_STATE::SCOPE_LINK_PAIRED &&
+        now - g_lastVideoMs >= OPENFIRE_SCOPE_PRESENCE_IDLE_MS && now - lastPresenceMs >= OPENFIRE_SCOPE_PRESENCE_EVERY_MS) {
+      const uint16_t frame = g_lastFrameSent;
+      uint8_t presence[OPENFIRE_SCOPE_VIDEO_HEADER];
+      presence[SCOPE_VIDEO_B_MARKER]    = OPENFIRE_SCOPE_VIDEO_MARKER;
+      presence[SCOPE_VIDEO_B_FLAGS]     = videoFlags(OPENFIRE_SCOPE_VIDEO_VERSION << 4);
+      presence[SCOPE_VIDEO_B_FRAME]     = (uint8_t)(frame & 0xFF);
+      presence[SCOPE_VIDEO_B_FRAME + 1] = (uint8_t)(frame >> 8);
+      presence[SCOPE_VIDEO_B_SLICE]     = OPENFIRE_SCOPE_VIDEO_PRESENCE;
+      presence[SCOPE_VIDEO_B_Q]         = (g_pauseSeen && now - g_lastPauseMs < OPENFIRE_SCOPE_PAUSE_VALID_MS) ? 1 : 0;
+      presence[SCOPE_VIDEO_B_PLAYER]    = WirelessScope.player;
+      presence[SCOPE_VIDEO_B_SESSION]   = WirelessScope.video_session;
+      udp_video.beginPacket(WirelessScope.ip_peer, OPENFIRE_SCOPE_VIDEO_PORT);
+      udp_video.write(presence, sizeof(presence));
+      if (udp_video.endPacket()) WirelessScope.video_tx_bytes = WirelessScope.video_tx_bytes + sizeof(presence);
+      lastPresenceMs = now;
+    }
+  }
+}
+
+static void scopeVideoInit() {
+  if (g_vqMutex == NULL) g_vqMutex = xSemaphoreCreateMutex();
+  if (g_videoTask == NULL) xTaskCreate(scopeVideoTask, "scopeVideo", 4096, NULL, 6, &g_videoTask);   // above the USB task (5): every packet goes out at once / sopra il task della USB (5): ogni pacchetto parte subito
 }
 
 #endif // SCOPE_DONGLE

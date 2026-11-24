@@ -98,6 +98,41 @@ typedef struct __attribute__ ((packed)) {
 } Scope_Pair_Msg;
 
 // ===================================================================================
+// VIDEO PACKETS (UDP) / PACCHETTI VIDEO (UDP)
+// ===================================================================================
+// EN: One slice per UDP packet: 8 bytes of header, then at most 1400 bytes of compressed data.
+//     The dongle forwards the packets of the PC without touching the data: it writes only the session (byte 7)
+//     and the start of session flag (bit 3 of byte 1).
+// IT: Una fascia per pacchetto UDP: 8 byte di intestazione, poi al massimo 1400 byte di dati compressi.
+//     Il dongle inoltra i pacchetti del PC senza toccare i dati: scrive solo la sessione (byte 7)
+//     e il flag di inizio sessione (bit 3 del byte 1).
+#define OPENFIRE_SCOPE_VIDEO_MARKER        0x4D   // 'M'
+#define OPENFIRE_SCOPE_VIDEO_VERSION       1      // 4 high bits of byte 1 / 4 bit alti del byte 1
+#define OPENFIRE_SCOPE_VIDEO_FLAG_SESSION  0x08   // bit 3 of byte 1: start of session / bit 3 del byte 1: inizio sessione
+#define OPENFIRE_SCOPE_VIDEO_HEADER        8
+#define OPENFIRE_SCOPE_VIDEO_MAX_DATA      1400
+#define OPENFIRE_SCOPE_VIDEO_MAX_PACKET    (OPENFIRE_SCOPE_VIDEO_HEADER + OPENFIRE_SCOPE_VIDEO_MAX_DATA)
+#define OPENFIRE_SCOPE_VIDEO_SLICES        15
+#define OPENFIRE_SCOPE_VIDEO_PRESENCE      0xFF   // slice index of the presence packet / indice di fascia del pacchetto di presenza
+
+// EN: Header byte positions. / IT: posizione dei byte dell'intestazione.
+#define SCOPE_VIDEO_B_MARKER    0
+#define SCOPE_VIDEO_B_FLAGS     1   // version (high) and flags (low) / versione (alti) e flag (bassi)
+#define SCOPE_VIDEO_B_FRAME     2   // 2-3, little-endian
+#define SCOPE_VIDEO_B_SLICE     4
+#define SCOPE_VIDEO_B_Q         5
+#define SCOPE_VIDEO_B_PLAYER    6
+#define SCOPE_VIDEO_B_SESSION   7
+
+// EN: Dongle times and sizes. / IT: tempi e dimensioni del dongle.
+#define OPENFIRE_SCOPE_DONGLE_QUEUE          32    // slices waiting for the radio (2 frames) / fasce in attesa della radio (2 frame)
+#define OPENFIRE_SCOPE_PRESENCE_IDLE_MS      200   // no video from the PC for 200 ms -> presence / niente video dal PC per 200 ms -> presenza
+#define OPENFIRE_SCOPE_PRESENCE_EVERY_MS     200   // one presence every 200 ms / una presenza ogni 200 ms
+#define OPENFIRE_SCOPE_PAUSE_VALID_MS        500   // q = 1 only with a PAUSE in the last 500 ms / q = 1 solo con una PAUSE negli ultimi 500 ms
+#define OPENFIRE_SCOPE_SESSION_FLAG_MS       1000  // bit 3 during the first second of video / bit 3 nel primo secondo di video
+#define OPENFIRE_SCOPE_TX_RETRY              5     // attempts, 1 ms apart, with the Wi-Fi queue full / tentativi, a 1 ms, con la coda Wi-Fi piena
+
+// ===================================================================================
 // LINK STATE / STATO DEL COLLEGAMENTO
 // ===================================================================================
 // EN: Same numbers as the "Scope state" phase sent to the S3. / IT: stessi numeri della fase di "Stato del mirino" mandata all'S3.
@@ -134,8 +169,29 @@ class WirelessScope_ {
   //     OPENFIRE_SCOPE_CHANNELS (per RESCAN;SKIP dal demone del PC).
   uint8_t findBestChannel(uint8_t skipMask = 0);
   bool startAccessPoint(uint8_t ch);
-  // EN: Blocking: waits for a scope's Confirm, answers OK and becomes busy. / IT: bloccante: aspetta la Conferma di un mirino, risponde OK e diventa occupato.
+  // EN: Blocking: waits for a scope's Confirm, answers OK and becomes busy. Returns false at a RESCAN request.
+  // IT: Bloccante: aspetta la Conferma di un mirino, risponde OK e diventa occupato. Torna false a una richiesta di RESCAN.
   bool connection_scope_dongle();
+
+  // EN: RESCAN;SKIP from the PC daemon, only while free: requestRescan() from the USB, rescanChannel() from the main
+  //     (blocking: new channel search without the skipped channels, then the access point again).
+  // IT: RESCAN;SKIP dal demone del PC, solo da libero: requestRescan() dalla USB, rescanChannel() dal main
+  //     (bloccante: nuova ricerca del canale senza i canali esclusi, poi di nuovo l'access point).
+  volatile bool    rescan_request = false;
+  volatile uint8_t rescan_skip_mask = 0;
+  volatile uint8_t rescan_count = 0;   // +1 at every rescan done, the USB tells the channel again / +1 a ogni rescan fatto, la USB ricomunica il canale
+  bool requestRescan(uint8_t skipMask);
+  bool rescanChannel();
+
+  // EN: Video: the USB passes every packet of the PC to videoPush(); a task of the library sends it to the scope.
+  // IT: Video: la USB passa ogni pacchetto del PC a videoPush(); un task della libreria lo manda al mirino.
+  volatile uint8_t  video_session = 1;    // 1-255, +1 at every START / 1-255, +1 a ogni START
+  volatile uint32_t video_tx_bytes = 0;   // bytes passed to the Wi-Fi stack (OF_STAT TX) / byte passati allo stack Wi-Fi (OF_STAT TX)
+  volatile uint32_t video_drop = 0;       // slices of old frames discarded (OF_STAT DROP) / fasce di frame vecchi scartate (OF_STAT DROP)
+  volatile uint32_t video_qfull = 0;      // Wi-Fi transmit queue full (OF_STAT QFULL) / coda di trasmissione Wi-Fi piena (OF_STAT QFULL)
+  bool videoPush(const uint8_t *pkt, uint16_t len);
+  void videoStart();    // START from the PC / START dal PC
+  void videoPause();    // PAUSE from the PC / PAUSE dal PC
   #endif // SCOPE_DONGLE
 
   #ifdef SCOPE

@@ -52,6 +52,7 @@
 //#include "OpenFIRE-SCOPE-DONGLE-version.h"
 
 #include "OpenFIRE_Wireless_Scope.h"
+#include "OpenFIRE_Scope_Dongle_USB.h"
 
 /*
 CPU frequency: uncomment to force it (80, 160 or 240 MHz). Commented out = 240 MHz.
@@ -86,14 +87,10 @@ void showScopeDongleState() {
   #endif // USES_DISPLAY
 }
 
-// EN: Messages to the PC daemon over the USB (channel chosen, paired with player and scope address, free again):
-//     see the "Specifica del demone PC OpenFIRE".
-// IT: Messaggi al demone del PC sulla USB (canale scelto, abbinato con giocatore e indirizzo del mirino, tornato libero):
-//     vedi la "Specifica del demone PC OpenFIRE".
-void notifyScopeDongleState() {
-  // TO DO / DA FARE: OF_SCOPE:... with WirelessScope.channel, WirelessScope.player, WirelessScope.ip_peer
-
-}
+// EN: The messages to the PC daemon over the USB (channel chosen, paired with the player, free again) are sent
+//     by the USB task by itself at every change: see OpenFIRE_Scope_Dongle_USB.
+// IT: I messaggi al demone del PC sulla USB (canale scelto, abbinato con il giocatore, tornato libero) li manda
+//     da solo il task della USB a ogni cambio: vedi OpenFIRE_Scope_Dongle_USB.
 
 // ===================================================================================
 // MAIN SETUP
@@ -105,6 +102,10 @@ void setup() {
   #ifdef SCOPE_DONGLE_CPU_FREQ_MHZ
     setCpuFrequencyMhz(SCOPE_DONGLE_CPU_FREQ_MHZ);
   #endif // SCOPE_DONGLE_CPU_FREQ_MHZ
+
+  // 0. EN: USB with the PC first: the dongle answers WHOAMI from power on (OF_SCOPE:BOOT during the channel search).
+  //    IT: Prima la USB con il PC: il dongle risponde a WHOAMI dall'accensione (OF_SCOPE:BOOT durante la ricerca del canale).
+  scopeUsbBegin();
 
   // 1. HARDWARE INITIALIZATION / INIZIALIZZAZIONE HARDWARE (Video Feedback)
   #ifdef USES_DISPLAY
@@ -136,13 +137,12 @@ void setup() {
   // The dongle chooses the freest channel, starts its access point and waits for a scope.
   // /
   // Il dongle sceglie il canale piu' libero, avvia il suo access point e aspetta un mirino.
-  WirelessScope.begin();                    // channel search and access point / ricerca del canale e access point
+  WirelessScope.begin();                    // channel search, access point, video task / ricerca del canale, access point, task del video
   showScopeDongleState();                   // channel, free / canale, libero
-  notifyScopeDongleState();
 
-  WirelessScope.connection_scope_dongle();  // waits for a scope and pairs (blocking) / aspetta un mirino e si abbina (bloccante)
-  showScopeDongleState();                   // paired player / giocatore abbinato
-  notifyScopeDongleState();
+  // EN: Waits for a scope and pairs (blocking). It returns false at a RESCAN from the PC: the loop does it.
+  // IT: Aspetta un mirino e si abbina (bloccante). Torna false a un RESCAN dal PC: lo fa il loop.
+  if (WirelessScope.connection_scope_dongle()) showScopeDongleState();   // paired player / giocatore abbinato
 
 }
 
@@ -152,14 +152,18 @@ void setup() {
 
 void loop()
 {
-  // EN: The scope left the network: the dongle is free and visible again and waits for a new pairing.
-  // IT: Il mirino e' uscito dalla rete: il dongle torna libero e visibile e aspetta un nuovo abbinamento.
+  // EN: RESCAN;SKIP from the PC daemon, accepted only while free: new channel search without the channels of the other dongles.
+  // IT: RESCAN;SKIP dal demone del PC, accettato solo da libero: nuova ricerca del canale senza i canali degli altri dongle.
+  if (WirelessScope.rescan_request) {
+    WirelessScope.rescanChannel();
+    showScopeDongleState();
+  }
+
+  // EN: Free (the scope left the network, or after a RESCAN): visible again, waits for a new pairing.
+  // IT: Libero (il mirino e' uscito dalla rete, oppure dopo un RESCAN): di nuovo visibile, aspetta un nuovo abbinamento.
   if (WirelessScope.link_state == SCOPE_LINK_STATE::SCOPE_LINK_SEARCH) {
     showScopeDongleState();
-    notifyScopeDongleState();
-    WirelessScope.connection_scope_dongle();
-    showScopeDongleState();
-    notifyScopeDongleState();
+    if (WirelessScope.connection_scope_dongle()) showScopeDongleState();
   }
 
   vTaskDelay(pdMS_TO_TICKS(1)); // Let's give the microcontroller some breathing room to avoid resets triggered by the Task Watchdog. / diamo un po' di respiro al micro per non incorrere in reset dal Task Watchdog
