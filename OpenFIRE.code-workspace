@@ -13,6 +13,14 @@
       "path": "pedal"
     },
     {
+      "name": "SCOPE",
+      "path": "scope"
+    },
+    {
+      "name": "SCOPE_DONGLE",
+      "path": "scope_dongle"
+    },	
+    {
       "name": "BOARDS",
       "path": "shared_boards"
     },
