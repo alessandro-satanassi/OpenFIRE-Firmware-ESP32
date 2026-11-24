@@ -47,6 +47,18 @@ void WirelessScope_::applyRadioSettings(wifi_interface_t ifx) {
   esp_wifi_set_ps(WIFI_PS_NONE);
 }
 
+#ifdef SCOPE
+// EN: The scope leaves the dongle's network after the pairing (link lost): back to the search, the main
+//     repeats the same pairing. During the search and the pairing the disconnections are handled by connection_scope().
+// IT: Il mirino esce dalla rete del dongle dopo l'abbinamento (collegamento perso): torna alla ricerca, il main
+//     ripete lo stesso abbinamento. Durante ricerca e abbinamento gli scollegamenti li gestisce connection_scope().
+static void scopeWiFiEvent(arduino_event_id_t event, arduino_event_info_t info) {
+  if (event == ARDUINO_EVENT_WIFI_STA_DISCONNECTED && WirelessScope.link_state >= SCOPE_LINK_STATE::SCOPE_LINK_PAIRED) {
+    WirelessScope.link_state = SCOPE_LINK_STATE::SCOPE_LINK_SEARCH;
+  }
+}
+#endif // SCOPE
+
 // ===================================================================================
 // BEGIN: COMMON INITIALIZATION / INIZIALIZZAZIONE COMUNE
 // ===================================================================================
@@ -67,8 +79,14 @@ void WirelessScope_::begin() {
   #ifdef SCOPE
     WiFi.mode(WIFI_STA);
     applyRadioSettings(WIFI_IF_STA);
+    // EN: No automatic reconnection by Arduino: a reconnection without Confirm would be dropped by the dongle after 2 s.
+    //     Every pairing, the first as the next ones, goes through connection_scope().
+    // IT: Niente ricollegamento automatico di Arduino: un ricollegamento senza Conferma verrebbe scollegato dal dongle dopo 2 s.
+    //     Ogni abbinamento, il primo come i successivi, passa da connection_scope().
+    WiFi.setAutoReconnect(false);
     WiFi.disconnect();
     esp_wifi_get_mac(WIFI_IF_STA, mac_local);
+    WiFi.onEvent(scopeWiFiEvent, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
   #endif // SCOPE
 }
 
@@ -334,6 +352,7 @@ bool WirelessScope_::connection_scope_dongle() {
 
 bool WirelessScope_::connection_scope(uint8_t player_number) {
   player = player_number;
+  WiFi.disconnect();   // from a lost link: no connection still in progress / da un collegamento perso: nessun collegamento ancora in corso
 
   while (true) {
     link_state = SCOPE_LINK_STATE::SCOPE_LINK_SEARCH;

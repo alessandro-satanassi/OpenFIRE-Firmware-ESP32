@@ -70,6 +70,31 @@ Frequenza della CPU: decommentare per forzarla (80, 160 o 240 MHz). Commentato =
   #define SCOPE_DONGLE_LOGO_TIME_MS 3000
 #endif // USES_DISPLAY
 
+// EN: Channel and state of the dongle on the display, to the right of the small logo: "FREE" or the paired player.
+// IT: Canale e stato del dongle sul display, a destra del logo piccolo: "FREE" oppure il giocatore abbinato.
+void showScopeDongleState() {
+  #ifdef USES_DISPLAY
+    #ifdef USE_LOVYAN_GFX
+      if (!display_init) return;
+      tft.fillRect(64, 20, 96, 60, BLACK);
+      tft.setCursor(70, 28);
+      tft.printf("CH %u", WirelessScope.channel);
+      tft.setCursor(70, 52);
+      if (WirelessScope.link_state >= SCOPE_LINK_STATE::SCOPE_LINK_PAIRED) tft.printf("P%u", WirelessScope.player);
+      else tft.print("FREE");
+    #endif // USE_LOVYAN_GFX
+  #endif // USES_DISPLAY
+}
+
+// EN: Messages to the PC daemon over the USB (channel chosen, paired with player and scope address, free again):
+//     see the "Specifica del demone PC OpenFIRE".
+// IT: Messaggi al demone del PC sulla USB (canale scelto, abbinato con giocatore e indirizzo del mirino, tornato libero):
+//     vedi la "Specifica del demone PC OpenFIRE".
+void notifyScopeDongleState() {
+  // TO DO / DA FARE: OF_SCOPE:... with WirelessScope.channel, WirelessScope.player, WirelessScope.ip_peer
+
+}
+
 // ===================================================================================
 // MAIN SETUP
 // ===================================================================================
@@ -112,7 +137,12 @@ void setup() {
   // /
   // Il dongle sceglie il canale piu' libero, avvia il suo access point e aspetta un mirino.
   WirelessScope.begin();                    // channel search and access point / ricerca del canale e access point
+  showScopeDongleState();                   // channel, free / canale, libero
+  notifyScopeDongleState();
+
   WirelessScope.connection_scope_dongle();  // waits for a scope and pairs (blocking) / aspetta un mirino e si abbina (bloccante)
+  showScopeDongleState();                   // paired player / giocatore abbinato
+  notifyScopeDongleState();
 
 }
 
@@ -122,5 +152,15 @@ void setup() {
 
 void loop()
 {
+  // EN: The scope left the network: the dongle is free and visible again and waits for a new pairing.
+  // IT: Il mirino e' uscito dalla rete: il dongle torna libero e visibile e aspetta un nuovo abbinamento.
+  if (WirelessScope.link_state == SCOPE_LINK_STATE::SCOPE_LINK_SEARCH) {
+    showScopeDongleState();
+    notifyScopeDongleState();
+    WirelessScope.connection_scope_dongle();
+    showScopeDongleState();
+    notifyScopeDongleState();
+  }
+
   vTaskDelay(pdMS_TO_TICKS(1)); // Let's give the microcontroller some breathing room to avoid resets triggered by the Task Watchdog. / diamo un po' di respiro al micro per non incorrere in reset dal Task Watchdog
 }
