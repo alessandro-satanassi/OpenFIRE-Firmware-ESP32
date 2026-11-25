@@ -40,27 +40,43 @@ static volatile uint32_t g_usbRxBytes = 0;   // OF_STAT RX: every byte received,
 // ===================================================================================
 // TRANSMISSION TO THE PC / TRASMISSIONE AL PC
 // ===================================================================================
-static void usbSendContent(const uint8_t *content, uint16_t len) {
-  const uint8_t head[4] = { USB_SYNC_0, USB_SYNC_1, (uint8_t)(len & 0xFF), (uint8_t)(len >> 8) };
+// EN: Returns false only when the frame did not go out whole (PC connected without room for it). Only control
+//     messages go to the PC: header and content in one buffer, one write, sent only if every byte was taken.
+// IT: Restituisce false solo se la trama non e' uscita intera (PC collegato senza posto). Al PC vanno solo messaggi
+//     di controllo: intestazione e contenuto in un buffer, una scrittura, inviata solo se ogni byte e' stato preso.
+static bool usbSendContent(const uint8_t *content, uint16_t len) {
+  uint8_t frame[4 + 1 + USB_TEXT_MAX];
+  if (len > sizeof(frame) - 4) return false;
+  frame[0] = USB_SYNC_0;
+  frame[1] = USB_SYNC_1;
+  frame[2] = (uint8_t)(len & 0xFF);
+  frame[3] = (uint8_t)(len >> 8);
+  memcpy(&frame[4], content, len);
+  const size_t total = 4 + len;
+
+  bool sent;
   xSemaphoreTake(g_usbTxMutex, portMAX_DELAY);   // whole frames, never mixed / trame intere, mai mescolate
   // EN: PC connected but without room for the whole frame (it is not reading): the frame is skipped, never cut and
   //     never waited for. PC not connected: written as before, the core keeps the newest bytes.
   // IT: PC collegato ma senza posto per tutta la trama (non sta leggendo): la trama si salta, mai tagliata e mai
   //     aspettata. PC non collegato: scritta come prima, il core tiene i byte piu' nuovi.
-  if (!Serial || Serial.availableForWrite() >= (int)(sizeof(head) + len)) {
-    Serial.write(head, sizeof(head));
-    Serial.write(content, len);
+  if (!Serial) {
+    Serial.write(frame, total);
+    sent = true;
+  } else {
+    sent = Serial.availableForWrite() >= (int)total && Serial.write(frame, total) == total;
   }
   xSemaphoreGive(g_usbTxMutex);
+  return sent;
 }
 
-static void usbSendControl(const char *text) {
+static bool usbSendControl(const char *text) {
   uint8_t buf[1 + USB_TEXT_MAX];
   size_t n = strlen(text);
   if (n > USB_TEXT_MAX) n = USB_TEXT_MAX;
   buf[0] = USB_TYPE_CONTROL;
   memcpy(&buf[1], text, n);
-  usbSendContent(buf, (uint16_t)(n + 1));
+  return usbSendContent(buf, (uint16_t)(n + 1));
 }
 
 // EN: State for WHOAMI and for the messages sent by itself. / IT: stato per WHOAMI e per i messaggi mandati da solo.
@@ -207,10 +223,11 @@ static void scopeUsbTask(void *param) {
       char state[64];
       usbStateText(state, sizeof(state));
       const uint8_t rescan = WirelessScope.rescan_count;
-      if (strcmp(state, lastState) != 0 || rescan != lastRescan) {
+      // EN: Marked as sent only when the whole frame went out: a skipped one (e.g. Pn at the pairing) is tried again.
+      // IT: Segnato come inviato solo se la trama e' uscita intera: una saltata (per esempio Pn all'abbinamento) si ritenta.
+      if ((strcmp(state, lastState) != 0 || rescan != lastRescan) && usbSendControl(state)) {
         strcpy(lastState, state);
         lastRescan = rescan;
-        usbSendControl(state);
       }
     }
 
