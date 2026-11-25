@@ -27,6 +27,7 @@
 #include "OpenFIRElights.h"
 #include "OpenFIREserial.h"
 #include "OpenFIREusbnet.h"
+#include "OpenFIREscope.h"
 
 // Roll of the gun around the barrel during calibration. The Square identifies its four emitters
 // by height (the top pair, then the bottom pair), which holds while the roll stays below the
@@ -1733,6 +1734,12 @@ void FW_Common::GetPosition()
                 #endif // USE_MULTI_ONE_EURO_FILTER
 
             }
+
+            // EN: Roll of the gun to the SCOPE: only if present, only when it changes, at most every 15 ms.
+            // IT: Roll della pistola allo SCOPE: solo se presente, solo quando cambia, al massimo ogni 15 ms.
+            if(scope_present)
+                OF_Scope::SendRoll(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout ? OpenFIREdiamond.Ang()
+                                                                                          : OpenFIREsquare.Ang());
 
             // Output mapped to screen resolution because offsets are measured in pixels.
             //

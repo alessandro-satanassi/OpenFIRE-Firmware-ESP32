@@ -516,6 +516,8 @@
     "Camera SPI MOSI": "SPI MOSI telecamera",
     "Camera SPI SCK": "SPI SCK telecamera",
     "Camera SPI CS": "SPI CS telecamera",
+    "Scope UART TX": "UART TX SCOPE",
+    "Scope UART RX": "UART RX SCOPE",
     "Debug Window": "Finestra di debug",
     "Serial Debug": "Debug seriale",
     "Clear": "Pulisci",

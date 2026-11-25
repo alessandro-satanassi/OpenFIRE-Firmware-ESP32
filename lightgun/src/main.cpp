@@ -35,6 +35,7 @@
 #include "OpenFIREprefs.h"
 #include "OpenFIREconstant.h"
 #include "OpenFIREstandby.h"
+#include "OpenFIREscope.h"
 
 // #include "web_assets.h"
 #include "OpenFIREweb.h"
@@ -725,6 +726,10 @@ CheckBootRequests();
     // ===================================================================================
     #endif
 #endif //USE_TINYUSB
+
+    // EN: SCOPE on the UART (only ESP32-S3 with its two pins set): Hello and, if it answers, the player.
+    // IT: SCOPE sulla UART (solo ESP32-S3 con i suoi due pin impostati): Ciao e, se risponde, il giocatore.
+    OF_Scope::Begin();
 
     // Restores the top part of the display to its original state. / ripristina la parte superiore del diplay come in originale
     #ifdef ARDUINO_ARCH_ESP32

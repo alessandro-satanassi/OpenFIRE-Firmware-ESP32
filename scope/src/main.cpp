@@ -49,7 +49,7 @@
 
 #endif // USES_DISPLAY
 
-//#include "OpenFIRE-SCOPE-version.h"
+#include "OpenFIRE-SCOPE-version.h"
 
 #include "OpenFIRE_Wireless_Scope.h"
 #include "OpenFIRE_Scope_Video.h"   // reception of the frames, rotation and display / ricezione dei frame, rotazione e display
@@ -58,93 +58,136 @@
 // PLAYER / GIOCATORE
 // ===================================================================================
 // EN: Player number (1-4) sent to the dongle in the Confirm of the pairing. 0 = not received yet.
-//     It arrives from the S3 of the lightgun in the first valid Command over the UART and is fixed at the
+//     It arrives from the S3 of the lightgun in the first valid Player over the UART and is fixed at the
 //     pairing: a hot change of player does not exist.
 // IT: Numero del giocatore (1-4) mandato al dongle nella Conferma dell'abbinamento. 0 = non ancora ricevuto.
-//     Arriva dall'S3 della lightgun nel primo Comando valido sulla UART e si fissa all'abbinamento:
+//     Arriva dall'S3 della lightgun nel primo Giocatore valido sulla UART e si fissa all'abbinamento:
 //     il cambio di giocatore a caldo non esiste.
 volatile uint8_t scope_player = 0;
-volatile bool scope_display_on = true;   // from the Command of the S3 / dal Comando dell'S3
+volatile bool scope_display_on = true;   // from the Display of the S3 / dal Display dell'S3
 
 // ===================================================================================
 // ROLL OF THE LIGHTGUN / ROLL DELLA LIGHTGUN
 // ===================================================================================
 // EN: Rotation of the lightgun in degrees, from -90 to +90 (0 = no rotation), positive = turned clockwise as seen
 //     by the shooter. The video turns every frame the opposite way, with the last value at the start of the rotation.
-//     Values outside -90..+90 are taken as -90 or +90. It will arrive from the S3 of the lightgun over the UART.
+//     Values outside -90..+90 are taken as -90 or +90. It arrives from the S3 of the lightgun over the UART, only when it changes.
 // IT: Rotazione della lightgun in gradi, da -90 a +90 (0 = nessuna rotazione), positivo = girata in senso orario
 //     vista da chi spara. Il video ruota ogni frame al contrario, con l'ultimo valore all'inizio della rotazione.
-//     I valori fuori da -90..+90 valgono -90 o +90. Arrivera' dall'S3 della lightgun sulla UART.
+//     I valori fuori da -90..+90 valgono -90 o +90. Arriva dall'S3 della lightgun sulla UART, solo quando cambia.
 volatile int8_t scope_roll = 0;
 
 // EN: Bench tests without the S3: fixed player, the pairing starts at once. Comment it out when the UART is ready.
 // IT: Prove al banco senza l'S3: giocatore fisso, l'abbinamento parte subito. Commentarlo quando la UART e' pronta.
-#define SCOPE_TEST_PLAYER 1
+//#define SCOPE_TEST_PLAYER 1
 
 // ===================================================================================
 // UART WITH THE ESP32-S3 OF THE LIGHTGUN / UART CON L'ESP32-S3 DELLA LIGHTGUN
 // ===================================================================================
 // EN: 115200 baud 8N1, same frame in both directions: 0xA5, type, length, data, CRC-8
 //     (polynomial 0x9B, initial value 0, no reflection, no final XOR, on type, length and data, without 0xA5).
-//     Types 0x01-0x7F from the S3 to the scope, 0x81-0xFF from the scope to the S3.
+//     Types 0x01-0x7F from the S3 to the scope, 0x81-0xFF from the scope to the S3. Unknown types are ignored.
+//     The S3 starts: after its USB or dongle connection it sends Hello (at most 3 times), the scope answers Present,
+//     then the S3 sends the Player once and the Roll only when it changes. No keepalive, no answer to the Roll.
 // IT: 115200 baud 8N1, stessa trama nei due sensi: 0xA5, tipo, lunghezza, dati, CRC-8
 //     (polinomio 0x9B, valore iniziale 0, senza riflessione, senza XOR finale, su tipo, lunghezza e dati, senza lo 0xA5).
-//     Tipi da 0x01 a 0x7F dall'S3 al mirino, da 0x81 a 0xFF dal mirino all'S3.
+//     Tipi da 0x01 a 0x7F dall'S3 al mirino, da 0x81 a 0xFF dal mirino all'S3. I tipi sconosciuti si ignorano.
+//     Comincia l'S3: dopo il suo collegamento USB o dongle manda Ciao (al massimo 3 volte), il mirino risponde Presente,
+//     poi l'S3 manda una volta il Giocatore e il Roll solo quando cambia. Niente keepalive, nessuna risposta al Roll.
 #if defined(SCOPE_UART_TX_GPIO) && defined(SCOPE_UART_RX_GPIO)
   #define SCOPE_UART               Serial1
   #define SCOPE_UART_BAUD          115200
   #define SCOPE_UART_START         0xA5
+  #define SCOPE_UART_PROTOCOL      1      // protocol version / versione del protocollo
+  #define SCOPE_UART_MAX_DATA      16
 
   // S3 -> scope / S3 -> mirino
-  #define SCOPE_UART_CMD_COMMAND   0x01   // display on (0/1), player (1-4) / display acceso (0/1), giocatore (1-4)
-  #define SCOPE_UART_CMD_ROLL      0x02   // angle uint16 (65536 = 360 deg) / angolo uint16 (65536 = 360 gradi)
+  #define SCOPE_UART_CMD_HELLO     0x01   // protocol version / versione protocollo
+  #define SCOPE_UART_CMD_PLAYER    0x02   // player (1-4) / giocatore (1-4)
+  #define SCOPE_UART_CMD_ROLL      0x03   // int8 degrees -90..+90 (see scope_roll) / gradi int8 -90..+90 (vedi scope_roll)
+  #define SCOPE_UART_CMD_DISPLAY   0x04   // 0 off, 1 on / 0 spento, 1 acceso
   // scope -> S3 / mirino -> S3
-  #define SCOPE_UART_MSG_PRESENT   0x81   // protocol version, firmware version, capabilities / versione protocollo, versione firmware, capacita'
-  #define SCOPE_UART_MSG_STATE     0x82   // phase (SCOPE_LINK_STATE), channel / fase (SCOPE_LINK_STATE), canale
-  #define SCOPE_UART_MSG_INPUTS    0x83   // reserved: buttons and crown / riservato: tasti e corona
+  #define SCOPE_UART_MSG_PRESENT   0x81   // protocol version, firmware major, minor, patch / versione protocollo, firmware major, minor, patch
+  #define SCOPE_UART_MSG_INPUTS    0x83   // reserved: buttons and wheel / riservato: tasti e rotellina
+
+  static uint8_t scopeUartCrc8Step(uint8_t crc, uint8_t value) {
+    crc ^= value;
+    for (uint8_t bit = 0; bit < 8; ++bit)
+      crc = (crc & 0x80) ? (uint8_t)((crc << 1) ^ 0x9B) : (uint8_t)(crc << 1);
+    return crc;
+  }
+
+  static void scopeUartSend(uint8_t type, const uint8_t *data, uint8_t length) {
+    uint8_t frame[4 + SCOPE_UART_MAX_DATA];
+    frame[0] = SCOPE_UART_START;
+    frame[1] = type;
+    frame[2] = length;
+    memcpy(&frame[3], data, length);
+    uint8_t crc = 0;
+    for (uint8_t i = 1; i < 3 + length; ++i) crc = scopeUartCrc8Step(crc, frame[i]);
+    frame[3 + length] = crc;
+    SCOPE_UART.write(frame, 4 + length);
+  }
+
+  static void scopeUartHandle(uint8_t type, const uint8_t *data, uint8_t length) {
+    switch (type) {
+      case SCOPE_UART_CMD_HELLO: {
+        const uint8_t present[4] = { SCOPE_UART_PROTOCOL, OPENFIRE_SCOPE_VERSION_MAJOR,
+                                     OPENFIRE_SCOPE_VERSION_MINOR, OPENFIRE_SCOPE_VERSION_PATCH };
+        scopeUartSend(SCOPE_UART_MSG_PRESENT, present, sizeof(present));
+        break;
+      }
+      case SCOPE_UART_CMD_PLAYER:
+        // EN: only the first one: the player is fixed at the pairing / IT: solo il primo: il giocatore si fissa all'abbinamento
+        if (length >= 1 && scope_player == 0 && data[0] >= 1 && data[0] <= 4) scope_player = data[0];
+        break;
+      case SCOPE_UART_CMD_ROLL:
+        if (length >= 1) {
+          const int8_t roll = (int8_t)data[0];
+          scope_roll = (roll > 90) ? 90 : ((roll < -90) ? -90 : roll);
+        }
+        break;
+      case SCOPE_UART_CMD_DISPLAY:
+        if (length >= 1) scope_display_on = (data[0] != 0);
+        break;
+      default:   // unknown type: ignored / tipo sconosciuto: ignorato
+        break;
+    }
+  }
 
   // EN: Own task: the UART keeps working also while the pairing (blocking) is running.
+  //     Wait for 0xA5, then type, length, data and CRC-8; wrong CRC -> frame discarded.
   // IT: Task proprio: la UART continua a lavorare anche mentre l'abbinamento (bloccante) e' in corso.
+  //     Aspetta 0xA5, poi tipo, lunghezza, dati e CRC-8; CRC sbagliato -> trama scartata.
   static void scopeUartTask(void *param) {
     SCOPE_UART.begin(SCOPE_UART_BAUD, SERIAL_8N1, SCOPE_UART_RX_GPIO, SCOPE_UART_TX_GPIO);
-    uint8_t last_state = 0xFF;
+    uint8_t state = 0, type = 0, length = 0, count = 0, crc = 0;
+    uint8_t data[SCOPE_UART_MAX_DATA];
 
     for (;;) {
-      // ---------------------------------------------------------------------------
-      // 1. RECEPTION / RICEZIONE                                         (TO DO / DA FARE)
-      // ---------------------------------------------------------------------------
-      // EN: - wait for 0xA5, read type, length, data and CRC-8; wrong CRC -> discarded, unknown type -> ignored
-      //     - SCOPE_UART_CMD_COMMAND: scope_display_on = data[0];
-      //       if (scope_player == 0 && data[1] >= 1 && data[1] <= 4) scope_player = data[1];   // the pairing starts
-      //     - SCOPE_UART_CMD_ROLL: last angle, kept for 100 ms without Roll
-      //     - no Command for 2 s -> back to announcing every 200 ms (e.g. the S3 restarted)
-      // IT: - aspetta 0xA5, legge tipo, lunghezza, dati e CRC-8; CRC sbagliato -> scartato, tipo sconosciuto -> ignorato
-      //     - SCOPE_UART_CMD_COMMAND: scope_display_on = data[0];
-      //       if (scope_player == 0 && data[1] >= 1 && data[1] <= 4) scope_player = data[1];   // parte l'abbinamento
-      //     - SCOPE_UART_CMD_ROLL: ultimo angolo, tenuto per 100 ms senza Roll
-      //     - niente Comando per 2 s -> torna ad annunciarsi ogni 200 ms (per esempio l'S3 si e' riavviato)
-
-
-
-      // ---------------------------------------------------------------------------
-      // 2. PRESENT / PRESENTE                                            (TO DO / DA FARE)
-      // ---------------------------------------------------------------------------
-      // EN: SCOPE_UART_MSG_PRESENT every 200 ms until the S3 answers, then every second as a sign of life.
-      // IT: SCOPE_UART_MSG_PRESENT ogni 200 ms finche' l'S3 non risponde, poi ogni secondo come segnale di vita.
-
-
-
-      // ---------------------------------------------------------------------------
-      // 3. SCOPE STATE / STATO DEL MIRINO
-      // ---------------------------------------------------------------------------
-      // EN: At every change: phase (0 waiting, 1 searching the dongle, 2 paired, 3 video) and channel.
-      // IT: A ogni cambio: fase (0 in attesa, 1 cerca il dongle, 2 abbinato, 3 video) e canale.
-      if (WirelessScope.link_state != last_state) {
-        last_state = WirelessScope.link_state;
-        // TO DO / DA FARE: send SCOPE_UART_MSG_STATE { last_state, WirelessScope.channel }
-
+      while (SCOPE_UART.available() > 0) {
+        const uint8_t b = (uint8_t)SCOPE_UART.read();
+        switch (state) {
+          case 0:   // start / inizio
+            if (b == SCOPE_UART_START) { crc = 0; state = 1; }
+            break;
+          case 1:   // type / tipo
+            type = b; crc = scopeUartCrc8Step(crc, b); state = 2;
+            break;
+          case 2:   // length / lunghezza
+            if (b > SCOPE_UART_MAX_DATA) { state = 0; break; }
+            length = b; count = 0; crc = scopeUartCrc8Step(crc, b); state = length ? 3 : 4;
+            break;
+          case 3:   // data / dati
+            data[count++] = b; crc = scopeUartCrc8Step(crc, b);
+            if (count == length) state = 4;
+            break;
+          default:  // CRC
+            if (b == crc) scopeUartHandle(type, data, length);
+            state = 0;
+            break;
+        }
       }
-
       vTaskDelay(pdMS_TO_TICKS(1));
     }
   }
@@ -256,7 +299,7 @@ Frequenza della CPU: decommentare per forzarla (80, 160 o 240 MHz). Commentato =
         vTaskDelay(pdMS_TO_TICKS(SCOPE_LOGO_SPIN_FRAME_MS));
         continue;
       }
-      scopePanelPowerApply();   // display on/off as the Command of the S3 / display acceso/spento come il Comando dell'S3
+      scopePanelPowerApply();   // display on/off as the Display of the S3 / display acceso/spento come il Display dell'S3
 
       const uint8_t state = WirelessScope.link_state;
       const uint8_t player_number = scope_player;
@@ -319,6 +362,12 @@ void setup() {
     setCpuFrequencyMhz(SCOPE_CPU_FREQ_MHZ);
   #endif // SCOPE_CPU_FREQ_MHZ
 
+  // EN: UART with the S3 first of all: the Hello of the S3 is answered also during the logo.
+  // IT: UART con l'S3 prima di tutto: il Ciao dell'S3 ha risposta anche durante il logo.
+  #if defined(SCOPE_UART_TX_GPIO) && defined(SCOPE_UART_RX_GPIO)
+    xTaskCreate(scopeUartTask, "scopeUart", 4096, NULL, 2, NULL);
+  #endif // SCOPE_UART_TX_GPIO && SCOPE_UART_RX_GPIO
+
   // 1. HARDWARE INITIALIZATION / INIZIALIZZAZIONE HARDWARE (Video Feedback)
   #ifdef USES_DISPLAY
     #ifdef USE_LOVYAN_GFX
@@ -351,17 +400,13 @@ void setup() {
     scope_player = SCOPE_TEST_PLAYER;
   #endif // SCOPE_TEST_PLAYER
 
-  #if defined(SCOPE_UART_TX_GPIO) && defined(SCOPE_UART_RX_GPIO)
-    xTaskCreate(scopeUartTask, "scopeUart", 4096, NULL, 2, NULL);
-  #endif // SCOPE_UART_TX_GPIO && SCOPE_UART_RX_GPIO
-
   // ===================================================================================
   // WIRELESS / WIRELESS
   // ===================================================================================
   WirelessScope.begin();                     // Wi-Fi 6, 5 GHz, 20 MHz / Wi-Fi 6, 5 GHz, 20 MHz
 
-  // EN: The pairing starts at the first valid Command with the player, also with the display off.
-  // IT: L'abbinamento parte al primo Comando valido con il giocatore, anche a display spento.
+  // EN: The pairing starts at the first valid Player from the S3, also with the display off.
+  // IT: L'abbinamento parte al primo Giocatore valido dall'S3, anche a display spento.
   while (scope_player == 0) vTaskDelay(pdMS_TO_TICKS(10));
 
   WirelessScope.connection_scope(scope_player); // searches a free dongle and pairs (blocking) / cerca un dongle libero e si abbina (bloccante)

@@ -113,6 +113,8 @@ public:
         cam_SPI_MOSI,
         cam_SPI_SCK,
         cam_SPI_CS,
+        scope_UART_TX,      // UART to the SCOPE (ESP32-S3 only) / UART verso lo SCOPE (solo ESP32-S3)
+        scope_UART_RX,
         // Add non-button inputs here
         boardInputsCount
     } boardInputs_e;
@@ -156,6 +158,8 @@ public:
         {"Camera SPI MOSI",     cam_SPI_MOSI    },
         {"Camera SPI SCK",      cam_SPI_SCK     },
         {"Camera SPI CS",       cam_SPI_CS      },
+        {"Scope UART TX",       scope_UART_TX   },
+        {"Scope UART RX",       scope_UART_RX   },
     };
 
     // Digital inputs whose logic can be inverted (normally closed contacts, e.g. NC switches),
