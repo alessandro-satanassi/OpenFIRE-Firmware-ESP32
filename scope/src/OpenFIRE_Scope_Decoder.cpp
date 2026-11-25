@@ -31,6 +31,13 @@
 #ifndef DRAM_ATTR
   #define DRAM_ATTR
 #endif
+// EN: forced inline of the hot helpers; MSVC (scope daemon on Windows) has no __attribute__.
+// IT: inline forzato delle funzioni calde; MSVC (demone dei mirini su Windows) non ha __attribute__.
+#if defined(_MSC_VER)
+  #define SCOPE_INLINE static __forceinline
+#else
+  #define SCOPE_INLINE static inline __attribute__((always_inline))
+#endif
 
 #define W  SCOPE_DEC_W
 #define H  SCOPE_DEC_H
@@ -223,7 +230,7 @@ typedef struct {
   int      bad;
 } ScopeBits;
 
-static inline __attribute__((always_inline)) void brFill(ScopeBits *b) {
+SCOPE_INLINE void brFill(ScopeBits *b) {
   if (b->cnt <= 16) {
     uint32_t w;
     if (b->p + 2 <= b->lim) { w = ((uint32_t)b->p[0] << 8) | b->p[1]; b->p += 2; }
@@ -232,12 +239,12 @@ static inline __attribute__((always_inline)) void brFill(ScopeBits *b) {
     b->cnt += 16;
   }
 }
-static inline __attribute__((always_inline)) uint32_t brPeek(const ScopeBits *b, int n) { return b->buf >> (32 - n); }
-static inline __attribute__((always_inline)) void brSkip(ScopeBits *b, int n) { b->buf <<= n; b->cnt -= n; }
-static inline __attribute__((always_inline)) int brGet(ScopeBits *b, int n) { const uint32_t v = b->buf >> (32 - n); b->buf <<= n; b->cnt -= n; return (int)v; }
-static inline __attribute__((always_inline)) int extendBits(int v, int s) { return v < (1 << (s - 1)) ? v - (1 << s) + 1 : v; }
+SCOPE_INLINE uint32_t brPeek(const ScopeBits *b, int n) { return b->buf >> (32 - n); }
+SCOPE_INLINE void brSkip(ScopeBits *b, int n) { b->buf <<= n; b->cnt -= n; }
+SCOPE_INLINE int brGet(ScopeBits *b, int n) { const uint32_t v = b->buf >> (32 - n); b->buf <<= n; b->cnt -= n; return (int)v; }
+SCOPE_INLINE int extendBits(int v, int s) { return v < (1 << (s - 1)) ? v - (1 << s) + 1 : v; }
 
-static inline __attribute__((always_inline)) int huffDecode(ScopeBits *b, const ScopeHuff *h) {
+SCOPE_INLINE int huffDecode(ScopeBits *b, const ScopeHuff *h) {
   brFill(b);
   const uint32_t e = h->lut[brPeek(b, LUTB)];
   if (e >> 8) { brSkip(b, e >> 8); return e & 0xFF; }
@@ -343,7 +350,7 @@ static IRAM_ATTR void idctStore(const int32_t *in, uint8_t *out, int stride, int
 // ===================================================================================
 // EN: Huffman, dequantization and IDCT of one block. Only-DC blocks without IDCT. coef is all zero at the exit.
 // IT: Huffman, dequantizzazione e IDCT di un blocco. Blocchi con solo DC senza IDCT. coef e' tutto a zero all'uscita.
-static inline __attribute__((always_inline)) void decodeBlock(ScopeBits *b, const ScopeHuff *hdc, const int32_t *fac, const ScopeHuff *hac,
+SCOPE_INLINE void decodeBlock(ScopeBits *b, const ScopeHuff *hdc, const int32_t *fac, const ScopeHuff *hac,
                                                               const int32_t *qs, int32_t *pred, int32_t *coef, uint8_t *out, int stride) {
   int s = huffDecode(b, hdc);
   int diff = 0;
@@ -446,9 +453,9 @@ IRAM_ATTR bool scopeDecSlice(const uint8_t *data, uint16_t len, uint8_t sy, uint
   if (sy >= SCOPE_DEC_SLICES || q < 1 || q > 100) return false;
   setQuant(q);
   static int32_t coef[64];   // always zero between blocks / sempre a zero tra un blocco e l'altro
-  uint8_t Y[16 * 16] __attribute__((aligned(4)));
-  uint8_t Cb[64] __attribute__((aligned(4)));
-  uint8_t Cr[64] __attribute__((aligned(4)));
+  alignas(4) uint8_t Y[16 * 16];
+  alignas(4) uint8_t Cb[64];
+  alignas(4) uint8_t Cr[64];
   ScopeBits b = { data, data + len + SCOPE_DEC_MARGIN, 0, 0, 0 };
   int32_t py = 0, pb = 0, pr = 0;   // DC predictors reset at every slice / predittori DC azzerati a ogni fascia
 
