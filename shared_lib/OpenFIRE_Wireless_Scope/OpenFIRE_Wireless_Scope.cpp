@@ -345,7 +345,7 @@ bool WirelessScope_::connection_scope_dongle() {
     // EN: A packet of another length is thrown away: left unread it would stop every next parsePacket().
     // IT: Un pacchetto di altra lunghezza si butta: lasciato non letto fermerebbe ogni parsePacket() successivo.
     const int pairLen = udp_pair.parsePacket();
-    if (pairLen > 0 && pairLen != (int)sizeof(Scope_Pair_Msg)) udp_pair.flush();
+    if (pairLen > 0 && pairLen != (int)sizeof(Scope_Pair_Msg)) udp_pair.clear();
     if (pairLen == (int)sizeof(Scope_Pair_Msg)) {
       Scope_Pair_Msg msg;
       udp_pair.read((uint8_t *)&msg, sizeof(msg));
@@ -647,7 +647,7 @@ bool WirelessScope_::connection_scope(uint8_t player_number) {
       // EN: A packet of another length is thrown away: left unread it would stop every next parsePacket().
       // IT: Un pacchetto di altra lunghezza si butta: lasciato non letto fermerebbe ogni parsePacket() successivo.
       const int pairLen = udp_pair.parsePacket();
-      if (pairLen > 0 && pairLen != (int)sizeof(Scope_Pair_Msg)) udp_pair.flush();
+      if (pairLen > 0 && pairLen != (int)sizeof(Scope_Pair_Msg)) udp_pair.clear();
       if (pairLen == (int)sizeof(Scope_Pair_Msg)) {
         Scope_Pair_Msg rx;
         udp_pair.read((uint8_t *)&rx, sizeof(rx));
