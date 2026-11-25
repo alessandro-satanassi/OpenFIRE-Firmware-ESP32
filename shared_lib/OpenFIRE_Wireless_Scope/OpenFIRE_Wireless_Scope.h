@@ -132,6 +132,13 @@ typedef struct __attribute__ ((packed)) {
 #define OPENFIRE_SCOPE_SESSION_FLAG_MS       1000  // bit 3 during the first second of video / bit 3 nel primo secondo di video
 #define OPENFIRE_SCOPE_TX_RETRY              5     // attempts, 1 ms apart, with the Wi-Fi queue full / tentativi, a 1 ms, con la coda Wi-Fi piena
 
+// EN: Scope sizes: ring of the received slices, each followed by 4 bytes 0xFF for the bit reader of the decoder.
+// IT: Dimensioni del mirino: anello delle fasce ricevute, ognuna seguita da 4 byte 0xFF per il lettore di bit del decoder.
+#define OPENFIRE_SCOPE_RX_RING               32    // over 2 whole frames / oltre 2 frame interi
+#define OPENFIRE_SCOPE_RX_MARGIN             4
+#define OPENFIRE_SCOPE_RX_SLOT               (OPENFIRE_SCOPE_VIDEO_MAX_PACKET + OPENFIRE_SCOPE_RX_MARGIN)   // 1412
+#define OPENFIRE_SCOPE_RX_TASK_PRIO          19    // above lwIP (18), below the Wi-Fi (23) / sopra lwIP (18), sotto il Wi-Fi (23)
+
 // ===================================================================================
 // LINK STATE / STATO DEL COLLEGAMENTO
 // ===================================================================================
@@ -140,7 +147,7 @@ enum SCOPE_LINK_STATE {
   SCOPE_LINK_WAIT   = 0,   // waiting (scope: no player yet; dongle: channel search) / in attesa (mirino: niente giocatore; dongle: ricerca canale)
   SCOPE_LINK_SEARCH = 1,   // scope: searching a dongle; dongle: free, access point visible / mirino: cerca il dongle; dongle: libero, access point visibile
   SCOPE_LINK_PAIRED = 2,   // paired / abbinato
-  SCOPE_LINK_VIDEO  = 3    // video (next steps) / video (prossimi passi)
+  SCOPE_LINK_VIDEO  = 3    // scope: paired and video on screen / mirino: abbinato e video sullo schermo
 };
 
 // ===================================================================================
@@ -198,6 +205,30 @@ class WirelessScope_ {
   // EN: Blocking: searches the first free dongle, connects and sends the player; returns when paired.
   // IT: Bloccante: cerca il primo dongle libero, si collega e comunica il giocatore; torna quando e' abbinato.
   bool connection_scope(uint8_t player_number);
+
+  // EN: Video reception: a task of the library receives the UDP packets of the dongle and puts in the ring only the valid
+  //     slices (marker, version, flags 0-2 at 0, player, slice 0-14, q 1-100, session 1-255). The presence packets do
+  //     not go in the ring: they only update video_pause_ms (q = 1). Session and frame are checked by the decoder.
+  // IT: Ricezione del video: un task della libreria riceve i pacchetti UDP del dongle e mette nell'anello solo le fasce
+  //     valide (marcatore, versione, flag 0-2 a 0, giocatore, fascia 0-14, q 1-100, sessione 1-255). I pacchetti di
+  //     presenza non vanno nell'anello: aggiornano solo video_pause_ms (q = 1). Sessione e frame li controlla il decoder.
+  volatile uint32_t video_rx_slices = 0;      // valid slices put in the ring / fasce valide messe nell'anello
+  volatile uint32_t video_rx_full = 0;        // valid slices lost with the ring full / fasce valide perse con l'anello pieno
+  volatile uint32_t video_rx_bad = 0;         // packets discarded / pacchetti scartati
+  volatile bool     video_slice_seen = false; // a valid slice since the pairing / una fascia valida dall'abbinamento
+  volatile uint32_t video_slice_ms = 0;       // millis() of the last valid slice / millis() dell'ultima fascia valida
+  volatile bool     video_pause_seen = false; // a presence with q = 1 since the pairing / una presenza con q = 1 dall'abbinamento
+  volatile uint32_t video_pause_ms = 0;       // millis() of the last presence with q = 1 / millis() dell'ultima presenza con q = 1
+
+  // EN: Slot of the ring with a slice (-1 none within wait_ms). After the decoding the slot goes back with videoRelease().
+  // IT: Posto dell'anello con una fascia (-1 nessuna entro wait_ms). Dopo la decodifica il posto torna con videoRelease().
+  int videoReceive(uint32_t wait_ms);
+  const uint8_t *videoSlot(int slot, uint16_t *len);   // whole packet, header included / pacchetto intero, intestazione compresa
+  void videoRelease(int slot);
+
+  // EN: The video module tells when the video is on screen (phase 3 for the S3). Only PAIRED <-> VIDEO: never over a lost link.
+  // IT: Il modulo video comunica quando il video e' sullo schermo (fase 3 per l'S3). Solo PAIRED <-> VIDEO: mai sopra un collegamento perso.
+  void videoActive(bool on);
   #endif // SCOPE
 
   private:

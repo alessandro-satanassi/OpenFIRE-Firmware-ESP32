@@ -15,6 +15,11 @@
 
 #include "OpenFIRE_Wireless_Scope.h"
 #include "freertos/semphr.h"
+#ifdef SCOPE
+  #include "freertos/queue.h"
+  #include "lwip/sockets.h"
+  #include "esp_heap_caps.h"
+#endif // SCOPE
 
 WirelessScope_ WirelessScope;
 
@@ -53,6 +58,8 @@ static void scopeVideoInit();   // video queue and task, below / coda e task del
 #endif // SCOPE_DONGLE
 
 #ifdef SCOPE
+static void scopeRxInit();   // video reception, below / ricezione del video, piu' sotto
+
 // EN: The scope leaves the dongle's network after the pairing (link lost): back to the search, the main
 //     repeats the same pairing. During the search and the pairing the disconnections are handled by connection_scope().
 // IT: Il mirino esce dalla rete del dongle dopo l'abbinamento (collegamento perso): torna alla ricerca, il main
@@ -93,6 +100,7 @@ void WirelessScope_::begin() {
     WiFi.disconnect();
     esp_wifi_get_mac(WIFI_IF_STA, mac_local);
     WiFi.onEvent(scopeWiFiEvent, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+    scopeRxInit();
   #endif // SCOPE
 }
 
@@ -577,6 +585,10 @@ bool WirelessScope_::connection_scope(uint8_t player_number) {
   player = player_number;
   WiFi.disconnect();   // from a lost link: no connection still in progress / da un collegamento perso: nessun collegamento ancora in corso
 
+  // EN: Every new pairing starts from zero: no slice and no pause seen. / IT: ogni nuovo abbinamento riparte da zero: nessuna fascia e nessuna pausa vista.
+  video_slice_seen = false;
+  video_pause_seen = false;
+
   while (true) {
     link_state = SCOPE_LINK_STATE::SCOPE_LINK_SEARCH;
 
@@ -650,6 +662,130 @@ bool WirelessScope_::connection_scope(uint8_t player_number) {
     }
     WiFi.disconnect();   // disconnecting also frees the dongle / scollegandosi libera anche il dongle
   }
+}
+
+// ===================================================================================
+// SCOPE: VIDEO RECEPTION / MIRINO: RICEZIONE DEL VIDEO
+// ===================================================================================
+// EN: A task above lwIP receives every UDP packet as soon as it arrives, straight into a free slot of the ring
+//     (BSD socket: no copy through WiFiUDP). With the ring full the packet is read anyway and lost (video_rx_full),
+//     so that lwIP never holds old packets. The decoder takes the full slots from g_rxFull and gives them back to g_rxFree.
+// IT: Un task sopra lwIP riceve ogni pacchetto UDP appena arriva, direttamente in un posto libero dell'anello
+//     (socket BSD: nessuna copia attraverso WiFiUDP). Con l'anello pieno il pacchetto si legge comunque e si perde
+//     (video_rx_full), cosi' lwIP non trattiene mai pacchetti vecchi. Il decoder prende i posti pieni da g_rxFull e li rende a g_rxFree.
+static uint8_t      *g_rxRing = NULL;                      // OPENFIRE_SCOPE_RX_RING x OPENFIRE_SCOPE_RX_SLOT
+static uint16_t      g_rxLen[OPENFIRE_SCOPE_RX_RING];
+static QueueHandle_t g_rxFree = NULL;
+static QueueHandle_t g_rxFull = NULL;
+static portMUX_TYPE  g_stateMux = portMUX_INITIALIZER_UNLOCKED;
+
+static void scopeRxTask(void *param) {
+  static uint8_t scratch[OPENFIRE_SCOPE_RX_SLOT];   // packet received with the ring full / pacchetto ricevuto con l'anello pieno
+  int sock = -1;
+  int cur = -1;   // free slot ready for the next packet / posto libero pronto per il prossimo pacchetto
+
+  for (;;) {
+    if (sock < 0) {
+      sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+      if (sock >= 0) {
+        struct sockaddr_in addr = {};
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(OPENFIRE_SCOPE_VIDEO_PORT);
+        addr.sin_addr.s_addr = htonl(INADDR_ANY);
+        if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) { close(sock); sock = -1; }
+      }
+      if (sock < 0) { vTaskDelay(pdMS_TO_TICKS(100)); continue; }
+    }
+
+    if (cur < 0) {
+      uint8_t s;
+      if (xQueueReceive(g_rxFree, &s, 0) == pdTRUE) cur = s;
+    }
+    uint8_t *buf = (cur >= 0) ? &g_rxRing[cur * OPENFIRE_SCOPE_RX_SLOT] : scratch;
+
+    // EN: One byte more than the maximum: a longer packet is recognised and discarded. / IT: un byte oltre il massimo: un pacchetto piu' lungo si riconosce e si scarta.
+    const int n = recv(sock, buf, OPENFIRE_SCOPE_VIDEO_MAX_PACKET + 1, 0);
+    if (n < 0) { close(sock); sock = -1; vTaskDelay(pdMS_TO_TICKS(10)); continue; }
+
+    // EN: Checks common to slices and presence: marker, version, flags 0-2 at 0, player of this pair.
+    // IT: Controlli comuni a fasce e presenza: marcatore, versione, flag 0-2 a 0, giocatore di questa coppia.
+    if (n < OPENFIRE_SCOPE_VIDEO_HEADER || n > OPENFIRE_SCOPE_VIDEO_MAX_PACKET ||
+        WirelessScope.link_state < SCOPE_LINK_STATE::SCOPE_LINK_PAIRED ||
+        buf[SCOPE_VIDEO_B_MARKER] != OPENFIRE_SCOPE_VIDEO_MARKER ||
+        (buf[SCOPE_VIDEO_B_FLAGS] >> 4) != OPENFIRE_SCOPE_VIDEO_VERSION ||
+        (buf[SCOPE_VIDEO_B_FLAGS] & 0x07) != 0 ||
+        buf[SCOPE_VIDEO_B_PLAYER] != WirelessScope.player) {
+      WirelessScope.video_rx_bad = WirelessScope.video_rx_bad + 1;
+      continue;
+    }
+
+    // EN: Presence: session, frame number and the 1-100 range of q are ignored; only q = 1 (pause) counts.
+    // IT: Presenza: sessione, numero di frame e intervallo 1-100 di q si ignorano; conta solo q = 1 (pausa).
+    if (buf[SCOPE_VIDEO_B_SLICE] == OPENFIRE_SCOPE_VIDEO_PRESENCE) {
+      if (buf[SCOPE_VIDEO_B_Q] == 1) {
+        WirelessScope.video_pause_ms = millis();
+        WirelessScope.video_pause_seen = true;
+      }
+      continue;
+    }
+
+    if (n == OPENFIRE_SCOPE_VIDEO_HEADER || buf[SCOPE_VIDEO_B_SLICE] >= OPENFIRE_SCOPE_VIDEO_SLICES ||
+        buf[SCOPE_VIDEO_B_Q] < 1 || buf[SCOPE_VIDEO_B_Q] > 100 || buf[SCOPE_VIDEO_B_SESSION] == 0) {
+      WirelessScope.video_rx_bad = WirelessScope.video_rx_bad + 1;
+      continue;
+    }
+
+    WirelessScope.video_slice_ms = millis();
+    WirelessScope.video_slice_seen = true;
+    if (cur < 0) {   // ring full / anello pieno
+      WirelessScope.video_rx_full = WirelessScope.video_rx_full + 1;
+      continue;
+    }
+    memset(&buf[n], 0xFF, OPENFIRE_SCOPE_RX_MARGIN);
+    g_rxLen[cur] = (uint16_t)n;
+    const uint8_t s = (uint8_t)cur;
+    xQueueSend(g_rxFull, &s, 0);   // never full: at most OPENFIRE_SCOPE_RX_RING slots exist / mai piena: esistono al massimo OPENFIRE_SCOPE_RX_RING posti
+    WirelessScope.video_rx_slices = WirelessScope.video_rx_slices + 1;
+    cur = -1;
+  }
+}
+
+static void scopeRxInit() {
+  if (g_rxRing != NULL) return;
+  g_rxRing = (uint8_t *)heap_caps_malloc(OPENFIRE_SCOPE_RX_RING * OPENFIRE_SCOPE_RX_SLOT, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+  g_rxFree = xQueueCreate(OPENFIRE_SCOPE_RX_RING, sizeof(uint8_t));
+  g_rxFull = xQueueCreate(OPENFIRE_SCOPE_RX_RING, sizeof(uint8_t));
+  if (g_rxRing == NULL || g_rxFree == NULL || g_rxFull == NULL) {
+    log_e("scope video: no memory for the ring / nessuna memoria per l'anello");
+    return;
+  }
+  for (uint8_t i = 0; i < OPENFIRE_SCOPE_RX_RING; i++) xQueueSend(g_rxFree, &i, 0);
+  xTaskCreate(scopeRxTask, "scopeRx", 3072, NULL, OPENFIRE_SCOPE_RX_TASK_PRIO, NULL);
+}
+
+int WirelessScope_::videoReceive(uint32_t wait_ms) {
+  uint8_t s;
+  if (g_rxFull == NULL) { vTaskDelay(pdMS_TO_TICKS(wait_ms ? wait_ms : 1)); return -1; }
+  return (xQueueReceive(g_rxFull, &s, pdMS_TO_TICKS(wait_ms)) == pdTRUE) ? (int)s : -1;
+}
+
+const uint8_t *WirelessScope_::videoSlot(int slot, uint16_t *len) {
+  *len = g_rxLen[slot];
+  return &g_rxRing[slot * OPENFIRE_SCOPE_RX_SLOT];
+}
+
+void WirelessScope_::videoRelease(int slot) {
+  const uint8_t s = (uint8_t)slot;
+  xQueueSend(g_rxFree, &s, 0);
+}
+
+void WirelessScope_::videoActive(bool on) {
+  // EN: Read and write together: the Wi-Fi event of a lost link cannot fall in between (single core).
+  // IT: Lettura e scrittura insieme: l'evento Wi-Fi di un collegamento perso non puo' cadere in mezzo (un solo core).
+  portENTER_CRITICAL(&g_stateMux);
+  if (on && link_state == SCOPE_LINK_STATE::SCOPE_LINK_PAIRED) link_state = SCOPE_LINK_STATE::SCOPE_LINK_VIDEO;
+  else if (!on && link_state == SCOPE_LINK_STATE::SCOPE_LINK_VIDEO) link_state = SCOPE_LINK_STATE::SCOPE_LINK_PAIRED;
+  portEXIT_CRITICAL(&g_stateMux);
 }
 
 #endif // SCOPE

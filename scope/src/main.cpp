@@ -52,6 +52,7 @@
 //#include "OpenFIRE-SCOPE-version.h"
 
 #include "OpenFIRE_Wireless_Scope.h"
+#include "OpenFIRE_Scope_Video.h"   // reception of the frames, rotation and display / ricezione dei frame, rotazione e display
 
 // ===================================================================================
 // PLAYER / GIOCATORE
@@ -64,6 +65,17 @@
 //     il cambio di giocatore a caldo non esiste.
 volatile uint8_t scope_player = 0;
 volatile bool scope_display_on = true;   // from the Command of the S3 / dal Comando dell'S3
+
+// ===================================================================================
+// ROLL OF THE LIGHTGUN / ROLL DELLA LIGHTGUN
+// ===================================================================================
+// EN: Rotation of the lightgun in degrees, from -90 to +90 (0 = no rotation), positive = turned clockwise as seen
+//     by the shooter. The video turns every frame the opposite way, with the last value at the start of the rotation.
+//     Values outside -90..+90 are taken as -90 or +90. It will arrive from the S3 of the lightgun over the UART.
+// IT: Rotazione della lightgun in gradi, da -90 a +90 (0 = nessuna rotazione), positivo = girata in senso orario
+//     vista da chi spara. Il video ruota ogni frame al contrario, con l'ultimo valore all'inizio della rotazione.
+//     I valori fuori da -90..+90 valgono -90 o +90. Arrivera' dall'S3 della lightgun sulla UART.
+volatile int8_t scope_roll = 0;
 
 // EN: Bench tests without the S3: fixed player, the pairing starts at once. Comment it out when the UART is ready.
 // IT: Prove al banco senza l'S3: giocatore fisso, l'abbinamento parte subito. Commentarlo quando la UART e' pronta.
@@ -162,14 +174,19 @@ Frequenza della CPU: decommentare per forzarla (80, 160 o 240 MHz). Commentato =
 //       "WAIT"      yellow  waiting for the player from the S3
 //       "SEARCH P1" cyan    searching the dongle: meanwhile the logo turns slowly
 //       "P1 CH 36"  green   paired: the logo stops straight
+//     Paired and without video for 500 ms (no valid pause) a red "NO SIGNAL" line appears above the logo.
 //     Own task: the animation does not slow down the UART and the pairing (blocking) does not stop the animation.
+//     The panel is shared with the video: while the video is on screen this task draws nothing, then redraws everything.
 // IT: Dopo il logo il display lo disegna solo questo task. Sotto il logo una riga di stato:
 //       "WAIT"      gialla   attesa del giocatore dall'S3
 //       "SEARCH P1" azzurra  ricerca del dongle: intanto il logo gira lentamente
 //       "P1 CH 36"  verde    abbinato: il logo si ferma dritto
+//     Abbinato e senza video da 500 ms (nessuna pausa valida) compare sopra il logo una riga rossa "NO SIGNAL".
 //     Task proprio: l'animazione non rallenta la UART e l'abbinamento (bloccante) non ferma l'animazione.
+//     Il pannello e' condiviso con il video: mentre il video e' sullo schermo questo task non disegna, poi ridisegna tutto.
 #if defined(USES_DISPLAY) && defined(USE_LOVYAN_GFX)
   #define SCOPE_STATE_Y            213     // centre of the state line, below the turning logo / centro della riga di stato, sotto il logo che gira
+  #define SCOPE_NOSIGNAL_Y         27      // centre of the "NO SIGNAL" line, above the logo / centro della riga "NO SIGNAL", sopra il logo
   #define SCOPE_LOGO_SPIN_TURN_MS  6000    // one turn of the logo / un giro del logo
   #define SCOPE_LOGO_SPIN_FRAME_MS 40      // 25 frames per second / 25 fotogrammi al secondo
   #define SCOPE_LOGO_SPIN_SIZE     160     // square that holds the logo at any angle (diagonal 139x78 = 159) / quadrato che contiene il logo a ogni angolo (diagonale 139x78 = 159)
@@ -215,15 +232,49 @@ Frequenza della CPU: decommentare per forzarla (80, 160 o 240 MHz). Commentato =
     tft.drawString(text, tft.width() / 2, SCOPE_STATE_Y);
   }
 
+  static void drawScopeNoSignalLine(bool no_signal) {
+    tft.fillRect(0, SCOPE_NOSIGNAL_Y - 10, tft.width(), 20, BLACK);
+    if (!no_signal) return;
+    tft.setTextSize(2);
+    tft.setTextDatum(textdatum_t::middle_center);
+    tft.setTextColor(RED, BLACK);
+    tft.drawString("NO SIGNAL", tft.width() / 2, SCOPE_NOSIGNAL_Y);
+  }
+
   static void scopeDisplayTask(void *param) {
     uint8_t last_state = 0xFF;
     uint8_t last_player = 0xFF;
+    bool last_no_signal = false;
+    bool had_panel = true;   // the logo of the setup is already on screen / il logo del setup e' gia' sullo schermo
     bool spinning = false;
     float angle = 0.0f;
 
     for (;;) {
+      // EN: Video on screen: nothing to draw; when it ends everything is redrawn. / IT: video sullo schermo: niente da disegnare; quando finisce si ridisegna tutto.
+      if (!scopePanelTryLock()) {
+        had_panel = false;
+        vTaskDelay(pdMS_TO_TICKS(SCOPE_LOGO_SPIN_FRAME_MS));
+        continue;
+      }
+      scopePanelPowerApply();   // display on/off as the Command of the S3 / display acceso/spento come il Comando dell'S3
+
       const uint8_t state = WirelessScope.link_state;
       const uint8_t player_number = scope_player;
+      const bool no_signal = scopeVideoNoSignal();
+
+      if (!had_panel) {
+        had_panel = true;
+        tft.fillScreen(BLACK);
+        if (!spinning) drawScopeLogoStraight();
+        drawScopeStateLine(state, player_number);
+        drawScopeNoSignalLine(no_signal);
+        last_no_signal = no_signal;
+      }
+
+      if (no_signal != last_no_signal) {
+        drawScopeNoSignalLine(no_signal);
+        last_no_signal = no_signal;
+      }
 
       if (state != last_state || player_number != last_player) {
         const bool search = (state == SCOPE_LINK_STATE::SCOPE_LINK_SEARCH);
@@ -251,6 +302,7 @@ Frequenza della CPU: decommentare per forzarla (80, 160 o 240 MHz). Commentato =
         drawScopeLogoTurned(angle);
       }
 
+      scopePanelUnlock();
       vTaskDelay(pdMS_TO_TICKS(SCOPE_LOGO_SPIN_FRAME_MS));
     }
   }
@@ -284,7 +336,9 @@ void setup() {
 
         vTaskDelay(pdMS_TO_TICKS(SCOPE_LOGO_TIME_MS));
 
-        // EN: From here the display is drawn only by its task. / IT: da qui il display lo disegna solo il suo task.
+        // EN: From here the display is drawn only by the video and by the task of the state screens, one at a time.
+        // IT: Da qui il display lo disegnano solo il video e il task delle schermate di stato, uno alla volta.
+        scopeVideoBegin(&tft);
         xTaskCreate(scopeDisplayTask, "scopeDisplay", 4096, NULL, 1, NULL);
       }
     #endif // USE_LOVYAN_GFX
