@@ -383,6 +383,12 @@ static void scopeVideoTask(void *param) {
       g_haveLast = false;
       g_building = false;
       for (uint8_t sy = 0; sy < SCOPE_DEC_SLICES; sy++) g_sliceOkMs[sy] = pairMs;
+      // EN: Nothing of the previous connection on screen: a slice missing from the first frame stays black.
+      // IT: Niente della connessione precedente sullo schermo: una fascia mancante dal primo frame resta nera.
+      if (g_buffers) {
+        for (uint8_t sy = 0; sy < SCOPE_DEC_SLICES; sy++) scopeDecBlackSlice(sy, g_slice[sy]);
+        g_black = ALL_SLICES;
+      }
     }
     if (!allocBuffers()) {   // memory not free yet (sprite of the logo): it tries again / memoria non ancora libera (sprite del logo): riprova
       int s;
@@ -443,6 +449,11 @@ static void scopeVideoTask(void *param) {
     const bool noSignal = !recent && !pause && (now - pairMs >= SCOPE_VIDEO_NOSIGNAL_MS);
     if (noSignal && g_active && !g_building) stopVideo();
     g_noSignal = noSignal && !g_active;
+    // EN: No video: the next session is accepted whatever its number. Every START of the PC moves the session of
+    //     the dongle forward also without video, and after 128 of them a new session would look older.
+    // IT: Nessun video: la sessione successiva si accetta qualunque sia il suo numero. Ogni START del PC fa avanzare
+    //     la sessione del dongle anche senza video, e dopo 128 una sessione nuova sembrerebbe piu' vecchia.
+    if (noSignal && !g_active && !g_building) g_session = 0;
 
     #ifdef SCOPE_VIDEO_DEBUG
     if (now - statMs >= 1000) {
