@@ -32,6 +32,7 @@
 #define USB_RX_BUFFER         8192   // ~8 ms of USB at 1 MB/s / circa 8 ms di USB a 1 MB/s
 #define USB_STAT_EVERY_MS     500
 #define USB_TEXT_MAX          96
+#define USB_RESYNC_MS         100    // frame left half way for so long: back to the sync / trama rimasta a meta' per tanto: si torna al sincronismo
 
 static SemaphoreHandle_t g_usbTxMutex = NULL;
 static volatile uint32_t g_usbRxBytes = 0;   // OF_STAT RX: every byte received, bandwidth test included / ogni byte ricevuto, prova di banda compresa
@@ -148,6 +149,7 @@ static void scopeUsbTask(void *param) {
   enum { WAIT_SYNC_0, WAIT_SYNC_1, WAIT_LEN_0, WAIT_LEN_1, WAIT_DATA } st = WAIT_SYNC_0;
   uint16_t len = 0;
   uint16_t pos = 0;
+  uint32_t lastRxMs = millis();
 
   char lastState[64] = "";
   uint8_t lastRescan = WirelessScope.rescan_count;
@@ -157,7 +159,11 @@ static void scopeUsbTask(void *param) {
     // 1. EN: Reception: every packet is passed on as soon as it is complete, without waiting for the end of the frame.
     //    IT: Ricezione: ogni pacchetto si passa avanti appena e' completo, senza aspettare la fine del frame.
     int n = Serial.available();
+    // EN: A frame cut by the PC (e.g. its program closed while writing) must not swallow the next ones.
+    // IT: Una trama troncata dal PC (per esempio il suo programma chiuso mentre scriveva) non deve mangiare le successive.
+    if (n <= 0 && st != WAIT_SYNC_0 && millis() - lastRxMs >= USB_RESYNC_MS) st = WAIT_SYNC_0;
     if (n > 0) {
+      lastRxMs = millis();
       if (n > (int)sizeof(chunk)) n = sizeof(chunk);
       n = Serial.read(chunk, n);
       if (n > 0) g_usbRxBytes = g_usbRxBytes + n;

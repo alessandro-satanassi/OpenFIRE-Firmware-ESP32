@@ -342,7 +342,11 @@ bool WirelessScope_::connection_scope_dongle() {
       esp_wifi_deauth_sta(g_staAid);
     }
 
-    if (udp_pair.parsePacket() == sizeof(Scope_Pair_Msg)) {
+    // EN: A packet of another length is thrown away: left unread it would stop every next parsePacket().
+    // IT: Un pacchetto di altra lunghezza si butta: lasciato non letto fermerebbe ogni parsePacket() successivo.
+    const int pairLen = udp_pair.parsePacket();
+    if (pairLen > 0 && pairLen != (int)sizeof(Scope_Pair_Msg)) udp_pair.flush();
+    if (pairLen == (int)sizeof(Scope_Pair_Msg)) {
       Scope_Pair_Msg msg;
       udp_pair.read((uint8_t *)&msg, sizeof(msg));
       // EN: Only from the station waiting for its Confirm: a Confirm still in the buffer when the 2 s check
@@ -640,7 +644,11 @@ bool WirelessScope_::connection_scope(uint8_t player_number) {
     // EN: Also stops if the dongle has already removed the scope (Confirm lost: it does so after 2 s).
     // IT: Si ferma anche se il dongle ha gia' tolto il mirino (Conferma persa: lo fa dopo 2 s).
     while (!paired && WiFi.status() == WL_CONNECTED && (millis() - t0 < OPENFIRE_SCOPE_PAIR_TIMEOUT_MS)) {
-      if (udp_pair.parsePacket() == sizeof(Scope_Pair_Msg)) {
+      // EN: A packet of another length is thrown away: left unread it would stop every next parsePacket().
+      // IT: Un pacchetto di altra lunghezza si butta: lasciato non letto fermerebbe ogni parsePacket() successivo.
+      const int pairLen = udp_pair.parsePacket();
+      if (pairLen > 0 && pairLen != (int)sizeof(Scope_Pair_Msg)) udp_pair.flush();
+      if (pairLen == (int)sizeof(Scope_Pair_Msg)) {
         Scope_Pair_Msg rx;
         udp_pair.read((uint8_t *)&rx, sizeof(rx));
         paired = (rx.marker == OPENFIRE_SCOPE_PAIR_MARKER && rx.version == OPENFIRE_SCOPE_PAIR_VERSION &&

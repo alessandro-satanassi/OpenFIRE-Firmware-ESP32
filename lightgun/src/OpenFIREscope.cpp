@@ -6,15 +6,15 @@
  *  1. Begin(), after the USB or dongle connection: if the two pins are set it opens the UART and sends
  *     Hello up to 3 times, every 200 ms. At Present (scope_present = true) it sends the player (3 times).
  *     No answer: the UART is closed and nothing else is sent.
- *  2. SendRoll(), at every camera frame: the roll in degrees, only when it changes and at most every 15 ms.
- *     No answer is awaited.
+ *  2. SendRoll(), at every camera frame: the roll in degrees, only when it changes and at most every 15 ms,
+ *     plus the last one once more 50 ms after the last change. No answer is awaited.
  *  3. The reception does not poll: onReceive() is called by the UART task of the core when bytes arrive.
  * IT: Come funziona:
  *  1. Begin(), dopo il collegamento USB o dongle: se i due pin sono impostati apre la UART e manda
  *     Ciao fino a 3 volte, ogni 200 ms. Al Presente (scope_present = true) manda il giocatore (3 volte).
  *     Nessuna risposta: la UART si chiude e non si manda altro.
- *  2. SendRoll(), a ogni frame della camera: il roll in gradi, solo quando cambia e al massimo ogni 15 ms.
- *     Non si aspetta risposta.
+ *  2. SendRoll(), a ogni frame della camera: il roll in gradi, solo quando cambia e al massimo ogni 15 ms,
+ *     piu' l'ultimo ancora una volta 50 ms dopo l'ultima variazione. Non si aspetta risposta.
  *  3. La ricezione non interroga: onReceive() la chiama il task UART del core quando arrivano byte.
  */
 #include "OpenFIREscope.h"
@@ -47,6 +47,9 @@ constexpr uint8_t  MaxData = 16;
 constexpr uint8_t  HelloTries = 3;
 constexpr uint32_t HelloWaitMs = 200;
 constexpr uint32_t RollMinMs = 15;
+// EN: the last roll sent once more this long after the last change: a lost frame is not kept while the gun is still
+// IT: l'ultimo roll rimandato una volta dopo tanto dall'ultima variazione: una trama persa non resta a pistola ferma
+constexpr uint32_t RollRepeatMs = 50;
 // EN: Player and Display are sent 3 times: a frame spoiled by a disturbance is not lost (the SCOPE ignores the repeats).
 // IT: Giocatore e Display si mandano 3 volte: una trama rovinata da un disturbo non va persa (lo SCOPE ignora le ripetizioni).
 constexpr uint8_t  RepeatTimes = 3;
@@ -60,6 +63,7 @@ HardwareSerial scope_uart(1);
 
 int8_t   lastRoll = 0;       // EN/IT: the SCOPE starts from 0 / lo SCOPE parte da 0
 uint32_t lastRollMs = 0;
+bool     rollRepeat = false; // EN/IT: last roll still to be sent once more / ultimo roll ancora da rimandare una volta
 
 uint8_t Crc8Step(uint8_t crc, uint8_t value)
 {
@@ -166,14 +170,22 @@ void OF_Scope::SendRoll(float angle)
     else if(degrees < -90.0f) degrees = -90.0f;
     else if(!(degrees == degrees)) return;   // EN/IT: NaN
 
-    if(fabsf(degrees - lastRoll) < RollHysteresis)
-        return;
     const uint32_t now = millis();
+    if(fabsf(degrees - lastRoll) < RollHysteresis) {
+        // EN/IT: no change: only the single repeat of the last one / nessuna variazione: solo l'unica ripetizione dell'ultimo
+        if(rollRepeat && now - lastRollMs >= RollRepeatMs) {
+            rollRepeat = false;
+            const uint8_t data = (uint8_t)lastRoll;
+            SendFrame(CmdRoll, &data, 1);
+        }
+        return;
+    }
     if(now - lastRollMs < RollMinMs)
         return;
 
     lastRoll = (int8_t)lroundf(degrees);
     lastRollMs = now;
+    rollRepeat = true;
     const uint8_t data = (uint8_t)lastRoll;
     SendFrame(CmdRoll, &data, 1);
 }
