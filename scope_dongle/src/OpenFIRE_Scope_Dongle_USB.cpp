@@ -42,8 +42,14 @@ static volatile uint32_t g_usbRxBytes = 0;   // OF_STAT RX: every byte received,
 static void usbSendContent(const uint8_t *content, uint16_t len) {
   const uint8_t head[4] = { USB_SYNC_0, USB_SYNC_1, (uint8_t)(len & 0xFF), (uint8_t)(len >> 8) };
   xSemaphoreTake(g_usbTxMutex, portMAX_DELAY);   // whole frames, never mixed / trame intere, mai mescolate
-  Serial.write(head, sizeof(head));
-  Serial.write(content, len);
+  // EN: PC connected but without room for the whole frame (it is not reading): the frame is skipped, never cut and
+  //     never waited for. PC not connected: written as before, the core keeps the newest bytes.
+  // IT: PC collegato ma senza posto per tutta la trama (non sta leggendo): la trama si salta, mai tagliata e mai
+  //     aspettata. PC non collegato: scritta come prima, il core tiene i byte piu' nuovi.
+  if (!Serial || Serial.availableForWrite() >= (int)(sizeof(head) + len)) {
+    Serial.write(head, sizeof(head));
+    Serial.write(content, len);
+  }
   xSemaphoreGive(g_usbTxMutex);
 }
 

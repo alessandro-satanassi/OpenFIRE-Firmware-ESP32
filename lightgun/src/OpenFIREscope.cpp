@@ -4,14 +4,14 @@
  *
  * EN: How it works:
  *  1. Begin(), after the USB or dongle connection: if the two pins are set it opens the UART and sends
- *     Hello up to 3 times, every 200 ms. At Present (scope_present = true) it sends the player once.
+ *     Hello up to 3 times, every 200 ms. At Present (scope_present = true) it sends the player (3 times).
  *     No answer: the UART is closed and nothing else is sent.
  *  2. SendRoll(), at every camera frame: the roll in degrees, only when it changes and at most every 15 ms.
  *     No answer is awaited.
  *  3. The reception does not poll: onReceive() is called by the UART task of the core when bytes arrive.
  * IT: Come funziona:
  *  1. Begin(), dopo il collegamento USB o dongle: se i due pin sono impostati apre la UART e manda
- *     Ciao fino a 3 volte, ogni 200 ms. Al Presente (scope_present = true) manda una volta il giocatore.
+ *     Ciao fino a 3 volte, ogni 200 ms. Al Presente (scope_present = true) manda il giocatore (3 volte).
  *     Nessuna risposta: la UART si chiude e non si manda altro.
  *  2. SendRoll(), a ogni frame della camera: il roll in gradi, solo quando cambia e al massimo ogni 15 ms.
  *     Non si aspetta risposta.
@@ -47,6 +47,10 @@ constexpr uint8_t  MaxData = 16;
 constexpr uint8_t  HelloTries = 3;
 constexpr uint32_t HelloWaitMs = 200;
 constexpr uint32_t RollMinMs = 15;
+// EN: Player and Display are sent 3 times: a frame spoiled by a disturbance is not lost (the SCOPE ignores the repeats).
+// IT: Giocatore e Display si mandano 3 volte: una trama rovinata da un disturbo non va persa (lo SCOPE ignora le ripetizioni).
+constexpr uint8_t  RepeatTimes = 3;
+constexpr uint32_t PlayerRepeatMs = 10;
 // EN: a new degree is sent only 0.1 degrees past the half: no flicker between two values
 // IT: un nuovo grado si manda solo 0,1 gradi oltre la meta': niente sfarfallio fra due valori
 constexpr float    RollHysteresis = 0.6f;
@@ -146,7 +150,10 @@ void OF_Scope::Begin()
     // EN/IT: player of the gun, as the Start/Select buttons / giocatore della pistola, come i tasti Start/Select
     const char startBtn = FW_Common::playerStartBtn;
     const uint8_t player = (startBtn >= '1' && startBtn <= '4') ? (uint8_t)(startBtn - '0') : 1;
-    SendFrame(CmdPlayer, &player, 1);
+    for(uint8_t i = 0; i < RepeatTimes; ++i) {
+        if(i) vTaskDelay(pdMS_TO_TICKS(PlayerRepeatMs));
+        SendFrame(CmdPlayer, &player, 1);
+    }
 }
 
 void OF_Scope::SendRoll(float angle)
@@ -176,7 +183,8 @@ void OF_Scope::SetDisplay(bool on)
     if(!scope_present)
         return;
     const uint8_t data = on ? 1 : 0;
-    SendFrame(CmdDisplay, &data, 1);
+    for(uint8_t i = 0; i < RepeatTimes; ++i)
+        SendFrame(CmdDisplay, &data, 1);
 }
 
 // EN: Reserved: inputs of the SCOPE (buttons, wheel), for future features. Runs in the UART task of the core.

@@ -26,6 +26,7 @@
 // IT: Dal main: stato del display (Comando dell'S3) e roll della lightgun.
 extern volatile bool   scope_display_on;
 extern volatile int8_t scope_roll;
+extern volatile bool   scope_logo_spin_on;   // sprite of the turning logo in memory / sprite del logo che gira in memoria
 
 #define SLICE_BYTES   (SCOPE_DEC_W * SCOPE_DEC_SLICE_H * 2)   // 7680
 #define ALL_SLICES    ((1u << SCOPE_DEC_SLICES) - 1)
@@ -315,6 +316,7 @@ static void freeBuffers(uint8_t nSlice, uint8_t nOut) {
 
 static bool allocBuffers() {
   if (g_buffers) return true;
+  if (scope_logo_spin_on) return false;   // its 51 KB are not free yet: it tries again / i suoi 51 KB non sono ancora liberi: riprova
   uint8_t ns = 0, n = 0;
   while (ns < SCOPE_DEC_SLICES) {
     g_slice[ns] = (uint16_t *)heap_caps_calloc(SCOPE_DEC_W * SCOPE_DEC_SLICE_H, 2, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);   // black / nero
@@ -426,12 +428,17 @@ static void scopeVideoTask(void *param) {
     //        closed by a newer slice). Right after the pairing it waits 500 ms as well.
     //    IT: Nessun segnale: 500 ms senza fasce e nessuna pausa valida (500 ms dall'ultima presenza con q = 1,
     //        chiusa da una fascia piu' nuova). Subito dopo l'abbinamento aspetta anche lui 500 ms.
-    const uint32_t now = millis();
+    //    EN: The times written by the reception are read before now: read after, a newer time would make
+    //        now - sliceMs negative (a huge unsigned value) and stop the video in the middle of the game.
+    //    IT: I tempi scritti dalla ricezione si leggono prima di now: letti dopo, un tempo piu' nuovo renderebbe
+    //        now - sliceMs negativo (un enorme valore senza segno) e fermerebbe il video in pieno gioco.
     const bool sliceSeen = WirelessScope.video_slice_seen;
     const uint32_t sliceMs = WirelessScope.video_slice_ms;
+    const bool pauseSeen = WirelessScope.video_pause_seen;
     const uint32_t pauseMs = WirelessScope.video_pause_ms;
+    const uint32_t now = millis();
     const bool recent = sliceSeen && (now - sliceMs < SCOPE_VIDEO_NOSIGNAL_MS);
-    const bool pause = WirelessScope.video_pause_seen && (now - pauseMs < OPENFIRE_SCOPE_PAUSE_VALID_MS) &&
+    const bool pause = pauseSeen && (now - pauseMs < OPENFIRE_SCOPE_PAUSE_VALID_MS) &&
                        (!sliceSeen || (int32_t)(pauseMs - sliceMs) >= 0);
     const bool noSignal = !recent && !pause && (now - pairMs >= SCOPE_VIDEO_NOSIGNAL_MS);
     if (noSignal && g_active && !g_building) stopVideo();

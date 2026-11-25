@@ -77,6 +77,10 @@ volatile bool scope_display_on = true;   // from the Display of the S3 / dal Dis
 //     I valori fuori da -90..+90 valgono -90 o +90. Arriva dall'S3 della lightgun sulla UART, solo quando cambia.
 volatile int8_t scope_roll = 0;
 
+// EN: true while the sprite of the turning logo (51 KB) is in memory: the video takes its memory only after it.
+// IT: true finche' lo sprite del logo che gira (51 KB) e' in memoria: il video prende la sua memoria solo dopo.
+volatile bool scope_logo_spin_on = false;
+
 // EN: Bench tests without the S3: fixed player, the pairing starts at once. Comment it out when the UART is ready.
 // IT: Prove al banco senza l'S3: giocatore fisso, l'abbinamento parte subito. Commentarlo quando la UART e' pronta.
 //#define SCOPE_TEST_PLAYER 1
@@ -326,12 +330,15 @@ Frequenza della CPU: decommentare per forzarla (80, 160 o 240 MHz). Commentato =
           // IT: Inizio della ricerca: se non c'e' memoria per lo sprite il logo resta fermo.
           logo_spin.setColorDepth(16);
           logo_spin.setSwapBytes(true);
+          scope_logo_spin_on = true;   // before the memory is taken / prima che la memoria sia presa
           spinning = (logo_spin.createSprite(SCOPE_LOGO_SPIN_SIZE, SCOPE_LOGO_SPIN_SIZE) != nullptr);
+          scope_logo_spin_on = spinning;
           angle = 0.0f;
         } else if (!search && spinning) {
           // EN: End of the search: the memory goes back and the logo stops straight. / IT: fine della ricerca: la memoria torna libera e il logo si ferma dritto.
           logo_spin.deleteSprite();
           spinning = false;
+          scope_logo_spin_on = false;
           drawScopeLogoStraight();
         }
         drawScopeStateLine(state, player_number);
