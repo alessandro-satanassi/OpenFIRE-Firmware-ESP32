@@ -505,18 +505,67 @@ void scopeRotAngle(int angle_deg, int32_t *c, int32_t *s) {
 
 // EN: Output pixel (x, y) shows the frame pixel u = 119.5 + c*dx + s*dy, v = 119.5 - s*dx + c*dy (dx = x - 119.5,
 //     dy = y - 119.5), rounded to the nearest and limited to 0-239: on the edge the rounding can give -1 or 240.
+//     Three faster paths give the same pixels: at 0 degrees each row is a plain copy; a row whose source stays
+//     inside 0-239 needs no limit (u and v change linearly along the row, so its two ends decide); up to about
+//     8 degrees such a row is copied in runs of pixels with the same source row and consecutive source columns.
 // IT: Il pixel di uscita (x, y) mostra il pixel del frame u = 119,5 + c*dx + s*dy, v = 119,5 - s*dx + c*dy (dx = x - 119,5,
 //     dy = y - 119,5), arrotondato al piu' vicino e limitato a 0-239: sul bordo l'arrotondamento puo' dare -1 o 240.
+//     Tre percorsi piu' veloci danno gli stessi pixel: a 0 gradi ogni riga e' una copia semplice; una riga la cui
+//     sorgente resta dentro 0-239 non ha bisogno del limite (u e v cambiano in modo lineare lungo la riga, quindi
+//     decidono i suoi due estremi); fino a circa 8 gradi una riga cosi' e' copiata a tratti di pixel con la stessa
+//     riga sorgente e colonne sorgente consecutive.
+#define SCOPE_ROT_RUN_SIN 9200   // sin(angle) * 65536 up to which the runs are used (about 8 degrees) / fino a cui si usano i tratti (circa 8 gradi)
 IRAM_ATTR void scopeRotSlice(const uint16_t *const *rows, uint8_t sy, int32_t c, int32_t s, uint16_t *out) {
   const int ox = OUT_X[sy], ow = OUT_W[sy];
+  const bool same = (s == 0 && c == 65536);   // 0 degrees / 0 gradi
+  const int32_t d = 65536 - c, as = s < 0 ? -s : s;
+  // EN: The run lengths need fu / d and fv / |s|, done as (f * m) >> 32 with m = 2^32 / divisor + 1: exact for
+  //     f < 65536 and divisor >= 2 (checked on every pair). With whole degrees d >= 10 and |s| >= 1144.
+  // IT: Le lunghezze dei tratti richiedono fu / d e fv / |s|, fatte come (f * m) >> 32 con m = 2^32 / divisore + 1: esatto per
+  //     f < 65536 e divisore >= 2 (verificato su ogni coppia). Con gradi interi d >= 10 e |s| >= 1144.
+  const bool runs = !same && c > 32768 && as >= 2 && as <= SCOPE_ROT_RUN_SIN && d != 1;
+  const uint32_t md = (runs && d >= 2) ? (uint32_t)((((uint64_t)1 << 32) / (uint32_t)d) + 1) : 0;   // 0: d = 0, u never changes row / u non cambia mai
+  const uint32_t ms = runs ? (uint32_t)((((uint64_t)1 << 32) / (uint32_t)as) + 1) : 0;
   for (int r = 0; r < SCOPE_DEC_SLICE_H; r++) {
     const int y = sy * SCOPE_DEC_SLICE_H + r, xs = VXS[y], xe = VXE[y];
     uint16_t *o = out + r * ow - ox;   // o[x] = pixel x of the display / o[x] = pixel x del display
     for (int x = ox; x < xs; x++) o[x] = 0;               // black outside the circle / nero fuori dal cerchio
     for (int x = xe + 1; x < ox + ow; x++) o[x] = 0;
+    if (same) { memcpy(o + xs, rows[y] + xs, (size_t)(xe - xs + 1) * 2); continue; }
     const int32_t dx = ((xs << 1) - 239) * 32768, dy = ((y << 1) - 239) * 32768;   // 16.16
     int32_t u = (120 << 16) + (int32_t)(((int64_t)c * dx + (int64_t)s * dy) >> 16);   // 119.5 + 0.5 for the rounding / 119,5 + 0,5 per l'arrotondamento
     int32_t v = (120 << 16) + (int32_t)(((int64_t)c * dy - (int64_t)s * dx) >> 16);
+    const int32_t n = xe - xs, u1 = u + n * c, v1 = v - n * s;   // source at the end of the row / sorgente a fine riga
+    const int32_t umin = u < u1 ? u : u1, umax = u < u1 ? u1 : u;
+    const int32_t vmin = v < v1 ? v : v1, vmax = v < v1 ? v1 : v;
+    if (umin >= 0 && vmin >= 0 && umax < (W << 16) && vmax < (H << 16)) {
+      if (runs) {
+        int x = xs;
+        while (x <= xe) {
+          // EN: the run ends when u falls one column behind (after fu / d + 1 pixels) or v changes row (fv / |s| + 1).
+          // IT: il tratto finisce quando u resta indietro di una colonna (dopo fu / d + 1 pixel) o v cambia riga (fv / |s| + 1).
+          const uint32_t fu = (uint32_t)(u & 0xFFFF);
+          const uint32_t fv = (uint32_t)(s > 0 ? (v & 0xFFFF) : (0xFFFF - (v & 0xFFFF)));
+          int32_t k = xe - x + 1;
+          if (md) { const int32_t ku = (int32_t)(((uint64_t)fu * md) >> 32) + 1; if (ku < k) k = ku; }
+          const int32_t kv = (int32_t)(((uint64_t)fv * ms) >> 32) + 1;
+          if (kv < k) k = kv;
+          const uint16_t *src = rows[v >> 16] + (u >> 16);
+          uint16_t *dst = o + x;
+          for (int32_t j = 0; j < k; j++) dst[j] = src[j];
+          x += k;
+          u += k * c;
+          v -= k * s;
+        }
+      } else {
+        for (int x = xs; x <= xe; x++) {
+          o[x] = rows[v >> 16][u >> 16];
+          u += c;
+          v -= s;
+        }
+      }
+      continue;
+    }
     for (int x = xs; x <= xe; x++) {
       int ui = u >> 16, vi = v >> 16;
       ui = ui < 0 ? 0 : (ui > W - 1 ? W - 1 : ui);

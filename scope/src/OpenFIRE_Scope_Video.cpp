@@ -117,6 +117,10 @@ static void rotateFrame() {
   int roll = scope_roll;
   if (roll > SCOPE_ROLL_MAX) roll = SCOPE_ROLL_MAX;
   if (roll < -SCOPE_ROLL_MAX) roll = -SCOPE_ROLL_MAX;
+  static int shown = 0;   // roll of the image shown / roll dell'immagine mostrata
+  const int diff = roll - shown;
+  if (diff >= SCOPE_ROLL_HYSTERESIS || diff <= -SCOPE_ROLL_HYSTERESIS) shown = roll;
+  roll = shown;
   #ifdef SCOPE_ROLL_INVERT
     const int angle = roll;
   #else

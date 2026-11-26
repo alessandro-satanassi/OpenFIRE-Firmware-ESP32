@@ -48,6 +48,11 @@
 //     L'immagine gira al contrario per restare in piano. Se al banco gira dalla parte sbagliata, decommentare.
 //#define SCOPE_ROLL_INVERT
 #define SCOPE_ROLL_MAX           90
+// EN: The image turns only when the roll moves at least this many degrees from the angle shown: the small tremor
+//     of the hand does not make it shake. 1 = it follows every degree.
+// IT: L'immagine gira solo quando il roll si sposta di almeno questi gradi dall'angolo mostrato: il piccolo tremolio
+//     della mano non la fa vibrare. 1 = segue ogni grado.
+#define SCOPE_ROLL_HYSTERESIS    3
 
 // EN: Statistics on the USB serial every second (frames, slices, times). / IT: statistiche sulla seriale USB ogni secondo (frame, fasce, tempi).
 //#define SCOPE_VIDEO_DEBUG
