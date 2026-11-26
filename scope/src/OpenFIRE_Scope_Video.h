@@ -48,11 +48,23 @@
 //     L'immagine gira al contrario per restare in piano. Se al banco gira dalla parte sbagliata, decommentare.
 //#define SCOPE_ROLL_INVERT
 #define SCOPE_ROLL_MAX           90
-// EN: The image turns only when the roll moves at least this many degrees from the angle shown: the small tremor
-//     of the hand does not make it shake. 1 = it follows every degree.
-// IT: L'immagine gira solo quando il roll si sposta di almeno questi gradi dall'angolo mostrato: il piccolo tremolio
-//     della mano non la fa vibrare. 1 = segue ogni grado.
+// EN: Steadiness of the image (to tune on the hardware):
+//     - ZERO_ZONE: with the image straight, it stays straight while the roll is within +-ZERO_ZONE degrees; after a
+//       turn it goes back exactly straight when the roll stays within +-1 degree for 250 ms. 0 = no zone.
+//     - HYSTERESIS: elsewhere the image turns only when the roll moves at least this many degrees from the angle shown.
+//     - STABLE_MS: a change smaller than 5 degrees must last this long (recoil kicks and tremor peaks are ignored);
+//       5 degrees or more is applied at once and then the turn is followed degree by degree. 0 = no filter.
+//     ZERO_ZONE 0, HYSTERESIS 1 and STABLE_MS 0 = the image follows every degree.
+// IT: Stabilita' dell'immagine (da regolare sull'hardware):
+//     - ZERO_ZONE: con l'immagine dritta, resta dritta finche' il roll e' entro +-ZERO_ZONE gradi; dopo una rotazione
+//       torna esattamente dritta quando il roll resta entro +-1 grado per 250 ms. 0 = nessuna zona.
+//     - HYSTERESIS: altrove l'immagine gira solo quando il roll si sposta di almeno questi gradi dall'angolo mostrato.
+//     - STABLE_MS: un cambio sotto i 5 gradi deve durare almeno questo tempo (i colpi del rinculo e i picchi del tremolio
+//       sono ignorati); da 5 gradi in su si applica subito e poi la rotazione e' seguita grado per grado. 0 = nessun filtro.
+//     ZERO_ZONE 0, HYSTERESIS 1 e STABLE_MS 0 = l'immagine segue ogni grado.
+#define SCOPE_ROLL_ZERO_ZONE     3
 #define SCOPE_ROLL_HYSTERESIS    3
+#define SCOPE_ROLL_STABLE_MS     80
 
 // EN: Statistics on the USB serial every second (frames, slices, times). / IT: statistiche sulla seriale USB ogni secondo (frame, fasce, tempi).
 //#define SCOPE_VIDEO_DEBUG

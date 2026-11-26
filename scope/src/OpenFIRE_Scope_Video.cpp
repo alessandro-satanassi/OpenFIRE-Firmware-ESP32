@@ -106,6 +106,56 @@ static uint8_t outFreeBuffer() {
   }
 }
 
+// EN: Roll of the image from the roll received, once per frame (see SCOPE_ROLL_ZERO_ZONE in the .h).
+//     A change of FAST degrees or more starts a fast turn: for FOLLOW_MS after each change applied at once, every
+//     further degree in the same direction is applied at once too, so the image keeps up with the turn.
+// IT: Roll dell'immagine dal roll ricevuto, una volta per frame (vedi SCOPE_ROLL_ZERO_ZONE nel .h).
+//     Un cambio di FAST gradi o piu' avvia una rotazione veloce: per FOLLOW_MS dopo ogni cambio applicato subito, ogni
+//     grado in piu' nella stessa direzione e' applicato subito anche lui, cosi' l'immagine tiene il passo.
+static int rollShown(int roll) {
+  static const int FAST = 5;              // degrees applied at once / gradi applicati subito
+  static const uint32_t LEVEL_MS = 250;   // within +-1 degree for this long -> straight / entro +-1 grado per questo tempo -> dritta
+  static const uint32_t FOLLOW_MS = 150;  // fast turn followed degree by degree / rotazione veloce seguita grado per grado
+  static const uint32_t GAP_MS = 200;     // longer pause of the video: start again / pausa del video piu' lunga: si riparte da capo
+  static int shown = 0;                   // roll of the image / roll dell'immagine
+  static int dir = 0;                     // direction of the fast turn / direzione della rotazione veloce
+  static int waitJump = 0;                // change waited / cambio atteso
+  static bool level = false, wait = false, follow = false, started = false;
+  static uint32_t levelMs = 0, waitMs = 0, followMs = 0, lastMs = 0;
+  const uint32_t now = millis();
+  if (started && now - lastMs > GAP_MS) { wait = false; level = false; follow = false; }   // old readings / letture vecchie
+  started = true;
+  lastMs = now;
+  if (roll >= -1 && roll <= 1) { if (!level) { level = true; levelMs = now; } }
+  else level = false;
+  if (follow && now - followMs > FOLLOW_MS) follow = false;
+  int want = shown;
+  bool back = false;
+  if (SCOPE_ROLL_ZERO_ZONE > 0 && shown == 0) {
+    if (roll > SCOPE_ROLL_ZERO_ZONE || roll < -SCOPE_ROLL_ZERO_ZONE) want = roll;   // leaves the zone / esce dalla zona
+  } else if (SCOPE_ROLL_ZERO_ZONE > 0 && level && now - levelMs >= LEVEL_MS) {
+    want = 0;                                                                       // back straight / di nuovo dritta
+    back = true;                                                                    // already stable for 250 ms / gia' stabile da 250 ms
+  } else {
+    const int diff = roll - shown;
+    if (diff >= SCOPE_ROLL_HYSTERESIS || diff <= -SCOPE_ROLL_HYSTERESIS || (follow && diff * dir >= 1)) want = roll;
+  }
+  if (want == shown) { wait = false; return shown; }
+  const int jump = want - shown;
+  const bool big = jump >= FAST || jump <= -FAST;
+  if (SCOPE_ROLL_STABLE_MS == 0 || big || back || (follow && jump * dir > 0)) {   // at once / subito
+    if (big || follow) { follow = true; followMs = now; }
+    dir = jump > 0 ? 1 : -1;
+    shown = want;
+    wait = false;
+    return shown;
+  }
+  if (wait && (jump > 0) != (waitJump > 0)) wait = false;   // the direction changed: start again / la direzione e' cambiata: si riparte
+  if (!wait) { wait = true; waitMs = now; waitJump = jump; }   // the change must last / il cambio deve durare
+  if (now - waitMs >= SCOPE_ROLL_STABLE_MS) { shown = want; wait = false; }
+  return shown;
+}
+
 // EN: Rotation of the whole frame with the last angle received: when it returns the frame can be overwritten,
 //     the last slices are still going to the display.
 // IT: Rotazione dell'intero frame con l'ultimo angolo ricevuto: quando torna il frame si puo' sovrascrivere,
@@ -117,10 +167,7 @@ static void rotateFrame() {
   int roll = scope_roll;
   if (roll > SCOPE_ROLL_MAX) roll = SCOPE_ROLL_MAX;
   if (roll < -SCOPE_ROLL_MAX) roll = -SCOPE_ROLL_MAX;
-  static int shown = 0;   // roll of the image shown / roll dell'immagine mostrata
-  const int diff = roll - shown;
-  if (diff >= SCOPE_ROLL_HYSTERESIS || diff <= -SCOPE_ROLL_HYSTERESIS) shown = roll;
-  roll = shown;
+  roll = rollShown(roll);
   #ifdef SCOPE_ROLL_INVERT
     const int angle = roll;
   #else
