@@ -75,3 +75,55 @@ void scopeRotAngle(int angle_deg, int32_t *c, int32_t *s);
 // IT: Rotazione nearest-neighbour attorno a (119,5; 119,5) del frame (rows[y] = riga y del frame) nella fascia
 //     di uscita sy (scopeRotWindowW(sy) x 16 pixel, nero fuori dal cerchio visibile).
 void scopeRotSlice(const uint16_t *const *rows, uint8_t sy, int32_t c, int32_t s, uint16_t *out);
+
+// ===================================================================================
+// FRAME IN YCbCr / FRAME IN YCbCr
+// ===================================================================================
+// EN: Frame kept as it arrives: only the coded MCU, in YCbCr 4:2:0 (201 MCU x 384 bytes = 75 KB instead of the
+//     115 KB of the RGB565 frame), in pieces of any size. Every MCU = Y 16x16, Cb 8x8, Cr 8x8. The colour is made
+//     by the rotation, with the same tables and the same pixels as the RGB565 path.
+// IT: Frame tenuto come arriva: solo gli MCU codificati, in YCbCr 4:2:0 (201 MCU x 384 byte = 75 KB invece dei
+//     115 KB del frame RGB565), a pezzi di qualunque misura. Ogni MCU = Y 16x16, Cb 8x8, Cr 8x8. Il colore lo fa
+//     la rotazione, con le stesse tabelle e gli stessi pixel del percorso RGB565.
+#define SCOPE_DEC_MCU_BYTES  384
+#define SCOPE_DEC_MCU_TABLE  (SCOPE_DEC_SLICES * 16)
+
+// EN: Coded MCU of the frame (SCOPE_DEC_MCU_CODED with the 240x240 circle): the frame needs scopeDecMcuCount() x
+//     SCOPE_DEC_MCU_BYTES bytes.
+// IT: MCU codificati del frame (SCOPE_DEC_MCU_CODED col cerchio 240x240): il frame vuole scopeDecMcuCount() x
+//     SCOPE_DEC_MCU_BYTES byte.
+#define SCOPE_DEC_MCU_CODED  201
+uint16_t scopeDecMcuCount();
+
+// EN: Table of the 15 x 15 MCU of the frame (mcu[my * 16 + mx], rows of 16 for a shift instead of a multiplication).
+//     The frame can be in pieces (any free memory): piece i holds count[i] coded MCU, in order of slice and column.
+//     A not coded MCU points to a black MCU, never written. Once, after the pieces are allocated.
+// IT: Tabella dei 15 x 15 MCU del frame (mcu[my * 16 + mx], righe da 16 per uno scorrimento invece di una moltiplicazione).
+//     Il frame puo' essere a pezzi (qualunque memoria libera): il pezzo i tiene count[i] MCU codificati, in ordine di
+//     fascia e colonna. Un MCU non codificato punta a un MCU nero, mai scritto. Una volta, dopo l'allocazione dei pezzi.
+void scopeDecMcuTable(uint8_t *const *piece, const uint8_t *count, uint8_t nPiece, uint8_t **mcu);
+
+// EN: As scopeDecSlice, but straight into the MCU of the frame in YCbCr, without colour. If not valid the slice is
+//     partly written: the caller makes it black (scopeDecBlackSliceYcc).
+// IT: Come scopeDecSlice, ma direttamente negli MCU del frame in YCbCr, senza colore. Se non valida la fascia e'
+//     scritta in parte: chi chiama la fa nera (scopeDecBlackSliceYcc).
+bool scopeDecSliceYcc(const uint8_t *data, uint16_t len, uint8_t sy, uint8_t q, uint8_t *const *mcu, ScopeDecIdleFn idle);
+
+// EN: Black slice sy of the frame (Y 0, Cb and Cr 128: RGB565 0 as in the RGB565 path).
+// IT: Fascia sy del frame nera (Y 0, Cb e Cr 128: RGB565 0 come nel percorso RGB565).
+void scopeDecBlackSliceYcc(uint8_t sy, uint8_t *const *mcu);
+
+// EN: Output bands of 8 rows (half the memory of the 16-row slices for the DMA buffers), window as wide as the
+//     visible circle in those rows.
+// IT: Fasce di uscita da 8 righe (meta' memoria delle fasce da 16 righe per i buffer del DMA), finestra larga quanto
+//     il cerchio visibile in quelle righe.
+#define SCOPE_ROT_BAND_H     8
+#define SCOPE_ROT_BANDS      (SCOPE_DEC_H / SCOPE_ROT_BAND_H)   // 30
+uint16_t scopeRotBandX(uint8_t band);
+uint16_t scopeRotBandW(uint8_t band);
+
+// EN: As scopeRotSlice (same pixels, same three faster paths), from the YCbCr frame into the output band
+//     (scopeRotBandW(band) x 8 pixels, RGB565 in display order, black outside the visible circle).
+// IT: Come scopeRotSlice (stessi pixel, stessi tre percorsi piu' veloci), dal frame YCbCr nella fascia di uscita
+//     (scopeRotBandW(band) x 8 pixel, RGB565 in ordine del display, nero fuori dal cerchio visibile).
+void scopeRotBandYcc(const uint8_t *const *mcu, uint8_t band, int32_t c, int32_t s, uint16_t *out);

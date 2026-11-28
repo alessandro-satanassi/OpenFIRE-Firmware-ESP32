@@ -31,14 +31,27 @@
 //     Il pannello e' condiviso con le schermate di stato del main: chi disegna prende prima il blocco.
 //     Mentre il video e' sullo schermo il blocco e' del video; al "nessun segnale" torna al main.
 
-// EN: Output slices for the DMA (2-6): with more slices the rotation ends earlier and the next decoding starts
-//     while the DMA works. Without memory it goes down to 2.
-// IT: Fasce di uscita per il DMA (2-6): con piu' fasce la rotazione finisce prima e la decodifica successiva parte
-//     mentre il DMA lavora. Senza memoria scende fino a 2.
+// EN: Output bands of 8 rows for the DMA (2-6): with more bands the rotation ends earlier and the next decoding starts
+//     while the DMA works. Beyond 2, a band is taken only if SCOPE_VIDEO_HEAP_MARGIN bytes stay free for the Wi-Fi
+//     (its buffers for the packets received are taken while the video runs).
+// IT: Fasce di uscita da 8 righe per il DMA (2-6): con piu' fasce la rotazione finisce prima e la decodifica successiva
+//     parte mentre il DMA lavora. Oltre 2, una fascia si prende solo se restano liberi SCOPE_VIDEO_HEAP_MARGIN byte per il
+//     Wi-Fi (i suoi buffer per i pacchetti ricevuti si prendono mentre il video gira).
 #define SCOPE_VIDEO_OUT_SLICES   6
+#define SCOPE_VIDEO_HEAP_MARGIN  16384
 
-#define SCOPE_VIDEO_SHOW_MS      40    // a frame is shown 40 ms after its first slice / un frame si mostra 40 ms dopo la sua prima fascia
-#define SCOPE_VIDEO_BLACK_MS     100   // slice missing from every frame for 100 ms -> black / fascia mancante da tutti i frame per 100 ms -> nera
+// EN: Fixed array of the frame in YCbCr (201 coded MCU x 384 bytes), shared with the sprite of the turning logo.
+// IT: Array fisso del frame in YCbCr (201 MCU codificati x 384 byte), condiviso con lo sprite del logo che gira.
+#define SCOPE_VIDEO_SHARED_BYTES 77184
+
+// EN: Incomplete frame shown 150 ms after its first slice. Normally a frame is shown when it is complete or when the
+//     first slice of the next one arrives; this time is only for the last slices lost with no frame after them.
+//     It must be longer than the time of a whole frame on the link (the slices arrive spread at the speed of the USB).
+// IT: Frame incompleto mostrato 150 ms dopo la sua prima fascia. Di solito un frame si mostra quando e' completo o
+//     quando arriva la prima fascia del successivo; questo tempo serve solo per le ultime fasce perse senza un frame
+//     dopo. Deve superare il tempo di un frame intero sul collegamento (le fasce arrivano distribuite alla velocita' della USB).
+#define SCOPE_VIDEO_SHOW_MS      150
+#define SCOPE_VIDEO_BLACK_MS     300   // slice missing from every frame for 300 ms -> black / fascia mancante da tutti i frame per 300 ms -> nera
 #define SCOPE_VIDEO_NOSIGNAL_MS  500   // no slice for 500 ms and no pause -> "no signal" / nessuna fascia per 500 ms e nessuna pausa -> "nessun segnale"
 #define SCOPE_VIDEO_TASK_PRIO    1     // below the UART (2): the roll always arrives / sotto la UART (2): il roll arriva sempre
 
@@ -66,8 +79,10 @@
 #define SCOPE_ROLL_HYSTERESIS    3
 #define SCOPE_ROLL_STABLE_MS     80
 
-// EN: Statistics on the USB serial every second (frames, slices, times). / IT: statistiche sulla seriale USB ogni secondo (frame, fasce, tempi).
-//#define SCOPE_VIDEO_DEBUG
+// EN: Statistics on the display, over the logo, every second (memory in KB, frames, slices, times): only while there is
+//     no video and the logo is not turning. / IT: statistiche sul display, sopra il logo, ogni secondo (memoria in KB,
+//     frame, fasce, tempi): solo mentre non c'e' video e il logo non gira.
+#define SCOPE_VIDEO_DEBUG
 
 // EN: To call once, after the display init and before the task of the state screens.
 // IT: Da chiamare una volta, dopo l'avvio del display e prima del task delle schermate di stato.
@@ -81,6 +96,15 @@ void scopePanelUnlock();
 // EN: Display on or off as scope_display_on: only the panel, reception and decoding go on. Call with the panel locked.
 // IT: Display acceso o spento come scope_display_on: solo il pannello, ricezione e decodifica continuano. Da chiamare col pannello bloccato.
 void scopePanelPowerApply();
+
+// EN: Memory of the sprite of the turning logo (SCOPE_VIDEO_SHARED_BYTES), the same array of the video frame: NULL
+//     while the video has it (try again later). Given back with scopeLogoMemoryGive() after deleteSprite().
+//     They set scope_logo_spin_on.
+// IT: Memoria dello sprite del logo che gira (SCOPE_VIDEO_SHARED_BYTES), lo stesso array del frame del video: NULL
+//     finche' ce l'ha il video (riprovare dopo). Si restituisce con scopeLogoMemoryGive() dopo deleteSprite().
+//     Impostano scope_logo_spin_on.
+uint8_t *scopeLogoMemoryTake();
+void scopeLogoMemoryGive();
 
 // EN: Paired, no video on screen, no slice for 500 ms and no valid pause: the main shows "no signal".
 // IT: Abbinato, nessun video sullo schermo, nessuna fascia da 500 ms e nessuna pausa valida: il main mostra "nessun segnale".

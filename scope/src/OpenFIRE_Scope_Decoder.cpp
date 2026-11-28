@@ -117,6 +117,11 @@ static int16_t WXS[H], WXE[H];   // written span of row y / tratto scritto della
 static uint8_t MCU_OK[SCOPE_DEC_SLICES][15];
 static uint8_t MCU_FULL[SCOPE_DEC_SLICES][15];
 static uint16_t OUT_X[SCOPE_DEC_SLICES], OUT_W[SCOPE_DEC_SLICES];
+// EN: YCbCr frame: number of coded MCU, MCU for the MCU not coded (black), window of every output band of 8 rows.
+// IT: Frame YCbCr: numero di MCU codificati, MCU per gli MCU non codificati (nero), finestra di ogni fascia di uscita da 8 righe.
+static uint16_t MCU_N = 0;
+static uint8_t  BLACK_MCU[SCOPE_DEC_MCU_BYTES];
+static uint16_t BAND_X[SCOPE_ROT_BANDS], BAND_W[SCOPE_ROT_BANDS];
 
 static void huffBuild(ScopeHuff *h, const uint8_t *bits, const uint8_t *vals) {
   int code = 0, k = 0;
@@ -197,6 +202,15 @@ void scopeDecInit() {
     int x0 = W, x1 = -1;
     for (int y = my * 16; y < my * 16 + 16; y++) { if (VXS[y] < x0) x0 = VXS[y]; if (VXE[y] > x1) x1 = VXE[y]; }
     OUT_X[my] = (uint16_t)x0; OUT_W[my] = (uint16_t)(x1 - x0 + 1);
+  }
+  MCU_N = 0;
+  for (int my = 0; my < SCOPE_DEC_SLICES; my++) for (int mx = 0; mx < 15; mx++) if (MCU_OK[my][mx]) MCU_N++;
+  memset(BLACK_MCU, 0, 256);
+  memset(BLACK_MCU + 256, 128, 128);
+  for (int b = 0; b < SCOPE_ROT_BANDS; b++) {
+    int x0 = W, x1 = -1;
+    for (int y = b * SCOPE_ROT_BAND_H; y < (b + 1) * SCOPE_ROT_BAND_H; y++) { if (VXS[y] < x0) x0 = VXS[y]; if (VXE[y] > x1) x1 = VXE[y]; }
+    BAND_X[b] = (uint16_t)x0; BAND_W[b] = (uint16_t)(x1 - x0 + 1);
   }
 }
 
@@ -571,6 +585,213 @@ IRAM_ATTR void scopeRotSlice(const uint16_t *const *rows, uint8_t sy, int32_t c,
       ui = ui < 0 ? 0 : (ui > W - 1 ? W - 1 : ui);
       vi = vi < 0 ? 0 : (vi > H - 1 ? H - 1 : vi);
       o[x] = rows[vi][ui];
+      u += c;
+      v -= s;
+    }
+  }
+}
+
+// ===================================================================================
+// FRAME IN YCbCr / FRAME IN YCbCr
+// ===================================================================================
+uint16_t scopeDecMcuCount() { return MCU_N; }
+
+// EN: Same bitstream and same blocks as scopeDecSlice: every coded MCU goes into its place of the frame as it is decoded.
+// IT: Stesso bitstream e stessi blocchi di scopeDecSlice: ogni MCU codificato va nel suo posto del frame appena decodificato.
+IRAM_ATTR bool scopeDecSliceYcc(const uint8_t *data, uint16_t len, uint8_t sy, uint8_t q, uint8_t *const *mcu, ScopeDecIdleFn idle) {
+  if (sy >= SCOPE_DEC_SLICES || q < 1 || q > 100) return false;
+  setQuant(q);
+  static int32_t coef[64];   // always zero between blocks / sempre a zero tra un blocco e l'altro
+  ScopeBits b = { data, data + len + SCOPE_DEC_MARGIN, 0, 0, 0 };
+  int32_t py = 0, pb = 0, pr = 0;   // DC predictors reset at every slice / predittori DC azzerati a ogni fascia
+  uint8_t *const *row = mcu + sy * 16;
+
+  for (uint8_t mx = 0; mx < 15; mx++) {
+    if (!MCU_OK[sy][mx]) continue;   // MCU outside the circle: not in the bitstream / MCU fuori dal cerchio: non c'e' nel bitstream
+    uint8_t *m = row[mx];
+    decodeBlock(&b, &HDL, FACL, &HAL, QSL, &py, coef, m,       16);
+    decodeBlock(&b, &HDL, FACL, &HAL, QSL, &py, coef, m + 8,   16);
+    decodeBlock(&b, &HDL, FACL, &HAL, QSL, &py, coef, m + 128, 16);
+    decodeBlock(&b, &HDL, FACL, &HAL, QSL, &py, coef, m + 136, 16);
+    decodeBlock(&b, &HDC, FACC, &HAC, QSC, &pb, coef, m + 256, 8);
+    decodeBlock(&b, &HDC, FACC, &HAC, QSC, &pr, coef, m + 320, 8);
+    if (b.bad) return false;   // corrupted: the rest is not needed / corrotta: il resto non serve
+    if (idle) idle();
+  }
+  // EN: Logical limit: the bits consumed must not exceed those of the received data.
+  // IT: Limite logico: i bit consumati non devono superare quelli dei dati ricevuti.
+  const int32_t consumed = (int32_t)(b.p - data) * 8 - b.cnt;
+  return !b.bad && consumed <= (int32_t)len * 8;
+}
+
+void scopeDecBlackSliceYcc(uint8_t sy, uint8_t *const *mcu) {
+  for (uint8_t mx = 0; mx < 15; mx++) if (MCU_OK[sy][mx]) memcpy(mcu[sy * 16 + mx], BLACK_MCU, SCOPE_DEC_MCU_BYTES);
+}
+
+void scopeDecMcuTable(uint8_t *const *piece, const uint8_t *count, uint8_t nPiece, uint8_t **mcu) {
+  uint8_t pi = 0, k = 0;
+  for (int my = 0; my < SCOPE_DEC_SLICES; my++) {
+    for (int mx = 0; mx < 15; mx++) {
+      if (!MCU_OK[my][mx]) { mcu[my * 16 + mx] = BLACK_MCU; continue; }
+      while (pi < nPiece && k >= count[pi]) { pi++; k = 0; }
+      mcu[my * 16 + mx] = (pi < nPiece) ? piece[pi] + k++ * SCOPE_DEC_MCU_BYTES : BLACK_MCU;
+    }
+    mcu[my * 16 + 15] = BLACK_MCU;   // never read / mai letto
+  }
+}
+
+uint16_t scopeRotBandX(uint8_t band) { return BAND_X[band]; }
+uint16_t scopeRotBandW(uint8_t band) { return BAND_W[band]; }
+
+// EN: Pixel (u, v) of the frame in RGB565, display order: same tables and same sums as colorMcu. The three tables
+//     of the colour depend only on the chroma sample (2x2 pixels): they are computed again only when it changes.
+// IT: Pixel (u, v) del frame in RGB565, ordine del display: stesse tabelle e stesse somme di colorMcu. Le tre tabelle
+//     del colore dipendono solo dal campione di croma (2x2 pixel): si ricalcolano solo quando cambia.
+typedef struct {
+  uint32_t key;   // chroma sample (v / 2, u / 2) of the tables below / campione di croma (v / 2, u / 2) delle tabelle qui sotto
+  const uint16_t *r, *g, *b;
+} ScopeYccCache;
+
+SCOPE_INLINE uint16_t yccPixel(const uint8_t *const *mcu, uint32_t u, uint32_t v, ScopeYccCache *k) {
+  const uint8_t *m = mcu[((v >> 4) << 4) | (u >> 4)];
+  const int yy = m[((v & 15) << 4) | (u & 15)];
+  const uint32_t key = ((v >> 1) << 8) | (u >> 1);
+  if (key != k->key) {
+    k->key = key;
+    const uint8_t *cp = m + 256 + ((v & 14) << 2) + ((u & 15) >> 1);
+    const int cb = cp[0], cr = cp[64];
+    k->r = R5 + CRR16[cr]; k->g = G6 + ((CBG[cb] + CRG[cr]) >> 16); k->b = B5 + CBB16[cb];
+  }
+  return (uint16_t)(k->r[yy] | k->g[yy] | k->b[yy]);
+}
+
+// EN: n consecutive pixels of row v of the frame from column u: the colour of a chroma pair is computed once.
+// IT: n pixel consecutivi della riga v del frame dalla colonna u: il colore di una coppia di croma si calcola una volta.
+SCOPE_INLINE void yccSpan(const uint8_t *const *mcu, int u, int v, int n, uint16_t *dst) {
+  const uint8_t *const *mrow = mcu + ((v >> 4) << 4);
+  const int ry = (v & 15) << 4, rc = 256 + (((v & 15) >> 1) << 3);
+  const int ue = u + n;
+  while (u < ue) {
+    const uint8_t *m = mrow[u >> 4];
+    const uint8_t *yp = m + ry, *cp = m + rc;
+    int lx = u & 15;
+    int end = 16 - lx;                       // pixels left in this MCU / pixel rimasti in questo MCU
+    if (end > ue - u) end = ue - u;
+    const int le = lx + end;
+    while (lx < le) {
+      const int c2 = lx >> 1, cb = cp[c2], cr = cp[c2 + 64];
+      const uint16_t *a = R5 + CRR16[cr], *g = G6 + ((CBG[cb] + CRG[cr]) >> 16), *bb = B5 + CBB16[cb];
+      int yv = yp[lx];
+      *dst++ = (uint16_t)(a[yv] | g[yv] | bb[yv]);
+      lx++;
+      if ((lx & 1) && lx < le) { yv = yp[lx]; *dst++ = (uint16_t)(a[yv] | g[yv] | bb[yv]); lx++; }
+    }
+    u += end;
+  }
+}
+
+// EN: Two rows y (even) and y + 1, n pixels from column x (x even, n even): they share the chroma samples, so the
+//     colour tables are computed once every 4 pixels, as in colorMcu.
+// IT: Due righe y (pari) e y + 1, n pixel dalla colonna x (x pari, n pari): condividono i campioni di croma, quindi le
+//     tabelle del colore si calcolano una volta ogni 4 pixel, come in colorMcu.
+SCOPE_INLINE void yccQuad(const uint8_t *const *mcu, int x, int y, int n, uint16_t *da, uint16_t *db) {
+  const uint8_t *const *mrow = mcu + ((y >> 4) << 4);
+  const int ry = (y & 15) << 4, rc = 256 + (((y & 15) >> 1) << 3);
+  const int xe = x + n;
+  while (x < xe) {
+    const uint8_t *m = mrow[x >> 4];
+    const uint8_t *yp = m + ry + (x & 15), *cp = m + rc + ((x & 15) >> 1);
+    int cnt = 16 - (x & 15);
+    if (cnt > xe - x) cnt = xe - x;
+    x += cnt;
+    for (; cnt > 0; cnt -= 2, yp += 2, cp++, da += 2, db += 2) {
+      const int cb = cp[0], cr = cp[64];
+      const uint16_t *a = R5 + CRR16[cr], *g = G6 + ((CBG[cb] + CRG[cr]) >> 16), *bb = B5 + CBB16[cb];
+      int p = yp[0];  da[0] = (uint16_t)(a[p] | g[p] | bb[p]);
+      p = yp[1];      da[1] = (uint16_t)(a[p] | g[p] | bb[p]);
+      p = yp[16];     db[0] = (uint16_t)(a[p] | g[p] | bb[p]);
+      p = yp[17];     db[1] = (uint16_t)(a[p] | g[p] | bb[p]);
+    }
+  }
+}
+
+// EN: Same geometry and same paths as scopeRotSlice, on bands of 8 rows; only the reading of the pixel changes.
+// IT: Stessa geometria e stessi percorsi di scopeRotSlice, su fasce da 8 righe; cambia solo la lettura del pixel.
+IRAM_ATTR void scopeRotBandYcc(const uint8_t *const *mcu, uint8_t band, int32_t c, int32_t s, uint16_t *out) {
+  const int ox = BAND_X[band], ow = BAND_W[band];
+  const bool same = (s == 0 && c == 65536);   // 0 degrees / 0 gradi
+  const int32_t d = 65536 - c, as = s < 0 ? -s : s;
+  const bool runs = !same && c > 32768 && as >= 2 && as <= SCOPE_ROT_RUN_SIN && d != 1;
+  const uint32_t md = (runs && d >= 2) ? (uint32_t)((((uint64_t)1 << 32) / (uint32_t)d) + 1) : 0;   // 0: d = 0, u never changes row / u non cambia mai
+  const uint32_t ms = runs ? (uint32_t)((((uint64_t)1 << 32) / (uint32_t)as) + 1) : 0;
+  if (same) {
+    // EN: 0 degrees: the rows two by two; the common part of the two spans 4 pixels at a time, the ends one row at a time.
+    // IT: 0 gradi: le righe a due a due; la parte comune dei due tratti 4 pixel alla volta, le estremita' una riga alla volta.
+    for (int r = 0; r < SCOPE_ROT_BAND_H; r += 2) {
+      const int y = band * SCOPE_ROT_BAND_H + r;
+      uint16_t *oa = out + r * ow - ox, *ob = oa + ow;
+      const int xsa = VXS[y], xea = VXE[y], xsb = VXS[y + 1], xeb = VXE[y + 1];
+      for (int x = ox; x < xsa; x++) oa[x] = 0;               // black outside the circle / nero fuori dal cerchio
+      for (int x = xea + 1; x < ox + ow; x++) oa[x] = 0;
+      for (int x = ox; x < xsb; x++) ob[x] = 0;
+      for (int x = xeb + 1; x < ox + ow; x++) ob[x] = 0;
+      const int cs = ((xsa > xsb ? xsa : xsb) + 1) & ~1;        // even / pari
+      const int ce = ((((xea < xeb ? xea : xeb) + 1) & ~1)) - 1; // odd / dispari
+      if (cs > ce) {
+        yccSpan(mcu, xsa, y, xea - xsa + 1, oa + xsa);
+        yccSpan(mcu, xsb, y + 1, xeb - xsb + 1, ob + xsb);
+        continue;
+      }
+      if (xsa < cs) yccSpan(mcu, xsa, y, cs - xsa, oa + xsa);
+      if (xsb < cs) yccSpan(mcu, xsb, y + 1, cs - xsb, ob + xsb);
+      yccQuad(mcu, cs, y, ce - cs + 1, oa + cs, ob + cs);
+      if (xea > ce) yccSpan(mcu, ce + 1, y, xea - ce, oa + ce + 1);
+      if (xeb > ce) yccSpan(mcu, ce + 1, y + 1, xeb - ce, ob + ce + 1);
+    }
+    return;
+  }
+  for (int r = 0; r < SCOPE_ROT_BAND_H; r++) {
+    const int y = band * SCOPE_ROT_BAND_H + r, xs = VXS[y], xe = VXE[y];
+    uint16_t *o = out + r * ow - ox;   // o[x] = pixel x of the display / o[x] = pixel x del display
+    for (int x = ox; x < xs; x++) o[x] = 0;               // black outside the circle / nero fuori dal cerchio
+    for (int x = xe + 1; x < ox + ow; x++) o[x] = 0;
+    const int32_t dx = ((xs << 1) - 239) * 32768, dy = ((y << 1) - 239) * 32768;   // 16.16
+    int32_t u = (120 << 16) + (int32_t)(((int64_t)c * dx + (int64_t)s * dy) >> 16);   // 119.5 + 0.5 for the rounding / 119,5 + 0,5 per l'arrotondamento
+    int32_t v = (120 << 16) + (int32_t)(((int64_t)c * dy - (int64_t)s * dx) >> 16);
+    const int32_t n = xe - xs, u1 = u + n * c, v1 = v - n * s;   // source at the end of the row / sorgente a fine riga
+    const int32_t umin = u < u1 ? u : u1, umax = u < u1 ? u1 : u;
+    const int32_t vmin = v < v1 ? v : v1, vmax = v < v1 ? v1 : v;
+    if (umin >= 0 && vmin >= 0 && umax < (W << 16) && vmax < (H << 16)) {
+      if (runs) {
+        int x = xs;
+        while (x <= xe) {
+          const uint32_t fu = (uint32_t)(u & 0xFFFF);
+          const uint32_t fv = (uint32_t)(s > 0 ? (v & 0xFFFF) : (0xFFFF - (v & 0xFFFF)));
+          int32_t k = xe - x + 1;
+          if (md) { const int32_t ku = (int32_t)(((uint64_t)fu * md) >> 32) + 1; if (ku < k) k = ku; }
+          const int32_t kv = (int32_t)(((uint64_t)fv * ms) >> 32) + 1;
+          if (kv < k) k = kv;
+          yccSpan(mcu, u >> 16, v >> 16, k, o + x);
+          x += k;
+          u += k * c;
+          v -= k * s;
+        }
+      } else {
+        ScopeYccCache k = { 0xFFFFFFFFu, R5, G6, B5 };
+        for (int x = xs; x <= xe; x++) {
+          o[x] = yccPixel(mcu, (uint32_t)u >> 16, (uint32_t)v >> 16, &k);
+          u += c;
+          v -= s;
+        }
+      }
+      continue;
+    }
+    ScopeYccCache k = { 0xFFFFFFFFu, R5, G6, B5 };
+    for (int x = xs; x <= xe; x++) {
+      int ui = u >> 16, vi = v >> 16;
+      ui = ui < 0 ? 0 : (ui > W - 1 ? W - 1 : ui);
+      vi = vi < 0 ? 0 : (vi > H - 1 ? H - 1 : vi);
+      o[x] = yccPixel(mcu, (uint32_t)ui, (uint32_t)vi, &k);
       u += c;
       v -= s;
     }

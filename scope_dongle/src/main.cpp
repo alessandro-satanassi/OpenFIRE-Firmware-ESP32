@@ -73,19 +73,51 @@ Frequenza della CPU: decommentare per forzarla (80, 160 o 240 MHz). Commentato =
 
 // EN: Channel and state of the dongle on the display, to the right of the small logo: "FREE" or the paired player.
 // IT: Canale e stato del dongle sul display, a destra del logo piccolo: "FREE" oppure il giocatore abbinato.
+#if defined(SCOPE_DONGLE_USB_DEBUG) && defined(USES_DISPLAY) && defined(USE_LOVYAN_GFX)
+  // EN: The display is also drawn by the task of the USB diagnostics: one at a time.
+  // IT: Il display lo disegna anche il task della diagnostica USB: uno alla volta.
+  static SemaphoreHandle_t g_tftMutex = NULL;
+#endif // SCOPE_DONGLE_USB_DEBUG
+
 void showScopeDongleState() {
   #ifdef USES_DISPLAY
     #ifdef USE_LOVYAN_GFX
       if (!display_init) return;
+      #ifdef SCOPE_DONGLE_USB_DEBUG
+      xSemaphoreTake(g_tftMutex, portMAX_DELAY);
+      #endif // SCOPE_DONGLE_USB_DEBUG
       tft.fillRect(64, 20, 96, 60, BLACK);
       tft.setCursor(70, 28);
       tft.printf("CH %u", WirelessScope.channel);
       tft.setCursor(70, 52);
       if (WirelessScope.link_state >= SCOPE_LINK_STATE::SCOPE_LINK_PAIRED) tft.printf("P%u", WirelessScope.player);
       else tft.print("FREE");
+      #ifdef SCOPE_DONGLE_USB_DEBUG
+      xSemaphoreGive(g_tftMutex);
+      #endif // SCOPE_DONGLE_USB_DEBUG
     #endif // USE_LOVYAN_GFX
   #endif // USES_DISPLAY
 }
+
+#if defined(SCOPE_DONGLE_USB_DEBUG) && defined(USES_DISPLAY) && defined(USE_LOVYAN_GFX)
+// EN: USB diagnostics on the bottom line every 500 ms, also while setup() waits for the scope.
+// IT: Diagnostica USB sull'ultima riga ogni 500 ms, anche mentre setup() aspetta il mirino.
+static void usbDebugTask(void *param) {
+  vTaskDelay(pdMS_TO_TICKS(SCOPE_DONGLE_LOGO_TIME_MS + 1000));   // after the logo / dopo il logo
+  for (;;) {
+    char text[40];
+    scopeUsbDebugText(text, sizeof(text));
+    xSemaphoreTake(g_tftMutex, portMAX_DELAY);
+    tft.fillRect(0, 72, 160, 8, BLACK);
+    tft.setTextSize(1);
+    tft.setCursor(0, 72);
+    tft.print(text);
+    tft.setTextSize(2);
+    xSemaphoreGive(g_tftMutex);
+    vTaskDelay(pdMS_TO_TICKS(500));
+  }
+}
+#endif // SCOPE_DONGLE_USB_DEBUG
 
 // EN: The messages to the PC daemon over the USB (channel chosen, paired with the player, free again) are sent
 //     by the USB task by itself at every change: see OpenFIRE_Scope_Dongle_USB.
@@ -127,6 +159,10 @@ void setup() {
         tft.pushImage(9, 24, LOGO_RGB_ALPHA_WIDTH, LOGO_RGB_ALPHA_HEIGHT, (uint16_t *)logo_rgb_alpha);
         tft.setTextSize(2);
         tft.setTextColor(WHITE);
+        #ifdef SCOPE_DONGLE_USB_DEBUG
+        g_tftMutex = xSemaphoreCreateMutex();
+        xTaskCreate(usbDebugTask, "usbDebug", 3072, NULL, 1, NULL);
+        #endif // SCOPE_DONGLE_USB_DEBUG
       }
     #endif // USE_LOVYAN_GFX
   #endif // USES_DISPLAY

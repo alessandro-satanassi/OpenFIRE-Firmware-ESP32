@@ -20,6 +20,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "freertos/semphr.h"
+#include "driver/usb_serial_jtag.h"
+#include "hal/usb_serial_jtag_ll.h"
+#include "esp_rom_sys.h"
 #include "OpenFIRE_Wireless_Scope.h"
 #include "OpenFIRE-SCOPE-DONGLE-version.h"
 
@@ -30,20 +33,33 @@
 #define USB_TYPE_TEST         0x54                          // 'T'
 #define USB_MAX_CONTENT       OPENFIRE_SCOPE_VIDEO_MAX_PACKET   // 1408
 #define USB_RX_BUFFER         8192   // ~8 ms of USB at 1 MB/s / circa 8 ms di USB a 1 MB/s
+#define USB_TX_BUFFER         256    // control messages only / solo messaggi di controllo
+#define USB_READ_CHUNK        1024
+#define USB_READ_WAIT_MS      10     // the task wakes at least this often for the state and the statistics / il task si sveglia almeno cosi' spesso per lo stato e le statistiche
 #define USB_STAT_EVERY_MS     500
 #define USB_TEXT_MAX          96
 #define USB_RESYNC_MS         100    // frame left half way for so long: back to the sync / trama rimasta a meta' per tanto: si torna al sincronismo
+#define USB_STUCK_FLUSH_MS    50     // IN buffer busy so long while the PC asks for data: the flush again / buffer IN occupato da tanto mentre il PC chiede dati: di nuovo il flush
+#define USB_STUCK_RESET_MS    100    // still busy so long after that flush: the IN FIFO is reset / ancora occupato da tanto dopo quel flush: si azzera la FIFO IN
+#define USB_STUCK_RETRY_MS    1000   // still busy after the reset: everything again after so long / ancora occupato dopo l'azzeramento: tutto di nuovo dopo tanto
 
 static SemaphoreHandle_t g_usbTxMutex = NULL;
 static volatile uint32_t g_usbRxBytes = 0;   // OF_STAT RX: every byte received, bandwidth test included / ogni byte ricevuto, prova di banda compresa
+static portMUX_TYPE g_usbKickMux = portMUX_INITIALIZER_UNLOCKED;
+#ifdef SCOPE_DONGLE_USB_DEBUG
+static volatile uint16_t d_whoami = 0, d_answerLost = 0;
+static volatile uint8_t d_flush = 0, d_reset = 0, d_busReset = 0;
+#endif // SCOPE_DONGLE_USB_DEBUG
 
 // ===================================================================================
 // TRANSMISSION TO THE PC / TRASMISSIONE AL PC
 // ===================================================================================
-// EN: Returns false only when the frame did not go out whole (PC connected without room for it). Only control
-//     messages go to the PC: header and content in one buffer, one write, sent only if every byte was taken.
-// IT: Restituisce false solo se la trama non e' uscita intera (PC collegato senza posto). Al PC vanno solo messaggi
-//     di controllo: intestazione e contenuto in un buffer, una scrittura, inviata solo se ogni byte e' stato preso.
+// EN: Returns false when the frame did not go out whole (no room: the PC is not reading). Only control messages go
+//     to the PC: header and content in one buffer, one write into the ring buffer of the ESP-IDF driver, which takes
+//     the frame whole or not at all (never cut, never waited for).
+// IT: Restituisce false se la trama non e' uscita intera (niente posto: il PC non sta leggendo). Al PC vanno solo
+//     messaggi di controllo: intestazione e contenuto in un buffer, una scrittura nel buffer circolare del driver
+//     ESP-IDF, che prende la trama intera o niente (mai tagliata, mai aspettata).
 static bool usbSendContent(const uint8_t *content, uint16_t len) {
   uint8_t frame[4 + 1 + USB_TEXT_MAX];
   if (len > sizeof(frame) - 4) return false;
@@ -54,18 +70,21 @@ static bool usbSendContent(const uint8_t *content, uint16_t len) {
   memcpy(&frame[4], content, len);
   const size_t total = 4 + len;
 
-  bool sent;
   xSemaphoreTake(g_usbTxMutex, portMAX_DELAY);   // whole frames, never mixed / trame intere, mai mescolate
-  // EN: PC connected but without room for the whole frame (it is not reading): the frame is skipped, never cut and
-  //     never waited for. PC not connected: written as before, the core keeps the newest bytes.
-  // IT: PC collegato ma senza posto per tutta la trama (non sta leggendo): la trama si salta, mai tagliata e mai
-  //     aspettata. PC non collegato: scritta come prima, il core tiene i byte piu' nuovi.
-  if (!Serial) {
-    Serial.write(frame, total);
-    sent = true;
-  } else {
-    sent = Serial.availableForWrite() >= (int)total && Serial.write(frame, total) == total;
-  }
+  const bool sent = usb_serial_jtag_write_bytes(frame, total, 0) == (int)total;
+  // EN: Kick: the driver sends only when the host has taken the previous packet (IN_EMPTY). After a reset without
+  //     a USB bus reset (e.g. after the upload) that signal may never come, with the IN buffer empty: nothing would
+  //     ever go out and the PC would get no answer to WHOAMI. A free IN buffer here, with the interrupt just
+  //     enabled, means exactly that case: an empty packet makes the host pick it up and the signal comes back.
+  //     Otherwise the buffer is busy and nothing is done. With interrupts off, the ISR cannot fall in between.
+  // IT: Spinta: il driver invia solo quando l'host ha preso il pacchetto precedente (IN_EMPTY). Dopo un reset senza
+  //     reset del bus USB (per esempio dopo il caricamento) quel segnale puo' non arrivare mai, con il buffer IN
+  //     vuoto: non uscirebbe piu' niente e il PC non avrebbe risposta a WHOAMI. Un buffer IN libero qui, con
+  //     l'interrupt appena abilitato, e' proprio quel caso: un pacchetto vuoto lo fa prendere all'host e il segnale
+  //     torna. Altrimenti il buffer e' occupato e non si fa niente. Con gli interrupt spenti l'ISR non puo' cadere in mezzo.
+  portENTER_CRITICAL(&g_usbKickMux);
+  if (usb_serial_jtag_ll_txfifo_writable()) usb_serial_jtag_ll_txfifo_flush();
+  portEXIT_CRITICAL(&g_usbKickMux);
   xSemaphoreGive(g_usbTxMutex);
   return sent;
 }
@@ -132,7 +151,12 @@ static void usbHandleControl(const char *data, uint16_t len) {
   if (usbTextIs(text, len, "WHOAMI")) {
     char answer[64];
     usbStateText(answer, sizeof(answer));
+    #ifdef SCOPE_DONGLE_USB_DEBUG
+    d_whoami = d_whoami + 1;
+    if (!usbSendControl(answer)) d_answerLost = d_answerLost + 1;
+    #else
     usbSendControl(answer);
+    #endif // SCOPE_DONGLE_USB_DEBUG
   } else if (usbTextIs(text, len, "START")) {   // video of the slot starts: new session / parte il video dello slot: sessione nuova
     WirelessScope.videoStart();
   } else if (usbTextIs(text, len, "PAUSE")) {   // game paused, every 200 ms / gioco in pausa, ogni 200 ms
@@ -157,11 +181,101 @@ static inline bool usbTypeValid(uint8_t type) {
 }
 
 // ===================================================================================
+// STUCK USB OUTPUT / USCITA USB BLOCCATA
+// ===================================================================================
+// EN: IN buffer (64 bytes towards the PC) busy while the PC keeps asking for data: a ready packet would leave within
+//     1 ms, so this one is stuck in the peripheral and the answers to WHOAMI stay in the dongle. Serial of Arduino
+//     sent the flush (WR_DONE) again at every write while the PC was not reading; the ESP-IDF driver sends it only
+//     once per packet, so a lost "packet ready" is never sent again. Here the flush again first (nothing is lost);
+//     if that is not enough, the IN FIFO is reset (at most the old packet is lost) and an empty packet restarts the
+//     sending. With the port closed the PC asks for nothing and nothing is done; in normal use the buffer is never
+//     busy for so long.
+// IT: Buffer IN (64 byte verso il PC) occupato mentre il PC continua a chiedere dati: un pacchetto pronto uscirebbe
+//     entro 1 ms, quindi questo e' bloccato nella periferica e le risposte a WHOAMI restano nel dongle. Il Serial di
+//     Arduino rimandava il flush (WR_DONE) a ogni scrittura mentre il PC non leggeva; il driver ESP-IDF lo manda una
+//     volta sola per pacchetto, quindi un "pacchetto pronto" perso non viene piu' rimandato. Qui prima di nuovo il
+//     flush (non si perde niente); se non basta, si azzera la FIFO IN (si perde al massimo il vecchio pacchetto) e un
+//     pacchetto vuoto fa ripartire l'invio. Con la porta chiusa il PC non chiede niente e non si fa niente; nell'uso
+//     normale il buffer non resta mai occupato cosi' a lungo.
+static void usbUnstick() {
+  static bool busy = false;
+  static bool asked = false;
+  static uint8_t step = 0;
+  static uint32_t stepMs = 0;
+
+  // EN: IN token: the PC asks for data, only with the port open. Bit not used by the ESP-IDF driver.
+  // IT: token IN: il PC chiede dati, solo con la porta aperta. Bit non usato dal driver ESP-IDF.
+  const uint32_t raw = usb_serial_jtag_ll_get_intraw_mask();
+  const bool token = (raw & USB_SERIAL_JTAG_INTR_TOKEN_REC_IN_EP1) != 0;
+  if (token) usb_serial_jtag_ll_clr_intsts_mask(USB_SERIAL_JTAG_INTR_TOKEN_REC_IN_EP1);
+  #ifdef SCOPE_DONGLE_USB_DEBUG
+  if (raw & USB_SERIAL_JTAG_INTR_BUS_RESET) {
+    usb_serial_jtag_ll_clr_intsts_mask(USB_SERIAL_JTAG_INTR_BUS_RESET);
+    if (d_busReset < 9) d_busReset = d_busReset + 1;
+  }
+  #endif // SCOPE_DONGLE_USB_DEBUG
+
+  if (usb_serial_jtag_ll_txfifo_writable()) {
+    busy = false;
+    return;
+  }
+  const uint32_t now = millis();
+  if (!busy) {   // just busy: the tokens from before do not count / appena occupato: i token di prima non contano
+    busy = true;
+    asked = false;
+    step = 0;
+    stepMs = now;
+    return;
+  }
+  if (token) asked = true;
+  if (!asked) return;   // port closed: the PC asks for nothing / porta chiusa: il PC non chiede niente
+
+  if (step == 0 && now - stepMs >= USB_STUCK_FLUSH_MS) {
+    portENTER_CRITICAL(&g_usbKickMux);
+    usb_serial_jtag_ll_txfifo_flush();
+    portEXIT_CRITICAL(&g_usbKickMux);
+    step = 1;
+    stepMs = now;
+    #ifdef SCOPE_DONGLE_USB_DEBUG
+    if (d_flush < 9) d_flush = d_flush + 1;
+    #endif // SCOPE_DONGLE_USB_DEBUG
+  } else if (step == 1 && now - stepMs >= USB_STUCK_RESET_MS) {
+    // EN: both clock domains of the IN FIFO (CPU and USB), then the empty packet: when the PC takes it, the driver
+    //     sends the rest. With interrupts off, the ISR cannot fall in between.
+    // IT: tutti e due i domini di clock della FIFO IN (CPU e USB), poi il pacchetto vuoto: quando il PC lo prende, il
+    //     driver manda il resto. Con gli interrupt spenti l'ISR non puo' cadere in mezzo.
+    portENTER_CRITICAL(&g_usbKickMux);
+    USB_SERIAL_JTAG.ser_afifo_config.serial_in_afifo_reset_wr = 1;
+    USB_SERIAL_JTAG.ser_afifo_config.serial_in_afifo_reset_rd = 1;
+    esp_rom_delay_us(1);
+    USB_SERIAL_JTAG.ser_afifo_config.serial_in_afifo_reset_wr = 0;
+    USB_SERIAL_JTAG.ser_afifo_config.serial_in_afifo_reset_rd = 0;
+    usb_serial_jtag_ll_txfifo_flush();
+    portEXIT_CRITICAL(&g_usbKickMux);
+    step = 2;
+    stepMs = now;
+    #ifdef SCOPE_DONGLE_USB_DEBUG
+    if (d_reset < 9) d_reset = d_reset + 1;
+    #endif // SCOPE_DONGLE_USB_DEBUG
+  } else if (step == 2 && now - stepMs >= USB_STUCK_RETRY_MS) {
+    step = 0;   // still stuck: from the flush again, when the PC asks / ancora bloccato: di nuovo dal flush, quando il PC chiede
+    stepMs = now;
+    asked = false;
+  }
+}
+
+// ===================================================================================
 // USB TASK / TASK DELLA USB
 // ===================================================================================
+// EN: The bytes come from the ring buffer of the ESP-IDF USB Serial/JTAG driver: its interrupt copies every USB packet
+//     (64 bytes) in one go, the task takes up to 1 KB per read (Serial of Arduino moved them one byte at a time
+//     through a queue, about 155 KB/s at most).
+// IT: I byte arrivano dal buffer circolare del driver USB Serial/JTAG di ESP-IDF: il suo interrupt copia ogni pacchetto
+//     USB (64 byte) in un colpo, il task prende fino a 1 KB per lettura (il Serial di Arduino li spostava un byte alla
+//     volta in una coda, circa 155 KB/s al massimo).
 static void scopeUsbTask(void *param) {
   static uint8_t content[USB_MAX_CONTENT];
-  uint8_t chunk[512];
+  static uint8_t chunk[USB_READ_CHUNK];
   enum { WAIT_SYNC_0, WAIT_SYNC_1, WAIT_LEN_0, WAIT_LEN_1, WAIT_DATA } st = WAIT_SYNC_0;
   uint16_t len = 0;
   uint16_t pos = 0;
@@ -174,15 +288,15 @@ static void scopeUsbTask(void *param) {
   for (;;) {
     // 1. EN: Reception: every packet is passed on as soon as it is complete, without waiting for the end of the frame.
     //    IT: Ricezione: ogni pacchetto si passa avanti appena e' completo, senza aspettare la fine del frame.
-    int n = Serial.available();
+    //    EN: It waits for the data at most USB_READ_WAIT_MS, without polling.
+    //    IT: Aspetta i dati al massimo USB_READ_WAIT_MS, senza interrogare a vuoto.
+    int n = usb_serial_jtag_read_bytes(chunk, sizeof(chunk), pdMS_TO_TICKS(USB_READ_WAIT_MS));
     // EN: A frame cut by the PC (e.g. its program closed while writing) must not swallow the next ones.
     // IT: Una trama troncata dal PC (per esempio il suo programma chiuso mentre scriveva) non deve mangiare le successive.
     if (n <= 0 && st != WAIT_SYNC_0 && millis() - lastRxMs >= USB_RESYNC_MS) st = WAIT_SYNC_0;
     if (n > 0) {
       lastRxMs = millis();
-      if (n > (int)sizeof(chunk)) n = sizeof(chunk);
-      n = Serial.read(chunk, n);
-      if (n > 0) g_usbRxBytes = g_usbRxBytes + n;
+      g_usbRxBytes = g_usbRxBytes + n;
       for (int i = 0; i < n; i++) {
         const uint8_t b = chunk[i];
         switch (st) {
@@ -242,14 +356,34 @@ static void scopeUsbTask(void *param) {
       usbSendControl(stat);
     }
 
-    if (n <= 0) vTaskDelay(pdMS_TO_TICKS(1));
+    // 4. EN: Output towards the PC stuck: see usbUnstick(). / IT: uscita verso il PC bloccata: vedi usbUnstick().
+    usbUnstick();
+
+    // EN: Less than a whole chunk: one tick for the next packets to gather, so the task wakes about once per
+    //     millisecond and not at every USB packet of 64 bytes (1 ms is about 1 KB, the ring holds 8).
+    // IT: Meno di un pezzo intero: un tick perche' i pacchetti successivi si accumulino, cosi' il task si sveglia
+    //     circa una volta al millisecondo e non a ogni pacchetto USB da 64 byte (1 ms e' circa 1 KB, l'anello ne tiene 8).
+    if (n > 0 && n < (int)sizeof(chunk)) vTaskDelay(1);
   }
 }
 
+#ifdef SCOPE_DONGLE_USB_DEBUG
+void scopeUsbDebugText(char *out, size_t size) {
+  snprintf(out, size, "W%u F%u K%u Q%u B%u E%u S%04X", (unsigned)(d_whoami < 99 ? d_whoami : 99),
+           (unsigned)(d_answerLost < 99 ? d_answerLost : 99), (unsigned)d_flush, (unsigned)d_reset, (unsigned)d_busReset,
+           (unsigned)usb_serial_jtag_ll_txfifo_writable(), (unsigned)(USB_SERIAL_JTAG.in_ep1_st.val & 0xFFFF));
+}
+#endif // SCOPE_DONGLE_USB_DEBUG
+
+// EN: Driver of ESP-IDF in place of Serial (Serial must not be started: both would use the same peripheral).
+// IT: Driver di ESP-IDF al posto di Serial (Serial non va avviato: userebbero tutti e due la stessa periferica).
 void scopeUsbBegin() {
-  Serial.setRxBufferSize(USB_RX_BUFFER);   // before begin() / prima di begin()
-  Serial.setTxTimeoutMs(0);                // never waits for a PC that does not read / non aspetta mai un PC che non legge
-  Serial.begin();
+  if (!usb_serial_jtag_is_driver_installed()) {
+    usb_serial_jtag_driver_config_t cfg = USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT();
+    cfg.rx_buffer_size = USB_RX_BUFFER;
+    cfg.tx_buffer_size = USB_TX_BUFFER;
+    if (usb_serial_jtag_driver_install(&cfg) != ESP_OK) return;   // no USB: the radio works alone / niente USB: la radio lavora da sola
+  }
   g_usbTxMutex = xSemaphoreCreateMutex();
   xTaskCreate(scopeUsbTask, "scopeUsb", 4096, NULL, 5, NULL);   // below the video task (6) / sotto il task del video (6)
 }

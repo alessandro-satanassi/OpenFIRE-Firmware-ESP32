@@ -369,7 +369,9 @@ bool WirelessScope_::connection_scope_dongle() {
           udp_pair.write((const uint8_t *)&msg, sizeof(msg));
           udp_pair.endPacket();
         }
-        setApHidden(true);
+        // EN: TEST: hiding the network here restarts the access point and drops the scope just paired.
+        // IT: PROVA: nascondere la rete qui riavvia l'access point e scollega il mirino appena abbinato.
+        //setApHidden(true);
         udp_pair.stop();
         // EN: The scope left while the OKs were going out: the event may have found the dongle not yet busy.
         //     Back to free: the main calls connection_scope_dongle() again, which makes the network visible.
@@ -675,22 +677,74 @@ bool WirelessScope_::connection_scope(uint8_t player_number) {
 // ===================================================================================
 // SCOPE: VIDEO RECEPTION / MIRINO: RICEZIONE DEL VIDEO
 // ===================================================================================
-// EN: A task above lwIP receives every UDP packet as soon as it arrives, straight into a free slot of the ring
-//     (BSD socket: no copy through WiFiUDP). With the ring full the packet is read anyway and lost (video_rx_full),
-//     so that lwIP never holds old packets. The decoder takes the full slots from g_rxFull and gives them back to g_rxFree.
-// IT: Un task sopra lwIP riceve ogni pacchetto UDP appena arriva, direttamente in un posto libero dell'anello
-//     (socket BSD: nessuna copia attraverso WiFiUDP). Con l'anello pieno il pacchetto si legge comunque e si perde
-//     (video_rx_full), cosi' lwIP non trattiene mai pacchetti vecchi. Il decoder prende i posti pieni da g_rxFull e li rende a g_rxFree.
-static uint8_t      *g_rxRing = NULL;                      // OPENFIRE_SCOPE_RX_RING x OPENFIRE_SCOPE_RX_SLOT
-static uint16_t      g_rxLen[OPENFIRE_SCOPE_RX_RING];
-static QueueHandle_t g_rxFree = NULL;
+// EN: A task above lwIP receives every UDP packet as soon as it arrives, straight into the ring (BSD socket: no copy
+//     through WiFiUDP). The ring is in bytes: every slice takes only its length plus the 4 bytes 0xFF, rounded to 4
+//     (a usual slice of ~300 bytes does not hold a whole place of 1412 bytes any more). With the ring full the packet
+//     is read anyway and lost (video_rx_full), so that lwIP never holds old packets. The decoder takes the slices from
+//     g_rxFull in order of arrival and gives them back with videoRelease(): the space goes back in the same order.
+// IT: Un task sopra lwIP riceve ogni pacchetto UDP appena arriva, direttamente nell'anello (socket BSD: nessuna copia
+//     attraverso WiFiUDP). L'anello e' in byte: ogni fascia occupa solo la sua lunghezza piu' i 4 byte 0xFF, arrotondata
+//     a 4 (una fascia normale da ~300 byte non tiene piu' un posto intero da 1412 byte). Con l'anello pieno il pacchetto
+//     si legge comunque e si perde (video_rx_full), cosi' lwIP non trattiene mai pacchetti vecchi. Il decoder prende le
+//     fasce da g_rxFull in ordine di arrivo e le rende con videoRelease(): lo spazio torna libero nello stesso ordine.
+static uint8_t      *g_rxRing = NULL;                       // OPENFIRE_SCOPE_RX_BYTES
+static uint16_t      g_rxOff[OPENFIRE_SCOPE_RX_PACKETS];    // start of the slice / inizio della fascia
+static uint16_t      g_rxLen[OPENFIRE_SCOPE_RX_PACKETS];    // length of the slice / lunghezza della fascia
+static uint16_t      g_rxEnd[OPENFIRE_SCOPE_RX_PACKETS];    // end of its space / fine del suo spazio
+static uint16_t      g_rxSize[OPENFIRE_SCOPE_RX_PACKETS];   // bytes taken, with the end of the ring skipped before it / byte presi, con la fine dell'anello saltata prima
+static bool          g_rxDone[OPENFIRE_SCOPE_RX_PACKETS];   // given back, waiting for the older ones / restituita, aspetta quelle piu' vecchie
+static uint8_t       g_rxHead = 0, g_rxTail = 0, g_rxCount = 0;   // slices: next, oldest, in the ring / fasce: prossima, piu' vecchia, nell'anello
+static uint16_t      g_rxWr = 0, g_rxRd = 0;                // bytes: next free, oldest taken / byte: prossimo libero, piu' vecchio preso
+static uint16_t      g_rxUsed = 0;                          // bytes taken / byte presi
+static portMUX_TYPE  g_rxMux = portMUX_INITIALIZER_UNLOCKED;
 static QueueHandle_t g_rxFull = NULL;
 static portMUX_TYPE  g_stateMux = portMUX_INITIALIZER_UNLOCKED;
+
+// EN: Room for a packet of the maximum size (OPENFIRE_SCOPE_RX_SLOT bytes in one piece): its offset, or -1 with the
+//     ring full. If the end of the ring is too short it starts again from 0 and *skip is the end left empty.
+//     Only the reception task takes room, so nothing changes it before rxCommit() (the decoder only gives back).
+// IT: Spazio per un pacchetto della misura massima (OPENFIRE_SCOPE_RX_SLOT byte in un pezzo solo): il suo offset, o -1
+//     con l'anello pieno. Se la fine dell'anello e' troppo corta riparte da 0 e *skip e' la fine lasciata vuota.
+//     Solo il task di ricezione prende spazio, quindi niente lo cambia prima di rxCommit() (il decoder lo rende soltanto).
+static int rxReserve(uint16_t *skip) {
+  int off = -1;
+  *skip = 0;
+  portENTER_CRITICAL(&g_rxMux);
+  if (g_rxCount < OPENFIRE_SCOPE_RX_PACKETS) {
+    if (g_rxUsed == 0) g_rxWr = g_rxRd = 0;   // empty: from the start, the most room in one piece / vuoto: dall'inizio, il piu' spazio in un pezzo
+    if (g_rxUsed == 0 || g_rxWr > g_rxRd) {
+      if (OPENFIRE_SCOPE_RX_BYTES - g_rxWr >= OPENFIRE_SCOPE_RX_SLOT) off = g_rxWr;
+      else if (g_rxRd >= OPENFIRE_SCOPE_RX_SLOT) { off = 0; *skip = (uint16_t)(OPENFIRE_SCOPE_RX_BYTES - g_rxWr); }
+    } else if (g_rxWr < g_rxRd) {
+      if (g_rxRd - g_rxWr >= OPENFIRE_SCOPE_RX_SLOT) off = g_rxWr;
+    }   // EN: write == read with bytes taken: full / IT: scrittura == lettura con byte presi: pieno
+  }
+  portEXIT_CRITICAL(&g_rxMux);
+  return off;
+}
+
+// EN: The slice of n bytes received at off (margin already written) enters the ring: its number for g_rxFull.
+// IT: La fascia di n byte ricevuta a off (margine gia' scritto) entra nell'anello: il suo numero per g_rxFull.
+static uint8_t rxCommit(int off, uint16_t skip, uint16_t n) {
+  const uint16_t size = (uint16_t)((n + OPENFIRE_SCOPE_RX_MARGIN + 3) & ~3);   // 4-byte steps / passi da 4 byte
+  portENTER_CRITICAL(&g_rxMux);
+  const uint8_t d = g_rxHead;
+  g_rxOff[d] = (uint16_t)off;
+  g_rxLen[d] = n;
+  g_rxEnd[d] = (uint16_t)(off + size);
+  g_rxSize[d] = (uint16_t)(skip + size);
+  g_rxDone[d] = false;
+  g_rxHead = (uint8_t)((d + 1) % OPENFIRE_SCOPE_RX_PACKETS);
+  g_rxCount++;
+  g_rxWr = (uint16_t)(off + size);
+  g_rxUsed = (uint16_t)(g_rxUsed + skip + size);
+  portEXIT_CRITICAL(&g_rxMux);
+  return d;
+}
 
 static void scopeRxTask(void *param) {
   static uint8_t scratch[OPENFIRE_SCOPE_RX_SLOT];   // packet received with the ring full / pacchetto ricevuto con l'anello pieno
   int sock = -1;
-  int cur = -1;   // free slot ready for the next packet / posto libero pronto per il prossimo pacchetto
 
   for (;;) {
     if (sock < 0) {
@@ -705,11 +759,9 @@ static void scopeRxTask(void *param) {
       if (sock < 0) { vTaskDelay(pdMS_TO_TICKS(100)); continue; }
     }
 
-    if (cur < 0) {
-      uint8_t s;
-      if (xQueueReceive(g_rxFree, &s, 0) == pdTRUE) cur = s;
-    }
-    uint8_t *buf = (cur >= 0) ? &g_rxRing[cur * OPENFIRE_SCOPE_RX_SLOT] : scratch;
+    uint16_t skip;
+    int off = rxReserve(&skip);
+    uint8_t *buf = (off >= 0) ? &g_rxRing[off] : scratch;
 
     // EN: One byte more than the maximum: a longer packet is recognised and discarded. / IT: un byte oltre il massimo: un pacchetto piu' lungo si riconosce e si scarta.
     const int n = recv(sock, buf, OPENFIRE_SCOPE_VIDEO_MAX_PACKET + 1, 0);
@@ -745,29 +797,32 @@ static void scopeRxTask(void *param) {
 
     WirelessScope.video_slice_ms = millis();
     WirelessScope.video_slice_seen = true;
-    if (cur < 0) {   // ring full / anello pieno
-      WirelessScope.video_rx_full = WirelessScope.video_rx_full + 1;
-      continue;
+    if (off < 0) {
+      // EN: The ring was full before the wait: room may have come back meanwhile.
+      // IT: L'anello era pieno prima dell'attesa: nel frattempo lo spazio puo' essere tornato.
+      off = rxReserve(&skip);
+      if (off < 0) {   // ring full / anello pieno
+        WirelessScope.video_rx_full = WirelessScope.video_rx_full + 1;
+        continue;
+      }
+      memcpy(&g_rxRing[off], scratch, n);
+      buf = &g_rxRing[off];
     }
     memset(&buf[n], 0xFF, OPENFIRE_SCOPE_RX_MARGIN);
-    g_rxLen[cur] = (uint16_t)n;
-    const uint8_t s = (uint8_t)cur;
-    xQueueSend(g_rxFull, &s, 0);   // never full: at most OPENFIRE_SCOPE_RX_RING slots exist / mai piena: esistono al massimo OPENFIRE_SCOPE_RX_RING posti
+    const uint8_t d = rxCommit(off, skip, (uint16_t)n);
+    xQueueSend(g_rxFull, &d, 0);   // never full: at most OPENFIRE_SCOPE_RX_PACKETS slices exist / mai piena: esistono al massimo OPENFIRE_SCOPE_RX_PACKETS fasce
     WirelessScope.video_rx_slices = WirelessScope.video_rx_slices + 1;
-    cur = -1;
   }
 }
 
 static void scopeRxInit() {
   if (g_rxRing != NULL) return;
-  g_rxRing = (uint8_t *)heap_caps_malloc(OPENFIRE_SCOPE_RX_RING * OPENFIRE_SCOPE_RX_SLOT, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
-  g_rxFree = xQueueCreate(OPENFIRE_SCOPE_RX_RING, sizeof(uint8_t));
-  g_rxFull = xQueueCreate(OPENFIRE_SCOPE_RX_RING, sizeof(uint8_t));
-  if (g_rxRing == NULL || g_rxFree == NULL || g_rxFull == NULL) {
+  g_rxRing = (uint8_t *)heap_caps_malloc(OPENFIRE_SCOPE_RX_BYTES, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+  g_rxFull = xQueueCreate(OPENFIRE_SCOPE_RX_PACKETS, sizeof(uint8_t));
+  if (g_rxRing == NULL || g_rxFull == NULL) {
     log_e("scope video: no memory for the ring / nessuna memoria per l'anello");
     return;
   }
-  for (uint8_t i = 0; i < OPENFIRE_SCOPE_RX_RING; i++) xQueueSend(g_rxFree, &i, 0);
   xTaskCreate(scopeRxTask, "scopeRx", 3072, NULL, OPENFIRE_SCOPE_RX_TASK_PRIO, NULL);
 }
 
@@ -779,12 +834,22 @@ int WirelessScope_::videoReceive(uint32_t wait_ms) {
 
 const uint8_t *WirelessScope_::videoSlot(int slot, uint16_t *len) {
   *len = g_rxLen[slot];
-  return &g_rxRing[slot * OPENFIRE_SCOPE_RX_SLOT];
+  return &g_rxRing[g_rxOff[slot]];
 }
 
+// EN: The space goes back from the oldest slice: one given back out of order waits for the older ones.
+// IT: Lo spazio torna libero dalla fascia piu' vecchia: una restituita fuori ordine aspetta quelle piu' vecchie.
 void WirelessScope_::videoRelease(int slot) {
-  const uint8_t s = (uint8_t)slot;
-  xQueueSend(g_rxFree, &s, 0);
+  portENTER_CRITICAL(&g_rxMux);
+  g_rxDone[slot] = true;
+  while (g_rxCount > 0 && g_rxDone[g_rxTail]) {
+    g_rxDone[g_rxTail] = false;
+    g_rxRd = g_rxEnd[g_rxTail];
+    g_rxUsed = (uint16_t)(g_rxUsed - g_rxSize[g_rxTail]);
+    g_rxTail = (uint8_t)((g_rxTail + 1) % OPENFIRE_SCOPE_RX_PACKETS);
+    g_rxCount--;
+  }
+  portEXIT_CRITICAL(&g_rxMux);
 }
 
 void WirelessScope_::videoActive(bool on) {

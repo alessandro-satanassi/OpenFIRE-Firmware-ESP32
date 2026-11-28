@@ -132,11 +132,15 @@ typedef struct __attribute__ ((packed)) {
 #define OPENFIRE_SCOPE_SESSION_FLAG_MS       1000  // bit 3 during the first second of video / bit 3 nel primo secondo di video
 #define OPENFIRE_SCOPE_TX_RETRY              5     // attempts, 1 ms apart, with the Wi-Fi queue full / tentativi, a 1 ms, con la coda Wi-Fi piena
 
-// EN: Scope sizes: ring of the received slices, each followed by 4 bytes 0xFF for the bit reader of the decoder.
-// IT: Dimensioni del mirino: anello delle fasce ricevute, ognuna seguita da 4 byte 0xFF per il lettore di bit del decoder.
-#define OPENFIRE_SCOPE_RX_RING               32    // over 2 whole frames / oltre 2 frame interi
+// EN: Scope sizes: ring of the received slices in bytes, each slice followed by 4 bytes 0xFF for the bit reader of
+//     the decoder and taking only its length: 12 slices of the maximum size, or many more of the usual ones.
+// IT: Dimensioni del mirino: anello delle fasce ricevute in byte, ogni fascia seguita da 4 byte 0xFF per il lettore di
+//     bit del decoder e grande solo quanto la sua lunghezza: 12 fasce della misura massima, o molte di piu' di quelle normali.
+#define OPENFIRE_SCOPE_RX_RING               12    // slices of the maximum size, 17 KB: decoded as they arrive / fasce della misura massima, 17 KB: decodificate appena arrivano
 #define OPENFIRE_SCOPE_RX_MARGIN             4
 #define OPENFIRE_SCOPE_RX_SLOT               (OPENFIRE_SCOPE_VIDEO_MAX_PACKET + OPENFIRE_SCOPE_RX_MARGIN)   // 1412
+#define OPENFIRE_SCOPE_RX_BYTES              (OPENFIRE_SCOPE_RX_RING * OPENFIRE_SCOPE_RX_SLOT)              // 16944
+#define OPENFIRE_SCOPE_RX_PACKETS            64    // slices in the ring at most / fasce nell'anello al massimo
 #define OPENFIRE_SCOPE_RX_TASK_PRIO          19    // above lwIP (18), below the Wi-Fi (23) / sopra lwIP (18), sotto il Wi-Fi (23)
 
 // ===================================================================================
@@ -220,8 +224,10 @@ class WirelessScope_ {
   volatile bool     video_pause_seen = false; // a presence with q = 1 since the pairing / una presenza con q = 1 dall'abbinamento
   volatile uint32_t video_pause_ms = 0;       // millis() of the last presence with q = 1 / millis() dell'ultima presenza con q = 1
 
-  // EN: Slot of the ring with a slice (-1 none within wait_ms). After the decoding the slot goes back with videoRelease().
-  // IT: Posto dell'anello con una fascia (-1 nessuna entro wait_ms). Dopo la decodifica il posto torna con videoRelease().
+  // EN: Number of a slice in the ring (-1 none within wait_ms), in order of arrival. After the decoding its space goes
+  //     back with videoRelease().
+  // IT: Numero di una fascia nell'anello (-1 nessuna entro wait_ms), in ordine di arrivo. Dopo la decodifica il suo spazio
+  //     torna libero con videoRelease().
   int videoReceive(uint32_t wait_ms);
   const uint8_t *videoSlot(int slot, uint16_t *len);   // whole packet, header included / pacchetto intero, intestazione compresa
   void videoRelease(int slot);

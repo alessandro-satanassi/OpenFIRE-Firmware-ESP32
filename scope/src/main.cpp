@@ -83,7 +83,7 @@ volatile bool scope_logo_spin_on = false;
 
 // EN: Bench tests without the S3: fixed player, the pairing starts at once. Comment it out when the UART is ready.
 // IT: Prove al banco senza l'S3: giocatore fisso, l'abbinamento parte subito. Commentarlo quando la UART e' pronta.
-//#define SCOPE_TEST_PLAYER 1
+#define SCOPE_TEST_PLAYER 1
 
 // ===================================================================================
 // UART WITH THE ESP32-S3 OF THE LIGHTGUN / UART CON L'ESP32-S3 DELLA LIGHTGUN
@@ -238,9 +238,10 @@ Frequenza della CPU: decommentare per forzarla (80, 160 o 240 MHz). Commentato =
   #define SCOPE_LOGO_SPIN_FRAME_MS 40      // 25 frames per second / 25 fotogrammi al secondo
   #define SCOPE_LOGO_SPIN_SIZE     160     // square that holds the logo at any angle (diagonal 139x78 = 159) / quadrato che contiene il logo a ogni angolo (diagonale 139x78 = 159)
 
-  // EN: Sprite of the turning logo (160x160x2 = 51 KB), created only during the search.
-  // IT: Sprite del logo che gira (160x160x2 = 51 KB), creato solo durante la ricerca.
+  // EN: Sprite of the turning logo (160x160x2 = 51 KB), only during the search, in the array of the video frame.
+  // IT: Sprite del logo che gira (160x160x2 = 51 KB), solo durante la ricerca, nell'array del frame del video.
   LGFX_Sprite logo_spin(&tft);
+  static_assert(SCOPE_LOGO_SPIN_SIZE * SCOPE_LOGO_SPIN_SIZE * 2 <= SCOPE_VIDEO_SHARED_BYTES, "logo sprite / sprite del logo");
 
   static void drawScopeLogoStraight() {
     tft.fillRect((tft.width() - SCOPE_LOGO_SPIN_SIZE) / 2, (tft.height() - SCOPE_LOGO_SPIN_SIZE) / 2,
@@ -323,24 +324,30 @@ Frequenza della CPU: decommentare per forzarla (80, 160 o 240 MHz). Commentato =
         last_no_signal = no_signal;
       }
 
-      if (state != last_state || player_number != last_player) {
-        const bool search = (state == SCOPE_LINK_STATE::SCOPE_LINK_SEARCH);
-        if (search && !spinning) {
-          // EN: Start of the search: if there is no memory for the sprite the logo stays still.
-          // IT: Inizio della ricerca: se non c'e' memoria per lo sprite il logo resta fermo.
+      const bool search = (state == SCOPE_LINK_STATE::SCOPE_LINK_SEARCH);
+      if (search && !spinning) {
+        // EN: Search: the sprite goes into the array of the video frame as soon as the video has given it back (tried
+        //     at every turn); until then the logo stays still.
+        // IT: Ricerca: lo sprite va nell'array del frame del video appena il video lo ha restituito (si prova a ogni
+        //     giro); fino ad allora il logo resta fermo.
+        uint8_t *mem = scopeLogoMemoryTake();
+        if (mem != nullptr) {
           logo_spin.setColorDepth(16);
           logo_spin.setSwapBytes(true);
-          scope_logo_spin_on = true;   // before the memory is taken / prima che la memoria sia presa
-          spinning = (logo_spin.createSprite(SCOPE_LOGO_SPIN_SIZE, SCOPE_LOGO_SPIN_SIZE) != nullptr);
-          scope_logo_spin_on = spinning;
+          logo_spin.setBuffer(mem, SCOPE_LOGO_SPIN_SIZE, SCOPE_LOGO_SPIN_SIZE);
+          spinning = true;
           angle = 0.0f;
-        } else if (!search && spinning) {
-          // EN: End of the search: the memory goes back and the logo stops straight. / IT: fine della ricerca: la memoria torna libera e il logo si ferma dritto.
-          logo_spin.deleteSprite();
-          spinning = false;
-          scope_logo_spin_on = false;
-          drawScopeLogoStraight();
         }
+      } else if (!search && spinning) {
+        // EN: End of the search: the array goes back to the video and the logo stops straight.
+        // IT: Fine della ricerca: l'array torna al video e il logo si ferma dritto.
+        logo_spin.deleteSprite();   // external buffer: nothing freed / buffer esterno: niente liberato
+        spinning = false;
+        scopeLogoMemoryGive();
+        drawScopeLogoStraight();
+      }
+
+      if (state != last_state || player_number != last_player) {
         drawScopeStateLine(state, player_number);
         last_state = state;
         last_player = player_number;

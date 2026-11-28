@@ -28,7 +28,7 @@ extern volatile bool   scope_display_on;
 extern volatile int8_t scope_roll;
 extern volatile bool   scope_logo_spin_on;   // sprite of the turning logo in memory / sprite del logo che gira in memoria
 
-#define SLICE_BYTES   (SCOPE_DEC_W * SCOPE_DEC_SLICE_H * 2)   // 7680
+#define BAND_BYTES    (SCOPE_DEC_W * SCOPE_ROT_BAND_H * 2)    // 3840: output band / fascia di uscita
 #define ALL_SLICES    ((1u << SCOPE_DEC_SLICES) - 1)
 
 static LGFX             *g_tft = NULL;
@@ -36,19 +36,30 @@ static SemaphoreHandle_t g_panelMutex = NULL;
 static bool              g_panelOn = true;        // power applied to the panel, under the lock / alimentazione data al pannello, sotto il blocco
 static volatile bool     g_noSignal = false;
 
-// EN: Buffers: decoded frame (15 blocks of 240x16, one per slice, and the table of its rows), work slice of the
-//     decoder, output slices of the rotation (DMA).
-// IT: Buffer: frame decodificato (15 blocchi da 240x16, uno per fascia, e la tabella delle sue righe), fascia di lavoro
-//     del decoder, fasce di uscita della rotazione (DMA).
+// EN: Buffers: decoded frame in YCbCr (fixed array with the coded MCU, and the table of its MCU), output bands of
+//     8 rows of the rotation (DMA).
+//     The array is shared with the sprite of the turning logo: the logo turns only during the search, the frame is
+//     used only while paired. Whoever wants it first sets its own flag and then looks at the other's: if the other
+//     has it, it takes its own flag back and tries again later (one core: the two flags are never both kept).
+// IT: Buffer: frame decodificato in YCbCr (array fisso con gli MCU codificati, e la tabella dei suoi MCU), fasce di
+//     uscita da 8 righe della rotazione (DMA).
+//     L'array e' condiviso con lo sprite del logo che gira: il logo gira solo durante la ricerca, il frame si usa solo
+//     da abbinati. Chi lo vuole prima alza il suo flag e poi guarda quello dell'altro: se l'altro lo ha, riabbassa il
+//     suo e riprova dopo (un core solo: i due flag non restano mai alzati insieme).
+static_assert(SCOPE_VIDEO_SHARED_BYTES == SCOPE_DEC_MCU_CODED * SCOPE_DEC_MCU_BYTES, "frame size / misura del frame");
+alignas(4) static uint8_t g_shared[SCOPE_VIDEO_SHARED_BYTES];
+static volatile bool g_frameInUse = false;   // the video has the array / il video ha l'array
 static bool      g_buffers = false;
-static uint16_t *g_slice[SCOPE_DEC_SLICES];
-static const uint16_t *g_rows[SCOPE_DEC_H];
-static uint16_t *g_work = NULL;
+static uint8_t  *g_mcu[SCOPE_DEC_MCU_TABLE];
 static uint16_t *g_out[SCOPE_VIDEO_OUT_SLICES];
 static uint8_t   g_nOut = 0;
 
 #ifdef SCOPE_VIDEO_DEBUG
-static uint32_t d_frames = 0, d_slices = 0, d_corrupt = 0, d_old = 0, d_dup = 0, d_decUs = 0, d_rotUs = 0;
+// EN: Counters of the last video, from its start to its end (shown when the video is over).
+// IT: Contatori dell'ultimo video, dal suo inizio alla sua fine (mostrati quando il video e' finito).
+static uint32_t d_frames = 0, d_slices = 0, d_corrupt = 0, d_old = 0, d_dup = 0, d_black = 0, d_decUs = 0, d_rotUs = 0, d_rotMax = 0;
+static uint32_t d_startMs = 0, d_endMs = 0, d_rx0 = 0, d_full0 = 0, d_bad0 = 0, d_rx1 = 0, d_full1 = 0, d_bad1 = 0;
+static char     d_mem[32] = "MEM ?";   // state of the memory of the video / stato della memoria del video
 #endif // SCOPE_VIDEO_DEBUG
 
 // ===================================================================================
@@ -56,7 +67,16 @@ static uint32_t d_frames = 0, d_slices = 0, d_corrupt = 0, d_old = 0, d_dup = 0,
 // ===================================================================================
 static bool g_owned = false;   // the video has the panel / il video ha il pannello
 
-bool scopePanelTryLock() { return g_panelMutex != NULL && xSemaphoreTake(g_panelMutex, 0) == pdTRUE; }
+bool scopePanelTryLock() {
+  #ifdef SCOPE_VIDEO_DEBUG
+  // EN: The debug lines take the panel for a moment: the state screens wait for them, otherwise they would take them for
+  //     the video and draw everything again (the lines would flash).
+  // IT: Le righe di debug prendono il pannello per un attimo: le schermate di stato le aspettano, altrimenti le
+  //     scambierebbero per il video e ridisegnerebbero tutto (le righe lampeggerebbero).
+  if (g_panelMutex != NULL && !g_owned) return xSemaphoreTake(g_panelMutex, pdMS_TO_TICKS(50)) == pdTRUE;
+  #endif // SCOPE_VIDEO_DEBUG
+  return g_panelMutex != NULL && xSemaphoreTake(g_panelMutex, 0) == pdTRUE;
+}
 void scopePanelUnlock()  { xSemaphoreGive(g_panelMutex); }
 
 void scopePanelPowerApply() {
@@ -71,26 +91,26 @@ bool scopeVideoNoSignal() { return g_noSignal; }
 // ===================================================================================
 // OUTPUT TO THE DISPLAY / USCITA VERSO IL DISPLAY
 // ===================================================================================
-// EN: The rotated slices wait in a queue; outPump() starts the next one as soon as the DMA is free, without waiting.
+// EN: The rotated bands wait in a queue; outPump() starts the next one as soon as the DMA is free, without waiting.
 //     It is called after every MCU of the decoder and between the packets, so the DMA keeps working while the
 //     next frame is decoded. A buffer is free again when its DMA has finished.
 // IT: Le fasce ruotate aspettano in una coda; outPump() fa partire la successiva appena il DMA e' libero, senza aspettare.
 //     Si chiama dopo ogni MCU del decoder e tra un pacchetto e l'altro, cosi' il DMA continua a lavorare mentre si
 //     decodifica il frame successivo. Un buffer torna libero quando il suo DMA ha finito.
 static bool    g_bufBusy[SCOPE_VIDEO_OUT_SLICES];
-static uint8_t g_qSy[SCOPE_VIDEO_OUT_SLICES], g_qBuf[SCOPE_VIDEO_OUT_SLICES];
+static uint8_t g_qBand[SCOPE_VIDEO_OUT_SLICES], g_qBuf[SCOPE_VIDEO_OUT_SLICES];
 static uint8_t g_qHead = 0, g_qCount = 0;
 static int     g_inflight = -1;   // buffer on the DMA / buffer sul DMA
 
 static void outPump() {
   if (g_inflight >= 0 && !g_tft->dmaBusy()) { g_bufBusy[g_inflight] = false; g_inflight = -1; }
   if (g_qCount == 0 || g_inflight >= 0) return;
-  const uint8_t sy = g_qSy[g_qHead], b = g_qBuf[g_qHead];
+  const uint8_t band = g_qBand[g_qHead], b = g_qBuf[g_qHead];
   g_qHead = (uint8_t)((g_qHead + 1) % g_nOut);
   g_qCount--;
   // EN: Data already in the byte order of the display (swap565): straight to the DMA, no conversion.
   // IT: Dati gia' nell'ordine di byte del display (swap565): dritti al DMA, nessuna conversione.
-  g_tft->pushImageDMA(scopeRotWindowX(sy), sy * SCOPE_DEC_SLICE_H, scopeRotWindowW(sy), SCOPE_DEC_SLICE_H,
+  g_tft->pushImageDMA(scopeRotBandX(band), band * SCOPE_ROT_BAND_H, scopeRotBandW(band), SCOPE_ROT_BAND_H,
                       (const lgfx::swap565_t *)g_out[b]);
   g_inflight = b;
 }
@@ -175,18 +195,20 @@ static void rotateFrame() {
   #endif // SCOPE_ROLL_INVERT
   int32_t c, s;
   scopeRotAngle(angle, &c, &s);
-  for (uint8_t sy = 0; sy < SCOPE_DEC_SLICES; sy++) {
+  for (uint8_t band = 0; band < SCOPE_ROT_BANDS; band++) {
     const uint8_t b = outFreeBuffer();
     g_bufBusy[b] = true;
-    scopeRotSlice(g_rows, sy, c, s, g_out[b]);
+    scopeRotBandYcc(g_mcu, band, c, s, g_out[b]);
     const uint8_t tail = (uint8_t)((g_qHead + g_qCount) % g_nOut);
-    g_qSy[tail] = sy;
+    g_qBand[tail] = band;
     g_qBuf[tail] = b;
     g_qCount++;
     outPump();
   }
   #ifdef SCOPE_VIDEO_DEBUG
-  d_rotUs += micros() - t0;
+  const uint32_t rt = micros() - t0;
+  d_rotUs += rt;
+  if (rt > d_rotMax) d_rotMax = rt;
   #endif // SCOPE_VIDEO_DEBUG
 }
 
@@ -230,6 +252,12 @@ static inline bool sessionNewer(uint8_t n, uint8_t cur) { const int d = ((int)n 
 static void stopVideo() {
   if (!g_active) return;
   g_active = false;
+  #ifdef SCOPE_VIDEO_DEBUG
+  d_endMs = millis();
+  d_rx1 = WirelessScope.video_rx_slices;
+  d_full1 = WirelessScope.video_rx_full;
+  d_bad1 = WirelessScope.video_rx_bad;
+  #endif // SCOPE_VIDEO_DEBUG
   WirelessScope.videoActive(false);
   panelGive();
 }
@@ -238,16 +266,26 @@ static void showFrame() {
   g_building = false;
   g_lastFrame = g_buildFrame;
   g_haveLast = true;
-  // EN: A slice missing from every frame of the last 100 ms goes black instead of an image piece standing still.
-  // IT: Una fascia mancante da tutti i frame degli ultimi 100 ms diventa nera invece di un pezzo di immagine fermo.
+  // EN: A slice missing from every frame of the last SCOPE_VIDEO_BLACK_MS goes black instead of an image piece standing still.
+  // IT: Una fascia mancante da tutti i frame degli ultimi SCOPE_VIDEO_BLACK_MS diventa nera invece di un pezzo di immagine fermo.
   const uint32_t now = millis();
   for (uint8_t sy = 0; sy < SCOPE_DEC_SLICES; sy++) {
     if (!(g_black & (1u << sy)) && now - g_sliceOkMs[sy] > SCOPE_VIDEO_BLACK_MS) {
-      scopeDecBlackSlice(sy, g_slice[sy]);
+      scopeDecBlackSliceYcc(sy, g_mcu);
       g_black |= (uint16_t)(1u << sy);
+      #ifdef SCOPE_VIDEO_DEBUG
+      if (g_active) d_black++;
+      #endif // SCOPE_VIDEO_DEBUG
     }
   }
   if (!g_active) {
+    #ifdef SCOPE_VIDEO_DEBUG
+    d_frames = d_slices = d_corrupt = d_old = d_dup = d_black = d_decUs = d_rotUs = d_rotMax = 0;
+    d_startMs = millis();
+    d_rx0 = WirelessScope.video_rx_slices;
+    d_full0 = WirelessScope.video_rx_full;
+    d_bad0 = WirelessScope.video_rx_bad;
+    #endif // SCOPE_VIDEO_DEBUG
     g_active = true;
     panelTake();
   }
@@ -259,10 +297,10 @@ static void showFrame() {
   if (g_panelOn) rotateFrame();
 }
 
-// EN: Slice of the session and frame already chosen. The decoding goes into the work slice and is copied into the
-//     frame only if valid: a corrupted slice leaves the previous valid one in its place.
-// IT: Fascia della sessione e del frame gia' scelti. La decodifica va nella fascia di lavoro e si copia nel frame
-//     solo se valida: una fascia corrotta lascia al suo posto quella valida precedente.
+// EN: Slice of the session and frame already chosen. The decoding goes straight into the frame: a corrupted slice
+//     (practically never: the Wi-Fi discards the damaged packets) becomes black.
+// IT: Fascia della sessione e del frame gia' scelti. La decodifica va direttamente nel frame: una fascia corrotta
+//     (praticamente mai: il Wi-Fi scarta i pacchetti danneggiati) diventa nera.
 static void handleSlice(const uint8_t *p, uint16_t len) {
   const uint8_t  session = p[SCOPE_VIDEO_B_SESSION];
   const uint16_t frame = pktFrame(p);
@@ -302,12 +340,14 @@ static void handleSlice(const uint8_t *p, uint16_t len) {
   #ifdef SCOPE_VIDEO_DEBUG
   const uint32_t t0 = micros();
   #endif // SCOPE_VIDEO_DEBUG
-  const bool ok = scopeDecSlice(p + OPENFIRE_SCOPE_VIDEO_HEADER, (uint16_t)(len - OPENFIRE_SCOPE_VIDEO_HEADER), sy,
-                                p[SCOPE_VIDEO_B_Q], g_work, outPump);
+  const bool ok = scopeDecSliceYcc(p + OPENFIRE_SCOPE_VIDEO_HEADER, (uint16_t)(len - OPENFIRE_SCOPE_VIDEO_HEADER), sy,
+                                   p[SCOPE_VIDEO_B_Q], g_mcu, outPump);
   if (ok) {
-    scopeDecCopySlice(g_work, sy, g_slice[sy]);
     g_sliceOkMs[sy] = millis();
     g_black &= (uint16_t)~(1u << sy);
+  } else {
+    scopeDecBlackSliceYcc(sy, g_mcu);
+    g_black |= (uint16_t)(1u << sy);
   }
   #ifdef SCOPE_VIDEO_DEBUG
   d_decUs += micros() - t0;
@@ -352,64 +392,130 @@ static void processPending(const int *pend, int n) {
 // ===================================================================================
 // MEMORY / MEMORIA
 // ===================================================================================
-// EN: Taken at the first pairing, after the sprite of the turning logo has gone: frame in 15 blocks of 7.5 KB (no
-//     need of 115 KB in one piece), work slice 7.5 KB, output slices 7.5 KB each (DMA memory). With little memory
-//     fewer output slices, at least 2.
-// IT: Presa al primo abbinamento, dopo che lo sprite del logo che gira e' sparito: frame in 15 blocchi da 7,5 KB (non
-//     servono 115 KB in un pezzo solo), fascia di lavoro 7,5 KB, fasce di uscita da 7,5 KB l'una (memoria DMA).
-//     Con poca memoria meno fasce di uscita, almeno 2.
-static void freeBuffers(uint8_t nSlice, uint8_t nOut) {
-  for (uint8_t i = 0; i < nSlice; i++) heap_caps_free(g_slice[i]);
-  for (uint8_t i = 0; i < nOut; i++) heap_caps_free(g_out[i]);
-  if (g_work) heap_caps_free(g_work);
-  g_work = NULL;
-}
-
+// EN: Taken at the first pairing: table of the frame in the fixed array, then the output bands of 3.75 KB (DMA
+//     memory): 2 always, the others (up to SCOPE_VIDEO_OUT_SLICES) only while SCOPE_VIDEO_HEAP_MARGIN stays free for
+//     the Wi-Fi. They are kept until the reset.
+// IT: Presa al primo abbinamento: tabella del frame nell'array fisso, poi le fasce di uscita da 3,75 KB (memoria DMA):
+//     2 sempre, le altre (fino a SCOPE_VIDEO_OUT_SLICES) solo se restano liberi SCOPE_VIDEO_HEAP_MARGIN per il Wi-Fi.
+//     Restano fino al reset.
 static bool allocBuffers() {
   if (g_buffers) return true;
-  if (scope_logo_spin_on) return false;   // its 51 KB are not free yet: it tries again / i suoi 51 KB non sono ancora liberi: riprova
-  uint8_t ns = 0, n = 0;
-  while (ns < SCOPE_DEC_SLICES) {
-    g_slice[ns] = (uint16_t *)heap_caps_calloc(SCOPE_DEC_W * SCOPE_DEC_SLICE_H, 2, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);   // black / nero
-    if (g_slice[ns] == NULL) break;
-    ns++;
-  }
-  g_work = (ns == SCOPE_DEC_SLICES) ? (uint16_t *)heap_caps_malloc(SLICE_BYTES, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT) : NULL;
-  if (g_work != NULL) {
-    while (n < SCOPE_VIDEO_OUT_SLICES) {
-      g_out[n] = (uint16_t *)heap_caps_malloc(SLICE_BYTES, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
-      if (g_out[n] == NULL) break;
-      n++;
-    }
-  }
-  if (g_work == NULL || n < 2) {
-    freeBuffers(ns, n);
+  if (scopeDecMcuCount() > SCOPE_DEC_MCU_CODED) {   // never with the 240x240 circle / mai col cerchio 240x240
     #ifdef SCOPE_VIDEO_DEBUG
-    Serial.printf("VIDEO no memory: free %u, largest block %u\n", (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
-                  (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));
+    snprintf(d_mem, sizeof(d_mem), "NO MEM MCU %u", (unsigned)scopeDecMcuCount());
     #endif // SCOPE_VIDEO_DEBUG
     return false;
   }
-  for (int y = 0; y < SCOPE_DEC_H; y++) g_rows[y] = g_slice[y / SCOPE_DEC_SLICE_H] + (y % SCOPE_DEC_SLICE_H) * SCOPE_DEC_W;
+  uint8_t n = 0;
+  while (n < SCOPE_VIDEO_OUT_SLICES) {
+    if (n >= 2 && heap_caps_get_free_size(MALLOC_CAP_INTERNAL) < (size_t)SCOPE_VIDEO_HEAP_MARGIN + BAND_BYTES) break;
+    g_out[n] = (uint16_t *)heap_caps_malloc(BAND_BYTES, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
+    if (g_out[n] == NULL) break;
+    n++;
+  }
+  if (n < 2) {
+    for (uint8_t i = 0; i < n; i++) heap_caps_free(g_out[i]);
+    #ifdef SCOPE_VIDEO_DEBUG
+    snprintf(d_mem, sizeof(d_mem), "NO MEM F%u B%u", (unsigned)(heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024),
+             (unsigned)(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL) / 1024));
+    #endif // SCOPE_VIDEO_DEBUG
+    return false;
+  }
+  uint8_t *const piece = g_shared;
+  const uint8_t count = (uint8_t)scopeDecMcuCount();
+  scopeDecMcuTable(&piece, &count, 1, g_mcu);
   g_nOut = n;
   for (uint8_t i = 0; i < n; i++) g_bufBusy[i] = false;
   g_buffers = true;
-  #ifdef SCOPE_VIDEO_DEBUG
-  Serial.printf("VIDEO %u output slices, free heap %u\n", n, (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
-  #endif // SCOPE_VIDEO_DEBUG
   return true;
 }
+
+// EN: Array of the frame: the video takes it at the pairing and gives it back when the link is lost.
+// IT: Array del frame: il video lo prende all'abbinamento e lo restituisce quando il collegamento si perde.
+static bool frameTake() {
+  g_frameInUse = true;
+  __sync_synchronize();
+  if (scope_logo_spin_on) {   // the logo is turning in it / il logo ci sta girando
+    g_frameInUse = false;
+    return false;
+  }
+  return true;
+}
+
+static void frameGive() {
+  __sync_synchronize();
+  g_frameInUse = false;
+}
+
+uint8_t *scopeLogoMemoryTake() {
+  scope_logo_spin_on = true;
+  __sync_synchronize();
+  if (g_frameInUse) {   // the video has it / ce l'ha il video
+    scope_logo_spin_on = false;
+    return NULL;
+  }
+  return g_shared;
+}
+
+void scopeLogoMemoryGive() {
+  __sync_synchronize();
+  scope_logo_spin_on = false;
+}
+
+#ifdef SCOPE_VIDEO_DEBUG
+// ===================================================================================
+// DEBUG ON THE DISPLAY / DEBUG SUL DISPLAY
+// ===================================================================================
+// EN: Every second: 7 lines in large text over the logo, drawn only while the video does not have the panel and the
+//     logo is not turning, with the lock of the panel and without waiting for it. The counters start again every second
+//     (rx, full and bad count from the power on).
+// IT: Ogni secondo: 7 righe a caratteri grandi sopra il logo, disegnate solo mentre il video non ha il pannello e il
+//     logo non gira, con il blocco del pannello e senza aspettarlo. I contatori ripartono ogni secondo
+//     (rx, full e bad contano dall'accensione).
+static void debugStats() {
+  static uint32_t statMs = 0;
+  const uint32_t now = millis();
+  if (now - statMs < 1000) return;
+  statMs = now;
+  char l[6][24];
+  // EN: last video: average FPS and frames, then per frame the average decoding and rotation (us) and the longest
+  //     rotation (RM); slices received, lost with the ring full and discarded during the video.
+  // IT: ultimo video: FPS medi e frame, poi per frame la decodifica e la rotazione medie (us) e la rotazione piu'
+  //     lunga (RM); fasce ricevute, perse con l'anello pieno e scartate durante il video.
+  const uint32_t endMs = g_active ? now : d_endMs;
+  const uint32_t ms = endMs - d_startMs;
+  const uint32_t rx = (g_active ? WirelessScope.video_rx_slices : d_rx1) - d_rx0;
+  snprintf(l[0], sizeof(l[0]), "FPS %lu FR %lu", (unsigned long)(ms ? (uint64_t)d_frames * 1000 / ms : 0), (unsigned long)d_frames);
+  snprintf(l[1], sizeof(l[1]), "COR %lu OLD %lu", (unsigned long)d_corrupt, (unsigned long)d_old);
+  snprintf(l[2], sizeof(l[2]), "DUP %lu BLK %lu", (unsigned long)d_dup, (unsigned long)d_black);
+  snprintf(l[3], sizeof(l[3]), "DEC %lu ROT %lu", (unsigned long)(d_frames ? d_decUs / d_frames : 0), (unsigned long)(d_frames ? d_rotUs / d_frames : 0));
+  snprintf(l[4], sizeof(l[4]), "RM %lu RX %lu", (unsigned long)d_rotMax, (unsigned long)rx);
+  snprintf(l[5], sizeof(l[5]), "FULL %lu BAD %lu", (unsigned long)((g_active ? WirelessScope.video_rx_full : d_full1) - d_full0),
+           (unsigned long)((g_active ? WirelessScope.video_rx_bad : d_bad1) - d_bad0));
+  // EN: buffers taken: output bands and free memory now (KB). / IT: buffer presi: fasce di uscita e memoria libera ora (KB).
+  if (g_buffers) snprintf(d_mem, sizeof(d_mem), "MEM OK O%u H%u", g_nOut, (unsigned)(heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024));
+
+  if (g_owned || scope_logo_spin_on || !scopePanelTryLock()) return;
+  if (g_panelOn) {
+    g_tft->fillRect(0, 43, 240, 155, TFT_BLACK);   // between "NO SIGNAL" and the state line / tra "NO SIGNAL" e la riga di stato
+    g_tft->setTextSize(2);
+    g_tft->setTextDatum(textdatum_t::middle_center);
+    g_tft->setTextColor(TFT_YELLOW, TFT_BLACK);
+    g_tft->drawString(d_mem, 120, 54);
+    g_tft->setTextColor(TFT_WHITE, TFT_BLACK);
+    for (uint8_t i = 0; i < 6; i++) g_tft->drawString(l[i], 120, 76 + 22 * i);
+  }
+  scopePanelUnlock();
+}
+#endif // SCOPE_VIDEO_DEBUG
 
 // ===================================================================================
 // VIDEO TASK / TASK DEL VIDEO
 // ===================================================================================
 static void scopeVideoTask(void *param) {
-  static int pend[OPENFIRE_SCOPE_RX_RING];
+  static int pend[OPENFIRE_SCOPE_RX_PACKETS];
   bool paired = false;
   uint32_t pairMs = 0;
-  #ifdef SCOPE_VIDEO_DEBUG
-  uint32_t statMs = millis();
-  #endif // SCOPE_VIDEO_DEBUG
 
   scopeDecInit();
 
@@ -419,6 +525,7 @@ static void scopeVideoTask(void *param) {
     if (WirelessScope.link_state < SCOPE_LINK_STATE::SCOPE_LINK_PAIRED) {
       if (paired) {
         paired = false;
+        frameGive();   // first: the logo can take it as soon as it has the panel / prima: il logo puo' prenderlo appena ha il pannello
         stopVideo();
       }
       g_noSignal = false;
@@ -434,18 +541,23 @@ static void scopeVideoTask(void *param) {
       g_haveLast = false;
       g_building = false;
       for (uint8_t sy = 0; sy < SCOPE_DEC_SLICES; sy++) g_sliceOkMs[sy] = pairMs;
-      // EN: Nothing of the previous connection on screen: a slice missing from the first frame stays black.
-      // IT: Niente della connessione precedente sullo schermo: una fascia mancante dal primo frame resta nera.
-      if (g_buffers) {
-        for (uint8_t sy = 0; sy < SCOPE_DEC_SLICES; sy++) scopeDecBlackSlice(sy, g_slice[sy]);
-        g_black = ALL_SLICES;
-      }
     }
-    if (!allocBuffers()) {   // memory not free yet (sprite of the logo): it tries again / memoria non ancora libera (sprite del logo): riprova
-      int s;
-      while ((s = WirelessScope.videoReceive(0)) >= 0) WirelessScope.videoRelease(s);
-      vTaskDelay(pdMS_TO_TICKS(100));
-      continue;
+    if (!g_frameInUse) {
+      if (!allocBuffers() || !frameTake()) {   // no bands or the logo still turning in the array: it tries again / niente fasce o il logo gira ancora nell'array: riprova
+        #ifdef SCOPE_VIDEO_DEBUG
+        debugStats();
+        #endif // SCOPE_VIDEO_DEBUG
+        int s;
+        while ((s = WirelessScope.videoReceive(0)) >= 0) WirelessScope.videoRelease(s);
+        vTaskDelay(pdMS_TO_TICKS(100));
+        continue;
+      }
+      // EN: Array just taken back from the logo, nothing of the previous connection: a slice missing from the first
+      //     frame stays black.
+      // IT: Array appena ripreso dal logo, niente della connessione precedente: una fascia mancante dal primo frame
+      //     resta nera.
+      for (uint8_t sy = 0; sy < SCOPE_DEC_SLICES; sy++) scopeDecBlackSliceYcc(sy, g_mcu);
+      g_black = ALL_SLICES;
     }
 
     // 2. EN: Packets: waits for the first only if the DMA has nothing to do, then takes all those waiting.
@@ -460,13 +572,13 @@ static void scopeVideoTask(void *param) {
     int s = WirelessScope.videoReceive(wait);
     while (s >= 0) {
       pend[n++] = s;
-      if (n == OPENFIRE_SCOPE_RX_RING) break;
+      if (n == OPENFIRE_SCOPE_RX_PACKETS) break;
       s = WirelessScope.videoReceive(0);
     }
     if (n) processPending(pend, n);
     if (g_owned) outPump();
 
-    // 3. EN: Frame not complete 40 ms after its first slice: shown as it is. / IT: frame non completo 40 ms dopo la sua prima fascia: si mostra cosi' com'e'.
+    // 3. EN: Frame not complete SCOPE_VIDEO_SHOW_MS after its first slice: shown as it is. / IT: frame non completo SCOPE_VIDEO_SHOW_MS dopo la sua prima fascia: si mostra cosi' com'e'.
     if (g_building && millis() - g_firstMs >= SCOPE_VIDEO_SHOW_MS) showFrame();
 
     // 4. EN: Display on/off while the video has the panel; back on, the last frame again.
@@ -507,15 +619,7 @@ static void scopeVideoTask(void *param) {
     if (noSignal && !g_active && !g_building) g_session = 0;
 
     #ifdef SCOPE_VIDEO_DEBUG
-    if (now - statMs >= 1000) {
-      statMs = now;
-      Serial.printf("VIDEO fps=%lu slices=%lu corrupt=%lu old=%lu dup=%lu dec=%luus rot=%luus rx=%lu full=%lu bad=%lu out=%u heap=%u\n",
-                    (unsigned long)d_frames, (unsigned long)d_slices, (unsigned long)d_corrupt, (unsigned long)d_old, (unsigned long)d_dup,
-                    (unsigned long)(d_frames ? d_decUs / d_frames : 0), (unsigned long)(d_frames ? d_rotUs / d_frames : 0),
-                    (unsigned long)WirelessScope.video_rx_slices, (unsigned long)WirelessScope.video_rx_full,
-                    (unsigned long)WirelessScope.video_rx_bad, g_nOut, (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
-      d_frames = d_slices = d_corrupt = d_old = d_dup = d_decUs = d_rotUs = 0;
-    }
+    debugStats();
     #endif // SCOPE_VIDEO_DEBUG
   }
 }

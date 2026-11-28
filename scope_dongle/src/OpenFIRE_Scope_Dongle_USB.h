@@ -33,10 +33,22 @@
 
 #if defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32) && defined(SCOPE_DONGLE)
 
+// EN: USB diagnostics on the bottom line of the display (temporary): comment out to remove it.
+// IT: Diagnostica della USB sull'ultima riga del display (temporanea): commentare per toglierla.
+#define SCOPE_DONGLE_USB_DEBUG
+
 // EN: Starts the USB and its task: call it first in setup(), so the dongle answers WHOAMI from power on
 //     (OF_SCOPE:BOOT during the channel search). The task also tells the PC by itself every change of state.
 // IT: Avvia la USB e il suo task: chiamarla per prima nel setup(), cosi' il dongle risponde a WHOAMI dall'accensione
 //     (OF_SCOPE:BOOT durante la ricerca del canale). Il task comunica anche da solo al PC ogni cambio di stato.
 void scopeUsbBegin();
+
+#ifdef SCOPE_DONGLE_USB_DEBUG
+// EN: "W<WHOAMI received> F<answers lost> K<flush again> Q<IN FIFO resets> B<USB bus resets> E<IN buffer free>
+//      S<IN endpoint state, hex>" (W and F up to 99, K Q B up to 9)
+// IT: "W<WHOAMI ricevuti> F<risposte perse> K<flush ripetuti> Q<azzeramenti FIFO IN> B<reset del bus USB> E<buffer IN libero>
+//      S<stato dell'endpoint IN, esadecimale>" (W e F fino a 99, K Q B fino a 9)
+void scopeUsbDebugText(char *out, size_t size);
+#endif // SCOPE_DONGLE_USB_DEBUG
 
 #endif // OPENFIRE_WIRELESS_ENABLE && ARDUINO_ARCH_ESP32 && SCOPE_DONGLE
