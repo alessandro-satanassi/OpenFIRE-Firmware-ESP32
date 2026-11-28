@@ -35,7 +35,7 @@
 
 // EN: USB diagnostics on the bottom line of the display (temporary): comment out to remove it.
 // IT: Diagnostica della USB sull'ultima riga del display (temporanea): commentare per toglierla.
-#define SCOPE_DONGLE_USB_DEBUG
+//#define SCOPE_DONGLE_USB_DEBUG
 
 // EN: Starts the USB and its task: call it first in setup(), so the dongle answers WHOAMI from power on
 //     (OF_SCOPE:BOOT during the channel search). The task also tells the PC by itself every change of state.

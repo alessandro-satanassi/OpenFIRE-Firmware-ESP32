@@ -82,7 +82,7 @@
 // EN: Statistics on the display, over the logo, every second (memory in KB, frames, slices, times): only while there is
 //     no video and the logo is not turning. / IT: statistiche sul display, sopra il logo, ogni secondo (memoria in KB,
 //     frame, fasce, tempi): solo mentre non c'e' video e il logo non gira.
-#define SCOPE_VIDEO_DEBUG
+//#define SCOPE_VIDEO_DEBUG
 
 // EN: To call once, after the display init and before the task of the state screens.
 // IT: Da chiamare una volta, dopo l'avvio del display e prima del task delle schermate di stato.

@@ -700,23 +700,27 @@ static portMUX_TYPE  g_rxMux = portMUX_INITIALIZER_UNLOCKED;
 static QueueHandle_t g_rxFull = NULL;
 static portMUX_TYPE  g_stateMux = portMUX_INITIALIZER_UNLOCKED;
 
-// EN: Room for a packet of the maximum size (OPENFIRE_SCOPE_RX_SLOT bytes in one piece): its offset, or -1 with the
-//     ring full. If the end of the ring is too short it starts again from 0 and *skip is the end left empty.
+// EN: Bytes taken in the ring by a slice of n bytes: margin included, in 4-byte steps.
+// IT: Byte presi nell'anello da una fascia di n byte: margine compreso, a passi di 4 byte.
+static inline uint16_t rxSpace(uint16_t n) { return (uint16_t)((n + OPENFIRE_SCOPE_RX_MARGIN + 3) & ~3); }
+
+// EN: Room for need bytes in one piece (before the reception OPENFIRE_SCOPE_RX_SLOT, the maximum size): its offset, or
+//     -1 with the ring full. If the end of the ring is too short it starts again from 0 and *skip is the end left empty.
 //     Only the reception task takes room, so nothing changes it before rxCommit() (the decoder only gives back).
-// IT: Spazio per un pacchetto della misura massima (OPENFIRE_SCOPE_RX_SLOT byte in un pezzo solo): il suo offset, o -1
-//     con l'anello pieno. Se la fine dell'anello e' troppo corta riparte da 0 e *skip e' la fine lasciata vuota.
+// IT: Spazio per need byte in un pezzo solo (prima della ricezione OPENFIRE_SCOPE_RX_SLOT, la misura massima): il suo
+//     offset, o -1 con l'anello pieno. Se la fine dell'anello e' troppo corta riparte da 0 e *skip e' la fine lasciata vuota.
 //     Solo il task di ricezione prende spazio, quindi niente lo cambia prima di rxCommit() (il decoder lo rende soltanto).
-static int rxReserve(uint16_t *skip) {
+static int rxReserve(uint16_t *skip, uint16_t need) {
   int off = -1;
   *skip = 0;
   portENTER_CRITICAL(&g_rxMux);
   if (g_rxCount < OPENFIRE_SCOPE_RX_PACKETS) {
     if (g_rxUsed == 0) g_rxWr = g_rxRd = 0;   // empty: from the start, the most room in one piece / vuoto: dall'inizio, il piu' spazio in un pezzo
     if (g_rxUsed == 0 || g_rxWr > g_rxRd) {
-      if (OPENFIRE_SCOPE_RX_BYTES - g_rxWr >= OPENFIRE_SCOPE_RX_SLOT) off = g_rxWr;
-      else if (g_rxRd >= OPENFIRE_SCOPE_RX_SLOT) { off = 0; *skip = (uint16_t)(OPENFIRE_SCOPE_RX_BYTES - g_rxWr); }
+      if (OPENFIRE_SCOPE_RX_BYTES - g_rxWr >= need) off = g_rxWr;
+      else if (g_rxRd >= need) { off = 0; *skip = (uint16_t)(OPENFIRE_SCOPE_RX_BYTES - g_rxWr); }
     } else if (g_rxWr < g_rxRd) {
-      if (g_rxRd - g_rxWr >= OPENFIRE_SCOPE_RX_SLOT) off = g_rxWr;
+      if (g_rxRd - g_rxWr >= need) off = g_rxWr;
     }   // EN: write == read with bytes taken: full / IT: scrittura == lettura con byte presi: pieno
   }
   portEXIT_CRITICAL(&g_rxMux);
@@ -726,7 +730,7 @@ static int rxReserve(uint16_t *skip) {
 // EN: The slice of n bytes received at off (margin already written) enters the ring: its number for g_rxFull.
 // IT: La fascia di n byte ricevuta a off (margine gia' scritto) entra nell'anello: il suo numero per g_rxFull.
 static uint8_t rxCommit(int off, uint16_t skip, uint16_t n) {
-  const uint16_t size = (uint16_t)((n + OPENFIRE_SCOPE_RX_MARGIN + 3) & ~3);   // 4-byte steps / passi da 4 byte
+  const uint16_t size = rxSpace(n);
   portENTER_CRITICAL(&g_rxMux);
   const uint8_t d = g_rxHead;
   g_rxOff[d] = (uint16_t)off;
@@ -760,7 +764,7 @@ static void scopeRxTask(void *param) {
     }
 
     uint16_t skip;
-    int off = rxReserve(&skip);
+    int off = rxReserve(&skip, OPENFIRE_SCOPE_RX_SLOT);
     uint8_t *buf = (off >= 0) ? &g_rxRing[off] : scratch;
 
     // EN: One byte more than the maximum: a longer packet is recognised and discarded. / IT: un byte oltre il massimo: un pacchetto piu' lungo si riconosce e si scarta.
@@ -798,9 +802,11 @@ static void scopeRxTask(void *param) {
     WirelessScope.video_slice_ms = millis();
     WirelessScope.video_slice_seen = true;
     if (off < 0) {
-      // EN: The ring was full before the wait: room may have come back meanwhile.
-      // IT: L'anello era pieno prima dell'attesa: nel frattempo lo spazio puo' essere tornato.
-      off = rxReserve(&skip);
+      // EN: The ring was full before the wait: room may have come back meanwhile. Now the length is known: only its
+      //     room is needed, not the maximum size.
+      // IT: L'anello era pieno prima dell'attesa: nel frattempo lo spazio puo' essere tornato. Ora la lunghezza e' nota:
+      //     serve solo il suo spazio, non la misura massima.
+      off = rxReserve(&skip, rxSpace((uint16_t)n));
       if (off < 0) {   // ring full / anello pieno
         WirelessScope.video_rx_full = WirelessScope.video_rx_full + 1;
         continue;

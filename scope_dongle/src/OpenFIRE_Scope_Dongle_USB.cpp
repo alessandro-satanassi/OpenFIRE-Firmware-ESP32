@@ -197,7 +197,9 @@ static inline bool usbTypeValid(uint8_t type) {
 //     flush (non si perde niente); se non basta, si azzera la FIFO IN (si perde al massimo il vecchio pacchetto) e un
 //     pacchetto vuoto fa ripartire l'invio. Con la porta chiusa il PC non chiede niente e non si fa niente; nell'uso
 //     normale il buffer non resta mai occupato cosi' a lungo.
-static void usbUnstick() {
+// EN: Returns true after a reset of the IN FIFO: the lost packet may have held the state, which is then announced again.
+// IT: Restituisce true dopo un azzeramento della FIFO IN: il pacchetto perso poteva contenere lo stato, che si riannuncia.
+static bool usbUnstick() {
   static bool busy = false;
   static bool asked = false;
   static uint8_t step = 0;
@@ -217,7 +219,7 @@ static void usbUnstick() {
 
   if (usb_serial_jtag_ll_txfifo_writable()) {
     busy = false;
-    return;
+    return false;
   }
   const uint32_t now = millis();
   if (!busy) {   // just busy: the tokens from before do not count / appena occupato: i token di prima non contano
@@ -225,10 +227,10 @@ static void usbUnstick() {
     asked = false;
     step = 0;
     stepMs = now;
-    return;
+    return false;
   }
   if (token) asked = true;
-  if (!asked) return;   // port closed: the PC asks for nothing / porta chiusa: il PC non chiede niente
+  if (!asked) return false;   // port closed: the PC asks for nothing / porta chiusa: il PC non chiede niente
 
   if (step == 0 && now - stepMs >= USB_STUCK_FLUSH_MS) {
     portENTER_CRITICAL(&g_usbKickMux);
@@ -241,27 +243,34 @@ static void usbUnstick() {
     #endif // SCOPE_DONGLE_USB_DEBUG
   } else if (step == 1 && now - stepMs >= USB_STUCK_RESET_MS) {
     // EN: both clock domains of the IN FIFO (CPU and USB), then the empty packet: when the PC takes it, the driver
-    //     sends the rest. With interrupts off, the ISR cannot fall in between.
+    //     sends the rest. With interrupts off, the ISR cannot fall in between. Buffer checked again in here: freed just
+    //     before, it holds nothing to lose.
     // IT: tutti e due i domini di clock della FIFO IN (CPU e USB), poi il pacchetto vuoto: quando il PC lo prende, il
-    //     driver manda il resto. Con gli interrupt spenti l'ISR non puo' cadere in mezzo.
+    //     driver manda il resto. Con gli interrupt spenti l'ISR non puo' cadere in mezzo. Buffer ricontrollato qui
+    //     dentro: liberato appena prima, non c'e' niente da perdere.
     portENTER_CRITICAL(&g_usbKickMux);
-    USB_SERIAL_JTAG.ser_afifo_config.serial_in_afifo_reset_wr = 1;
-    USB_SERIAL_JTAG.ser_afifo_config.serial_in_afifo_reset_rd = 1;
-    esp_rom_delay_us(1);
-    USB_SERIAL_JTAG.ser_afifo_config.serial_in_afifo_reset_wr = 0;
-    USB_SERIAL_JTAG.ser_afifo_config.serial_in_afifo_reset_rd = 0;
-    usb_serial_jtag_ll_txfifo_flush();
+    const bool reset = !usb_serial_jtag_ll_txfifo_writable();
+    if (reset) {
+      USB_SERIAL_JTAG.ser_afifo_config.serial_in_afifo_reset_wr = 1;
+      USB_SERIAL_JTAG.ser_afifo_config.serial_in_afifo_reset_rd = 1;
+      esp_rom_delay_us(1);
+      USB_SERIAL_JTAG.ser_afifo_config.serial_in_afifo_reset_wr = 0;
+      USB_SERIAL_JTAG.ser_afifo_config.serial_in_afifo_reset_rd = 0;
+      usb_serial_jtag_ll_txfifo_flush();
+    }
     portEXIT_CRITICAL(&g_usbKickMux);
     step = 2;
     stepMs = now;
     #ifdef SCOPE_DONGLE_USB_DEBUG
-    if (d_reset < 9) d_reset = d_reset + 1;
+    if (reset && d_reset < 9) d_reset = d_reset + 1;
     #endif // SCOPE_DONGLE_USB_DEBUG
+    return reset;
   } else if (step == 2 && now - stepMs >= USB_STUCK_RETRY_MS) {
     step = 0;   // still stuck: from the flush again, when the PC asks / ancora bloccato: di nuovo dal flush, quando il PC chiede
     stepMs = now;
     asked = false;
   }
+  return false;
 }
 
 // ===================================================================================
@@ -356,8 +365,11 @@ static void scopeUsbTask(void *param) {
       usbSendControl(stat);
     }
 
-    // 4. EN: Output towards the PC stuck: see usbUnstick(). / IT: uscita verso il PC bloccata: vedi usbUnstick().
-    usbUnstick();
+    // 4. EN: Output towards the PC stuck: see usbUnstick(). After a reset of the IN FIFO the state is sent again: after
+    //       the first answer the daemon asks WHOAMI only during BOOT, and the same state again changes nothing for it.
+    //    IT: uscita verso il PC bloccata: vedi usbUnstick(). Dopo un azzeramento della FIFO IN lo stato si rimanda: dopo
+    //       la prima risposta il demone chiede WHOAMI solo durante BOOT, e lo stesso stato di nuovo per lui non cambia niente.
+    if (usbUnstick()) lastState[0] = '\0';
 
     // EN: Less than a whole chunk: one tick for the next packets to gather, so the task wakes about once per
     //     millisecond and not at every USB packet of 64 bytes (1 ms is about 1 KB, the ring holds 8).
